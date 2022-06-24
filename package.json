@@ -19,7 +19,8 @@
   "dependencies": {
     "@oclif/core": "1.9.5",
     "@oclif/plugin-help": "5.1.12",
-    "@oclif/plugin-plugins": "2.1.0"
+    "@oclif/plugin-plugins": "2.1.0",
+    "prettier": "^2.7.1"
   },
   "devDependencies": {
     "@oclif/test": "2.1.0",
@@ -60,7 +61,9 @@
     "posttest": "yarn lint",
     "prepack": "yarn build && oclif manifest && oclif readme",
     "test": "mocha --forbid-only \"test/**/*.test.ts\"",
-    "version": "oclif readme && git add README.md"
+    "version": "oclif readme && git add README.md",
+    "prettier:check": "prettier --loglevel error --ignore-path .gitignore --list-different .",
+    "prettier:fix": "prettier --loglevel error --ignore-path .gitignore --write ."
   },
   "engines": {
     "node": ">=12.0.0"

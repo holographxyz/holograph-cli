@@ -1,5 +1,4 @@
-oclif-hello-world
-=================
+# oclif-hello-world
 
 oclif example Hello World CLI
 
@@ -10,11 +9,15 @@ oclif example Hello World CLI
 [![License](https://img.shields.io/npm/l/oclif-hello-world.svg)](https://github.com/oclif/hello-world/blob/main/package.json)
 
 <!-- toc -->
-* [Usage](#usage)
-* [Commands](#commands)
+
+- [Usage](#usage)
+- [Commands](#commands)
 <!-- tocstop -->
+
 # Usage
+
 <!-- usage -->
+
 ```sh-session
 $ npm install -g holo-cli
 $ holo COMMAND
@@ -26,21 +29,25 @@ USAGE
   $ holo COMMAND
 ...
 ```
+
 <!-- usagestop -->
+
 # Commands
+
 <!-- commands -->
-* [`holo hello PERSON`](#holo-hello-person)
-* [`holo hello world`](#holo-hello-world)
-* [`holo help [COMMAND]`](#holo-help-command)
-* [`holo plugins`](#holo-plugins)
-* [`holo plugins:install PLUGIN...`](#holo-pluginsinstall-plugin)
-* [`holo plugins:inspect PLUGIN...`](#holo-pluginsinspect-plugin)
-* [`holo plugins:install PLUGIN...`](#holo-pluginsinstall-plugin-1)
-* [`holo plugins:link PLUGIN`](#holo-pluginslink-plugin)
-* [`holo plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin)
-* [`holo plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin-1)
-* [`holo plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin-2)
-* [`holo plugins update`](#holo-plugins-update)
+
+- [`holo hello PERSON`](#holo-hello-person)
+- [`holo hello world`](#holo-hello-world)
+- [`holo help [COMMAND]`](#holo-help-command)
+- [`holo plugins`](#holo-plugins)
+- [`holo plugins:install PLUGIN...`](#holo-pluginsinstall-plugin)
+- [`holo plugins:inspect PLUGIN...`](#holo-pluginsinspect-plugin)
+- [`holo plugins:install PLUGIN...`](#holo-pluginsinstall-plugin-1)
+- [`holo plugins:link PLUGIN`](#holo-pluginslink-plugin)
+- [`holo plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin)
+- [`holo plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin-1)
+- [`holo plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin-2)
+- [`holo plugins update`](#holo-plugins-update)
 
 ## `holo hello PERSON`
 
@@ -153,7 +160,7 @@ ALIASES
   $ holo plugins add
 
 EXAMPLES
-  $ holo plugins:install myplugin 
+  $ holo plugins:install myplugin
 
   $ holo plugins:install https://github.com/someuser/someplugin
 
@@ -213,7 +220,7 @@ ALIASES
   $ holo plugins add
 
 EXAMPLES
-  $ holo plugins:install myplugin 
+  $ holo plugins:install myplugin
 
   $ holo plugins:install https://github.com/someuser/someplugin
 
@@ -331,4 +338,5 @@ FLAGS
 DESCRIPTION
   Update installed plugins.
 ```
+
 <!-- commandsstop -->
