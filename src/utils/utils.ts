@@ -8,6 +8,7 @@ import networks from './networks';
 dotenv.config();
 
 const unorm = require('unorm');
+
 Object.defineProperty(String.prototype, 'normalize', {
   value: function (type: any) {
     type = type.toLowerCase();
@@ -70,13 +71,13 @@ const provider = {
   mumbai: new WebsocketProvider(networks.mumbai.webSocket, webSocketConfig),
 };
 
-const web3 = {
+const web3Local: any = {
   rinkeby: new Web3(provider.rinkeby),
   mumbai: new Web3(provider.mumbai),
 };
 
 const holographAddress = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase();
-const rinkebyHolograph = new web3.rinkeby.eth.Contract(
+const rinkebyHolograph = new web3Local.rinkeby.eth.Contract(
   JSON.parse(fs.readFileSync('src/abi/Holograph.json', utf)),
   holographAddress
 );
@@ -94,7 +95,7 @@ const targetEvents = {
 };
 
 const decodeDeploymentConfig = function (input: any) {
-  let decodedConfig = web3.rinkeby.eth.abi.decodeParameters(
+  let decodedConfig = web3Local.rinkeby.eth.abi.decodeParameters(
     [
       {
         components: [
@@ -183,7 +184,7 @@ export {
   networks,
   utf,
   provider,
-  web3,
+  web3Local,
   holographAddress,
   rinkebyHolograph,
   receivers,
