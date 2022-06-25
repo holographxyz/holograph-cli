@@ -82,7 +82,7 @@ const rinkebyHolograph = new web3Local.rinkeby.eth.Contract(
   holographAddress
 );
 
-const receivers = {
+const receivers: any = {
   rinkeby: '0x41836E93A3D92C116087af0C9424F4EF3DdB00a2'.toLowerCase(),
   mumbai: '0xb27c5c80eefe92591bf784dac95b7ac3db968e07'.toLowerCase(),
 };

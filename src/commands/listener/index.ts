@@ -148,6 +148,202 @@ export default class Listener extends Command {
       getReceipt();
     };
 
-    process.exit(0);
+    let latestBlock = {
+      rinkeby: 0,
+      mumbai: 0,
+    };
+
+    let blockJobs: any[] = [];
+
+    const processBlock = function (job: any) {
+      web3Local[job.network].eth.getBlock(job.block, true).then(function (block: any) {
+        if (block != null && 'transactions' in block) {
+          if (block.transactions.length == 0) {
+            console.log('zero block transaction for block', job.block, 'on', job.network);
+          }
+          let interestingTransactions = [];
+          for (let i = 0, l = block.transactions.length; i < l; i++) {
+            let transaction = block.transactions[i];
+            // only check transactions that have a "to" address
+            if ('to' in transaction && transaction.to != null && transaction.to != '') {
+              // check if it's a factory call
+              if (transaction.to.toLowerCase() == factoryAddress) {
+                // we have a potential factory deployment transaction
+                interestingTransactions.push(transaction);
+              } else if (transaction.to.toLowerCase() == operatorAddress) {
+                // we have a potential operator bridge transaction
+                interestingTransactions.push(transaction);
+              }
+              // check if it's a layer zero call
+              else if (transaction.to.toLowerCase() == receivers[job.network]) {
+                // we have layer zero call, need to check it it's directed towards our operators
+                interestingTransactions.push(transaction);
+              }
+            }
+          }
+          if (interestingTransactions.length > 0) {
+            processTransactions(job.network, interestingTransactions, blockJobHandler);
+          } else {
+            blockJobHandler();
+          }
+        } else {
+          console.log(job.network, 'dropped block!', job.block);
+          blockJobs.unshift(job);
+          blockJobHandler();
+        }
+      });
+    };
+
+    const blockJobHandler = function () {
+      if (blockJobs.length > 0) {
+        let blockJob = blockJobs.shift();
+        processBlock(blockJob);
+      } else {
+        setTimeout(blockJobHandler, 1000);
+      }
+    };
+
+    // start block job handler
+    blockJobHandler();
+
+    let rinkebySubscriptionId = null;
+    let rinkebySubscribe = function () {
+      let rinkeby_subscription = web3Local.rinkeby.eth
+        .subscribe('newBlockHeaders')
+        .on('connected', function (subscriptionId: any) {
+          rinkebySubscriptionId = subscriptionId;
+          console.log('Rinkeby newBlockHeaders subscription successful:', subscriptionId);
+        })
+        .on('data', function (blockHeader: any) {
+          if (latestBlock.rinkeby != 0 && blockHeader.number - latestBlock.rinkeby > 1) {
+            console.log('dropped rinkeby websocket connection, gotta do some catching up');
+            let latest = latestBlock.rinkeby;
+            while (blockHeader.number - latest > 1) {
+              console.log('adding rinkeby block', latest);
+              blockJobs.push({
+                network: 'rinkeby',
+                block: latest,
+              });
+              latest++;
+            }
+          }
+          latestBlock.rinkeby = blockHeader.number;
+          console.log('rinkeby', blockHeader.number);
+          blockJobs.push({
+            network: 'rinkeby',
+            block: blockHeader.number,
+          });
+        })
+        .on('error', function (error: any) {
+          console.log('Rinkeby newBlockHeaders subscription error' /*, error*/);
+          try {
+            rinkeby_subscription.unsubscribe(console.log);
+            rinkeby_subscription.subscribe();
+          } catch (ex) {
+            rinkebySubscribe();
+          }
+        });
+    };
+    rinkebySubscribe();
+    let rinkebyResetProvider: any = undefined;
+    let handleRinkebyDroppedSocket = function (error: Error) {
+      if (typeof rinkebyResetProvider !== 'undefined') {
+        clearInterval(rinkebyResetProvider);
+      }
+      rinkebyResetProvider = setInterval(function () {
+        try {
+          web3Local.rinkeby.eth.clearSubscriptions();
+        } catch (ex) {
+          // do nothing
+        }
+        console.log('Rinkeby webSocket error' /*, error*/);
+        let Web3 = require('web3');
+        let WebsocketProvider = require('./WebSocketProvider');
+        try {
+          provider.rinkeby = new WebsocketProvider(networks.eth_rinkeby.webSocket);
+          provider.rinkeby.on('error', handleRinkebyDroppedSocket);
+          provider.rinkeby.on('close', handleRinkebyDroppedSocket);
+          provider.rinkeby.on('end', handleRinkebyDroppedSocket);
+          web3Local.rinkeby = new Web3(provider.rinkeby);
+          rinkebySubscribe();
+          clearInterval(rinkebyResetProvider);
+        } catch (ex) {
+          console.log(ex);
+        }
+      }, 5000); // 3 seconds
+    };
+    provider.rinkeby.on('error', handleRinkebyDroppedSocket);
+    provider.rinkeby.on('close', handleRinkebyDroppedSocket);
+    provider.rinkeby.on('end', handleRinkebyDroppedSocket);
+
+    let mumbaiSubscriptionId = null;
+    let mumbaiSubscribe = function () {
+      let mumbai_subscription = web3Local.mumbai.eth
+        .subscribe('newBlockHeaders')
+        .on('connected', function (subscriptionId: any) {
+          mumbaiSubscriptionId = subscriptionId;
+          console.log('Mumbai newBlockHeaders subscription successful:', subscriptionId);
+        })
+        .on('data', function (blockHeader: any) {
+          if (latestBlock.mumbai != 0 && blockHeader.number - latestBlock.mumbai > 1) {
+            console.log('dropped mumbai websocket connection, gotta do some catching up');
+            let latest = latestBlock.mumbai;
+            while (blockHeader.number - latest > 1) {
+              console.log('adding mumbai block', latest);
+              blockJobs.push({
+                network: 'mumbai',
+                block: latest,
+              });
+              latest++;
+            }
+          }
+          latestBlock.mumbai = blockHeader.number;
+          console.log('mumbai', blockHeader.number);
+          blockJobs.push({
+            network: 'mumbai',
+            block: blockHeader.number,
+          });
+        })
+        .on('error', function (error: Error) {
+          console.log('Mumbai newBlockHeaders subscription error' /*, error*/);
+          try {
+            mumbai_subscription.unsubscribe(console.log);
+            mumbai_subscription.subscribe();
+          } catch (ex) {
+            mumbaiSubscribe();
+          }
+        });
+    };
+    mumbaiSubscribe();
+    let mumbaiResetProvider: any = undefined;
+    let handleMumbaiDroppedSocket = function (error: Error) {
+      if (typeof mumbaiResetProvider !== 'undefined') {
+        clearInterval(mumbaiResetProvider);
+      }
+      mumbaiResetProvider = setInterval(function () {
+        try {
+          web3Local.mumbai.eth.clearSubscriptions();
+        } catch (ex) {
+          // do nothing
+        }
+        console.log('Mumbai webSocket error' /*, error*/);
+        let Web3 = require('web3');
+        let WebsocketProvider = require('./WebSocketProvider');
+        try {
+          provider.mumbai = new WebsocketProvider(networks.mumbai.webSocket);
+          provider.mumbai.on('error', handleMumbaiDroppedSocket);
+          provider.mumbai.on('close', handleMumbaiDroppedSocket);
+          provider.mumbai.on('end', handleMumbaiDroppedSocket);
+          web3Local.mumbai = new Web3(provider.mumbai);
+          mumbaiSubscribe();
+          clearInterval(mumbaiResetProvider);
+        } catch (ex) {
+          console.log(ex);
+        }
+      }, 5000); // 3 seconds
+    };
+    provider.mumbai.on('error', handleMumbaiDroppedSocket);
+    provider.mumbai.on('close', handleMumbaiDroppedSocket);
+    provider.mumbai.on('end', handleMumbaiDroppedSocket);
   }
 }
