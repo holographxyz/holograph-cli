@@ -80,7 +80,7 @@ const web3Local: any = {
 const holographAddress = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
 const rinkebyHolograph = new web3Local.rinkeby.eth.Contract(
   JSON.parse(fs.readFileSync('src/abi/Holograph.json', utf)),
-  holographAddress
+  holographAddress,
 )
 
 const receivers: any = {
@@ -158,7 +158,7 @@ const decodeDeploymentConfig = function (input: any) {
         type: 'address',
       },
     ],
-    input
+    input,
   )
   return {
     config: {

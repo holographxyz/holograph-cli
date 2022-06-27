@@ -65,7 +65,7 @@ export default class Listener extends Command {
                   // @ts-expect-error
                   `HolographFactory deployed a new collection on ${network.capitalize()} at address ${deploymentAddress}\n
                   Wallet that deployed the collection is ${transaction.from}\n
-                  The config used for deployHolographableContract function was ${config}\n`
+                  The config used for deployHolographableContract function was ${config}\n`,
                 )
               } else {
                 console.log(`Failed with BridgeableContractDeployed event parsing ${transaction} ${receipt}`)
@@ -86,17 +86,17 @@ export default class Listener extends Command {
               if (event !== null) {
                 const deploymentInput = web3Local[network].eth.abi.decodeParameter(
                   'bytes',
-                  '0x' + transaction.input.slice(10)
+                  '0x' + transaction.input.slice(10),
                 )
                 const config = decodeDeploymentConfig(
-                  web3Local[network].eth.abi.decodeParameter('bytes', '0x' + deploymentInput.slice(10))
+                  web3Local[network].eth.abi.decodeParameter('bytes', '0x' + deploymentInput.slice(10)),
                 )
                 const deploymentAddress = '0x' + event[1].slice(26)
                 console.log(
                   // @ts-expect-error
                   `HolographOperator executed a job which bridged a collection\nHolographFactory deployed a new collection on ${network.capitalize()} at address ${deploymentAddress}\n
                   Operator that deployed the collection is ${transaction.from}\n
-                  The config used for deployHolographableContract function was ${config}\n`
+                  The config used for deployHolographableContract function was ${config}\n`,
                 )
               } else {
                 console.log('Failed to find BridgeableContractDeployed event from operator job')
@@ -122,18 +122,20 @@ export default class Listener extends Command {
                 console.log(
                   // @ts-expect-error
                   `HolographOperator received a new bridge job on ${network.capitalize()}\n
-                  The job payload is ${payload}\n`
+                  The job payload is ${payload}\n`,
                 )
               } else {
                 console.log('LayerZero transaction is not relevant to AvailableJob event')
               }
             }
+
             getReceipt()
           })
         } else {
           callback()
         }
       }
+
       getReceipt()
     }
 
@@ -200,41 +202,41 @@ export default class Listener extends Command {
     let rinkebySubscriptionId = null
     function rinkebySubscribe() {
       const rinkebySubscription = web3Local.rinkeby.eth
-        .subscribe('newBlockHeaders')
-        .on('connected', function (subscriptionId: any) {
-          rinkebySubscriptionId = subscriptionId
-          console.log('Rinkeby subscription to new block headers successful:', subscriptionId)
-        })
-        .on('data', function (blockHeader: any) {
-          if (latestBlock.rinkeby !== 0 && blockHeader.number - latestBlock.rinkeby > 1) {
-            console.log('dropped rinkeby websocket connection, gotta do some catching up')
-            let latest = latestBlock.rinkeby
-            while (blockHeader.number - latest > 1) {
-              console.log('adding rinkeby block', latest)
-              blockJobs.push({
-                network: 'rinkeby',
-                block: latest,
-              })
-              latest++
-            }
+      .subscribe('newBlockHeaders')
+      .on('connected', function (subscriptionId: any) {
+        rinkebySubscriptionId = subscriptionId
+        console.log('Rinkeby subscription to new block headers successful:', subscriptionId)
+      })
+      .on('data', function (blockHeader: any) {
+        if (latestBlock.rinkeby !== 0 && blockHeader.number - latestBlock.rinkeby > 1) {
+          console.log('dropped rinkeby websocket connection, gotta do some catching up')
+          let latest = latestBlock.rinkeby
+          while (blockHeader.number - latest > 1) {
+            console.log('adding rinkeby block', latest)
+            blockJobs.push({
+              network: 'rinkeby',
+              block: latest,
+            })
+            latest++
           }
+        }
 
-          latestBlock.rinkeby = blockHeader.number
-          console.log('Rinkeby', blockHeader.number)
-          blockJobs.push({
-            network: 'rinkeby',
-            block: blockHeader.number,
-          })
+        latestBlock.rinkeby = blockHeader.number
+        console.log('Rinkeby', blockHeader.number)
+        blockJobs.push({
+          network: 'rinkeby',
+          block: blockHeader.number,
         })
-        .on('error', function (error: any) {
-          console.error('Rinkeby subscription to new block headers error' /* , error */)
-          try {
-            rinkebySubscription.unsubscribe(console.log)
-            rinkebySubscription.subscribe()
-          } catch {
-            rinkebySubscribe()
-          }
-        })
+      })
+      .on('error', function (error: any) {
+        console.error('Rinkeby subscription to new block headers error' /* , error */)
+        try {
+          rinkebySubscription.unsubscribe(console.log)
+          rinkebySubscription.subscribe()
+        } catch {
+          rinkebySubscribe()
+        }
+      })
     }
 
     rinkebySubscribe()
@@ -274,41 +276,41 @@ export default class Listener extends Command {
     let mumbaiSubscriptionId = null
     const mumbaiSubscribe = () => {
       const mumbaiSubscription = web3Local.mumbai.eth
-        .subscribe('newBlockHeaders')
-        .on('connected', function (subscriptionId: any) {
-          mumbaiSubscriptionId = subscriptionId
-          console.log(`Mumbai subscription to new block headers successful: ${subscriptionId}`)
-        })
-        .on('data', function (blockHeader: any) {
-          if (latestBlock.mumbai !== 0 && blockHeader.number - latestBlock.mumbai > 1) {
-            console.log('Dropped mumbai websocket connection, gotta do some catching up')
-            let latest = latestBlock.mumbai
-            while (blockHeader.number - latest > 1) {
-              console.log('adding mumbai block', latest)
-              blockJobs.push({
-                network: 'mumbai',
-                block: latest,
-              })
-              latest++
-            }
+      .subscribe('newBlockHeaders')
+      .on('connected', function (subscriptionId: any) {
+        mumbaiSubscriptionId = subscriptionId
+        console.log(`Mumbai subscription to new block headers successful: ${subscriptionId}`)
+      })
+      .on('data', function (blockHeader: any) {
+        if (latestBlock.mumbai !== 0 && blockHeader.number - latestBlock.mumbai > 1) {
+          console.log('Dropped mumbai websocket connection, gotta do some catching up')
+          let latest = latestBlock.mumbai
+          while (blockHeader.number - latest > 1) {
+            console.log('adding mumbai block', latest)
+            blockJobs.push({
+              network: 'mumbai',
+              block: latest,
+            })
+            latest++
           }
+        }
 
-          latestBlock.mumbai = blockHeader.number
-          console.log('Mumbai', blockHeader.number)
-          blockJobs.push({
-            network: 'mumbai',
-            block: blockHeader.number,
-          })
+        latestBlock.mumbai = blockHeader.number
+        console.log('Mumbai', blockHeader.number)
+        blockJobs.push({
+          network: 'mumbai',
+          block: blockHeader.number,
         })
-        .on('error', function (error: Error) {
-          console.log(`Mumbai newBlockHeaders subscription error ${error}`)
-          try {
-            mumbaiSubscription.unsubscribe(console.log)
-            mumbaiSubscription.subscribe()
-          } catch {
-            mumbaiSubscribe()
-          }
-        })
+      })
+      .on('error', function (error: Error) {
+        console.log(`Mumbai newBlockHeaders subscription error ${error}`)
+        try {
+          mumbaiSubscription.unsubscribe(console.log)
+          mumbaiSubscription.subscribe()
+        } catch {
+          mumbaiSubscribe()
+        }
+      })
     }
 
     mumbaiSubscribe()
