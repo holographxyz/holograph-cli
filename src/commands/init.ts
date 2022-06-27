@@ -1,9 +1,8 @@
 import {Command, Flags} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
-import * as path from 'path'
+import * as path from 'node:path'
 import {ethers} from 'ethers'
-
 
 export default class Init extends Command {
   static description = 'Initialize the Holo command line to become an operator or to bridge collections and NFTs manually'
@@ -22,7 +21,8 @@ export default class Init extends Command {
     defaultFrom: Flags.string({options: this.allowedNetworks, description: 'Default network to bridge FROM (origin network)'}),
     defaultTo: Flags.string({options: this.allowedNetworks, description: 'Default network to bridge TO (destination network)'}),
     privateKey: Flags.string({description: 'Default account to use when sending all transactions'}),
-    providerUrl: Flags.string({description: 'Provide a secure https or wss url'}),
+    providerUrlFrom: Flags.string({description: 'Provide a secure https or wss url'}),
+    providerUrlTo: Flags.string({description: 'Provide a secure https or wss url'}),
   }
 
   private async checkFileExists(configPath: string) {
@@ -58,7 +58,8 @@ export default class Init extends Command {
     let defaultFrom = flags.defaultFrom
     let defaultTo = flags.defaultTo
     let privateKey = flags.privateKey
-    let providerUrl = flags.providerUrl
+    let providerUrlFrom = flags.providerUrlFrom
+    let providerUrlTo = flags.providerUrlTo
     let userWallet = null
 
 
@@ -146,11 +147,11 @@ export default class Init extends Command {
       userWallet = new ethers.Wallet(prompt.privateKey)
     }
 
-    // Collect provider url value
-    if (!providerUrl) {
+    // Collect provider url value, from network
+    if (!providerUrlFrom) {
       const prompt: any = await inquirer.prompt([{
-        name: 'providerUrl',
-        message: 'Enter the provider url',
+        name: 'providerUrlFrom',
+        message: 'Enter the FROM (origin) provider url',
         type: 'input',
         validate: async (input: string) => {
           if (!this.isStringAValidURL(input)) {
@@ -160,16 +161,42 @@ export default class Init extends Command {
           return true
         },
       }])
-      providerUrl = prompt.providerUrl
+      providerUrlFrom = prompt.providerUrlFrom
+    }
+
+    // Collect provider url value, to network
+    if (!providerUrlTo) {
+      const prompt: any = await inquirer.prompt([{
+        name: 'providerUrlTo',
+        message: 'Enter the TO (destination) provider url',
+        type: 'input',
+        validate: async (input: string) => {
+          if (!this.isStringAValidURL(input)) {
+            return 'Input is not a valid and secure URL (https or wss)'
+          }
+
+          return true
+        },
+      }])
+      providerUrlTo = prompt.providerUrlTo
     }
 
     // Save config object
     try {
       const userConfigSample = {
-        providerUrl: providerUrl,
         network: {
           from: defaultFrom,
           to: defaultTo,
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          [defaultFrom]: {
+            providerUrl: providerUrlFrom,
+          },
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          [defaultTo]: {
+            providerUrl: providerUrlTo,
+          },
         },
         user: {
           credentials: {
@@ -180,9 +207,8 @@ export default class Init extends Command {
       }
       await fs.outputJSON(configPath, userConfigSample)
     } catch (error: any) {
-      this.log('configuration file does not exist, lets create it!')
-      this.debug(error)
       this.log(`Failed to save file in ${configPath}. Please try again with debugger on and try again.`)
+      this.debug(error)
     }
   }
 }
