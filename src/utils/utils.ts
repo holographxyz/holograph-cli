@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 
 import Web3 from 'web3'
-import {WebsocketProviderBase} from 'web3-core-helpers'
+import WebsocketProvider from 'web3-providers-ws'
 
 import dotenv = require('dotenv')
 import networks from './networks'
@@ -50,8 +50,8 @@ const webSocketConfig = {
 }
 
 const providers: any = {
-  rinkeby: new WebsocketProviderBase(networks.rinkeby.wss, webSocketConfig),
-  mumbai: new WebsocketProviderBase(networks.mumbai.wss, webSocketConfig),
+  rinkeby: new WebsocketProvider(networks.rinkeby.wss, webSocketConfig),
+  mumbai: new WebsocketProvider(networks.mumbai.wss, webSocketConfig),
 }
 
 const web3: any = {
