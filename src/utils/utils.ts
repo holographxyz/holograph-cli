@@ -1,7 +1,11 @@
 import * as fs from 'node:fs'
 
 import Web3 from 'web3'
+<<<<<<< HEAD
+const WebsocketProvider = require('./WebsocketProvider.js');
+=======
 import WebsocketProvider from 'web3-providers-ws'
+>>>>>>> 4d021d71e66a2010779ffe2b98e84821bd880933
 
 import dotenv = require('dotenv')
 import networks from './networks'
