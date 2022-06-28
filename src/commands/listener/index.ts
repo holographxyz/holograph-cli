@@ -1,7 +1,6 @@
 import {Command /* Flags */} from '@oclif/core'
 
-import { WebsocketProviderBase } from 'web3-core-helpers';
-import WebsocketProvider from 'web3-providers-ws'
+import {WebsocketProviderBase} from 'web3-core-helpers'
 
 import {
   networks,
