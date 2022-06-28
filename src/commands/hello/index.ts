@@ -19,7 +19,7 @@ hello friend from oclif! (./src/commands/hello/index.ts)
     const {args, flags} = await this.parse(Hello)
 
     this.log(`hello ${args.person} from ${flags.from}! (./src/commands/hello/index.ts)`)
-    // Not sure why this is hanging...
+    // TODO: Not sure why this is hanging...
     // process.exit(0)
   }
 }

@@ -1,4 +1,4 @@
-import {Command, /* Flags */} from '@oclif/core'
+import {Command /* Flags */} from '@oclif/core'
 
 import WebsocketProvider from 'web3-providers-ws'
 // import WebsocketProvider = require('web3-providers-ws')
@@ -13,6 +13,7 @@ import {
   targetEvents,
   decodeDeploymentConfig,
   decodeDeploymentConfigInput,
+  capitalize,
 } from '../../utils/utils'
 
 export default class Listener extends Command {
@@ -133,10 +134,11 @@ export default class Listener extends Command {
 
         if (event) {
           const deploymentAddress = '0x' + event[1].slice(26)
-          console.log(`
-            HolographFactory deployed a new collection on ${network} at address ${deploymentAddress}
-            Wallet that deployed the collection is ${transaction.from}
-            The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}`)
+          console.log(
+            `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
+              `Wallet that deployed the collection is ${transaction.from}\n` +
+              `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n`,
+          )
         } else {
           console.log(`Failed with BridgeableContractDeployed event parsing ${transaction} ${receipt}`)
           throw new Error('Failed with BridgeableContractDeployed event parsing')
@@ -163,12 +165,10 @@ export default class Listener extends Command {
           )
           const deploymentAddress = '0x' + event[1].slice(26)
           console.log(
-            `
-              HolographOperator executed a job which bridged a collection
-              HolographFactory deployed a new collection on ${network} at address ${deploymentAddress}
-              Operator that deployed the collection is ${transaction.from}
-              The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n
-              `,
+            '\nHolographOperator executed a job which bridged a collection\n' +
+              `HolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
+              `Operator that deployed the collection is ${transaction.from}` +
+              `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
           )
         } else {
           console.log('Failed to find BridgeableContractDeployed event from operator job')
@@ -191,7 +191,9 @@ export default class Listener extends Command {
 
         if (event) {
           const payload = web3Local[network].eth.abi.decodeParameter('bytes', event)
-          console.log(`HolographOperator received a new bridge job on ${network}\nThe job payload is ${payload}\n`)
+          console.log(
+            `HolographOperator received a new bridge job on ${capitalize(network)}\nThe job payload is ${payload}\n`,
+          )
         } else {
           console.log('LayerZero transaction is not relevant to AvailableJob event')
         }

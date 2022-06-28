@@ -7,7 +7,7 @@ import dotenv = require('dotenv')
 import networks from './networks'
 dotenv.config()
 
-// Not sure if we need these utility functions yet
+// TODO: Not sure if we need these utility functions yet
 // function remove0x(input: string) {
 //   let output  = input.toLowerCase().trim()
 //   if (output.startsWith('0x')) {
@@ -27,9 +27,9 @@ dotenv.config()
 //   return bytes.toString(16).hexify(bytes)
 // }
 
-// function capitalize(input: string) {
-//   return input.charAt(0).toUpperCase() + input.slice(1)
-// }
+function capitalize(input: string) {
+  return input.charAt(0).toUpperCase() + input.slice(1)
+}
 
 const webSocketConfig = {
   reconnect: {
@@ -164,6 +164,7 @@ const decodeDeploymentConfigInput = function (input: string): string {
 }
 
 export {
+  capitalize,
   networks,
   providers,
   web3Local,
