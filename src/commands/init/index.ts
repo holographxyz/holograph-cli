@@ -30,11 +30,11 @@ export default class Index extends Command {
       return await fs.pathExists(configPath)
     } catch (error) {
       this.debug(error)
-      process.exit(0)
+      this.error('failed to find config file')
     }
   }
 
-  public isStringAValidURL(s: string) {
+  public isStringAValidURL(s: string): boolean {
     const protocols = ['https', 'wss']
     try {
       const result = new URL(s)
@@ -48,7 +48,7 @@ export default class Index extends Command {
     }
   }
 
-  public isFromAndToNetworksTheSame(from: string | undefined, to: string | undefined) {
+  public isFromAndToNetworksTheSame(from: string | undefined, to: string | undefined): boolean {
     return (from !== to)
   }
 
@@ -62,13 +62,12 @@ export default class Index extends Command {
     let providerUrlTo = flags.providerUrlTo
     let userWallet = null
 
-
     // Make sure default from and to networks are not the same when using flags
     if (typeof defaultFrom !== 'undefined' && typeof defaultTo !== 'undefined') {
       const isValidFromAndTo = this.isFromAndToNetworksTheSame(defaultFrom, defaultTo)
       if (!isValidFromAndTo) {
         this.log('The FROM and TO networks cannot be the same')
-        process.exit(0)
+        this.error('Networks cannot be the same')
       }
     }
 
@@ -87,8 +86,7 @@ export default class Index extends Command {
         default: false,
       }])
       if (!prompt.shouldContinue) {
-        this.log('No files were modified')
-        process.exit(0)
+        this.error('No files were modified')
       }
     }
 
