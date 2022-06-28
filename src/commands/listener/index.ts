@@ -108,98 +108,99 @@ export default class Listener extends Command {
     }
   }
 
-  processTransactions = (network: string, transactions: any, callback: any) => {
-    const getReceipt = async () => {
-      if (transactions.length > 0) {
-        const transaction = transactions.shift()
-        const receipt = await web3Local[network].eth.getTransactionReceipt(transaction.hash)
-        if (receipt === null) {
-          throw new Error(`could not get receipt for ${transaction.hash}`)
+  getReceipt = async (network: string, transactions: any, callback: any) => {
+    if (transactions.length > 0) {
+      const transaction = transactions.shift()
+      const receipt = await web3Local[network].eth.getTransactionReceipt(transaction.hash)
+      if (receipt === null) {
+        throw new Error(`could not get receipt for ${transaction.hash}`)
+      }
+
+      if (transaction.to.toLowerCase() === this.factoryAddress) {
+        const config = decodeDeploymentConfigInput(transaction.input)
+        let event = null
+        if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
+          for (let i = 0, l = receipt.logs.length; i < l; i++) {
+            const log = receipt.logs[i]
+            if (log.topics.length > 0 && log.topics[0] === targetEvents.BridgeableContractDeployed) {
+              event = log.topics
+              break
+            }
+          }
         }
 
-        if (transaction.to.toLowerCase() === this.factoryAddress) {
-          const config = decodeDeploymentConfigInput(transaction.input)
-          let event = null
-          if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
-            for (let i = 0, l = receipt.logs.length; i < l; i++) {
-              const log = receipt.logs[i]
-              if (log.topics.length > 0 && log.topics[0] === targetEvents.BridgeableContractDeployed) {
-                event = log.topics
-                break
-              }
-            }
-          }
-
-          if (event) {
-            const deploymentAddress = '0x' + event[1].slice(26)
-            console.log(`
-              HolographFactory deployed a new collection on ${network} at address ${deploymentAddress}
-              Wallet that deployed the collection is ${transaction.from}
-              The config used for deployHolographableContract function was ${config.toString()}`)
-          } else {
-            console.log(`Failed with BridgeableContractDeployed event parsing ${transaction} ${receipt}`)
-            throw new Error('Failed with BridgeableContractDeployed event parsing')
-          }
-        } else if (transaction.to.toLowerCase() === this.operatorAddress) {
-          let event = null
-          if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
-            for (let i = 0, l = receipt.logs.length; i < l; i++) {
-              const log = receipt.logs[i]
-              if (log.topics.length > 0 && log.topics[0] === targetEvents.BridgeableContractDeployed) {
-                event = log.topics
-                break
-              }
-            }
-          }
-
-          if (event) {
-            const deploymentInput = web3Local[network].eth.abi.decodeParameter(
-              'bytes',
-              '0x' + transaction.input.slice(10),
-            )
-            const config = decodeDeploymentConfig(
-              web3Local[network].eth.abi.decodeParameter('bytes', '0x' + deploymentInput.slice(10)),
-            )
-            const deploymentAddress = '0x' + event[1].slice(26)
-            console.log(
-              `
-                HolographOperator executed a job which bridged a collection
-                HolographFactory deployed a new collection on ${network} at address ${deploymentAddress}
-                Operator that deployed the collection is ${transaction.from}
-                The config used for deployHolographableContract function was ${config.toString()}\n
-                `,
-            )
-          } else {
-            console.log('Failed to find BridgeableContractDeployed event from operator job')
-          }
+        if (event) {
+          const deploymentAddress = '0x' + event[1].slice(26)
+          console.log(`
+            HolographFactory deployed a new collection on ${network} at address ${deploymentAddress}
+            Wallet that deployed the collection is ${transaction.from}
+            The config used for deployHolographableContract function was ${config.toString()}`)
         } else {
-          let event = null
-          if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
-            for (let i = 0, l = receipt.logs.length; i < l; i++) {
-              const log = receipt.logs[i]
-              if (
-                log.address.toLowerCase() === this.operatorAddress &&
-                log.topics.length > 0 &&
-                log.topics[0] === targetEvents.AvailableJob
-              ) {
-                event = log.data
-                break
-              }
+          console.log(`Failed with BridgeableContractDeployed event parsing ${transaction} ${receipt}`)
+          throw new Error('Failed with BridgeableContractDeployed event parsing')
+        }
+      } else if (transaction.to.toLowerCase() === this.operatorAddress) {
+        let event = null
+        if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
+          for (let i = 0, l = receipt.logs.length; i < l; i++) {
+            const log = receipt.logs[i]
+            if (log.topics.length > 0 && log.topics[0] === targetEvents.BridgeableContractDeployed) {
+              event = log.topics
+              break
             }
           }
+        }
 
-          if (event) {
-            const payload = web3Local[network].eth.abi.decodeParameter('bytes', event)
-            console.log(`HolographOperator received a new bridge job on ${network}\nThe job payload is ${payload}\n`)
-          } else {
-            console.log('LayerZero transaction is not relevant to AvailableJob event')
-          }
+        if (event) {
+          const deploymentInput = web3Local[network].eth.abi.decodeParameter(
+            'bytes',
+            '0x' + transaction.input.slice(10),
+          )
+          const config = decodeDeploymentConfig(
+            web3Local[network].eth.abi.decodeParameter('bytes', '0x' + deploymentInput.slice(10)),
+          )
+          const deploymentAddress = '0x' + event[1].slice(26)
+          console.log(
+            `
+              HolographOperator executed a job which bridged a collection
+              HolographFactory deployed a new collection on ${network} at address ${deploymentAddress}
+              Operator that deployed the collection is ${transaction.from}
+              The config used for deployHolographableContract function was ${config.toString()}\n
+              `,
+          )
+        } else {
+          console.log('Failed to find BridgeableContractDeployed event from operator job')
         }
       } else {
-        callback()
+        let event = null
+        if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
+          for (let i = 0, l = receipt.logs.length; i < l; i++) {
+            const log = receipt.logs[i]
+            if (
+              log.address.toLowerCase() === this.operatorAddress &&
+              log.topics.length > 0 &&
+              log.topics[0] === targetEvents.AvailableJob
+            ) {
+              event = log.data
+              break
+            }
+          }
+        }
+
+        if (event) {
+          const payload = web3Local[network].eth.abi.decodeParameter('bytes', event)
+          console.log(`HolographOperator received a new bridge job on ${network}\nThe job payload is ${payload}\n`)
+        } else {
+          console.log('LayerZero transaction is not relevant to AvailableJob event')
+        }
       }
+    } else {
+      callback()
     }
-    getReceipt()
+  }
+
+  processTransactions = (network: string, transactions: any, callback: any) => {
+    this.getReceipt(network, transactions, callback)
   }
 
   rinkebySubscribe = () => {
