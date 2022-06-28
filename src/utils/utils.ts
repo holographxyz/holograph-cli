@@ -1,53 +1,35 @@
 import * as fs from 'node:fs'
 
 import Web3 from 'web3'
-const WebsocketProvider = require('./WebSocketProvider')
+import WebsocketProvider from 'web3-providers-ws'
 
 import dotenv = require('dotenv')
 import networks from './networks'
 dotenv.config()
 
-const unorm = require('unorm')
+// Not sure if we need these utility functions yet
+// function remove0x(input: string) {
+//   let output  = input.toLowerCase().trim()
+//   if (output.startsWith('0x')) {
+//     output = output.slice(2)
+//   }
+//   return output
+// }
 
-Object.defineProperty(String.prototype, 'normalize', {
-  value: function (type: any) {
-    type = type.toLowerCase()
-    return unorm[type](this)
-  },
-})
-Object.defineProperty(String.prototype, 'removeX', {
-  value: function () {
-    let v = this
-    v = v.toLowerCase().trim()
-    if (v.startsWith('0x')) {
-      v = v.slice(2)
-    }
+// function hexifyString(bytes: any) {
+//   let output = remove0x(bytes)
+//   bytes = bytes.padStart(bytes * 2, '0')
+//   bytes = '0x' + bytes
+//   return bytes
+// }
 
-    return v
-  },
-})
-Object.defineProperty(String.prototype, 'hexify', {
-  value: function (bytes: any) {
-    let v = this
-    v = v.removeX()
-    v = v.padStart(bytes * 2, '0')
-    v = '0x' + v
-    return v
-  },
-})
-Object.defineProperty(Number.prototype, 'hexify', {
-  value: function (bytes: any) {
-    return this.toString(16).hexify(bytes)
-  },
-})
-Object.defineProperty(String.prototype, 'capitalize', {
-  value: function () {
-    return this.charAt(0).toUpperCase() + this.slice(1)
-  },
-  enumerable: false,
-})
+// function  hexifyNumber(bytes: any) {
+//   return bytes.toString(16).hexify(bytes)
+// }
 
-const utf = 'utf8'
+// function capitalize(input: string) {
+//   return input.charAt(0).toUpperCase() + input.slice(1)
+// }
 
 const webSocketConfig = {
   reconnect: {
@@ -79,7 +61,7 @@ const web3Local: any = {
 
 const holographAddress = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
 const rinkebyHolograph = new web3Local.rinkeby.eth.Contract(
-  JSON.parse(fs.readFileSync('src/abi/Holograph.json', utf)),
+  JSON.parse(fs.readFileSync('src/abi/Holograph.json', 'utf8')),
   holographAddress,
 )
 
@@ -95,7 +77,7 @@ const targetEvents = {
   AvailableJob: '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11',
 }
 
-const decodeDeploymentConfig = function (input: any) {
+const decodeDeploymentConfig = function (input: any): any {
   const decodedConfig = web3Local.rinkeby.eth.abi.decodeParameters(
     [
       {
@@ -177,13 +159,12 @@ const decodeDeploymentConfig = function (input: any) {
   }
 }
 
-const decodeDeploymentConfigInput = function (input: any) {
+const decodeDeploymentConfigInput = function (input: string): string {
   return decodeDeploymentConfig('0x' + input.slice(10))
 }
 
 export {
   networks,
-  utf,
   providers,
   web3Local,
   holographAddress,

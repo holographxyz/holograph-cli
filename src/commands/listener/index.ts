@@ -1,10 +1,10 @@
-import {Command, Flags} from '@oclif/core'
+import {Command, /* Flags */} from '@oclif/core'
 
-import {WebsocketProvider} from 'web3-providers-ws'
+import WebsocketProvider from 'web3-providers-ws'
+// import WebsocketProvider = require('web3-providers-ws')
 
 import {
   networks,
-  // utf,
   providers,
   web3Local,
   holographAddress,
@@ -25,6 +25,7 @@ export default class Listener extends Command {
     rinkeby: 0,
     mumbai: 0,
   }
+
   blockJobs: any[] = []
 
   // TODO: Decide on flags
@@ -35,7 +36,7 @@ export default class Listener extends Command {
   // static args = [{ name: 'person', description: 'Person to say hello to', required: true }];
 
   async run(): Promise<void> {
-    const {args, flags} = await this.parse(Listener)
+    // const {args, flags} = await this.parse(Listener)
     this.bridgeAddress = (await rinkebyHolograph.methods.getBridge().call()).toLowerCase()
     this.factoryAddress = (await rinkebyHolograph.methods.getFactory().call()).toLowerCase()
     this.operatorAddress = (await rinkebyHolograph.methods.getOperator().call()).toLowerCase()
@@ -51,6 +52,7 @@ export default class Listener extends Command {
 
     this.blockJobHandler()
     this.processTransactions('rinkeby', this.blockJobs, this.blockJobHandler)
+
     providers.rinkeby.on('error', this.handleRinkebyDroppedSocket)
     providers.rinkeby.on('close', this.handleRinkebyDroppedSocket)
     providers.rinkeby.on('end', this.handleRinkebyDroppedSocket)
@@ -59,7 +61,7 @@ export default class Listener extends Command {
     providers.mumbai.on('end', this.handleMumbaiDroppedSocket)
   }
 
-  processBlock = async (job: any) => {
+  processBlock = async (job: any): Promise<void> => {
     const block = await web3Local[job.network].eth.getBlock(job.block, true)
     if (block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
@@ -69,19 +71,19 @@ export default class Listener extends Command {
       const interestingTransactions = []
       for (let i = 0, l = block.transactions.length; i < l; i++) {
         const transaction = block.transactions[i]
-        // only check transactions that have a "to" address
+        // Only check transactions that have a "to" address
         if ('to' in transaction && transaction.to !== null && transaction.to !== '') {
-          // check if it's a factory call
+          // Check if it's a factory call
           if (transaction.to.toLowerCase() === this.factoryAddress) {
-            // we have a potential factory deployment transaction
+            // We have a potential factory deployment transaction
             interestingTransactions.push(transaction)
           } else if (transaction.to.toLowerCase() === this.operatorAddress) {
-            // we have a potential operator bridge transaction
+            // We have a potential operator bridge transaction
             interestingTransactions.push(transaction)
           }
-          // check if it's a layer zero call
+          // Check if it's a LayerZero call
           else if (transaction.to.toLowerCase() === receivers[job.network]) {
-            // we have layer zero call, need to check it it's directed towards our operators
+            // We have LayerZero call, need to check it it's directed towards Holograph operators
             interestingTransactions.push(transaction)
           }
         }
@@ -108,7 +110,7 @@ export default class Listener extends Command {
     }
   }
 
-  getReceipt = async (network: string, transactions: any, callback: any) => {
+  processTransactions = async (network: string, transactions: any, callback: any): Promise<void> => {
     if (transactions.length > 0) {
       const transaction = transactions.shift()
       const receipt = await web3Local[network].eth.getTransactionReceipt(transaction.hash)
@@ -134,7 +136,7 @@ export default class Listener extends Command {
           console.log(`
             HolographFactory deployed a new collection on ${network} at address ${deploymentAddress}
             Wallet that deployed the collection is ${transaction.from}
-            The config used for deployHolographableContract function was ${config.toString()}`)
+            The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}`)
         } else {
           console.log(`Failed with BridgeableContractDeployed event parsing ${transaction} ${receipt}`)
           throw new Error('Failed with BridgeableContractDeployed event parsing')
@@ -165,7 +167,7 @@ export default class Listener extends Command {
               HolographOperator executed a job which bridged a collection
               HolographFactory deployed a new collection on ${network} at address ${deploymentAddress}
               Operator that deployed the collection is ${transaction.from}
-              The config used for deployHolographableContract function was ${config.toString()}\n
+              The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n
               `,
           )
         } else {
@@ -199,11 +201,7 @@ export default class Listener extends Command {
     }
   }
 
-  processTransactions = (network: string, transactions: any, callback: any) => {
-    this.getReceipt(network, transactions, callback)
-  }
-
-  rinkebySubscribe = () => {
+  rinkebySubscribe = (): void => {
     const rinkebySubscription = web3Local.rinkeby.eth
       .subscribe('newBlockHeaders')
       .on('connected', (subscriptionId: any) => {
@@ -222,6 +220,7 @@ export default class Listener extends Command {
             latest++
           }
         }
+
         this.latestBlock.rinkeby = blockHeader.number
         console.log('Rinkeby', blockHeader.number)
         this.blockJobs.push({
@@ -229,8 +228,8 @@ export default class Listener extends Command {
           block: blockHeader.number,
         })
       })
-      .on('error', (error: any) => {
-        console.error('Rinkeby subscription to new block headers error' /* , error */)
+      .on('error', (error: Error) => {
+        console.error(`Rinkeby subscription to new block headers error ${error.message}`)
         try {
           rinkebySubscription.unsubscribe(console.log)
           rinkebySubscription.subscribe()
@@ -240,20 +239,20 @@ export default class Listener extends Command {
       })
   }
 
-  handleRinkebyDroppedSocket = (error: Error) => {
+  handleRinkebyDroppedSocket = (): void => {
     let rinkebyResetProvider: any = null
     if (typeof rinkebyResetProvider !== 'undefined') {
       clearInterval(rinkebyResetProvider)
     }
 
     rinkebyResetProvider = setInterval(() => {
+      console.log(`Rinkeby websocket connection error`)
       try {
         web3Local.rinkeby.eth.clearSubscriptions()
       } catch (error) {
         console.error(`Rinkeby clearSubscriptions error: ${error}`)
       }
 
-      console.error(`Rinkeby websocker error: ${error}`)
       const Web3 = require('web3')
       try {
         providers.rinkeby = new WebsocketProvider(networks.rinkeby.wss)
@@ -307,8 +306,9 @@ export default class Listener extends Command {
       })
   }
 
-  handleMumbaiDroppedSocket = (error: Error) => {
-    let mumbaiResetProvider: any
+  handleMumbaiDroppedSocket = (): void => {
+    console.log(`Mumbai websocket connection error`)
+    let mumbaiResetProvider: any = null
     if (typeof mumbaiResetProvider !== 'undefined') {
       clearInterval(mumbaiResetProvider)
     }
@@ -320,7 +320,6 @@ export default class Listener extends Command {
         console.error(`Mumbai clearSubscriptions error: ${error}`)
       }
 
-      console.log(`Mumbai wss error ${error}`)
       const Web3 = require('web3')
       try {
         providers.mumbai = new WebsocketProvider(networks.mumbai.wss)
