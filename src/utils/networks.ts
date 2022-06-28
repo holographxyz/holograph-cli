@@ -229,4 +229,4 @@ export default {
     tokenSymbol: 'tETH',
     lzEndpoint: '0x0000000000000000000000000000000000000000'.toLowerCase(),
   },
-}
+} as any

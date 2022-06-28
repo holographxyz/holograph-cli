@@ -241,30 +241,30 @@ export default class Listener extends Command {
   }
 
   handleDroppedSocket(network: string): void {
-    let rinkebyResetProvider: any = null
-    if (typeof rinkebyResetProvider !== 'undefined') {
-      clearInterval(rinkebyResetProvider)
+    let resetProvider: any = null
+    if (typeof resetProvider !== 'undefined') {
+      clearInterval(resetProvider)
     }
 
-    rinkebyResetProvider = setInterval((): void => {
-      console.log(`Rinkeby websocket connection error`)
+    resetProvider = setInterval((): void => {
+      console.log(`${capitalize(network)} websocket connection error`)
       try {
-        web3.rinkeby.eth.clearSubscriptions()
+        web3[network].eth.clearSubscriptions()
       } catch (error) {
-        console.error(`Rinkeby clearSubscriptions error: ${error}`)
+        console.error(`Websocket clearSubscriptions error: ${error}`)
       }
 
       const Web3 = require('web3')
       try {
-        providers.rinkeby = new WebsocketProvider(networks.rinkeby.wss)
-        providers.rinkeby.on('error', this.handleDroppedSocket.bind(this, network))
-        providers.rinkeby.on('close', this.handleDroppedSocket.bind(this, network))
-        providers.rinkeby.on('end', this.handleDroppedSocket.bind(this, network))
+        providers[network] = new WebsocketProvider(networks[network].wss)
+        providers[network].on('error', this.handleDroppedSocket.bind(this, network))
+        providers[network].on('close', this.handleDroppedSocket.bind(this, network))
+        providers[network].on('end', this.handleDroppedSocket.bind(this, network))
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore - TODO: Come back to this
         web3[network] = new Web3(providers[network])
         this.networkSubscribe(network)
-        clearInterval(rinkebyResetProvider)
+        clearInterval(resetProvider)
       } catch (error) {
         console.log(error)
       }
