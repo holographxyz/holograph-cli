@@ -59,13 +59,13 @@ const web3Local: any = {
   mumbai: new Web3(providers.mumbai),
 }
 
-const holographAddress = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
+const HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
 const rinkebyHolograph = new web3Local.rinkeby.eth.Contract(
   JSON.parse(fs.readFileSync('src/abi/Holograph.json', 'utf8')),
-  holographAddress,
+  HOLOGRAPH_ADDRESS,
 )
 
-const receivers: any = {
+const LAYERZERO_RECEIVERS: any = {
   rinkeby: '0x41836E93A3D92C116087af0C9424F4EF3DdB00a2'.toLowerCase(),
   mumbai: '0xb27c5c80eefe92591bf784dac95b7ac3db968e07'.toLowerCase(),
 }
@@ -164,13 +164,13 @@ const decodeDeploymentConfigInput = function (input: string): string {
 }
 
 export {
+  HOLOGRAPH_ADDRESS,
+  LAYERZERO_RECEIVERS,
   capitalize,
   networks,
   providers,
   web3Local,
-  holographAddress,
   rinkebyHolograph,
-  receivers,
   targetEvents,
   decodeDeploymentConfig,
   decodeDeploymentConfigInput,

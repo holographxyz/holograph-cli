@@ -7,13 +7,13 @@ import {
   networks,
   providers,
   web3Local,
-  holographAddress,
   rinkebyHolograph,
-  receivers,
   targetEvents,
   decodeDeploymentConfig,
   decodeDeploymentConfigInput,
   capitalize,
+  HOLOGRAPH_ADDRESS,
+  LAYERZERO_RECEIVERS,
 } from '../../utils/utils'
 
 export default class Listener extends Command {
@@ -43,7 +43,7 @@ export default class Listener extends Command {
     this.operatorAddress = (await rinkebyHolograph.methods.getOperator().call()).toLowerCase()
 
     console.log('Starting listener...')
-    console.log(`Holograph address: ${holographAddress}`)
+    console.log(`Holograph address: ${HOLOGRAPH_ADDRESS}`)
     console.log(`Bridge address: ${this.bridgeAddress}`)
     console.log(`Factory address: ${this.factoryAddress}`)
     console.log(`Operator address: ${this.operatorAddress}`)
@@ -62,14 +62,14 @@ export default class Listener extends Command {
     providers.mumbai.on('end', this.handleMumbaiDroppedSocket)
   }
 
-  processBlock = async (job: any): Promise<void> => {
+  async processBlock(job: any): Promise<void> {
     const block = await web3Local[job.network].eth.getBlock(job.block, true)
     if (block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
         console.log('Zero block transactions for block', job.block, 'on', job.network)
       }
 
-      const interestingTransactions = []
+      let interestingTransactions = []
       for (let i = 0, l = block.transactions.length; i < l; i++) {
         const transaction = block.transactions[i]
         // Only check transactions that have a "to" address
@@ -83,7 +83,7 @@ export default class Listener extends Command {
             interestingTransactions.push(transaction)
           }
           // Check if it's a LayerZero call
-          else if (transaction.to.toLowerCase() === receivers[job.network]) {
+          else if (transaction.to.toLowerCase() === LAYERZERO_RECEIVERS[job.network]) {
             // We have LayerZero call, need to check it it's directed towards Holograph operators
             interestingTransactions.push(transaction)
           }
@@ -96,12 +96,13 @@ export default class Listener extends Command {
         this.blockJobHandler()
       }
     } else {
-      console.log(job.network, 'dropped block!', job.block)
+      console.log(job.network, 'Dropped block!', job.block)
       this.blockJobs.unshift(job)
       this.blockJobHandler()
     }
   }
 
+  // For some reason defining this as function definition causes `this` to be undefined
   blockJobHandler = (): void => {
     if (this.blockJobs.length > 0) {
       const blockJob = this.blockJobs.shift()
@@ -111,7 +112,7 @@ export default class Listener extends Command {
     }
   }
 
-  processTransactions = async (network: string, transactions: any, callback: any): Promise<void> => {
+  async processTransactions(network: string, transactions: any, callback: any): Promise<void> {
     if (transactions.length > 0) {
       const transaction = transactions.shift()
       const receipt = await web3Local[network].eth.getTransactionReceipt(transaction.hash)
@@ -203,7 +204,7 @@ export default class Listener extends Command {
     }
   }
 
-  rinkebySubscribe = (): void => {
+  rinkebySubscribe(): void {
     const rinkebySubscription = web3Local.rinkeby.eth
       .subscribe('newBlockHeaders')
       .on('connected', (subscriptionId: any) => {
@@ -211,7 +212,7 @@ export default class Listener extends Command {
       })
       .on('data', (blockHeader: any) => {
         if (this.latestBlock.rinkeby !== 0 && blockHeader.number - this.latestBlock.rinkeby > 1) {
-          console.log('dropped rinkeby websocket connection, gotta do some catching up')
+          console.log('Dropped rinkeby websocket connection, gotta do some catching up')
           let latest = this.latestBlock.rinkeby
           while (blockHeader.number - latest > 1) {
             console.log('adding rinkeby block', latest)
@@ -241,7 +242,7 @@ export default class Listener extends Command {
       })
   }
 
-  handleRinkebyDroppedSocket = (): void => {
+  handleRinkebyDroppedSocket(): void {
     let rinkebyResetProvider: any = null
     if (typeof rinkebyResetProvider !== 'undefined') {
       clearInterval(rinkebyResetProvider)
@@ -270,7 +271,7 @@ export default class Listener extends Command {
     }, 5000) // 5 seconds
   }
 
-  mumbaiSubscribe = () => {
+  mumbaiSubscribe() {
     const mumbaiSubscription = web3Local.mumbai.eth
       .subscribe('newBlockHeaders')
       .on('connected', (subscriptionId: any) => {
@@ -281,7 +282,7 @@ export default class Listener extends Command {
           console.log('Dropped mumbai websocket connection, gotta do some catching up')
           let latest = this.latestBlock.mumbai
           while (blockHeader.number - latest > 1) {
-            console.log('adding mumbai block', latest)
+            console.log('Adding mumbai block', latest)
             this.blockJobs.push({
               network: 'mumbai',
               block: latest,
@@ -308,7 +309,7 @@ export default class Listener extends Command {
       })
   }
 
-  handleMumbaiDroppedSocket = (): void => {
+  handleMumbaiDroppedSocket(): void {
     console.log(`Mumbai websocket connection error`)
     let mumbaiResetProvider: any = null
     if (typeof mumbaiResetProvider !== 'undefined') {
