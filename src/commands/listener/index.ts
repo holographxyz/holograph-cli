@@ -51,7 +51,6 @@ export default class Listener extends Command {
     // Setup websocket subscriptions and start processing blocks
     for (const network of this.supportedNetworks) {
       this.networkSubscribe(network)
-      this.networkSubscribe(network)
 
       providers[network].on('error', this.handleDroppedSocket.bind(this, network))
       providers[network].on('close', this.handleDroppedSocket.bind(this, network))
