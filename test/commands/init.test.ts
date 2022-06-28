@@ -1,17 +1,10 @@
 import {expect, test} from '@oclif/test'
 
-describe('init', () => {
+describe.skip('init command', () => {
   test
   .stdout()
   .command(['init'])
-  .it('runs hello', ctx => {
-    expect(ctx.stdout).to.contain('hello world')
-  })
-
-  test
-  .stdout()
-  .command(['init', '--name', 'jeff'])
-  .it('runs hello --name jeff', ctx => {
-    expect(ctx.stdout).to.contain('hello jeff')
+  .it('runs init', ctx => {
+    expect(ctx.stdout).to.contain('select the default network to bridge FROM (origin network)')
   })
 })

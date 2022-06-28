@@ -4,7 +4,7 @@ import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import {ethers} from 'ethers'
 
-export default class Init extends Command {
+export default class Index extends Command {
   static description = 'Initialize the Holo command line to become an operator or to bridge collections and NFTs manually'
 
   static examples = [
@@ -34,7 +34,7 @@ export default class Init extends Command {
     }
   }
 
-  public isStringAValidURL = (s: string) => {
+  public isStringAValidURL(s: string) {
     const protocols = ['https', 'wss']
     try {
       const result = new URL(s)
@@ -48,12 +48,12 @@ export default class Init extends Command {
     }
   }
 
-  public isFromAndToNetworksTheSame = (from: string | undefined, to: string | undefined) => {
-    return   (from !== to)
+  public isFromAndToNetworksTheSame(from: string | undefined, to: string | undefined) {
+    return (from !== to)
   }
 
   public async run(): Promise<void> {
-    const {flags} = await this.parse(Init)
+    const {flags} = await this.parse(Index)
 
     let defaultFrom = flags.defaultFrom
     let defaultTo = flags.defaultTo
@@ -93,7 +93,7 @@ export default class Init extends Command {
     }
 
     // Array will get smaller depending on input defaultFrom and defaultTo values. I copy value so I can manipulate it
-    let remainingNetworks = Init.allowedNetworks
+    let remainingNetworks = Index.allowedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
 
     // Collect default FROM network value
