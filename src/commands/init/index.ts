@@ -3,8 +3,9 @@ import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import {ethers} from 'ethers'
+import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 
-export default class Index extends Command {
+export default class Init extends Command {
   static description = 'Initialize the Holo command line to become an operator or to bridge collections and NFTs manually'
 
   static examples = [
@@ -53,7 +54,7 @@ export default class Index extends Command {
   }
 
   public async run(): Promise<void> {
-    const {flags} = await this.parse(Index)
+    const {flags} = await this.parse(Init)
 
     let defaultFrom = flags.defaultFrom
     let defaultTo = flags.defaultTo
@@ -72,13 +73,15 @@ export default class Index extends Command {
     }
 
     // Check if config file exists
-    const configFileName = 'config.json'
+    const configFileName = CONFIG_FILE_NAME
     const configPath = path.join(this.config.configDir, configFileName)
     this.debug(`configuration path ${configPath}`)
     const isConfigExist: boolean = await this.checkFileExists(configPath)
     this.debug(`configuration file exists = ${isConfigExist}`)
 
     if (isConfigExist) {
+      await ensureConfigFileIsValid(configPath)
+
       const prompt: any = await inquirer.prompt([{
         name: 'shouldContinue',
         message: 'configuration already exist, are you sure you want to override existing values?',
@@ -91,7 +94,7 @@ export default class Index extends Command {
     }
 
     // Array will get smaller depending on input defaultFrom and defaultTo values. I copy value so I can manipulate it
-    let remainingNetworks = Index.allowedNetworks
+    let remainingNetworks = Init.allowedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
 
     // Collect default FROM network value
@@ -182,6 +185,7 @@ export default class Index extends Command {
     // Save config object
     try {
       const userConfigSample = {
+        version: 'beta1',
         network: {
           from: defaultFrom,
           to: defaultTo,
