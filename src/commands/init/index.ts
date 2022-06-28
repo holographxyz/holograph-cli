@@ -189,6 +189,8 @@ export default class Init extends Command {
         network: {
           from: defaultFrom,
           to: defaultTo,
+          // NOTE: The defaultTo and DefaultFrom can be in any order
+          // I dynamically set the key name, and ts does not like it
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
           [defaultFrom]: {

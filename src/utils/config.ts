@@ -6,7 +6,7 @@ export const CONFIG_FILE_NAME = 'config.json'
 export async function ensureConfigFileIsValid(configPath: string): Promise<any> {
   const exists = await fs.pathExists(configPath)
   if (!exists) {
-    throw new Error('please run `holo init` before running any other holo command')
+    throw new Error('Please run `holo init` before running any other holo command')
   }
 
   try {
