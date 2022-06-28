@@ -2847,6 +2847,11 @@ eslint-config-oclif@^4:
     eslint-plugin-node "^11.1.0"
     eslint-plugin-unicorn "^36.0.0"
 
+eslint-config-prettier@^8.5.0:
+  version "8.5.0"
+  resolved "https://registry.yarnpkg.com/eslint-config-prettier/-/eslint-config-prettier-8.5.0.tgz#5a81680ec934beca02c7b1a61cf8ca34b66feab1"
+  integrity sha512-obmWKLUNCnhtQRKc+tmnYuQl0pFU1ibYJQ5BGhTVB08bHe9wC8qUeG7c08dj9XX+AuPj1YSGSQIHl1pnDHZR0Q==
+
 eslint-config-xo-space@^0.27.0:
   version "0.27.0"
   resolved "https://registry.yarnpkg.com/eslint-config-xo-space/-/eslint-config-xo-space-0.27.0.tgz#9663e41d7bedc0f345488377770565aa9b0085e0"
@@ -7970,7 +7975,7 @@ web3-providers-ipc@1.7.4:
     oboe "2.1.5"
     web3-core-helpers "1.7.4"
 
-web3-providers-ws@1.7.4:
+web3-providers-ws@1.7.4, web3-providers-ws@^1.7.4:
   version "1.7.4"
   resolved "https://registry.yarnpkg.com/web3-providers-ws/-/web3-providers-ws-1.7.4.tgz#6e60bcefb456f569a3e766e386d7807a96f90595"
   integrity sha512-g72X77nrcHMFU8hRzQJzfgi/072n8dHwRCoTw+WQrGp+XCQ71fsk2qIu3Tp+nlp5BPn8bRudQbPblVm2uT4myQ==

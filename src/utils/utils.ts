@@ -67,14 +67,14 @@ const webSocketConfig = {
   },
 }
 
-const provider = {
-  rinkeby: new WebsocketProvider(networks.eth_rinkeby.webSocket, webSocketConfig),
-  mumbai: new WebsocketProvider(networks.mumbai.webSocket, webSocketConfig),
+const providers = {
+  rinkeby: new WebsocketProvider(networks.rinkeby.wss, webSocketConfig),
+  mumbai: new WebsocketProvider(networks.mumbai.wss, webSocketConfig),
 }
 
 const web3Local: any = {
-  rinkeby: new Web3(provider.rinkeby),
-  mumbai: new Web3(provider.mumbai),
+  rinkeby: new Web3(providers.rinkeby),
+  mumbai: new Web3(providers.mumbai),
 }
 
 const holographAddress = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
@@ -184,7 +184,7 @@ const decodeDeploymentConfigInput = function (input: any) {
 export {
   networks,
   utf,
-  provider,
+  providers,
   web3Local,
   holographAddress,
   rinkebyHolograph,
