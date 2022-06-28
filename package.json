@@ -2,19 +2,14 @@
   "name": "holo-cli",
   "version": "0.0.0",
   "description": "holograph operator cli",
-  "keywords": [
-    "oclif"
-  ],
-  "homepage": "https://github.com/cxip-labs/holo-cli",
-  "bugs": "https://github.com/cxip-labs/holo-cli/issues",
-  "repository": "cxip-labs/holo-cli",
-  "license": "MIT",
   "author": "sogoiii @sogoiii",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "bin": {
     "holo": "./bin/run"
   },
+  "homepage": "https://github.com/cxip-labs/holo-cli",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "repository": "cxip-labs/holo-cli",
   "files": [
     "/bin",
     "/dist",
@@ -25,10 +20,10 @@
     "build": "shx rm -rf dist && tsc -b",
     "lint": "eslint . --ext .ts --config .eslintrc",
     "lint:fix": "eslint . --ext .ts --config .eslintrc --fix",
-    "prepack": "yarn build && oclif manifest && oclif readme",
     "postpack": "shx rm -f oclif.manifest.json",
-    "test": "mocha --forbid-only \"test/**/*.test.ts\"",
     "posttest": "yarn lint",
+    "prepack": "yarn build && oclif manifest && oclif readme",
+    "test": "mocha --forbid-only \"test/**/*.test.ts\"",
     "version": "oclif readme && git add README.md"
   },
   "dependencies": {
@@ -42,7 +37,8 @@
     "ethereum-cryptography": "^1.1.0",
     "ethereumjs-util": "^7.1.5",
     "ethereumjs-wallet": "^1.0.2",
-    "web3": "^1.7.4"
+    "web3": "^1.7.4",
+    "web3-providers-ws": "^1.7.4"
   },
   "devDependencies": {
     "@oclif/test": "2.1.0",
@@ -67,9 +63,6 @@
     "tslib": "2.4.0",
     "typescript": "4.7.4"
   },
-  "engines": {
-    "node": ">=12.0.0"
-  },
   "oclif": {
     "bin": "holo",
     "dirname": "holo",
@@ -84,5 +77,13 @@
         "description": "Say hello to the world and others"
       }
     }
-  }
+  },
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "bugs": "https://github.com/cxip-labs/holo-cli/issues",
+  "keywords": [
+    "oclif"
+  ],
+  "types": "dist/index.d.ts"
 }

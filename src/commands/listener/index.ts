@@ -1,7 +1,6 @@
 import {Command /* Flags */} from '@oclif/core'
 
 import WebsocketProvider from 'web3-providers-ws'
-// import WebsocketProvider = require('web3-providers-ws')
 
 import {
   networks,
@@ -69,7 +68,7 @@ export default class Listener extends Command {
         console.log('Zero block transactions for block', job.block, 'on', job.network)
       }
 
-      let interestingTransactions = []
+      const interestingTransactions = []
       for (let i = 0, l = block.transactions.length; i < l; i++) {
         const transaction = block.transactions[i]
         // Only check transactions that have a "to" address
