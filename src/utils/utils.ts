@@ -49,18 +49,18 @@ const webSocketConfig = {
   },
 }
 
-const providers = {
+const providers: any = {
   rinkeby: new WebsocketProvider(networks.rinkeby.wss, webSocketConfig),
   mumbai: new WebsocketProvider(networks.mumbai.wss, webSocketConfig),
 }
 
-const web3Local: any = {
+const web3: any = {
   rinkeby: new Web3(providers.rinkeby),
   mumbai: new Web3(providers.mumbai),
 }
 
 const HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
-const rinkebyHolograph = new web3Local.rinkeby.eth.Contract(
+const rinkebyHolograph = new web3.rinkeby.eth.Contract(
   JSON.parse(fs.readFileSync('src/abi/Holograph.json', 'utf8')),
   HOLOGRAPH_ADDRESS,
 )
@@ -78,7 +78,7 @@ const targetEvents = {
 }
 
 const decodeDeploymentConfig = function (input: any): any {
-  const decodedConfig = web3Local.rinkeby.eth.abi.decodeParameters(
+  const decodedConfig = web3.rinkeby.eth.abi.decodeParameters(
     [
       {
         components: [
@@ -169,7 +169,7 @@ export {
   capitalize,
   networks,
   providers,
-  web3Local,
+  web3,
   rinkebyHolograph,
   targetEvents,
   decodeDeploymentConfig,

@@ -5,7 +5,7 @@ import WebsocketProvider from 'web3-providers-ws'
 import {
   networks,
   providers,
-  web3Local,
+  web3,
   rinkebyHolograph,
   targetEvents,
   decodeDeploymentConfig,
@@ -21,11 +21,11 @@ export default class Listener extends Command {
   bridgeAddress: any
   factoryAddress: any
   operatorAddress: any
-  latestBlock: {rinkeby: number; mumbai: number} = {
-    rinkeby: 0,
-    mumbai: 0,
-  }
 
+  // @ts-ignore - Set all networks to start with latest block at index 0
+  latestBlockMap: any = Object.assign(...Object.keys(networks).map((k) => ({[k]: 0})))
+
+  supportedNetworks: string[] = ['rinkeby', 'mumbai']
   blockJobs: any[] = []
 
   // TODO: Decide on flags
@@ -47,22 +47,23 @@ export default class Listener extends Command {
     console.log(`Factory address: ${this.factoryAddress}`)
     console.log(`Operator address: ${this.operatorAddress}`)
 
-    this.rinkebySubscribe()
-    this.mumbaiSubscribe()
+    // Setup websocket subscriptions and start processing blocks
+    for (const network of this.supportedNetworks) {
+      this.networkSubscribe(network)
+      this.networkSubscribe(network)
+
+      providers[network].on('error', this.handleDroppedSocket.bind(this, network))
+      providers[network].on('close', this.handleDroppedSocket.bind(this, network))
+      providers[network].on('end', this.handleDroppedSocket.bind(this, network))
+
+      this.processTransactions(network, this.blockJobs, this.blockJobHandler)
+    }
 
     this.blockJobHandler()
-    this.processTransactions('rinkeby', this.blockJobs, this.blockJobHandler)
-
-    providers.rinkeby.on('error', this.handleRinkebyDroppedSocket)
-    providers.rinkeby.on('close', this.handleRinkebyDroppedSocket)
-    providers.rinkeby.on('end', this.handleRinkebyDroppedSocket)
-    providers.mumbai.on('error', this.handleMumbaiDroppedSocket)
-    providers.mumbai.on('close', this.handleMumbaiDroppedSocket)
-    providers.mumbai.on('end', this.handleMumbaiDroppedSocket)
   }
 
   async processBlock(job: any): Promise<void> {
-    const block = await web3Local[job.network].eth.getBlock(job.block, true)
+    const block = await web3[job.network].eth.getBlock(job.block, true)
     if (block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
         console.log('Zero block transactions for block', job.block, 'on', job.network)
@@ -114,7 +115,7 @@ export default class Listener extends Command {
   async processTransactions(network: string, transactions: any, callback: any): Promise<void> {
     if (transactions.length > 0) {
       const transaction = transactions.shift()
-      const receipt = await web3Local[network].eth.getTransactionReceipt(transaction.hash)
+      const receipt = await web3[network].eth.getTransactionReceipt(transaction.hash)
       if (receipt === null) {
         throw new Error(`could not get receipt for ${transaction.hash}`)
       }
@@ -156,12 +157,9 @@ export default class Listener extends Command {
         }
 
         if (event) {
-          const deploymentInput = web3Local[network].eth.abi.decodeParameter(
-            'bytes',
-            '0x' + transaction.input.slice(10),
-          )
+          const deploymentInput = web3[network].eth.abi.decodeParameter('bytes', '0x' + transaction.input.slice(10))
           const config = decodeDeploymentConfig(
-            web3Local[network].eth.abi.decodeParameter('bytes', '0x' + deploymentInput.slice(10)),
+            web3[network].eth.abi.decodeParameter('bytes', '0x' + deploymentInput.slice(10)),
           )
           const deploymentAddress = '0x' + event[1].slice(26)
           console.log(
@@ -190,7 +188,7 @@ export default class Listener extends Command {
         }
 
         if (event) {
-          const payload = web3Local[network].eth.abi.decodeParameter('bytes', event)
+          const payload = web3[network].eth.abi.decodeParameter('bytes', event)
           console.log(
             `HolographOperator received a new bridge job on ${capitalize(network)}\nThe job payload is ${payload}\n`,
           )
@@ -203,54 +201,54 @@ export default class Listener extends Command {
     }
   }
 
-  rinkebySubscribe(): void {
-    const rinkebySubscription = web3Local.rinkeby.eth
+  networkSubscribe(network: string): void {
+    const subscription = web3[network].eth
       .subscribe('newBlockHeaders')
-      .on('connected', (subscriptionId: any) => {
-        console.log('Rinkeby subscription to new block headers successful:', subscriptionId)
+      .on('connected', (subscriptionId: string) => {
+        console.log(`${capitalize(network)} subscription to new block headers successful: ${subscriptionId}`)
       })
       .on('data', (blockHeader: any) => {
-        if (this.latestBlock.rinkeby !== 0 && blockHeader.number - this.latestBlock.rinkeby > 1) {
-          console.log('Dropped rinkeby websocket connection, gotta do some catching up')
-          let latest = this.latestBlock.rinkeby
+        if (this.latestBlockMap[network] !== 0 && blockHeader.number - this.latestBlockMap[network] > 1) {
+          console.log(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
+          let latest = this.latestBlockMap[network]
           while (blockHeader.number - latest > 1) {
-            console.log('adding rinkeby block', latest)
+            console.log(`Adding ${network} block`, latest)
             this.blockJobs.push({
-              network: 'rinkeby',
+              network: network,
               block: latest,
             })
             latest++
           }
         }
 
-        this.latestBlock.rinkeby = blockHeader.number
-        console.log('Rinkeby', blockHeader.number)
+        this.latestBlockMap[network] = blockHeader.number
+        console.log(capitalize(network), blockHeader.number)
         this.blockJobs.push({
-          network: 'rinkeby',
+          network: network,
           block: blockHeader.number,
         })
       })
       .on('error', (error: Error) => {
-        console.error(`Rinkeby subscription to new block headers error ${error.message}`)
+        console.error(`${capitalize(network)} subscription to new block headers error ${error.message}`)
         try {
-          rinkebySubscription.unsubscribe(console.log)
-          rinkebySubscription.subscribe()
+          subscription.unsubscribe(console.log)
+          subscription.subscribe()
         } catch {
-          this.rinkebySubscribe()
+          this.networkSubscribe(network)
         }
       })
   }
 
-  handleRinkebyDroppedSocket(): void {
+  handleDroppedSocket(network: string): void {
     let rinkebyResetProvider: any = null
     if (typeof rinkebyResetProvider !== 'undefined') {
       clearInterval(rinkebyResetProvider)
     }
 
-    rinkebyResetProvider = setInterval(() => {
+    rinkebyResetProvider = setInterval((): void => {
       console.log(`Rinkeby websocket connection error`)
       try {
-        web3Local.rinkeby.eth.clearSubscriptions()
+        web3.rinkeby.eth.clearSubscriptions()
       } catch (error) {
         console.error(`Rinkeby clearSubscriptions error: ${error}`)
       }
@@ -258,81 +256,13 @@ export default class Listener extends Command {
       const Web3 = require('web3')
       try {
         providers.rinkeby = new WebsocketProvider(networks.rinkeby.wss)
-        providers.rinkeby.on('error', this.handleRinkebyDroppedSocket)
-        providers.rinkeby.on('close', this.handleRinkebyDroppedSocket)
-        providers.rinkeby.on('end', this.handleRinkebyDroppedSocket)
-        web3Local.rinkeby = new Web3(providers.rinkeby)
-        this.rinkebySubscribe()
+        providers.rinkeby.on('error', this.handleDroppedSocket.bind(this, network))
+        providers.rinkeby.on('close', this.handleDroppedSocket.bind(this, network))
+        providers.rinkeby.on('end', this.handleDroppedSocket.bind(this, network))
+        // @ts-ignore - TODO: Come back to this
+        web3[network] = new Web3(providers[network])
+        this.networkSubscribe(network)
         clearInterval(rinkebyResetProvider)
-      } catch (error) {
-        console.log(error)
-      }
-    }, 5000) // 5 seconds
-  }
-
-  mumbaiSubscribe() {
-    const mumbaiSubscription = web3Local.mumbai.eth
-      .subscribe('newBlockHeaders')
-      .on('connected', (subscriptionId: any) => {
-        console.log(`Mumbai subscription to new block headers successful: ${subscriptionId}`)
-      })
-      .on('data', (blockHeader: any) => {
-        if (this.latestBlock.mumbai !== 0 && blockHeader.number - this.latestBlock.mumbai > 1) {
-          console.log('Dropped mumbai websocket connection, gotta do some catching up')
-          let latest = this.latestBlock.mumbai
-          while (blockHeader.number - latest > 1) {
-            console.log('Adding mumbai block', latest)
-            this.blockJobs.push({
-              network: 'mumbai',
-              block: latest,
-            })
-            latest++
-          }
-        }
-
-        this.latestBlock.mumbai = blockHeader.number
-        console.log('Mumbai', blockHeader.number)
-        this.blockJobs.push({
-          network: 'mumbai',
-          block: blockHeader.number,
-        })
-      })
-      .on('error', (error: Error) => {
-        console.log(`Mumbai newBlockHeaders subscription error ${error}`)
-        try {
-          mumbaiSubscription.unsubscribe(console.log)
-          mumbaiSubscription.subscribe()
-        } catch {
-          this.mumbaiSubscribe()
-        }
-      })
-  }
-
-  handleMumbaiDroppedSocket(): void {
-    console.log(`Mumbai websocket connection error`)
-    let mumbaiResetProvider: any = null
-    if (typeof mumbaiResetProvider !== 'undefined') {
-      clearInterval(mumbaiResetProvider)
-    }
-
-    mumbaiResetProvider = setInterval(() => {
-      try {
-        web3Local.mumbai.eth.clearSubscriptions()
-      } catch (error) {
-        console.error(`Mumbai clearSubscriptions error: ${error}`)
-      }
-
-      const Web3 = require('web3')
-      try {
-        providers.mumbai = new WebsocketProvider(networks.mumbai.wss)
-        providers.mumbai.on('error', this.handleMumbaiDroppedSocket)
-        providers.mumbai.on('close', this.handleMumbaiDroppedSocket)
-        providers.mumbai.on('end', this.handleMumbaiDroppedSocket)
-        web3Local.mumbai = new Web3(providers.mumbai)
-
-        // Resubscribe to new blocks
-        this.mumbaiSubscribe()
-        clearInterval(mumbaiResetProvider)
       } catch (error) {
         console.log(error)
       }
