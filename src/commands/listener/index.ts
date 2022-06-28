@@ -1,5 +1,6 @@
 import {Command /* Flags */} from '@oclif/core'
 
+import { WebsocketProviderBase } from 'web3-core-helpers';
 import WebsocketProvider from 'web3-providers-ws'
 
 import {
@@ -256,7 +257,7 @@ export default class Listener extends Command {
 
       const Web3 = require('web3')
       try {
-        providers[network] = new WebsocketProvider(networks[network].wss)
+        providers[network] = new WebsocketProviderBase(networks[network].wss)
         providers[network].on('error', this.handleDroppedSocket.bind(this, network))
         providers[network].on('close', this.handleDroppedSocket.bind(this, network))
         providers[network].on('end', this.handleDroppedSocket.bind(this, network))
