@@ -1,6 +1,6 @@
 import {Command /* Flags */} from '@oclif/core'
 
-import WebsocketProvider from 'web3-providers-ws'
+const WebsocketProvider = require('../../utils/WebsocketProvider.js');
 
 import {
   networks,
