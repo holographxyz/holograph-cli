@@ -1,3 +1,6 @@
 {
+  // "rules": {
+  //   "@typescript-eslint/ban-ts-comment": ["error", {"ts-ignore": "allow-with-description"}]
+  // },
   "extends": ["oclif", "oclif-typescript", "prettier"]
 }

@@ -22,6 +22,7 @@ export default class Listener extends Command {
   factoryAddress: any
   operatorAddress: any
 
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore - Set all networks to start with latest block at index 0
   latestBlockMap: any = Object.assign(...Object.keys(networks).map((k) => ({[k]: 0})))
 
@@ -259,6 +260,7 @@ export default class Listener extends Command {
         providers.rinkeby.on('error', this.handleDroppedSocket.bind(this, network))
         providers.rinkeby.on('close', this.handleDroppedSocket.bind(this, network))
         providers.rinkeby.on('end', this.handleDroppedSocket.bind(this, network))
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore - TODO: Come back to this
         web3[network] = new Web3(providers[network])
         this.networkSubscribe(network)
