@@ -1,29 +1,12 @@
 {
-  "prettier.printWidth": 120,
-  "prettier.tabWidth": 2,
-  "prettier.useTabs": false,
-  "prettier.semi": true,
-  "prettier.singleQuote": true,
-  "prettier.quoteProps": "as-needed",
-  "prettier.trailingComma": "es5",
-  "prettier.bracketSpacing": true,
-  "prettier.bracketSameLine": true,
-  "prettier.arrowParens": "always",
-  "prettier.requirePragma": false,
-  "prettier.insertPragma": false,
-  "prettier.proseWrap": "preserve",
-  "prettier.htmlWhitespaceSensitivity": "css",
-  "prettier.endOfLine": "lf",
-  "prettier.embeddedLanguageFormatting": "off",
-  "prettier.ignorePath": ".gitignore",
   "printWidth": 120,
   "tabWidth": 2,
   "useTabs": false,
-  "semi": true,
+  "semi": false,
   "singleQuote": true,
   "quoteProps": "as-needed",
-  "trailingComma": "es5",
-  "bracketSpacing": true,
+  "trailingComma": "all",
+  "bracketSpacing": false,
   "bracketSameLine": true,
   "arrowParens": "always",
   "requirePragma": false,
@@ -34,20 +17,8 @@
   "embeddedLanguageFormatting": "off",
   "overrides":
     [
-      { "files": "*.prettierrc", "options": { "singleQuote": false } },
-      { "files": "*.js", "options": { "singleQuote": true } },
-      { "files": "*.ts", "options": { "singleQuote": true } },
-      {
-        "files": "*.sol",
-        "options":
-          {
-            "printWidth": 120,
-            "tabWidth": 2,
-            "useTabs": false,
-            "singleQuote": false,
-            "bracketSpacing": false,
-            "explicitTypes": "always",
-          },
-      },
-    ],
+      {"files": "*.prettierrc", "options": {"singleQuote": false, "trailingComma": "none"}},
+      {"files": "*.js", "options": {"singleQuote": true}},
+      {"files": "*.ts", "options": {"singleQuote": true}}
+    ]
 }
