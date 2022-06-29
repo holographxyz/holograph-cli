@@ -33,6 +33,7 @@ export async function validateBeta1Schema(config: any): Promise<any> {
     }),
     user: Joi.object({
       credentials: Joi.object({
+        iv: Joi.string(),
         privateKey: Joi.string(),
         address: Joi.string(),
       }),
@@ -40,4 +41,12 @@ export async function validateBeta1Schema(config: any): Promise<any> {
   }).unknown(false)
 
   await beta1Schema.validateAsync(config)
+}
+
+export function randomASCII(bytes: number): string {
+  let text: string = ''
+  for (let i: number = 0; i < bytes; i++) {
+    text += (32 + Math.floor(Math.random() * 94)).toString(16).padStart(2, '0')
+  }
+  return Buffer.from(text, 'hex').toString();
 }
