@@ -1,6 +1,6 @@
 import {Command /* Flags */} from '@oclif/core'
 
-const WebsocketProvider = require('../../utils/WebsocketProvider.js');
+const WebsocketProvider = require('../../utils/WebsocketProvider.js')
 
 import {
   networks,
@@ -212,7 +212,7 @@ export default class Listener extends Command {
           console.log(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
           let latest = this.latestBlockMap[network]
           while (blockHeader.number - latest > 1) {
-            console.log(`Adding ${network} block`, latest)
+            console.log(`Adding ${capitalize(network)} block`, latest)
             this.blockJobs.push({
               network: network,
               block: latest,
