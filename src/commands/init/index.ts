@@ -3,7 +3,8 @@ import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import {ethers} from 'ethers'
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {CONFIG_FILE_NAME, ensureConfigFileIsValid, randomASCII} from '../../utils/config'
+import AesEncryption from '../../utils/AesEncryption'
 
 export default class Init extends Command {
   static description = 'Initialize the Holo command line to become an operator or to bridge collections and NFTs manually'
@@ -62,6 +63,9 @@ export default class Init extends Command {
     let providerUrlFrom = flags.providerUrlFrom
     let providerUrlTo = flags.providerUrlTo
     let userWallet = null
+    let currentConfigFile: any = null;
+    let encryption;
+    let iv: string;
 
     // Make sure default from and to networks are not the same when using flags
     if (typeof defaultFrom !== 'undefined' && typeof defaultTo !== 'undefined') {
@@ -80,7 +84,7 @@ export default class Init extends Command {
     this.debug(`configuration file exists = ${isConfigExist}`)
 
     if (isConfigExist) {
-      await ensureConfigFileIsValid(configPath)
+      currentConfigFile = await ensureConfigFileIsValid(configPath)
 
       const prompt: any = await inquirer.prompt([{
         name: 'shouldContinue',
@@ -128,10 +132,12 @@ export default class Init extends Command {
     }
 
     // Collect private key value
+    let keyProtected = true;
     if (!privateKey) {
+      keyProtected = false;
       const prompt: any = await inquirer.prompt([{
         name: 'privateKey',
-        message: 'Default account to use when sending all transactions',
+        message: 'Default private key to use when sending all transactions (will be password encrypted)',
         type: 'password',
         validate: async (input: string) => {
           try {
@@ -146,7 +152,31 @@ export default class Init extends Command {
       }])
       privateKey = prompt.privateKey
       userWallet = new ethers.Wallet(prompt.privateKey)
+      iv = randomASCII(12);
+    } else {
+      iv = currentConfigFile.user.credentials.iv;
     }
+
+    const passwordPrompt: any = await inquirer.prompt([{
+      name: 'encryptionPassword',
+      message: 'Please enter the password to ' + (keyProtected ? 'decrypt' : 'encrypt') + ' the private key with',
+      type: 'password',
+      validate: async (input: string) => {
+        try {
+          encryption = new AesEncryption(input, iv);
+          if (keyProtected) {
+            // we need to check that key decoded
+            userWallet = new ethers.Wallet(encryption.decrypt(currentConfigFile.user.credentials.privataKey) as string);
+          } else {
+            privateKey = encryption.encrypt(privateKey || '');
+          }
+          return true
+        } catch (error) {
+          this.debug(error)
+          return 'Input is not a valid password'
+        }
+      },
+    }])
 
     // Collect provider url value, from network
     if (!providerUrlFrom) {
@@ -204,12 +234,14 @@ export default class Init extends Command {
         },
         user: {
           credentials: {
+            iv: iv,
             privateKey: privateKey,
             address: userWallet?.address,
           },
         },
       }
       await fs.outputJSON(configPath, userConfigSample)
+      process.exit();
     } catch (error: any) {
       this.log(`Failed to save file in ${configPath}. Please try again with debugger on and try again.`)
       this.debug(error)
