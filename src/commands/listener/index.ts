@@ -1,6 +1,6 @@
 import * as fs from 'node:fs'
 
-import {Command, Flags} from '@oclif/core'
+import {CliUx, Command /* Flags */} from '@oclif/core'
 import Web3 from 'web3'
 
 const WebsocketProvider = require('../../utils/WebsocketProvider.js')
@@ -16,13 +16,14 @@ import {
 } from '../../utils/utils'
 
 export default class Listener extends Command {
-  static description = 'Listen for evm events'
+  static description = 'Listen for EVM events'
 
-  static flags = {
-    from: Flags.string({char: 'e', description: 'Execute', required: false}),
-  }
+  // TODO: Enable flags and args once required
+  // static flags = {
+  //   from: Flags.string({char: 'e', description: 'Execute', required: false}),
+  // }
 
-  static args = [{name: 'mode', description: 'Mode to run in', required: false}]
+  // static args = [{name: 'mode', description: 'Mode to run in', required: false}]
 
   /**
    * Listener class variables
@@ -70,15 +71,17 @@ export default class Listener extends Command {
 
   async run(): Promise<void> {
     // const {args, flags} = await this.parse(Listener)
+    CliUx.ux.action.start('Starting listener...')
+
     this.bridgeAddress = (await this.holograph.methods.getBridge().call()).toLowerCase()
     this.factoryAddress = (await this.holograph.methods.getFactory().call()).toLowerCase()
     this.operatorAddress = (await this.holograph.methods.getOperator().call()).toLowerCase()
 
-    console.log('Starting listener...')
-    console.log(`Holograph address: ${this.HOLOGRAPH_ADDRESS}`)
-    console.log(`Bridge address: ${this.bridgeAddress}`)
-    console.log(`Factory address: ${this.factoryAddress}`)
-    console.log(`Operator address: ${this.operatorAddress}`)
+    this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESS}`)
+    this.log(`Bridge address: ${this.bridgeAddress}`)
+    this.log(`Factory address: ${this.factoryAddress}`)
+    this.log(`Operator address: ${this.operatorAddress}`)
+    CliUx.ux.action.stop('🚀')
 
     // Setup websocket subscriptions and start processing blocks
     for (const network of this.supportedNetworks) {
@@ -96,7 +99,7 @@ export default class Listener extends Command {
     const block = await this.web3[job.network].eth.getBlock(job.block, true)
     if (block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
-        console.log('Zero block transactions for block', job.block, 'on', job.network)
+        this.log('Zero block transactions for block', job.block, 'on', job.network)
       }
 
       const interestingTransactions = []
@@ -126,7 +129,7 @@ export default class Listener extends Command {
         this.blockJobHandler()
       }
     } else {
-      console.log(job.network, 'Dropped block!', job.block)
+      this.log(job.network, 'Dropped block!', job.block)
       this.blockJobs.unshift(job)
       this.blockJobHandler()
     }
@@ -165,13 +168,13 @@ export default class Listener extends Command {
 
         if (event) {
           const deploymentAddress = '0x' + event[1].slice(26)
-          console.log(
+          this.log(
             `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
               `Wallet that deployed the collection is ${transaction.from}\n` +
               `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n`,
           )
         } else {
-          console.log(`Failed with BridgeableContractDeployed event parsing ${transaction} ${receipt}`)
+          this.log(`Failed with BridgeableContractDeployed event parsing ${transaction} ${receipt}`)
           throw new Error('Failed with BridgeableContractDeployed event parsing')
         }
       } else if (transaction.to.toLowerCase() === this.operatorAddress) {
@@ -195,14 +198,14 @@ export default class Listener extends Command {
             this.web3[network].eth.abi.decodeParameter('bytes', '0x' + deploymentInput.slice(10)),
           )
           const deploymentAddress = '0x' + event[1].slice(26)
-          console.log(
+          this.log(
             '\nHolographOperator executed a job which bridged a collection\n' +
               `HolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
               `Operator that deployed the collection is ${transaction.from}` +
               `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
           )
         } else {
-          console.log('Failed to find BridgeableContractDeployed event from operator job')
+          this.log('Failed to find BridgeableContractDeployed event from operator job')
         }
       } else {
         let event = null
@@ -222,11 +225,11 @@ export default class Listener extends Command {
 
         if (event) {
           const payload = this.web3[network].eth.abi.decodeParameter('bytes', event)
-          console.log(
+          this.log(
             `HolographOperator received a new bridge job on ${capitalize(network)}\nThe job payload is ${payload}\n`,
           )
         } else {
-          console.log('LayerZero transaction is not relevant to AvailableJob event')
+          this.log('LayerZero transaction is not relevant to AvailableJob event')
         }
       }
     } else {
@@ -238,14 +241,14 @@ export default class Listener extends Command {
     const subscription = this.web3[network].eth
       .subscribe('newBlockHeaders')
       .on('connected', (subscriptionId: string) => {
-        console.log(`${capitalize(network)} subscription to new block headers successful: ${subscriptionId}`)
+        this.log(`${capitalize(network)} subscription to new block headers successful: ${subscriptionId}`)
       })
       .on('data', (blockHeader: any) => {
         if (this.latestBlockMap[network] !== 0 && blockHeader.number - this.latestBlockMap[network] > 1) {
-          console.log(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
+          this.log(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
           let latest = this.latestBlockMap[network]
           while (blockHeader.number - latest > 1) {
-            console.log(`Syncing ${capitalize(network)} block`, latest)
+            this.log(`Syncing ${capitalize(network)} block`, latest)
             this.blockJobs.push({
               network: network,
               block: latest,
@@ -255,16 +258,16 @@ export default class Listener extends Command {
         }
 
         this.latestBlockMap[network] = blockHeader.number
-        console.log(capitalize(network), blockHeader.number)
+        this.log(capitalize(network), blockHeader.number)
         this.blockJobs.push({
           network: network,
           block: blockHeader.number,
         })
       })
       .on('error', (error: Error) => {
-        console.error(`${capitalize(network)} subscription to new block headers error ${error.message}`)
+        this.warn(`${capitalize(network)} subscription to new block headers error ${error.message}`)
         try {
-          subscription.unsubscribe(console.log)
+          subscription.unsubscribe(this.log)
           subscription.subscribe()
         } catch {
           this.networkSubscribe(network)
@@ -279,11 +282,11 @@ export default class Listener extends Command {
     }
 
     resetProvider = setInterval((): void => {
-      console.log(`${capitalize(network)} websocket connection error`)
+      this.log(`${capitalize(network)} websocket connection error`)
       try {
         this.web3[network].eth.clearSubscriptions()
       } catch (error) {
-        console.error(`Websocket clearSubscriptions error: ${error}`)
+        this.warn(`Websocket clearSubscriptions error: ${error}`)
       }
 
       try {
@@ -297,7 +300,7 @@ export default class Listener extends Command {
         this.networkSubscribe(network)
         clearInterval(resetProvider)
       } catch (error) {
-        console.log(error)
+        this.log(error as string)
       }
     }, 5000) // 5 seconds
   }
