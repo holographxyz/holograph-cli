@@ -44,9 +44,10 @@ export async function validateBeta1Schema(config: any): Promise<any> {
 }
 
 export function randomASCII(bytes: number): string {
-  let text: string = ''
-  for (let i: number = 0; i < bytes; i++) {
+  let text = ''
+  for (let i = 0; i < bytes; i++) {
     text += (32 + Math.floor(Math.random() * 94)).toString(16).padStart(2, '0')
   }
-  return Buffer.from(text, 'hex').toString();
+
+  return Buffer.from(text, 'hex').toString()
 }
