@@ -69,15 +69,17 @@ export default class Listener extends Command {
   }
 
   async run(): Promise<void> {
-    const {args, flags} = await this.parse(Listener)
+    // const {args, flags} = await this.parse(Listener)
     this.bridgeAddress = (await this.holograph.methods.getBridge().call()).toLowerCase()
     this.factoryAddress = (await this.holograph.methods.getFactory().call()).toLowerCase()
     this.operatorAddress = (await this.holograph.methods.getOperator().call()).toLowerCase()
+
     console.log('Starting listener...')
     console.log(`Holograph address: ${this.HOLOGRAPH_ADDRESS}`)
     console.log(`Bridge address: ${this.bridgeAddress}`)
     console.log(`Factory address: ${this.factoryAddress}`)
     console.log(`Operator address: ${this.operatorAddress}`)
+
     // Setup websocket subscriptions and start processing blocks
     for (const network of this.supportedNetworks) {
       this.networkSubscribe(network)
@@ -86,6 +88,7 @@ export default class Listener extends Command {
       this.providers[network].on('end', this.handleDroppedSocket.bind(this, network))
       this.processTransactions(network, this.blockJobs, this.blockJobHandler)
     }
+
     this.blockJobHandler()
   }
 
@@ -283,7 +286,7 @@ export default class Listener extends Command {
         console.error(`Websocket clearSubscriptions error: ${error}`)
       }
 
-      const Web3 = require('this.web3')
+      const Web3 = require('web3')
       try {
         this.providers[network] = new WebsocketProvider(networks[network].wss)
         this.providers[network].on('error', this.handleDroppedSocket.bind(this, network))
