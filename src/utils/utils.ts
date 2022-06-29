@@ -3,7 +3,7 @@ import Web3 from 'web3'
 import networks from './networks'
 
 // Used for web3 utility functions
-const web3 = new Web3('https://eth-rinkeby.alchemyapi.io/v2/KS7QKtJ6kOqppPMPjgi6KwbQWhsC5Xbt')
+const web3 = new Web3('ws://localhost:8545')
 
 // TODO: Not sure if we need these utility functions yet
 // function remove0x(input: string) {

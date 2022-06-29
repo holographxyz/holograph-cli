@@ -286,7 +286,6 @@ export default class Listener extends Command {
         console.error(`Websocket clearSubscriptions error: ${error}`)
       }
 
-      const Web3 = require('web3')
       try {
         this.providers[network] = new WebsocketProvider(networks[network].wss)
         this.providers[network].on('error', this.handleDroppedSocket.bind(this, network))
