@@ -1,5 +1,5 @@
-const dotenv = require('dotenv')
-dotenv.config()
+// const dotenv = require('dotenv')
+// dotenv.config()
 
 export default {
   hardhat: {
