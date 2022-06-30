@@ -1,18 +1,15 @@
 import * as fs from 'fs-extra'
+import * as path from 'node:path'
 
 import {CONFIG_FILE_NAME} from '../../utils/config'
-import path from 'path'
+
 import Config from '.'
 
 export default class ConfigView extends Config {
   static description = 'View the current configuration state of the Holo command line'
   static examples = ['$ holo:view']
 
-  user: string | undefined
-
   async run(): Promise<void> {
-    let user = this.user
-
     const configFileName = CONFIG_FILE_NAME
     const configPath = path.join(this.config.configDir, configFileName)
     this.debug(`configuration path ${configPath}`)

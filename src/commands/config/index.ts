@@ -34,18 +34,18 @@ export default class Config extends Command {
     providerUrlTo: Flags.string({description: 'Provide a secure https or wss url'}),
   }
 
-  public async checkFileExists(configPath: string) {
+  public checkFileExists(configPath: string) {
     try {
       this.debug(`Configuration file exists `)
-      return await fs.pathExists(configPath)
+      return fs.pathExists(configPath)
     } catch (error) {
       this.debug(error)
       this.error('Failed to find config file')
     }
   }
 
-  public async readConfig(configPath: string): Promise<any> {
-    return await this.readConfig(configPath)
+  public readConfig(configPath: string): any {
+    return this.readConfig(configPath)
   }
 
   public isStringAValidURL(s: string): boolean {

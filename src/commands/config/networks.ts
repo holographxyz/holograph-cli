@@ -1,12 +1,10 @@
-import * as fs from 'fs-extra'
-
 import {CONFIG_FILE_NAME} from '../../utils/config'
-import path from 'path'
+import * as path from 'node:path'
 
 import ConfigNetworks from './view'
 
 export default class ConfigUser extends ConfigNetworks {
-  static description = 'View the current configuration state of the Holo command line'
+  static description = 'View the current network config'
   static examples = ['$ holo:view']
 
   async run(): Promise<void> {
