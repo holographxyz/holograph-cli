@@ -16,13 +16,13 @@ export default class ConfigUser extends ConfigView {
   async run(): Promise<void> {
     const config = await this.readConfig(path.join(this.config.configDir, CONFIG_FILE_NAME))
     const {flags} = await this.parse(ConfigView)
+    const yaml = new YAML.Document()
 
     switch (flags.output) {
       case 'json':
         this.log(JSON.stringify({user: config.user.credentials.address}, null, 2))
         break
       case 'yaml':
-        const yaml = new YAML.Document()
         yaml.contents = {user: config.user.credentials.address} as any
         this.log(yaml.toString())
         break

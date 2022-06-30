@@ -16,13 +16,13 @@ export default class ConfigNetworks extends ConfigView {
   async run(): Promise<void> {
     const config = await this.readConfig(path.join(this.config.configDir, CONFIG_FILE_NAME))
     const {flags} = await this.parse(ConfigView)
+    const yaml = new YAML.Document()
 
     switch (flags.output) {
       case 'json':
         this.log(JSON.stringify(config.networks, null, 2))
         break
       case 'yaml':
-        const yaml = new YAML.Document()
         yaml.contents = config.networks
         this.log(yaml.toString())
         break

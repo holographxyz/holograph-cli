@@ -1,4 +1,3 @@
-import * as fs from 'fs-extra'
 import YAML from 'yaml'
 
 import {CONFIG_FILE_NAME} from '../../utils/config'
@@ -14,6 +13,7 @@ export default class ConfigView extends Config {
     '$ holo:view --output yaml',
     '$ holo:view --output clean',
   ]
+
   static override flags = {
     ...Config.flags,
     output: Flags.string({description: 'Output format', options: ['clean', 'json', 'yaml']}),
@@ -24,7 +24,8 @@ export default class ConfigView extends Config {
     const configFileName = CONFIG_FILE_NAME
     const configPath = path.join(this.config.configDir, configFileName)
     this.config = await this.readConfig(configPath)
-    this.debug(`configuration path ${configPath}`)
+    this.debug(`Configuration path ${configPath}`)
+    const yaml = new YAML.Document()
 
     switch (flags.output) {
       case 'clean':
@@ -34,7 +35,6 @@ export default class ConfigView extends Config {
         this.log(JSON.stringify(this.config, null, 2))
         break
       case 'yaml':
-        const yaml = new YAML.Document()
         yaml.contents = this.config as any
         this.log(yaml.toString())
         break

@@ -34,22 +34,22 @@ export default class Config extends Command {
     providerUrlTo: Flags.string({description: 'Provide a secure https or wss url'}),
   }
 
-  public checkFileExists(configPath: string) {
+  public async checkFileExists(configPath: string): Promise<boolean> {
     try {
       this.debug(`Configuration file exists `)
-      return fs.pathExists(configPath)
+      return await fs.pathExists(configPath)
     } catch (error) {
       this.debug(error)
-      this.error('Failed to find config file')
+      return this.error('Failed to find config file')
     }
   }
 
-  public async readConfig(configPath: string) {
+  public async readConfig(configPath: string): Promise<any> {
     try {
       return await fs.readJSON(configPath)
     } catch (error) {
       this.debug(error)
-      this.error('Failed to find config file')
+      return this.error('Failed to find config file')
     }
   }
 
@@ -93,7 +93,7 @@ export default class Config extends Command {
     // Check if config file exists
     const configFileName = CONFIG_FILE_NAME
     const configPath = path.join(this.config.configDir, configFileName)
-    this.debug(`configuration path ${configPath}`)
+    this.debug(`Configuration path ${configPath}`)
     const isConfigExist: boolean = await this.checkFileExists(configPath)
 
     if (isConfigExist) {
