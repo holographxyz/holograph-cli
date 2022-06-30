@@ -7,7 +7,7 @@ import AesEncryption from './aes-encryption'
 
 export const CONFIG_FILE_NAME = 'config.json'
 
-export async function ensureConfigFileIsValid(configPath: string): Promise<any> {
+export async function ensureConfigFileIsValid(configPath: string, unlockWallet: boolean = false): Promise<any> {
   const exists = await fs.pathExists(configPath)
   if (!exists) {
     throw new Error('Please run `holo init` before running any other holo command')
@@ -16,25 +16,27 @@ export async function ensureConfigFileIsValid(configPath: string): Promise<any> 
     const configFile = await fs.readJson(configPath)
     await validateBeta1Schema(configFile)
     let userWallet = null
-    try {
-      userWallet = new ethers.Wallet((new AesEncryption('', configFile.user.credentials.iv)).decrypt(configFile.user.credentials.privateKey))
-    } catch (error) {
-      await inquirer.prompt([
-        {
-          name: 'encryptionPassword',
-          message: 'Please enter the password to decrypt the private key for ' + configFile.user.credentials.address,
-          type: 'password',
-          validate: async (input: string) => {
-            try {
-              // we need to check that key decoded
-              userWallet = new ethers.Wallet((new AesEncryption(input, configFile.user.credentials.iv)).decrypt(configFile.user.credentials.privateKey))
-              return true
-            } catch (error) {
-              return 'Password is incorrect'
-            }
+    if (unlockWallet) {
+      try {
+        userWallet = new ethers.Wallet((new AesEncryption('', configFile.user.credentials.iv)).decrypt(configFile.user.credentials.privateKey))
+      } catch (error) {
+        await inquirer.prompt([
+          {
+            name: 'encryptionPassword',
+            message: 'Please enter the password to decrypt the private key for ' + configFile.user.credentials.address,
+            type: 'password',
+            validate: async (input: string) => {
+              try {
+                // we need to check that key decoded
+                userWallet = new ethers.Wallet((new AesEncryption(input, configFile.user.credentials.iv)).decrypt(configFile.user.credentials.privateKey))
+                return true
+              } catch (error) {
+                return 'Password is incorrect'
+              }
+            },
           },
-        },
-      ])
+        ])
+      }
     }
     return { userWallet, configFile }
   } catch {
