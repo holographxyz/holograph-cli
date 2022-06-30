@@ -44,7 +44,19 @@ export default class Collection extends Command {
     this.debug('tx', tx)
 
     // connect a legit provider in
-    userWallet = userWallet.connect(new ethers.providers.JsonRpcProvider(configFile.network[configFile.network.from].providerUrl))
+    let protocol = (new URL(configFile.network[configFile.network.from].providerUrl)).protocol
+    let provider
+    switch (protocol) {
+      case 'https:':
+        provider = new ethers.providers.JsonRpcProvider(configFile.network[configFile.network.from].providerUrl)
+        break
+      case 'ws:':
+        new ethers.providers.WebSocketProvider(configFile.network[configFile.network.from].providerUrl)
+        break
+      default:
+        throw new Error('Unsupported RPC URL protocol -> ' + protocol)
+    }
+    userWallet = userWallet.connect(provider)
 
     this.debug('provider network', await userWallet.provider.getNetwork())
 
