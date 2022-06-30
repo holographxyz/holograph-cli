@@ -2,6 +2,6 @@
   "extends": "../tsconfig",
   "compilerOptions": {
     "noEmit": true
-  },
-  "references": [{ "path": ".." }]
+  }
+  // "references": [{"path": ".."}]  // TODO: Not sure what this is here for but it errors
 }
