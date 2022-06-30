@@ -181,7 +181,7 @@ export default class Init extends Command {
             if (keyProtected) {
               // we need to check that key decoded
               userWallet = new ethers.Wallet(
-                encryption.decrypt(currentConfigFile.user.credentials.privataKey) as string,
+                encryption.decrypt(currentConfigFile.user.credentials.privateKey) as string,
               )
             } else {
               privateKey = encryption.encrypt(privateKey || '')
