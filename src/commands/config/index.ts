@@ -44,8 +44,13 @@ export default class Config extends Command {
     }
   }
 
-  public readConfig(configPath: string): any {
-    return this.readConfig(configPath)
+  public async readConfig(configPath: string) {
+    try {
+      return await fs.readJSON(configPath)
+    } catch (error) {
+      this.debug(error)
+      this.error('Failed to find config file')
+    }
   }
 
   public isStringAValidURL(s: string): boolean {
@@ -66,7 +71,6 @@ export default class Config extends Command {
 
   public async run(): Promise<void> {
     const {flags} = await this.parse(Config)
-
     let defaultFrom = flags.defaultFrom
     let defaultTo = flags.defaultTo
     let privateKey = flags.privateKey
