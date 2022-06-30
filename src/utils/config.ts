@@ -21,7 +21,7 @@ export async function ensureConfigFileIsValid(configPath: string): Promise<any> 
 export async function validateBeta1Schema(config: any): Promise<any> {
   const beta1Schema = Joi.object({
     version: Joi.string().valid('beta1'),
-    network: Joi.object({
+    networks: Joi.object({
       from: Joi.string(),
       to: Joi.string(),
       rinkeby: Joi.object({
@@ -38,6 +38,7 @@ export async function validateBeta1Schema(config: any): Promise<any> {
         address: Joi.string(),
       }),
     }),
+    topicSeparator: Joi.string(),
   }).unknown(false)
 
   await beta1Schema.validateAsync(config)
