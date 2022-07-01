@@ -269,7 +269,6 @@ export default class Config extends Command {
             address: userWallet?.address,
           },
         },
-        topicSeparator: ':',
       }
       await fs.outputJSON(configPath, userConfigSample)
     } catch (error: any) {

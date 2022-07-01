@@ -38,7 +38,6 @@ export async function validateBeta1Schema(config: any): Promise<any> {
         address: Joi.string(),
       }),
     }),
-    topicSeparator: Joi.string(),
   }).unknown(false)
 
   await beta1Schema.validateAsync(config)

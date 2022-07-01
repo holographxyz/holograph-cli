@@ -1,13 +1,13 @@
 import YAML from 'yaml'
+import * as fs from 'fs-extra'
 
 import * as path from 'node:path'
-import Config from '.'
-import {Flags} from '@oclif/core'
+import {Command, Flags} from '@oclif/core'
 
 import {CONFIG_FILE_NAME} from '../../utils/config'
 import {capitalize} from '../../utils/utils'
 
-export default class ConfigView extends Config {
+export default class ConfigView extends Command {
   static description = 'View the current configuration state of the Holo command line'
   static examples = [
     '$ holo:view',
@@ -17,7 +17,6 @@ export default class ConfigView extends Config {
   ]
 
   static flags = {
-    ...Config.flags,
     output: Flags.string({description: 'Output format', options: ['clean', 'json', 'yaml']}),
   }
 
@@ -45,7 +44,16 @@ export default class ConfigView extends Config {
     }
   }
 
-  serializeClean(obj: any, tabCursor: string): void {
+  public async readConfig(configPath: string): Promise<any> {
+    try {
+      return await fs.readJSON(configPath)
+    } catch (error) {
+      this.debug(error)
+      return this.error('Failed to find config file')
+    }
+  }
+
+  public serializeClean(obj: any, tabCursor: string): void {
     for (const key of Object.keys(obj)) {
       if (typeof obj[key] === 'object') {
         tabCursor = '  '
