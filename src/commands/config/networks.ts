@@ -17,6 +17,7 @@ export default class ConfigNetworks extends ConfigView {
     const config = await this.readConfig(path.join(this.config.configDir, CONFIG_FILE_NAME))
     const {flags} = await this.parse(ConfigView)
     const yaml = new YAML.Document()
+    const configJson = JSON.parse(JSON.stringify(config.networks))
 
     switch (flags.output) {
       case 'json':
@@ -28,7 +29,6 @@ export default class ConfigNetworks extends ConfigView {
         break
       case 'clean':
       default:
-        const configJson = JSON.parse(JSON.stringify(config.networks))
         this.serializeClean(configJson, '')
         break
     }

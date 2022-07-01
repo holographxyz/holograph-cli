@@ -28,6 +28,7 @@ export default class ConfigView extends Config {
     this.config = await this.readConfig(configPath)
     this.debug(`Configuration path ${configPath}`)
     const yaml = new YAML.Document()
+    const configJson = JSON.parse(JSON.stringify(this.config))
 
     switch (flags.output) {
       case 'json':
@@ -39,14 +40,13 @@ export default class ConfigView extends Config {
         break
       case 'clean':
       default:
-        const configJson = JSON.parse(JSON.stringify(this.config))
         this.serializeClean(configJson, '')
         break
     }
   }
 
   serializeClean(obj: any, tabCursor: string): void {
-    Object.keys(obj).forEach((key: string) => {
+    for (const key of Object.keys(obj)) {
       if (typeof obj[key] === 'object') {
         tabCursor = '  '
         this.log(`${capitalize(key)}:`)
@@ -54,6 +54,6 @@ export default class ConfigView extends Config {
       } else {
         this.log(`${tabCursor}${capitalize(key)}: ${obj[key]}`)
       }
-    })
+    }
   }
 }
