@@ -14,6 +14,6 @@ export default class Bridge extends Command {
 
     await this.parse(Bridge)
 
-    this.log(`it works`)
+    this.log(`It works 🌉`)
   }
 }

@@ -1,7 +1,7 @@
 import * as fs from 'fs-extra'
 import * as inquirer from 'inquirer'
 import * as Joi from 'joi'
-import { ethers } from 'ethers'
+import {ethers} from 'ethers'
 
 import AesEncryption from './aes-encryption'
 
@@ -19,7 +19,9 @@ export async function ensureConfigFileIsValid(configPath: string, unlockWallet =
     let userWallet = null
     if (unlockWallet) {
       try {
-        userWallet = new ethers.Wallet((new AesEncryption('', configFile.user.credentials.iv)).decrypt(configFile.user.credentials.privateKey))
+        userWallet = new ethers.Wallet(
+          new AesEncryption('', configFile.user.credentials.iv).decrypt(configFile.user.credentials.privateKey),
+        )
       } catch {
         await inquirer.prompt([
           {
@@ -29,7 +31,11 @@ export async function ensureConfigFileIsValid(configPath: string, unlockWallet =
             validate: async (input: string) => {
               try {
                 // we need to check that key decoded
-                userWallet = new ethers.Wallet((new AesEncryption(input, configFile.user.credentials.iv)).decrypt(configFile.user.credentials.privateKey))
+                userWallet = new ethers.Wallet(
+                  new AesEncryption(input, configFile.user.credentials.iv).decrypt(
+                    configFile.user.credentials.privateKey,
+                  ),
+                )
                 return true
               } catch {
                 return 'Password is incorrect'
@@ -40,7 +46,7 @@ export async function ensureConfigFileIsValid(configPath: string, unlockWallet =
       }
     }
 
-    return { userWallet, configFile }
+    return {userWallet, configFile}
   } catch {
     throw new Error('Config file is no longer valid, please delete it before continuing')
   }
@@ -49,7 +55,7 @@ export async function ensureConfigFileIsValid(configPath: string, unlockWallet =
 export async function validateBeta1Schema(config: any): Promise<any> {
   const beta1Schema = Joi.object({
     version: Joi.string().valid('beta1'),
-    network: Joi.object({
+    networks: Joi.object({
       from: Joi.string(),
       to: Joi.string(),
       rinkeby: Joi.object({
