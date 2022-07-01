@@ -7,11 +7,12 @@ import AesEncryption from './aes-encryption'
 
 export const CONFIG_FILE_NAME = 'config.json'
 
-export async function ensureConfigFileIsValid(configPath: string, unlockWallet: boolean = false): Promise<any> {
+export async function ensureConfigFileIsValid(configPath: string, unlockWallet = false): Promise<any> {
   const exists = await fs.pathExists(configPath)
   if (!exists) {
     throw new Error('Please run `holo init` before running any other holo command')
   }
+
   try {
     const configFile = await fs.readJson(configPath)
     await validateBeta1Schema(configFile)
@@ -19,7 +20,7 @@ export async function ensureConfigFileIsValid(configPath: string, unlockWallet: 
     if (unlockWallet) {
       try {
         userWallet = new ethers.Wallet((new AesEncryption('', configFile.user.credentials.iv)).decrypt(configFile.user.credentials.privateKey))
-      } catch (error) {
+      } catch {
         await inquirer.prompt([
           {
             name: 'encryptionPassword',
@@ -30,7 +31,7 @@ export async function ensureConfigFileIsValid(configPath: string, unlockWallet: 
                 // we need to check that key decoded
                 userWallet = new ethers.Wallet((new AesEncryption(input, configFile.user.credentials.iv)).decrypt(configFile.user.credentials.privateKey))
                 return true
-              } catch (error) {
+              } catch {
                 return 'Password is incorrect'
               }
             },
@@ -38,6 +39,7 @@ export async function ensureConfigFileIsValid(configPath: string, unlockWallet: 
         ])
       }
     }
+
     return { userWallet, configFile }
   } catch {
     throw new Error('Config file is no longer valid, please delete it before continuing')

@@ -1,6 +1,5 @@
 import {Command, Flags} from '@oclif/core'
 import * as inquirer from 'inquirer'
-import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import {ethers} from 'ethers'
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
@@ -26,7 +25,7 @@ export default class Collection extends Command {
     const {flags} = await this.parse(Collection)
 
     let tx = flags.tx
-    if (tx === undefined || tx == '') {
+    if (tx === undefined || tx === '') {
       const prompt: any = await inquirer.prompt([
         {
           name: 'tx',
@@ -34,7 +33,7 @@ export default class Collection extends Command {
           type: 'input',
           validate: async (input: string) => {
             console.clear()
-            return (new RegExp('^0x[0-9a-f]{64}$', 'i')).test(input) ? true : 'Input is not a valid transaction hash';
+            return /^0x[\da-f]{64}$/i.test(input) ? true : 'Input is not a valid transaction hash';
           },
         },
       ])
@@ -44,25 +43,30 @@ export default class Collection extends Command {
     this.debug('tx', tx)
 
     // connect a legit provider in
-    let protocol = (new URL(configFile.network[configFile.network.from].providerUrl)).protocol
+    const protocol = (new URL(configFile.network[configFile.network.from].providerUrl)).protocol
     let provider
     switch (protocol) {
       case 'https:':
         provider = new ethers.providers.JsonRpcProvider(configFile.network[configFile.network.from].providerUrl)
         break
       case 'ws:':
-        new ethers.providers.WebSocketProvider(configFile.network[configFile.network.from].providerUrl)
+        provider = new ethers.providers.WebSocketProvider(configFile.network[configFile.network.from].providerUrl)
         break
       default:
         throw new Error('Unsupported RPC URL protocol -> ' + protocol)
     }
+
     userWallet = userWallet.connect(provider)
 
     this.debug('provider network', await userWallet.provider.getNetwork())
 
-    let transaction = await userWallet.provider.getTransaction(tx)
+    const transaction = await userWallet.provider.getTransaction(tx)
 
-    this.debug(decodeDeploymentConfigInput(transaction.data))
+    const deploymentConfig = decodeDeploymentConfigInput(transaction.data)
+    this.debug(deploymentConfig)
+
+    userWallet = null
+    configFile = null
 
   }
 }
