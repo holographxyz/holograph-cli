@@ -6,7 +6,7 @@ export const CONFIG_FILE_NAME = 'config.json'
 export async function ensureConfigFileIsValid(configPath: string): Promise<any> {
   const exists = await fs.pathExists(configPath)
   if (!exists) {
-    throw new Error('Please run `holo init` before running any other holo command')
+    throw new Error('Please run `holo config` before running any other holo command')
   }
 
   try {
@@ -21,7 +21,7 @@ export async function ensureConfigFileIsValid(configPath: string): Promise<any> 
 export async function validateBeta1Schema(config: any): Promise<any> {
   const beta1Schema = Joi.object({
     version: Joi.string().valid('beta1'),
-    network: Joi.object({
+    networks: Joi.object({
       from: Joi.string(),
       to: Joi.string(),
       rinkeby: Joi.object({

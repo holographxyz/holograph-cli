@@ -6,7 +6,7 @@ import {ethers} from 'ethers'
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid, randomASCII} from '../../utils/config'
 import AesEncryption from '../../utils/aes-encryption'
 
-export default class Init extends Command {
+export default class Config extends Command {
   static description =
     'Initialize the Holo command line to become an operator or to bridge collections and NFTs manually'
 
@@ -34,12 +34,22 @@ export default class Init extends Command {
     providerUrlTo: Flags.string({description: 'Provide a secure https or wss url'}),
   }
 
-  private async checkFileExists(configPath: string) {
+  public async checkFileExists(configPath: string): Promise<boolean> {
     try {
+      this.debug(`Configuration file exists `)
       return await fs.pathExists(configPath)
     } catch (error) {
       this.debug(error)
-      this.error('failed to find config file')
+      return this.error('Failed to find config file')
+    }
+  }
+
+  public async readConfig(configPath: string): Promise<any> {
+    try {
+      return await fs.readJSON(configPath)
+    } catch (error) {
+      this.debug(error)
+      return this.error('Failed to find config file')
     }
   }
 
@@ -60,8 +70,7 @@ export default class Init extends Command {
   }
 
   public async run(): Promise<void> {
-    const {flags} = await this.parse(Init)
-
+    const {flags} = await this.parse(Config)
     let defaultFrom = flags.defaultFrom
     let defaultTo = flags.defaultTo
     let privateKey = flags.privateKey
@@ -84,9 +93,8 @@ export default class Init extends Command {
     // Check if config file exists
     const configFileName = CONFIG_FILE_NAME
     const configPath = path.join(this.config.configDir, configFileName)
-    this.debug(`configuration path ${configPath}`)
+    this.debug(`Configuration path ${configPath}`)
     const isConfigExist: boolean = await this.checkFileExists(configPath)
-    this.debug(`configuration file exists = ${isConfigExist}`)
 
     if (isConfigExist) {
       currentConfigFile = await ensureConfigFileIsValid(configPath)
@@ -105,7 +113,7 @@ export default class Init extends Command {
     }
 
     // Array will get smaller depending on input defaultFrom and defaultTo values. I copy value so I can manipulate it
-    let remainingNetworks = Init.allowedNetworks
+    let remainingNetworks = Config.allowedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
 
     // Collect default FROM network value
@@ -238,7 +246,7 @@ export default class Init extends Command {
     try {
       const userConfigSample = {
         version: 'beta1',
-        network: {
+        networks: {
           from: defaultFrom,
           to: defaultTo,
           // NOTE: The defaultTo and DefaultFrom can be in any order
