@@ -2,7 +2,7 @@ import YAML from 'yaml'
 import * as path from 'node:path'
 
 import ConfigView from './view'
-import {CONFIG_FILE_NAME} from '../../utils/config'
+import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 
 export default class ConfigUser extends ConfigView {
   static description = 'View the current user address'
@@ -14,8 +14,10 @@ export default class ConfigUser extends ConfigView {
   ]
 
   async run(): Promise<void> {
-    const config = await this.readConfig(path.join(this.config.configDir, CONFIG_FILE_NAME))
     const {flags} = await this.parse(ConfigView)
+    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
+    await ensureConfigFileIsValid(configPath)
+    const config = await this.readConfig(configPath)
     const yaml = new YAML.Document()
 
     switch (flags.output) {

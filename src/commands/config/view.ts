@@ -4,7 +4,7 @@ import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import {Command, Flags} from '@oclif/core'
 
-import {CONFIG_FILE_NAME} from '../../utils/config'
+import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 import {capitalize} from '../../utils/utils'
 
 export default class ConfigView extends Command {
@@ -23,7 +23,8 @@ export default class ConfigView extends Command {
   async run(): Promise<void> {
     const {flags} = await this.parse(ConfigView)
     const configFileName = CONFIG_FILE_NAME
-    const configPath = path.join(this.config.configDir, configFileName)
+    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
+    await ensureConfigFileIsValid(configPath)
     this.config = await this.readConfig(configPath)
     this.debug(`Configuration path ${configPath}`)
     const yaml = new YAML.Document()
