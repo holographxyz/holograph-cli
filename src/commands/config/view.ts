@@ -1,9 +1,11 @@
 import YAML from 'yaml'
 
-import {CONFIG_FILE_NAME} from '../../utils/config'
 import * as path from 'node:path'
 import Config from '.'
 import {Flags} from '@oclif/core'
+
+import {CONFIG_FILE_NAME} from '../../utils/config'
+import {capitalize} from '../../utils/utils'
 
 export default class ConfigView extends Config {
   static description = 'View the current configuration state of the Holo command line'
@@ -14,7 +16,7 @@ export default class ConfigView extends Config {
     '$ holo:view --output clean',
   ]
 
-  static override flags = {
+  static flags = {
     ...Config.flags,
     output: Flags.string({description: 'Output format', options: ['clean', 'json', 'yaml']}),
   }
@@ -28,9 +30,6 @@ export default class ConfigView extends Config {
     const yaml = new YAML.Document()
 
     switch (flags.output) {
-      case 'clean':
-        this.log(JSON.stringify(this.config))
-        break
       case 'json':
         this.log(JSON.stringify(this.config, null, 2))
         break
@@ -38,9 +37,23 @@ export default class ConfigView extends Config {
         yaml.contents = this.config as any
         this.log(yaml.toString())
         break
+      case 'clean':
       default:
-        this.log(JSON.stringify(this.config, null, 2))
+        const configJson = JSON.parse(JSON.stringify(this.config))
+        this.serializeClean(configJson, '')
         break
     }
+  }
+
+  serializeClean(obj: any, tabCursor: string): void {
+    Object.keys(obj).forEach((key: string) => {
+      if (typeof obj[key] === 'object') {
+        tabCursor = '  '
+        this.log(`${capitalize(key)}:`)
+        this.serializeClean(obj[key], tabCursor)
+      } else {
+        this.log(`${tabCursor}${capitalize(key)}: ${obj[key]}`)
+      }
+    })
   }
 }

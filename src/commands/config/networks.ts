@@ -28,7 +28,8 @@ export default class ConfigNetworks extends ConfigView {
         break
       case 'clean':
       default:
-        this.log(JSON.stringify(config, null, 2))
+        const configJson = JSON.parse(JSON.stringify(config.networks))
+        this.serializeClean(configJson, '')
         break
     }
   }
