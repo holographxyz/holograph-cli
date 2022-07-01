@@ -25,6 +25,10 @@ const web3 = new Web3('ws://localhost:8545')
 //   return bytes.toString(16).hexify(bytes)
 // }
 
+function randomNumber(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min)) + min
+}
+
 function capitalize(input: string) {
   return input.charAt(0).toUpperCase() + input.slice(1)
 }
@@ -133,4 +137,4 @@ const decodeDeploymentConfigInput = function (input: string): any {
   return decodeDeploymentConfig('0x' + input.slice(10))
 }
 
-export {capitalize, networks, decodeDeploymentConfig, decodeDeploymentConfigInput, webSocketConfig}
+export {capitalize, randomNumber, networks, decodeDeploymentConfig, decodeDeploymentConfigInput, webSocketConfig}

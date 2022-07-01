@@ -13,17 +13,12 @@ import {
   decodeDeploymentConfigInput,
   capitalize,
   webSocketConfig,
+  randomNumber,
 } from '../../utils/utils'
+import color from '@oclif/color'
 
 export default class Listener extends Command {
   static description = 'Listen for EVM events'
-
-  // TODO: Enable flags and args once required
-  // static flags = {
-  //   from: Flags.string({char: 'e', description: 'Execute', required: false}),
-  // }
-
-  // static args = [{name: 'mode', description: 'Mode to run in', required: false}]
 
   /**
    * Listener class variables
@@ -31,47 +26,56 @@ export default class Listener extends Command {
   bridgeAddress: any
   factoryAddress: any
   operatorAddress: any
-
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore - Set all networks to start with latest block at index 0
-  latestBlockMap: any = Object.assign(...Object.keys(networks).map((k) => ({[k]: 0})))
-
   supportedNetworks: string[] = ['rinkeby', 'mumbai']
   blockJobs: any[] = []
-
-  providers: any = {
-    rinkeby: new WebsocketProvider(networks.rinkeby.wss, webSocketConfig),
-    mumbai: new WebsocketProvider(networks.mumbai.wss, webSocketConfig),
-  }
-
-  web3: any = {
-    rinkeby: new Web3(this.providers.rinkeby),
-    mumbai: new Web3(this.providers.mumbai),
-  }
-
+  providers: any = {}
+  web3: any
+  holograph: any
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
-
-  // Contract is instantiated with Rinkeby, but is compatible with all networks
-  holograph = new this.web3.rinkeby.eth.Contract(
-    JSON.parse(fs.readFileSync('src/abi/Holograph.json', 'utf8')),
-    this.HOLOGRAPH_ADDRESS,
-  )
-
   LAYERZERO_RECEIVERS: any = {
     rinkeby: '0x41836E93A3D92C116087af0C9424F4EF3DdB00a2'.toLowerCase(),
     mumbai: '0xb27c5c80eefe92591bf784dac95b7ac3db968e07'.toLowerCase(),
   }
 
-  targetEvents = {
+  targetEvents: any = {
     '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b': 'BridgeableContractDeployed',
     BridgeableContractDeployed: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
     '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11': 'AvailableJob',
     AvailableJob: '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11',
   }
 
+  networkColors: any = {}
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore - Set all networks to start with latest block at index 0
+  latestBlockMap: any = Object.assign(...Object.keys(networks).map(k => ({[k]: 0})))
+
+  rgbToHex(rgb: any) {
+    const hex = Number(rgb).toString(16)
+    return hex.length === 1 ? `0${hex}` : hex
+  }
+
+  initializeWeb3() {
+    this.providers = {
+      rinkeby: new WebsocketProvider(networks.rinkeby.wss, webSocketConfig),
+      mumbai: new WebsocketProvider(networks.mumbai.wss, webSocketConfig),
+    }
+
+    this.web3 = {
+      rinkeby: new Web3(this.providers.rinkeby),
+      mumbai: new Web3(this.providers.mumbai),
+    }
+
+    // Contract is instantiated with Rinkeby, but is compatible with all networks
+    this.holograph = new this.web3.rinkeby.eth.Contract(
+      JSON.parse(fs.readFileSync('src/abi/Holograph.json', 'utf8')),
+      this.HOLOGRAPH_ADDRESS,
+    )
+  }
+
   async run(): Promise<void> {
     // const {args, flags} = await this.parse(Listener)
     CliUx.ux.action.start('Starting listener...')
+    this.initializeWeb3()
 
     this.bridgeAddress = (await this.holograph.methods.getBridge().call()).toLowerCase()
     this.factoryAddress = (await this.holograph.methods.getFactory().call()).toLowerCase()
@@ -85,10 +89,21 @@ export default class Listener extends Command {
 
     // Setup websocket subscriptions and start processing blocks
     for (const network of this.supportedNetworks) {
+      // First let's color our networks 🌈
+      this.networkColors = {
+        rinkeby: color.rgb(randomNumber(100, 255), randomNumber(100, 255), randomNumber(100, 255)),
+        mumbai: color.rgb(randomNumber(100, 255), randomNumber(100, 255), randomNumber(100, 255)),
+      }
+
+      // Subscribe to events 🎧
       this.networkSubscribe(network)
+
+      // Watch out for dropped sockets and reconnect if necessary
       this.providers[network].on('error', this.handleDroppedSocket.bind(this, network))
       this.providers[network].on('close', this.handleDroppedSocket.bind(this, network))
       this.providers[network].on('end', this.handleDroppedSocket.bind(this, network))
+
+      // Process blocks 🧱
       this.processTransactions(network, this.blockJobs, this.blockJobHandler)
     }
 
@@ -129,7 +144,7 @@ export default class Listener extends Command {
         this.blockJobHandler()
       }
     } else {
-      this.log(job.network, 'Dropped block!', job.block)
+      this.log(job.network, color.red('Dropped block!'), job.block)
       this.blockJobs.unshift(job)
       this.blockJobHandler()
     }
@@ -258,7 +273,7 @@ export default class Listener extends Command {
         }
 
         this.latestBlockMap[network] = blockHeader.number
-        this.log(capitalize(network), blockHeader.number)
+        this.log(`${this.networkColors[network](capitalize(network))} => Block ${blockHeader.number}`)
         this.blockJobs.push({
           network: network,
           block: blockHeader.number,
