@@ -22,7 +22,6 @@ export default class ConfigView extends Command {
 
   async run(): Promise<void> {
     const {flags} = await this.parse(ConfigView)
-    const configFileName = CONFIG_FILE_NAME
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
     await ensureConfigFileIsValid(configPath)
     this.config = await this.readConfig(configPath)
