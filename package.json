@@ -43,7 +43,8 @@
     "inquirer": "^8.0.0",
     "joi": "^17.6.0",
     "web3": "^1.7.4",
-    "web3-providers-ws": "^1.7.4"
+    "web3-providers-ws": "^1.7.4",
+    "yaml": "^2.1.1"
   },
   "devDependencies": {
     "@oclif/test": "2.1.0",
@@ -78,7 +79,7 @@
       "@oclif/plugin-help",
       "@oclif/plugin-plugins"
     ],
-    "topicSeparator": " ",
+    "topicSeparator": ":",
     "topics": {
       "hello": {
         "description": "Say hello to the world and others"
