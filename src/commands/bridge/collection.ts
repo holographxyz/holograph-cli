@@ -1,4 +1,4 @@
-import {Command, Flags} from '@oclif/core'
+import {CliUx, Command, Flags} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
@@ -26,13 +26,13 @@ export default class Collection extends Command {
 
     let tx = flags.tx
     if (tx === undefined || tx === '') {
+      this.debug('User did not provide tx via cli flag, need to create prompt to ask for it.')
       const prompt: any = await inquirer.prompt([
         {
           name: 'tx',
           message: 'Enter the hash of transaction that deployed the original collection',
           type: 'input',
           validate: async (input: string) => {
-            console.clear()
             return /^0x[\da-f]{64}$/i.test(input) ? true : 'Input is not a valid transaction hash';
           },
         },
@@ -40,9 +40,13 @@ export default class Collection extends Command {
       tx = prompt.tx
     }
 
-    this.debug('tx', tx)
+    if (!/^0x[\da-f]{64}$/i.test(tx || '')) {
+      throw new Error('Transaction hash is not a valid 32 byte hex string')
+    }
 
-    // connect a legit provider in
+    this.debug('we have a valid transaction hash at this point', 'tx', tx)
+
+    CliUx.ux.action.start('Loading RPC providers')
     const sourceProtocol = (new URL(configFile.network[configFile.network.from].providerUrl)).protocol
     let sourceProvider
     switch (sourceProtocol) {
@@ -69,27 +73,37 @@ export default class Collection extends Command {
         throw new Error('Unsupported RPC URL protocol -> ' + destinationProtocol)
     }
 
+    CliUx.ux.action.stop()
+
+    CliUx.ux.action.start('Connecting source chain provider to wallet')
     userWallet = userWallet.connect(sourceProvider)
 
     this.debug('provider network', await userWallet.provider.getNetwork())
+    CliUx.ux.action.stop()
 
+    CliUx.ux.action.start('Retrieving transaction details from source chain')
     const transaction = await userWallet.provider.getTransaction(tx)
 
     const deploymentConfig = decodeDeploymentConfigInput(transaction.data)
     this.debug(deploymentConfig)
+    CliUx.ux.action.stop()
 
+    CliUx.ux.action.start('Connecting destination chain provider to wallet')
     userWallet = userWallet.connect(destinationProvider)
+    CliUx.ux.action.stop()
 
+    CliUx.ux.action.start('Retrieving HolographFactory contract')
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
     const holograph = (new ethers.ContractFactory(holographABI, '0x', userWallet)).attach('0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase())
 
     const holographFactoryABI = await fs.readJson('./src/abi/HolographFactory.json')
     const holographFactory = (new ethers.ContractFactory(holographFactoryABI, '0x', userWallet)).attach(await holograph.getFactory())
+    CliUx.ux.action.stop()
 
     const blockchainPrompt: any = await inquirer.prompt([
       {
         name: 'shouldContinue',
-        message: 'Are you sure you want to execute a transaction on blockchain?',
+        message: 'Ready to create and send transaction to blockchain, would you like to proceed?',
         type: 'confirm',
         default: true,
       },
@@ -98,10 +112,28 @@ export default class Collection extends Command {
       this.error('Dropping command, no blockchain transactions executed')
     }
 
-    const deployTx = await holographFactory.deployHolographableContract(deploymentConfig.config, deploymentConfig.signature, deploymentConfig.signer)
-    this.debug(deployTx)
-    const deployReceipt = await deployTx.wait()
-    this.debug(deployReceipt)
+    try {
+      CliUx.ux.action.start('Sending transaction to mempool')
+      const deployTx = await holographFactory.deployHolographableContract(deploymentConfig.config, deploymentConfig.signature, deploymentConfig.signer)
+      this.debug(deployTx)
+      CliUx.ux.action.stop('transaction has is ' + deployTx.hash)
+
+      CliUx.ux.action.start('Waiting for transaction to be mined and confirmed')
+      const deployReceipt = await deployTx.wait()
+      this.debug(deployReceipt)
+      let collectionAddress
+      for (let i = 0, l = deployReceipt.logs.length; i < l; i++) {
+        const log = deployReceipt.logs [i]
+        if (log.topics.length === 3 && log.topics[0] === '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b') {
+          collectionAddress = '0x' + log.topics[1].slice(26)
+          break
+        }
+      }
+
+      CliUx.ux.action.stop('Collection deployed to ' + collectionAddress)
+    } catch (error: any) {
+      this.error(error.error.reason)
+    }
 
     userWallet = null
     configFile = null
