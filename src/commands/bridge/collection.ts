@@ -45,7 +45,7 @@ export default class Collection extends Command {
       throw new Error('Transaction hash is not a valid 32 byte hex string')
     }
 
-    this.debug('we have a valid transaction hash at this point', 'tx', tx)
+    this.debug('We have a valid transaction hash at this point', 'tx', tx)
 
     CliUx.ux.action.start('Loading RPC providers')
     const sourceProtocol = new URL(configFile.networks[configFile.networks.from].providerUrl).protocol
@@ -64,7 +64,7 @@ export default class Collection extends Command {
     }
 
     const sourceWallet = userWallet.connect(sourceProvider)
-    this.debug('source network', await sourceWallet.provider.getNetwork())
+    this.debug('Source network', await sourceWallet.provider.getNetwork())
 
     const destinationProtocol = new URL(configFile.networks[configFile.networks.to].providerUrl).protocol
     let destinationProvider
@@ -84,7 +84,7 @@ export default class Collection extends Command {
     }
 
     const destinationWallet = userWallet.connect(destinationProvider)
-    this.debug('destination network', await destinationWallet.provider.getNetwork())
+    this.debug('Destination network', await destinationWallet.provider.getNetwork())
     userWallet = null
     CliUx.ux.action.stop()
 
