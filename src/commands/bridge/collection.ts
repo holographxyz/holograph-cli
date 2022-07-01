@@ -62,6 +62,9 @@ export default class Collection extends Command {
         throw new Error('Unsupported RPC URL protocol -> ' + sourceProtocol)
     }
 
+    const sourceWallet = userWallet.connect(sourceProvider)
+    this.debug('source network', await sourceWallet.provider.getNetwork())
+
     const destinationProtocol = (new URL(configFile.network[configFile.network.to].providerUrl)).protocol
     let destinationProvider
     switch (destinationProtocol) {
@@ -75,37 +78,45 @@ export default class Collection extends Command {
         throw new Error('Unsupported RPC URL protocol -> ' + destinationProtocol)
     }
 
-    CliUx.ux.action.stop()
-
-    CliUx.ux.action.start('Connecting source chain provider to wallet')
-    userWallet = userWallet.connect(sourceProvider)
-
-    this.debug('provider network', await userWallet.provider.getNetwork())
+    const destinationWallet = userWallet.connect(destinationProvider)
+    this.debug('destination network', await destinationWallet.provider.getNetwork())
+    userWallet = null
     CliUx.ux.action.stop()
 
     CliUx.ux.action.start('Retrieving transaction details from source chain')
-    const transaction = await userWallet.provider.getTransaction(tx)
+    const transaction = await sourceWallet.provider.getTransaction(tx)
 
     const deploymentConfig = decodeDeploymentConfigInput(transaction.data)
     this.debug(deploymentConfig)
     CliUx.ux.action.stop()
 
-    CliUx.ux.action.start('Connecting destination chain provider to wallet')
-    userWallet = userWallet.connect(destinationProvider)
-    CliUx.ux.action.stop()
-
     CliUx.ux.action.start('Retrieving HolographFactory contract')
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
-    const holograph = (new ethers.ContractFactory(holographABI, '0x', userWallet)).attach('0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase())
+    const holograph = (new ethers.ContractFactory(holographABI, '0x', destinationWallet)).attach('0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase())
 
     const holographFactoryABI = await fs.readJson('./src/abi/HolographFactory.json')
-    const holographFactory = (new ethers.ContractFactory(holographFactoryABI, '0x', userWallet)).attach(await holograph.getFactory())
+    const holographFactory = (new ethers.ContractFactory(holographFactoryABI, '0x', destinationWallet)).attach(await holograph.getFactory())
     CliUx.ux.action.stop()
+
+//    const holographBridgeABI = await fs.readJson('./src/abi/HolographBridge.json')
+//    const holographBridge = (new ethers.ContractFactory(holographBridgeABI, '0x', destinationWallet)).attach(await holograph.getBridge())
+    CliUx.ux.action.stop()
+
+    CliUx.ux.action.start('Calculating gas amounts and prices')
+    let gasAmount
+    try {
+      gasAmount = await holographFactory.estimateGas.deployHolographableContract(deploymentConfig.config, deploymentConfig.signature, deploymentConfig.signer)
+    } catch (error: any) {
+      this.error(error.error.reason)
+    }
+    const gasPrice = await destinationWallet.provider.getGasPrice()
+    CliUx.ux.action.stop()
+    this.log('Transaction is estimated to cost a total of', ethers.utils.formatUnits(gasAmount.mul(gasPrice), 'ether'), 'native gas tokens (in ether)')
 
     const blockchainPrompt: any = await inquirer.prompt([
       {
         name: 'shouldContinue',
-        message: 'Ready to create and send transaction to blockchain, would you like to proceed?',
+        message: 'Next steps submit the transaction, would you like to proceed?',
         type: 'confirm',
         default: true,
       },
@@ -118,7 +129,7 @@ export default class Collection extends Command {
       CliUx.ux.action.start('Sending transaction to mempool')
       const deployTx = await holographFactory.deployHolographableContract(deploymentConfig.config, deploymentConfig.signature, deploymentConfig.signer)
       this.debug(deployTx)
-      CliUx.ux.action.stop('transaction has is ' + deployTx.hash)
+      CliUx.ux.action.stop('transaction hash is ' + deployTx.hash)
 
       CliUx.ux.action.start('Waiting for transaction to be mined and confirmed')
       const deployReceipt = await deployTx.wait()
