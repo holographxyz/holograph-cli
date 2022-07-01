@@ -19,10 +19,12 @@ export default class Collection extends Command {
   }
 
   public async run(): Promise<void> {
+    this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
     let { userWallet, configFile } = await ensureConfigFileIsValid(configPath, true)
 
     const {flags} = await this.parse(Collection)
+    this.log('User configurations loaded.')
 
     let tx = flags.tx
     if (tx === undefined || tx === '') {
