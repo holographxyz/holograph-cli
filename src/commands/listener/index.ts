@@ -1,11 +1,12 @@
 import * as fs from 'node:fs'
+import * as path from 'node:path'
 
-import {CliUx, Command /* Flags */} from '@oclif/core'
+import {CliUx, Command, Flags} from '@oclif/core'
 import Web3 from 'web3'
 
+import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+const HttpProvider = require('../../utils/HttpProvider.js')
 const WebsocketProvider = require('../../utils/WebsocketProvider.js')
-import dotenv = require('dotenv')
-dotenv.config()
 
 import {
   networks,
@@ -20,6 +21,12 @@ import color from '@oclif/color'
 export default class Listener extends Command {
   static description = 'Listen for EVM events'
 
+  static examples = ['$ holo listener --networks="rinkeby,mumbai"']
+
+  static flags = {
+    networks: Flags.string({description: 'Comma separated list of networks to listen to'})
+  }
+
   /**
    * Listener class variables
    */
@@ -29,7 +36,7 @@ export default class Listener extends Command {
   supportedNetworks: string[] = ['rinkeby', 'mumbai']
   blockJobs: any[] = []
   providers: any = {}
-  web3: any
+  web3: any = {}
   holograph: any
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
   LAYERZERO_RECEIVERS: any = {
@@ -47,35 +54,73 @@ export default class Listener extends Command {
   networkColors: any = {}
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore - Set all networks to start with latest block at index 0
-  latestBlockMap: any = Object.assign(...Object.keys(networks).map(k => ({[k]: 0})))
+  latestBlockMap: any = {}
 
   rgbToHex(rgb: any) {
     const hex = Number(rgb).toString(16)
     return hex.length === 1 ? `0${hex}` : hex
   }
 
-  initializeWeb3() {
-    this.providers = {
-      rinkeby: new WebsocketProvider(networks.rinkeby.wss, webSocketConfig),
-      mumbai: new WebsocketProvider(networks.mumbai.wss, webSocketConfig),
-    }
+  initializeWeb3(loadNetworks: string[], configFile: any) {
+    for (let i = 0, l = loadNetworks.length; i < l; i++) {
+      const network = loadNetworks[i]
+      const rpcEndpoint = configFile.networks[network].providerUrl
+      const protocol = new URL(rpcEndpoint).protocol
+      switch (protocol) {
+        case 'https:':
+          this.providers[network] = new HttpProvider(rpcEndpoint)
+          break
+        case 'wss:':
+          this.providers[network] = new WebsocketProvider(rpcEndpoint, webSocketConfig)
+          break
+        default:
+          throw new Error ('Unsupported RPC provider protocol -> ' + protocol)
+      }
 
-    this.web3 = {
-      rinkeby: new Web3(this.providers.rinkeby),
-      mumbai: new Web3(this.providers.mumbai),
+      this.web3[network] = new Web3(this.providers[network])
+      this.latestBlockMap[network] = 0
     }
 
     // Contract is instantiated with Rinkeby, but is compatible with all networks
-    this.holograph = new this.web3.rinkeby.eth.Contract(
+    this.holograph = new this.web3[loadNetworks[0]].eth.Contract(
       JSON.parse(fs.readFileSync('src/abi/Holograph.json', 'utf8')),
       this.HOLOGRAPH_ADDRESS,
     )
   }
 
   async run(): Promise<void> {
+    this.log('Loading user configurations...')
+    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
+    const {configFile} = await ensureConfigFileIsValid(configPath)
+
+    const {flags} = await this.parse(Listener)
+    this.log('User configurations loaded.')
+
+    let networksString: string = flags.networks || ''
+    if (networksString === '') {
+      // we gotta load defaults
+      networksString = this.supportedNetworks.join(',')
+    }
+
+    const selectedNetworks = networksString.trim().toLowerCase().replace(/\s/gi, '').split(',')
+    this.debug('raw networks', selectedNetworks)
+    for (let i = 0, l = selectedNetworks.length; i < l; i++) {
+      const network = selectedNetworks[i]
+      if (!this.supportedNetworks.includes(network)) {
+        selectedNetworks.splice(i, 1)
+        l--
+        i--
+      } else {
+        // First let's color our networks 🌈
+        this.networkColors[network] = color.rgb(randomNumber(100, 255), randomNumber(100, 255), randomNumber(100, 255))
+      }
+    }
+
+    this.debug('cleaned networks', selectedNetworks)
+
     // const {args, flags} = await this.parse(Listener)
     CliUx.ux.action.start('Starting listener...')
-    this.initializeWeb3()
+    this.initializeWeb3(selectedNetworks, configFile)
 
     this.bridgeAddress = (await this.holograph.methods.getBridge().call()).toLowerCase()
     this.factoryAddress = (await this.holograph.methods.getFactory().call()).toLowerCase()
@@ -88,12 +133,8 @@ export default class Listener extends Command {
     CliUx.ux.action.stop('🚀')
 
     // Setup websocket subscriptions and start processing blocks
-    for (const network of this.supportedNetworks) {
-      // First let's color our networks 🌈
-      this.networkColors = {
-        rinkeby: color.rgb(randomNumber(100, 255), randomNumber(100, 255), randomNumber(100, 255)),
-        mumbai: color.rgb(randomNumber(100, 255), randomNumber(100, 255), randomNumber(100, 255)),
-      }
+    for (let i = 0, l = selectedNetworks.length; i < l; i++) {
+      const network = selectedNetworks[i]
 
       // Subscribe to events 🎧
       this.networkSubscribe(network)
