@@ -21,10 +21,10 @@ import color from '@oclif/color'
 export default class Listener extends Command {
   static description = 'Listen for EVM events'
 
-  static examples = ['$ holo listener --networks="rinkeby,mumbai"']
+  static examples = ['$ holo listener --networks="rinkeby mumbai"']
 
   static flags = {
-    networks: Flags.string({description: 'Comma separated list of networks to listen to'})
+    networks: Flags.string({description: 'Comma separated list of networks to listen to', multiple: true}),
   }
 
   /**
@@ -74,7 +74,7 @@ export default class Listener extends Command {
           this.providers[network] = new WebsocketProvider(rpcEndpoint, webSocketConfig)
           break
         default:
-          throw new Error ('Unsupported RPC provider protocol -> ' + protocol)
+          throw new Error('Unsupported RPC provider protocol -> ' + protocol)
       }
 
       this.web3[network] = new Web3(this.providers[network])
@@ -96,31 +96,28 @@ export default class Listener extends Command {
     const {flags} = await this.parse(Listener)
     this.log('User configurations loaded.')
 
-    let networksString: string = flags.networks || ''
-    if (networksString === '') {
-      // we gotta load defaults
-      networksString = this.supportedNetworks.join(',')
+    // let networksString: string = flags.networks || ''
+
+    if (flags.networks === undefined || '') {
+      // Load defaults
+      flags.networks = this.supportedNetworks
     }
 
-    const selectedNetworks = networksString.trim().toLowerCase().replace(/\s/gi, '').split(',')
-    this.debug('raw networks', selectedNetworks)
-    for (let i = 0, l = selectedNetworks.length; i < l; i++) {
-      const network = selectedNetworks[i]
+    for (let i = 0, l = flags.networks.length; i < l; i++) {
+      const network = flags.networks[i]
       if (this.supportedNetworks.includes(network)) {
         // First let's color our networks 🌈
         this.networkColors[network] = color.rgb(randomNumber(100, 255), randomNumber(100, 255), randomNumber(100, 255))
       } else {
-        selectedNetworks.splice(i, 1)
+        flags.networks.splice(i, 1)
         l--
         i--
       }
     }
 
-    this.debug('cleaned networks', selectedNetworks)
-
     // const {args, flags} = await this.parse(Listener)
     CliUx.ux.action.start('Starting listener...')
-    this.initializeWeb3(selectedNetworks, configFile)
+    this.initializeWeb3(flags.networks, configFile)
 
     this.bridgeAddress = (await this.holograph.methods.getBridge().call()).toLowerCase()
     this.factoryAddress = (await this.holograph.methods.getFactory().call()).toLowerCase()
@@ -133,8 +130,8 @@ export default class Listener extends Command {
     CliUx.ux.action.stop('🚀')
 
     // Setup websocket subscriptions and start processing blocks
-    for (let i = 0, l = selectedNetworks.length; i < l; i++) {
-      const network = selectedNetworks[i]
+    for (let i = 0, l = flags.networks.length; i < l; i++) {
+      const network = flags.networks[i]
 
       // Subscribe to events 🎧
       this.networkSubscribe(network)
@@ -228,7 +225,7 @@ export default class Listener extends Command {
             `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
               `Wallet that deployed the collection is ${transaction.from}\n` +
               `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n`,
-              `The transaction hash is: ${transaction.hash}\n`,
+            `The transaction hash is: ${transaction.hash}\n`,
           )
         } else {
           this.log(`Failed with BridgeableContractDeployed event parsing ${transaction} ${receipt}`)
