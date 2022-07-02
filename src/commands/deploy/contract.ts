@@ -61,6 +61,7 @@ export default class Contract extends Command {
     CliUx.ux.action.stop()
 
     const deploymentConfig = await prepareDeploymentConfig(configFile, userWallet, flags, remainingNetworks)
+    this.debug(deploymentConfig)
 
     CliUx.ux.action.start('Retrieving HolographFactory contract')
     const holographABI = await fs.readJson('./src/abi/Holograph.json')

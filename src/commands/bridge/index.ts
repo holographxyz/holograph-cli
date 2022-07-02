@@ -4,7 +4,7 @@ import * as path from 'node:path'
 
 export default class Bridge extends Command {
   static description = 'Make a bridge request'
-  static examples = ['$ holo bridge', '$ holo bridge:collection']
+  static examples = ['$ holo bridge', '$ holo bridge:contract']
 
   async run(): Promise<void> {
     // These 2 lines must be at the top of every command!!
