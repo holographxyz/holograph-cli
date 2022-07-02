@@ -208,9 +208,13 @@ export default class Contract extends Command {
       this.error(error.error.reason)
     }
 
-    userWallet = null
     configFile = null
+    userWallet = null
     sourceWallet = null
+    sourceProvider = null
     destinationWallet = null
+    destinationProvider = null
+
+    this.exit()
   }
 }
