@@ -1,10 +1,10 @@
-import {CliUx, Command, Flags} from '@oclif/core'
+import {CliUx, Command} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import {ethers} from 'ethers'
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
-import {decodeDeploymentConfigInput} from '../../utils/utils'
+import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-deployment'
 
 export default class Contract extends Command {
   static description = 'Deploy a Holographable contract'
@@ -14,7 +14,7 @@ export default class Contract extends Command {
   ]
 
   static flags = {
-    deploymentType: Flags.string({description: 'The type of deployment to use: [deployedTx, deploymentConfig]'}),
+    ...deploymentFlags
   }
 
   public async run(): Promise<void> {
@@ -25,23 +25,7 @@ export default class Contract extends Command {
     const {flags} = await this.parse(Contract)
     this.log('User configurations loaded.')
 
-    let deploymentType = flags.deploymentType
-
     const allowedNetworks = ['rinkeby', 'mumbai']
-
-    const deployProcess = [
-      {
-        name: 'extract deployment config from existing transaction',
-        value: 'deployedTx',
-        short: 'existing deployment'
-      },
-      {
-        name: 'load custom deployment configuration',
-        value: 'deploymentConfig',
-        short: 'custom deployment'
-      }
-    ]
-
     let remainingNetworks = allowedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
 
@@ -55,17 +39,9 @@ export default class Contract extends Command {
     ])
     const destinationChain = destinationChainPrompt.destinationNetwork
 
-    if (deploymentType === undefined) {
-      const prompt: any = await inquirer.prompt([
-        {
-          name: 'deploymentType',
-          message: 'Select the contract deployment process to use',
-          type: 'list',
-          choices: deployProcess,
-        },
-      ])
-      deploymentType = prompt.deploymentType
-    }
+    remainingNetworks = remainingNetworks.filter((item: string) => {
+      return item !== destinationChain
+    })
 
     CliUx.ux.action.start('Loading destination network RPC provider')
     const destinationChainProtocol = new URL(configFile.networks[destinationChain].providerUrl).protocol
@@ -84,71 +60,7 @@ export default class Contract extends Command {
     let destinationWallet = userWallet.connect(destinationChainProvider)
     CliUx.ux.action.stop()
 
-    remainingNetworks = remainingNetworks.filter((item: string) => {
-      return item !== destinationChain
-    })
-
-    let deploymentConfig
-
-    switch (deploymentType) {
-      case 'deployedTx': {
-        const txChainPrompt: any = await inquirer.prompt([
-          {
-            name: 'txChain',
-            message: 'select the network to extract transaction details from',
-            type: 'list',
-            choices: remainingNetworks,
-          },
-        ])
-        const txChain = txChainPrompt.txChain
-        CliUx.ux.action.start('Loading transaction network RPC provider')
-        const txChainProtocol = new URL(configFile.networks[txChain].providerUrl).protocol
-        let txChainProvider
-        switch (txChainProtocol) {
-          case 'https:':
-            txChainProvider = new ethers.providers.JsonRpcProvider(configFile.networks[txChain].providerUrl)
-            break
-          case 'wss:':
-            txChainProvider = new ethers.providers.WebSocketProvider(configFile.networks[txChain].providerUrl)
-            break
-          default:
-            throw new Error('Unsupported RPC URL protocol -> ' + txChainProtocol)
-        }
-
-        let txChainWallet = userWallet.connect(txChainProvider)
-        CliUx.ux.action.stop()
-        const txPrompt: any = await inquirer.prompt([
-          {
-            name: 'tx',
-            message: 'Enter the hash of transaction that deployed the contract',
-            type: 'input',
-            validate: async (input: string) => {
-              return /^0x[\da-f]{64}$/i.test(input) ? true : 'Input is not a valid transaction hash'
-            },
-          },
-        ])
-        const tx = txPrompt.tx
-
-        CliUx.ux.action.start('Retrieving transaction details from ' + txChain + ' network')
-        const transaction = await txChainWallet.provider.getTransaction(tx)
-
-        deploymentConfig = decodeDeploymentConfigInput(transaction.data)
-        this.debug(deploymentConfig)
-        CliUx.ux.action.stop()
-
-        txChainWallet = null
-        break
-      }
-
-      case 'deploymentConfig': {
-        throw new Error('Unsupported deployment type: ' + deploymentType + '... Still working on this one :(')
-        break
-      }
-
-      default: {
-        throw new Error('Unsupported deployment type: ' + deploymentType)
-      }
-    }
+    const deploymentConfig = await prepareDeploymentConfig(configFile, userWallet, flags, remainingNetworks)
 
     CliUx.ux.action.start('Retrieving HolographFactory contract')
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
