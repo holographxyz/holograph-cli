@@ -42,6 +42,19 @@ export default class Contract extends Command {
       }
     ]
 
+    let remainingNetworks = allowedNetworks
+    this.debug(`remainingNetworks = ${remainingNetworks}`)
+
+    const destinationChainPrompt: any = await inquirer.prompt([
+      {
+        name: 'destinationNetwork',
+        message: 'select the network to which the contract will be deployed',
+        type: 'list',
+        choices: remainingNetworks,
+      },
+    ])
+    const destinationChain = destinationChainPrompt.destinationNetwork
+
     if (deploymentType === undefined) {
       const prompt: any = await inquirer.prompt([
         {
@@ -53,19 +66,6 @@ export default class Contract extends Command {
       ])
       deploymentType = prompt.deploymentType
     }
-
-    let remainingNetworks = allowedNetworks
-    this.debug(`remainingNetworks = ${remainingNetworks}`)
-
-    const destinationChainPrompt: any = await inquirer.prompt([
-      {
-        name: 'destinationNetwork',
-        message: 'select the network where where the contract will be deployed to',
-        type: 'list',
-        choices: remainingNetworks,
-      },
-    ])
-    const destinationChain = destinationChainPrompt.destinationNetwork
 
     CliUx.ux.action.start('Loading destination network RPC provider')
     const destinationChainProtocol = new URL(configFile.networks[destinationChain].providerUrl).protocol
