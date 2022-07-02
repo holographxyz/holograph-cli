@@ -81,7 +81,7 @@ export default class Contract extends Command {
         throw new Error('Unsupported RPC URL protocol -> ' + destinationChainProtocol)
     }
 
-    const destinationWallet = userWallet.connect(destinationChainProvider)
+    let destinationWallet = userWallet.connect(destinationChainProvider)
     CliUx.ux.action.stop()
 
     remainingNetworks = remainingNetworks.filter((item: string) => {
@@ -115,7 +115,7 @@ export default class Contract extends Command {
             throw new Error('Unsupported RPC URL protocol -> ' + txChainProtocol)
         }
 
-        const txChainWallet = userWallet.connect(txChainProvider)
+        let txChainWallet = userWallet.connect(txChainProvider)
         CliUx.ux.action.stop()
         const txPrompt: any = await inquirer.prompt([
           {
@@ -135,7 +135,8 @@ export default class Contract extends Command {
         deploymentConfig = decodeDeploymentConfigInput(transaction.data)
         this.debug(deploymentConfig)
         CliUx.ux.action.stop()
-        //
+
+        txChainWallet = null
         break
       }
 
@@ -223,8 +224,9 @@ export default class Contract extends Command {
       this.error(error.error.reason)
     }
 
+    destinationWallet = null
+
     userWallet = null
     configFile = null
-
   }
 }
