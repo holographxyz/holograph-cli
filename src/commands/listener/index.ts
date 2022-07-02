@@ -228,6 +228,7 @@ export default class Listener extends Command {
             `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
               `Wallet that deployed the collection is ${transaction.from}\n` +
               `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n`,
+              `The transaction hash is: ${transaction.hash}\n`,
           )
         } else {
           this.log(`Failed with BridgeableContractDeployed event parsing ${transaction} ${receipt}`)
