@@ -54,7 +54,7 @@ export default class Collection extends Command {
       case 'https:':
         sourceProvider = new ethers.providers.JsonRpcProvider(configFile.networks[configFile.networks.from].providerUrl)
         break
-      case 'ws:':
+      case 'wss:':
         sourceProvider = new ethers.providers.WebSocketProvider(
           configFile.networks[configFile.networks.from].providerUrl,
         )
@@ -74,7 +74,7 @@ export default class Collection extends Command {
           configFile.networks[configFile.networks.to].providerUrl,
         )
         break
-      case 'ws:':
+      case 'wss:':
         destinationProvider = new ethers.providers.WebSocketProvider(
           configFile.networks[configFile.networks.to].providerUrl,
         )
