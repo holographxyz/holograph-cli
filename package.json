@@ -43,6 +43,7 @@
     "fs-extra": "^10.1.0",
     "inquirer": "^8.0.0",
     "joi": "^17.6.0",
+    "supports-color": "^9.2.2",
     "web3": "^1.7.4",
     "web3-providers-ws": "^1.7.4",
     "yaml": "^2.1.1"
