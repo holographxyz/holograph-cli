@@ -9,14 +9,14 @@ import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-dep
 export default class Contract extends Command {
   static description = 'Bridge a Holographable contract from source chain to destination chain'
 
-  static examples = [
-    '$ holo bridge:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"',
-  ]
+  static examples = ['$ holo bridge:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"']
 
   static flags = {
     sourceNetwork: Flags.string({description: 'The name of source network, from which to make the bridge request'}),
-    destinationNetwork: Flags.string({description: 'The name of destination network, where the bridge request is sent to'}),
-    ...deploymentFlags
+    destinationNetwork: Flags.string({
+      description: 'The name of destination network, where the bridge request is sent to',
+    }),
+    ...deploymentFlags,
   }
 
   public async run(): Promise<void> {
@@ -29,13 +29,19 @@ export default class Contract extends Command {
 
     let sourceNetwork: string = flags.sourceNetwork || ''
     if (sourceNetwork === '' || !(sourceNetwork in configFile.networks)) {
-      this.log('source network not provided, or does not exist in the config file', 'reverting to default "from" network from config')
+      this.log(
+        'source network not provided, or does not exist in the config file',
+        'reverting to default "from" network from config',
+      )
       sourceNetwork = configFile.networks.from
     }
 
     let destinationNetwork: string = flags.destinationNetwork || ''
     if (destinationNetwork === '' || !(destinationNetwork in configFile.networks)) {
-      this.log('destination network not provided, or does not exist in the config file', 'reverting to default "to" network from config')
+      this.log(
+        'destination network not provided, or does not exist in the config file',
+        'reverting to default "to" network from config',
+      )
       destinationNetwork = configFile.networks.to
     }
 
@@ -64,9 +70,7 @@ export default class Contract extends Command {
     let destinationProvider
     switch (destinationProtocol) {
       case 'https:':
-        destinationProvider = new ethers.providers.JsonRpcProvider(
-          configFile.networks[destinationNetwork].providerUrl,
-        )
+        destinationProvider = new ethers.providers.JsonRpcProvider(configFile.networks[destinationNetwork].providerUrl)
         break
       case 'wss:':
         destinationProvider = new ethers.providers.WebSocketProvider(
@@ -102,11 +106,21 @@ export default class Contract extends Command {
     )
 
     const holographInterfacesABI = await fs.readJson('./src/abi/Interfaces.json')
-    const holographInterfaces = (new ethers.ContractFactory(holographInterfacesABI, '0x', sourceWallet)).attach(await holograph.getInterfaces())
+    const holographInterfaces = new ethers.ContractFactory(holographInterfacesABI, '0x', sourceWallet).attach(
+      await holograph.getInterfaces(),
+    )
 
-    const holographToChainId = await holographInterfaces.getChainId(1, (await destinationProvider.getNetwork()).chainId, 2)
+    const holographToChainId = await holographInterfaces.getChainId(
+      1,
+      (
+        await destinationProvider.getNetwork()
+      ).chainId,
+      2,
+    )
     const holographBridgeABI = await fs.readJson('./src/abi/HolographBridge.json')
-    const holographBridge = (new ethers.ContractFactory(holographBridgeABI, '0x', sourceWallet)).attach(await holograph.getBridge())
+    const holographBridge = new ethers.ContractFactory(holographBridgeABI, '0x', sourceWallet).attach(
+      await holograph.getBridge(),
+    )
     CliUx.ux.action.stop()
 
     CliUx.ux.action.start('Calculating gas amounts and prices')
@@ -123,8 +137,8 @@ export default class Contract extends Command {
             deploymentConfig.signature,
             deploymentConfig.signer,
             {
-              value: startingPayment
-            }
+              value: startingPayment,
+            },
           )
         } catch (error: any) {
           if (error.reason !== lzFeeError) {
@@ -153,7 +167,9 @@ export default class Contract extends Command {
       'Transaction is estimated to cost a total of',
       ethers.utils.formatUnits(gasAmount.mul(gasPrice), 'ether'),
       'native gas tokens (in ether).',
-      'And you will send a value of', ethers.utils.formatEther(startingPayment), 'native gas tokens (in ether) for messaging protocol'
+      'And you will send a value of',
+      ethers.utils.formatEther(startingPayment),
+      'native gas tokens (in ether) for messaging protocol',
     )
 
     const blockchainPrompt: any = await inquirer.prompt([
@@ -176,8 +192,8 @@ export default class Contract extends Command {
         deploymentConfig.signature,
         deploymentConfig.signer,
         {
-          value: startingPayment
-        }
+          value: startingPayment,
+        },
       )
       this.debug(deployTx)
       CliUx.ux.action.stop('transaction hash is ' + deployTx.hash)
@@ -188,7 +204,6 @@ export default class Contract extends Command {
 
       CliUx.ux.action.stop()
       this.log('Transaction', deployTx.hash, 'confirmed')
-
     } catch (error: any) {
       this.error(error.error.reason)
     }

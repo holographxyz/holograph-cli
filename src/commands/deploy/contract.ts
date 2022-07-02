@@ -9,12 +9,10 @@ import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-dep
 export default class Contract extends Command {
   static description = 'Deploy a Holographable contract'
 
-  static examples = [
-    '$ holo deploy:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"',
-  ]
+  static examples = ['$ holo deploy:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"']
 
   static flags = {
-    ...deploymentFlags
+    ...deploymentFlags,
   }
 
   public async run(): Promise<void> {
@@ -48,10 +46,14 @@ export default class Contract extends Command {
     let destinationChainProvider
     switch (destinationChainProtocol) {
       case 'https:':
-        destinationChainProvider = new ethers.providers.JsonRpcProvider(configFile.networks[destinationChain].providerUrl)
+        destinationChainProvider = new ethers.providers.JsonRpcProvider(
+          configFile.networks[destinationChain].providerUrl,
+        )
         break
       case 'wss:':
-        destinationChainProvider = new ethers.providers.WebSocketProvider(configFile.networks[destinationChain].providerUrl)
+        destinationChainProvider = new ethers.providers.WebSocketProvider(
+          configFile.networks[destinationChain].providerUrl,
+        )
         break
       default:
         throw new Error('Unsupported RPC URL protocol -> ' + destinationChainProtocol)
