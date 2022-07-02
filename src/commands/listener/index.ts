@@ -106,13 +106,13 @@ export default class Listener extends Command {
     this.debug('raw networks', selectedNetworks)
     for (let i = 0, l = selectedNetworks.length; i < l; i++) {
       const network = selectedNetworks[i]
-      if (!this.supportedNetworks.includes(network)) {
+      if (this.supportedNetworks.includes(network)) {
+        // First let's color our networks 🌈
+        this.networkColors[network] = color.rgb(randomNumber(100, 255), randomNumber(100, 255), randomNumber(100, 255))
+      } else {
         selectedNetworks.splice(i, 1)
         l--
         i--
-      } else {
-        // First let's color our networks 🌈
-        this.networkColors[network] = color.rgb(randomNumber(100, 255), randomNumber(100, 255), randomNumber(100, 255))
       }
     }
 
