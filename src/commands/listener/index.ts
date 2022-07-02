@@ -96,8 +96,6 @@ export default class Listener extends Command {
     const {flags} = await this.parse(Listener)
     this.log('User configurations loaded.')
 
-    // let networksString: string = flags.networks || ''
-
     if (flags.networks === undefined || '') {
       // Load defaults
       flags.networks = this.supportedNetworks
@@ -109,16 +107,15 @@ export default class Listener extends Command {
         // First let's color our networks 🌈
         this.networkColors[network] = color.rgb(randomNumber(100, 255), randomNumber(100, 255), randomNumber(100, 255))
       } else {
+        // If network is not supported remove it from the array
         flags.networks.splice(i, 1)
         l--
         i--
       }
     }
 
-    // const {args, flags} = await this.parse(Listener)
     CliUx.ux.action.start('Starting listener...')
     this.initializeWeb3(flags.networks, configFile)
-
     this.bridgeAddress = (await this.holograph.methods.getBridge().call()).toLowerCase()
     this.factoryAddress = (await this.holograph.methods.getFactory().call()).toLowerCase()
     this.operatorAddress = (await this.holograph.methods.getOperator().call()).toLowerCase()
