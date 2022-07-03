@@ -42,6 +42,8 @@ export default class ConfigView extends Command {
         this.serializeClean(configJson, '')
         break
     }
+
+    this.exit()
   }
 
   public async readConfig(configPath: string): Promise<any> {

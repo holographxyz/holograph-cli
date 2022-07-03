@@ -14,5 +14,7 @@ export default class Deploy extends Command {
 
     this.log(`Welcome to Holograph Factory 🌉`)
     this.log(`To deploy a holographable contract, view the help menu by running: holo deploy --help`)
+
+    this.exit()
   }
 }

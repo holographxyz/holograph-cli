@@ -276,6 +276,6 @@ export default class Config extends Command {
       this.debug(error)
     }
 
-    userWallet = undefined
+    this.exit()
   }
 }

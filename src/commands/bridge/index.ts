@@ -14,5 +14,7 @@ export default class Bridge extends Command {
 
     this.log(`Welcome to the Holograph Bridge 🌉`)
     this.log(`To get started, view the help menu by running: holo bridge --help`)
+
+    this.exit()
   }
 }

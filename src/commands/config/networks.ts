@@ -34,5 +34,7 @@ export default class ConfigNetworks extends ConfigView {
         this.serializeClean(configJson, '')
         break
     }
+
+    this.exit()
   }
 }

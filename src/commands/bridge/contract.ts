@@ -22,7 +22,7 @@ export default class Contract extends Command {
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    let {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
+    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
 
     const {flags} = await this.parse(Contract)
     this.log('User configurations loaded.')
@@ -63,7 +63,7 @@ export default class Contract extends Command {
         throw new Error('Unsupported RPC URL protocol -> ' + sourceProtocol)
     }
 
-    let sourceWallet = userWallet.connect(sourceProvider)
+    const sourceWallet = userWallet.connect(sourceProvider)
     this.debug('Source network', await sourceWallet.provider.getNetwork())
 
     const destinationProtocol = new URL(configFile.networks[destinationNetwork].providerUrl).protocol
@@ -81,7 +81,7 @@ export default class Contract extends Command {
         throw new Error('Unsupported RPC URL protocol -> ' + destinationProtocol)
     }
 
-    let destinationWallet = userWallet.connect(destinationProvider)
+    const destinationWallet = userWallet.connect(destinationProvider)
     this.debug('Destination network', await destinationWallet.provider.getNetwork())
     CliUx.ux.action.stop()
 
@@ -93,8 +93,6 @@ export default class Contract extends Command {
     })
 
     const deploymentConfig = await prepareDeploymentConfig(configFile, userWallet, flags, remainingNetworks)
-
-    userWallet = null
 
     this.debug(deploymentConfig)
     CliUx.ux.action.stop()
