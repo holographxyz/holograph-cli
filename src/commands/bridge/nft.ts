@@ -4,7 +4,8 @@ import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import {ethers} from 'ethers'
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
-import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-deployment'
+import {deploymentFlags} from '../../utils/contract-deployment'
+import {addressValidator, tokenValidator} from '../../utils/validation'
 
 export default class Contract extends Command {
   static description = 'Bridge a Holographable NFT from source chain to destination chain'
@@ -54,6 +55,15 @@ export default class Contract extends Command {
     const contractAddress: string = flags.address
     const tokenId: string = flags.tokenId
 
+    // Validate the command inputs
+    if (!addressValidator.test(contractAddress)) {
+      throw new Error('Invalid contract address')
+    }
+
+    if (!tokenValidator.test(tokenId)) {
+      this.error('Invalid token ID')
+    }
+
     CliUx.ux.action.start('Loading RPC providers')
     const sourceProtocol = new URL(configFile.networks[sourceNetwork].providerUrl).protocol
     let sourceProvider
@@ -99,6 +109,18 @@ export default class Contract extends Command {
 
     CliUx.ux.action.stop()
 
+    // Check if the contract is deployed on the source chain and not on the destination chain
+    CliUx.ux.action.start('Checking if the contract is deployed on the source chain, and not on the destination chain')
+    if ((await sourceProvider.getCode(contractAddress)) === '0x') {
+      this.error(`Contract at ${contractAddress} does not exist on the source chain`)
+    }
+
+    if ((await destinationProvider.getCode(contractAddress)) !== '0x') {
+      this.error(`Contract at ${contractAddress} already exists on the destination chain`)
+    }
+
+    CliUx.ux.action.stop()
+
     CliUx.ux.action.start('Retrieving HolographFactory contract')
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
     const holograph = new ethers.ContractFactory(holographABI, '0x', sourceWallet).attach(
@@ -123,10 +145,26 @@ export default class Contract extends Command {
       await holograph.getRegistry(),
     )
 
-    if (!holographRegistry.isHolographedContract(contractAddress)) {
+    // Check that the contract is Holographed
+    if (holographRegistry.isHolographedContract(contractAddress) === false) {
       throw new Error('Contract is not a Holograph contract')
     } else {
       this.log('Holographed contract found')
+    }
+
+    const holographErc721ABI = await fs.readJson('./src/abi/HolographERC721.json')
+    const holographErc721 = new ethers.ContractFactory(holographErc721ABI, '0x', sourceWallet).attach(
+      await holograph.getBridge(),
+    )
+
+    // Check that the NFT exists
+    if ((await holographErc721.exists(tokenId)) === false) {
+      throw new Error('NFT does not exist')
+    }
+
+    // Check that the user is the owner of the NFT
+    if (holographErc721.ownerOf(tokenId) !== userWallet) {
+      throw new Error('Token is not owned by the user')
     }
 
     const holographBridgeABI = await fs.readJson('./src/abi/HolographBridge.json')
