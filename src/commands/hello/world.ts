@@ -15,5 +15,6 @@ hello world! (./src/commands/hello/world.ts)
 
   async run(): Promise<void> {
     this.log('hello world! (./src/commands/hello/world.ts)')
+    this.exit()
   }
 }

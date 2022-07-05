@@ -33,5 +33,7 @@ export default class ConfigUser extends ConfigView {
         this.log(`User address: ${config.user.credentials.address}`)
         break
     }
+
+    this.exit()
   }
 }
