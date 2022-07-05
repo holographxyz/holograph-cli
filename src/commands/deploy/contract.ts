@@ -117,7 +117,7 @@ export default class Contract extends Command {
         deploymentConfig.signer,
       )
       this.debug(deployTx)
-      CliUx.ux.action.stop('transaction hash is ' + deployTx.hash)
+      CliUx.ux.action.stop('Transaction hash is ' + deployTx.hash)
 
       CliUx.ux.action.start('Waiting for transaction to be mined and confirmed')
       const deployReceipt = await deployTx.wait()

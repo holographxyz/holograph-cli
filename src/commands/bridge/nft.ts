@@ -7,15 +7,17 @@ import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-deployment'
 
 export default class Contract extends Command {
-  static description = 'Bridge a Holographable contract from source chain to destination chain'
+  static description = 'Bridge a Holographable NFT from source chain to destination chain'
 
-  static examples = ['$ holo bridge:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"']
+  static examples = ['$ holo bridge:nft --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1']
 
   static flags = {
     sourceNetwork: Flags.string({description: 'The name of source network, from which to make the bridge request'}),
     destinationNetwork: Flags.string({
       description: 'The name of destination network, where the bridge request is sent to',
     }),
+    address: Flags.string({description: 'The address of the contract on the source chain', required: true}),
+    tokenId: Flags.string({description: 'The ID of the NFT on the source chain', required: true}),
     ...deploymentFlags,
   }
 
@@ -48,6 +50,9 @@ export default class Contract extends Command {
     if (sourceNetwork === destinationNetwork) {
       throw new Error('Cannot bridge to/from the same network')
     }
+
+    const contractAddress: string = flags.address
+    const tokenId: string = flags.tokenId
 
     CliUx.ux.action.start('Loading RPC providers')
     const sourceProtocol = new URL(configFile.networks[sourceNetwork].providerUrl).protocol
@@ -92,9 +97,6 @@ export default class Contract extends Command {
       return item !== destinationNetwork
     })
 
-    const deploymentConfig = await prepareDeploymentConfig(configFile, userWallet, flags, remainingNetworks)
-
-    this.debug(deploymentConfig)
     CliUx.ux.action.stop()
 
     CliUx.ux.action.start('Retrieving HolographFactory contract')
@@ -115,6 +117,18 @@ export default class Contract extends Command {
       ).chainId,
       2,
     )
+
+    const holographRegistryABI = await fs.readJson('./src/abi/HolographRegistry.json')
+    const holographRegistry = new ethers.ContractFactory(holographRegistryABI, '0x', sourceWallet).attach(
+      await holograph.getRegistry(),
+    )
+
+    if (!holographRegistry.isHolographedContract(contractAddress)) {
+      throw new Error('Contract is not a Holograph contract')
+    } else {
+      this.log('Holographed contract found')
+    }
+
     const holographBridgeABI = await fs.readJson('./src/abi/HolographBridge.json')
     const holographBridge = new ethers.ContractFactory(holographBridgeABI, '0x', sourceWallet).attach(
       await holograph.getBridge(),
@@ -131,18 +145,19 @@ export default class Contract extends Command {
     const calculateGas = async function () {
       if (gasAmount === undefined) {
         try {
-          gasAmount = await holographBridge.estimateGas.deployOut(
+          gasAmount = await holographBridge.estimateGas.erc721out(
             holographToChainId,
-            deploymentConfig.config,
-            deploymentConfig.signature,
-            deploymentConfig.signer,
+            contractAddress,
+            userWallet.address,
+            userWallet.address,
+            tokenId,
             {
               value: startingPayment,
             },
           )
         } catch (error: any) {
           if (error.reason !== lzFeeError) {
-            throw new Error(error.reason)
+            throw new Error(error.message)
           }
         }
 
@@ -186,17 +201,18 @@ export default class Contract extends Command {
 
     try {
       CliUx.ux.action.start('Sending transaction to mempool')
-      const deployTx = await holographBridge.deployOut(
+      const deployTx = await holographBridge.erc721out(
         holographToChainId,
-        deploymentConfig.config,
-        deploymentConfig.signature,
-        deploymentConfig.signer,
+        contractAddress,
+        userWallet.address,
+        userWallet.address,
+        tokenId,
         {
           value: startingPayment,
         },
       )
       this.debug(deployTx)
-      CliUx.ux.action.stop('Transaction hash is ' + deployTx.hash)
+      CliUx.ux.action.stop('transaction hash is ' + deployTx.hash)
 
       CliUx.ux.action.start('Waiting for transaction to be mined and confirmed')
       const deployReceipt = await deployTx.wait()
