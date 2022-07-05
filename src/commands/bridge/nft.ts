@@ -152,20 +152,21 @@ export default class Contract extends Command {
       this.log('Holographed contract found')
     }
 
-    const holographErc721ABI = await fs.readJson('./src/abi/HolographERC721.json')
-    const holographErc721 = new ethers.ContractFactory(holographErc721ABI, '0x', sourceWallet).attach(
-      await holograph.getBridge(),
-    )
+    // const holographErc721ABI = await fs.readJson('./src/abi/HolographERC721.json')
+    // const holographErc721 = new ethers.ContractFactory(holographErc721ABI, '0x', sourceWallet).attach(
+    //   await holograph.getBridge(),
+    // )
 
+    // TODO: Figure out why these checks are causing errors
+    // Error: missing revert data in call exception; Transaction reverted without a reason string
     // Check that the NFT exists
-    if ((await holographErc721.exists(tokenId)) === false) {
-      throw new Error('NFT does not exist')
-    }
+    // if ((await holographErc721.exists(ethers.BigNumber.from(tokenId))) === false) {
+    //   throw new Error('NFT does not exist')
+    // }
 
-    // Check that the user is the owner of the NFT
-    if (holographErc721.ownerOf(tokenId) !== userWallet) {
-      throw new Error('Token is not owned by the user')
-    }
+    // if ((await holographErc721.ownerOf(ethers.BigNumber.from(tokenId))) !== userWallet.address) {
+    //   throw new Error('Token is not owned by the user')
+    // }
 
     const holographBridgeABI = await fs.readJson('./src/abi/HolographBridge.json')
     const holographBridge = new ethers.ContractFactory(holographBridgeABI, '0x', sourceWallet).attach(
