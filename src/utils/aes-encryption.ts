@@ -4,8 +4,8 @@ const encryptionEncoding = 'base64'
 const bufferEncryption = 'utf8'
 
 export default class AesEncryption {
-  AesKey: string;
-  AesIV: string;
+  AesKey: string
+  AesIV: string
 
   constructor(key: string, iv: string) {
     this.AesKey = key

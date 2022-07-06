@@ -87,7 +87,7 @@ export default class Contract extends Command {
 
     // Validate the command inputs
     if (!addressValidator.test(collectionAddress as string)) {
-      throw new Error('Invalid collection address: ' + collectionAddress)
+      throw new Error(`Invalid collection address: ${collectionAddress}`)
     }
 
     if (!tokenValidator.test(tokenId as string)) {
@@ -151,7 +151,6 @@ export default class Contract extends Command {
 
     CliUx.ux.action.stop()
 
-
     CliUx.ux.action.start('Retrieving HolographFactory contract')
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
     const holograph = new ethers.ContractFactory(holographABI, '0x', sourceWallet).attach(
@@ -184,7 +183,9 @@ export default class Contract extends Command {
     }
 
     const holographErc721ABI = await fs.readJson('./src/abi/HolographERC721.json')
-    const holographErc721 = new ethers.ContractFactory(holographErc721ABI, '0x', sourceWallet).attach(collectionAddress as string)
+    const holographErc721 = new ethers.ContractFactory(holographErc721ABI, '0x', sourceWallet).attach(
+      collectionAddress as string,
+    )
 
     const tokenIdBn = ethers.BigNumber.from(tokenId)
 
@@ -194,7 +195,11 @@ export default class Contract extends Command {
 
     const tokenOwner = await holographErc721.ownerOf(tokenIdBn)
 
-    if (tokenOwner !== userWallet.address && (await holographErc721.getApproved(tokenIdBn)) !== userWallet.address && (await holographErc721.isApprovedForAll(tokenOwner, userWallet.address)) === false) {
+    if (
+      tokenOwner !== userWallet.address &&
+      (await holographErc721.getApproved(tokenIdBn)) !== userWallet.address &&
+      (await holographErc721.isApprovedForAll(tokenOwner, userWallet.address)) === false
+    ) {
       throw new Error('Token is not owned by the user, or approved for user')
     }
 

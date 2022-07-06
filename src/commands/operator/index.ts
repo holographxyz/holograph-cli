@@ -21,7 +21,9 @@ import {
 import color from '@oclif/color'
 
 enum OperatorMode {
-  listen, manual, auto
+  listen,
+  manual,
+  auto,
 }
 
 export default class Operator extends Command {
@@ -31,7 +33,12 @@ export default class Operator extends Command {
 
   static flags = {
     networks: Flags.string({description: 'Comma separated list of networks to listen to', multiple: true}),
-    mode: Flags.string({description: 'The mode in which to run the operator', options: ['listen', 'manual', 'auto'], default: 'listen', char: 'm'})
+    mode: Flags.string({
+      description: 'The mode in which to run the operator',
+      options: ['listen', 'manual', 'auto'],
+      default: 'listen',
+      char: 'm',
+    }),
   }
 
   /**
@@ -109,7 +116,10 @@ export default class Operator extends Command {
       JSON.parse(fs.readFileSync('src/abi/Holograph.json', 'utf8')),
       this.HOLOGRAPH_ADDRESS,
     )
-    this.operatorContract = new ethers.ContractFactory(await fs.readJson('./src/abi/HolographOperator.json'), '0x').attach(await this.holograph.methods.getOperator().call())
+    this.operatorContract = new ethers.ContractFactory(
+      await fs.readJson('./src/abi/HolographOperator.json'),
+      '0x',
+    ).attach(await this.holograph.methods.getOperator().call())
   }
 
   async run(): Promise<void> {
@@ -118,7 +128,10 @@ export default class Operator extends Command {
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, this.operatorMode !== OperatorMode.listen)
+    const {userWallet, configFile} = await ensureConfigFileIsValid(
+      configPath,
+      this.operatorMode !== OperatorMode.listen,
+    )
     this.log('User configurations loaded.')
 
     if (flags.networks === undefined || '') {
@@ -162,7 +175,6 @@ export default class Operator extends Command {
       this.providers[network].on('error', this.handleDroppedSocket.bind(this, network))
       this.providers[network].on('close', this.handleDroppedSocket.bind(this, network))
       this.providers[network].on('end', this.handleDroppedSocket.bind(this, network))
-
     }
 
     // Process blocks 🧱
@@ -196,7 +208,6 @@ export default class Operator extends Command {
       this.log('transaction ' + jobTx.hash + ' mined and confirmed')
     } else {
       this.log('dropped potential payload to execute')
-
     }
   }
 
