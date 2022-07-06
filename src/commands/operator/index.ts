@@ -27,12 +27,10 @@ enum OperatorMode {
 }
 
 export default class Operator extends Command {
-  static description = 'Listen for EVM events'
-
-  static examples = ['$ holo listener --networks="rinkeby mumbai"']
-
+  static description = 'Listen for EVM events and process them'
+  static examples = ['$ holo operator --networks="rinkeby mumbai" --mode=auto']
   static flags = {
-    networks: Flags.string({description: 'Comma separated list of networks to listen to', multiple: true}),
+    networks: Flags.string({description: 'Comma separated list of networks to operate to', multiple: true}),
     mode: Flags.string({
       description: 'The mode in which to run the operator',
       options: ['listen', 'manual', 'auto'],
@@ -152,7 +150,7 @@ export default class Operator extends Command {
       }
     }
 
-    CliUx.ux.action.start('Starting listener...')
+    CliUx.ux.action.start(`Starting operator in mode: ${this.operatorMode}`)
     await this.initializeWeb3(flags.networks, configFile, userWallet)
     this.bridgeAddress = (await this.holograph.methods.getBridge().call()).toLowerCase()
     this.factoryAddress = (await this.holograph.methods.getFactory().call()).toLowerCase()
@@ -182,14 +180,12 @@ export default class Operator extends Command {
   }
 
   async executePayload(network: string, payload: string): Promise<void> {
-    // operatorMode !== OperatorMode.listen
     let operate = true
     if (this.operatorMode === OperatorMode.manual) {
-      // we prompt
       const operatorPrompt: any = await inquirer.prompt([
         {
           name: 'shouldContinue',
-          message: 'A transaction appeared on ' + network + ' for execution, would you like to operate?',
+          message: `A transaction appeared on ${network} for execution, would you like to operate?`,
           type: 'confirm',
           default: false,
         },
@@ -201,13 +197,13 @@ export default class Operator extends Command {
       const contract = this.operatorContract.connect(this.wallets[network])
       const jobTx = await contract.executeJob(payload)
       this.debug(jobTx)
-      this.log('transaction hash is ' + jobTx.hash)
+      this.log(`Transaction hash is ${jobTx.hash}`)
 
       const jobReceipt = await jobTx.wait()
       this.debug(jobReceipt)
-      this.log('transaction ' + jobTx.hash + ' mined and confirmed')
+      this.log(`Transaction ${jobTx.hash} mined and confirmed`)
     } else {
-      this.log('dropped potential payload to execute')
+      this.log('Dropped potential payload to execute')
     }
   }
 
@@ -376,7 +372,7 @@ export default class Operator extends Command {
         }
 
         this.latestBlockMap[network] = blockHeader.number
-        this.log(`${this.networkColors[network](capitalize(network))} => Block ${blockHeader.number}`)
+        this.log(`[${this.networkColors[network](capitalize(network))}] -> Block ${blockHeader.number}`)
         this.blockJobs.push({
           network: network,
           block: blockHeader.number,
