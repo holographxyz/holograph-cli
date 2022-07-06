@@ -34,7 +34,6 @@ export default class Operator extends Command {
     mode: Flags.string({
       description: 'The mode in which to run the operator',
       options: ['listen', 'manual', 'auto'],
-      default: 'listen',
       char: 'm',
     }),
   }
@@ -107,6 +106,11 @@ export default class Operator extends Command {
       }
 
       this.latestBlockMap[network] = 0
+      // TODO: You can manually set the latest block for a network to force the operator to start from a certain block
+      // this.latestBlockMap = {
+      //   rinkeby: 10900000,
+      //   mumbai: 27060000,
+      // }
     }
 
     // Contract is instantiated with Rinkeby, but is compatible with all networks
@@ -122,7 +126,24 @@ export default class Operator extends Command {
 
   async run(): Promise<void> {
     const {flags} = await this.parse(Operator)
-    this.operatorMode = OperatorMode[flags.mode as keyof typeof OperatorMode]
+
+    // Have the user input the mode if it's not provided
+    let mode: string | undefined = flags.mode
+
+    if (!mode) {
+      const prompt: any = await inquirer.prompt([
+        {
+          name: 'mode',
+          message: 'Enter the mode in which to run the operator',
+          type: 'list',
+          choices: ['listen', 'manual', 'auto'],
+        },
+      ])
+      mode = prompt.mode
+    }
+
+    this.operatorMode = OperatorMode[mode as keyof typeof OperatorMode]
+    console.log(`Operator mode: ${this.operatorMode}`)
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
@@ -337,9 +358,12 @@ export default class Operator extends Command {
         }
 
         if (event) {
+          const deploymentAddress = '0x' + event[1].slice(26)
           const payload = this.web3[network].eth.abi.decodeParameter('bytes', event)
           this.log(
-            `HolographOperator received a new bridge job on ${capitalize(network)}\nThe job payload is ${payload}\n`,
+            `HolographOperator received a new bridge job on ${capitalize(
+              network,
+            )} at ${deploymentAddress}\nThe job payload is ${payload}\n`,
           )
           await this.executePayload(network, payload)
         } else {

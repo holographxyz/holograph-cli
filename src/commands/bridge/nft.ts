@@ -4,7 +4,6 @@ import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import {ethers} from 'ethers'
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
-import {deploymentFlags} from '../../utils/contract-deployment'
 import {addressValidator, tokenValidator} from '../../utils/validation'
 
 export default class Contract extends Command {
@@ -19,7 +18,6 @@ export default class Contract extends Command {
     }),
     address: Flags.string({description: 'The address of the contract on the source chain'}),
     tokenId: Flags.string({description: 'The ID of the NFT on the source chain (number or 32-byte hex string)'}),
-    ...deploymentFlags,
   }
 
   public async run(): Promise<void> {
