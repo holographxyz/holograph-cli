@@ -1,8 +1,10 @@
-import * as fs from 'node:fs'
+import * as fs from 'fs-extra'
 import * as path from 'node:path'
+import * as inquirer from 'inquirer'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import Web3 from 'web3'
+import {ethers} from 'ethers'
 
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 const HttpProvider = require('../../utils/HttpProvider.js')
@@ -18,17 +20,22 @@ import {
 } from '../../utils/utils'
 import color from '@oclif/color'
 
-export default class Listener extends Command {
+enum OperatorMode {
+  listen, manual, auto
+}
+
+export default class Operator extends Command {
   static description = 'Listen for EVM events'
 
   static examples = ['$ holo listener --networks="rinkeby mumbai"']
 
   static flags = {
     networks: Flags.string({description: 'Comma separated list of networks to listen to', multiple: true}),
+    mode: Flags.string({description: 'The mode in which to run the operator', options: ['listen', 'manual', 'auto'], default: 'listen', char: 'm'})
   }
 
   /**
-   * Listener class variables
+   * Operator class variables
    */
   bridgeAddress: any
   factoryAddress: any
@@ -37,7 +44,10 @@ export default class Listener extends Command {
   blockJobs: any[] = []
   providers: any = {}
   web3: any = {}
+  wallets: any = {}
   holograph: any
+  operatorMode: OperatorMode = OperatorMode.listen
+  operatorContract: any
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
   LAYERZERO_RECEIVERS: any = {
     rinkeby: '0x41836E93A3D92C116087af0C9424F4EF3DdB00a2'.toLowerCase(),
@@ -61,23 +71,36 @@ export default class Listener extends Command {
     return hex.length === 1 ? `0${hex}` : hex
   }
 
-  initializeWeb3(loadNetworks: string[], configFile: any) {
+  async initializeWeb3(loadNetworks: string[], configFile: any, userWallet: any) {
     for (let i = 0, l = loadNetworks.length; i < l; i++) {
       const network = loadNetworks[i]
       const rpcEndpoint = configFile.networks[network].providerUrl
       const protocol = new URL(rpcEndpoint).protocol
+      let ethersProvider
       switch (protocol) {
         case 'https:':
           this.providers[network] = new HttpProvider(rpcEndpoint)
+          if (this.operatorMode !== OperatorMode.listen) {
+            ethersProvider = new ethers.providers.JsonRpcProvider(rpcEndpoint)
+          }
+
           break
         case 'wss:':
           this.providers[network] = new WebsocketProvider(rpcEndpoint, webSocketConfig)
+          if (this.operatorMode !== OperatorMode.listen) {
+            ethersProvider = new ethers.providers.WebSocketProvider(rpcEndpoint)
+          }
+
           break
         default:
           throw new Error('Unsupported RPC provider protocol -> ' + protocol)
       }
 
       this.web3[network] = new Web3(this.providers[network])
+      if (this.operatorMode !== OperatorMode.listen) {
+        this.wallets[network] = userWallet.connect(ethersProvider)
+      }
+
       this.latestBlockMap[network] = 0
     }
 
@@ -86,14 +109,16 @@ export default class Listener extends Command {
       JSON.parse(fs.readFileSync('src/abi/Holograph.json', 'utf8')),
       this.HOLOGRAPH_ADDRESS,
     )
+    this.operatorContract = new ethers.ContractFactory(await fs.readJson('./src/abi/HolographOperator.json'), '0x').attach(await this.holograph.methods.getOperator().call())
   }
 
   async run(): Promise<void> {
+    const {flags} = await this.parse(Operator)
+    this.operatorMode = OperatorMode[flags.mode as keyof typeof OperatorMode]
+
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {configFile} = await ensureConfigFileIsValid(configPath)
-
-    const {flags} = await this.parse(Listener)
+    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, this.operatorMode !== OperatorMode.listen)
     this.log('User configurations loaded.')
 
     if (flags.networks === undefined || '') {
@@ -115,7 +140,7 @@ export default class Listener extends Command {
     }
 
     CliUx.ux.action.start('Starting listener...')
-    this.initializeWeb3(flags.networks, configFile)
+    await this.initializeWeb3(flags.networks, configFile, userWallet)
     this.bridgeAddress = (await this.holograph.methods.getBridge().call()).toLowerCase()
     this.factoryAddress = (await this.holograph.methods.getFactory().call()).toLowerCase()
     this.operatorAddress = (await this.holograph.methods.getOperator().call()).toLowerCase()
@@ -142,6 +167,37 @@ export default class Listener extends Command {
 
     // Process blocks 🧱
     this.blockJobHandler()
+  }
+
+  async executePayload(network: string, payload: string): Promise<void> {
+    // operatorMode !== OperatorMode.listen
+    let operate = true
+    if (this.operatorMode === OperatorMode.manual) {
+      // we prompt
+      const operatorPrompt: any = await inquirer.prompt([
+        {
+          name: 'shouldContinue',
+          message: 'A transaction appeared on ' + network + ' for execution, would you like to operate?',
+          type: 'confirm',
+          default: false,
+        },
+      ])
+      operate = operatorPrompt.shouldContinue
+    }
+
+    if (operate) {
+      const contract = this.operatorContract.connect(this.wallets[network])
+      const jobTx = await contract.executeJob(payload)
+      this.debug(jobTx)
+      this.log('transaction hash is ' + jobTx.hash)
+
+      const jobReceipt = await jobTx.wait()
+      this.debug(jobReceipt)
+      this.log('transaction ' + jobTx.hash + ' mined and confirmed')
+    } else {
+      this.log('dropped potential payload to execute')
+
+    }
   }
 
   async processBlock(job: any): Promise<void> {
@@ -278,6 +334,7 @@ export default class Listener extends Command {
           this.log(
             `HolographOperator received a new bridge job on ${capitalize(network)}\nThe job payload is ${payload}\n`,
           )
+          await this.executePayload(network, payload)
         } else {
           this.log('LayerZero transaction is not relevant to AvailableJob event')
         }
