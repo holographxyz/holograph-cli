@@ -150,7 +150,7 @@ export default class Operator extends Command {
       }
     }
 
-    CliUx.ux.action.start(`Starting operator in mode: ${this.operatorMode}`)
+    CliUx.ux.action.start(`Starting operator in mode: ${OperatorMode[this.operatorMode]}`)
     await this.initializeWeb3(flags.networks, configFile, userWallet)
     this.bridgeAddress = (await this.holograph.methods.getBridge().call()).toLowerCase()
     this.factoryAddress = (await this.holograph.methods.getFactory().call()).toLowerCase()
