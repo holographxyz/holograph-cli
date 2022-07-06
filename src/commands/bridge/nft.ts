@@ -17,17 +17,44 @@ export default class Contract extends Command {
     destinationNetwork: Flags.string({
       description: 'The name of destination network, where the bridge request is sent to',
     }),
-    address: Flags.string({description: 'The address of the contract on the source chain', required: true}),
-    tokenId: Flags.string({description: 'The ID of the NFT on the source chain', required: true}),
+    address: Flags.string({description: 'The address of the contract on the source chain'}),
+    tokenId: Flags.string({description: 'The ID of the NFT on the source chain'}),
     ...deploymentFlags,
   }
 
   public async run(): Promise<void> {
+    const {flags} = await this.parse(Contract)
+
+    // Have the user input the contract address and token ID if they don't provide flags
+    let contractAddress: string | undefined = flags.address
+    let tokenId: string | undefined = flags.tokenId
+
+    if (!contractAddress) {
+      const prompt: any = await inquirer.prompt([
+        {
+          name: 'address',
+          message: 'Enter the contract address of the collection on the source chain',
+          type: 'string',
+        },
+      ])
+      contractAddress = prompt.contractAddress
+    }
+
+    if (!tokenId) {
+      const prompt: any = await inquirer.prompt([
+        {
+          name: 'tokenId',
+          message: 'Select the token ID to bridge',
+          type: 'string',
+        },
+      ])
+      tokenId = prompt.tokenId
+    }
+
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
     const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
 
-    const {flags} = await this.parse(Contract)
     this.log('User configurations loaded.')
 
     let sourceNetwork: string = flags.sourceNetwork || ''
@@ -52,15 +79,12 @@ export default class Contract extends Command {
       throw new Error('Cannot bridge to/from the same network')
     }
 
-    const contractAddress: string = flags.address
-    const tokenId: string = flags.tokenId
-
     // Validate the command inputs
-    if (!addressValidator.test(contractAddress)) {
+    if (!addressValidator.test(contractAddress as string)) {
       throw new Error('Invalid contract address')
     }
 
-    if (!tokenValidator.test(tokenId)) {
+    if (!tokenValidator.test(tokenId as string)) {
       this.error('Invalid token ID')
     }
 
