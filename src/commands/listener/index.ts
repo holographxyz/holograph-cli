@@ -138,10 +138,9 @@ export default class Listener extends Command {
       this.providers[network].on('close', this.handleDroppedSocket.bind(this, network))
       this.providers[network].on('end', this.handleDroppedSocket.bind(this, network))
 
-      // Process blocks 🧱
-      this.processTransactions(network, this.blockJobs, this.blockJobHandler)
     }
 
+    // Process blocks 🧱
     this.blockJobHandler()
   }
 

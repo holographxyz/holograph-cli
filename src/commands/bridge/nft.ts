@@ -32,7 +32,7 @@ export default class Contract extends Command {
     if (!collectionAddress) {
       const prompt: any = await inquirer.prompt([
         {
-          name: 'address',
+          name: 'collectionAddress',
           message: 'Enter the contract address of the collection on the source chain',
           type: 'string',
           validate: async (input: string) => {
@@ -87,7 +87,7 @@ export default class Contract extends Command {
 
     // Validate the command inputs
     if (!addressValidator.test(collectionAddress as string)) {
-      throw new Error('Invalid collection address')
+      throw new Error('Invalid collection address: ' + collectionAddress)
     }
 
     if (!tokenValidator.test(tokenId as string)) {
