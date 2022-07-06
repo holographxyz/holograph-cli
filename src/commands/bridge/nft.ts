@@ -109,18 +109,6 @@ export default class Contract extends Command {
 
     CliUx.ux.action.stop()
 
-    // Check if the contract is deployed on the source chain and not on the destination chain
-    CliUx.ux.action.start('Checking if the contract is deployed on the source chain, and not on the destination chain')
-    if ((await sourceProvider.getCode(contractAddress)) === '0x') {
-      this.error(`Contract at ${contractAddress} does not exist on the source chain`)
-    }
-
-    if ((await destinationProvider.getCode(contractAddress)) !== '0x') {
-      this.error(`Contract at ${contractAddress} already exists on the destination chain`)
-    }
-
-    CliUx.ux.action.stop()
-
     CliUx.ux.action.start('Retrieving HolographFactory contract')
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
     const holograph = new ethers.ContractFactory(holographABI, '0x', sourceWallet).attach(
@@ -149,7 +137,7 @@ export default class Contract extends Command {
     if (holographRegistry.isHolographedContract(contractAddress) === false) {
       throw new Error('Contract is not a Holograph contract')
     } else {
-      this.log('Holographed contract found')
+      this.log('Holographed contract found 👍')
     }
 
     // const holographErc721ABI = await fs.readJson('./src/abi/HolographERC721.json')
