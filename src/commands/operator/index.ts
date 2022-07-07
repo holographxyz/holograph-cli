@@ -45,7 +45,7 @@ export default class Operator extends Command {
   factoryAddress: any
   operatorAddress: any
   supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
-  blockJobs: any[] = []
+  blockJobs: any[] = [{network:"mumbai",block:27072607}]
   providers: any = {}
   web3: any = {}
   wallets: any = {}
@@ -251,7 +251,7 @@ export default class Operator extends Command {
             interestingTransactions.push(transaction)
           }
           // Check if it's a LayerZero call
-          else if (transaction.to.toLowerCase() === this.LAYERZERO_RECEIVERS[job.network]) {
+          else if (transaction.from.toLowerCase() === this.LAYERZERO_RECEIVERS[job.network]) {
             // We have LayerZero call, need to check it it's directed towards Holograph operators
             interestingTransactions.push(transaction)
           }
