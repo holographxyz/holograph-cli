@@ -45,7 +45,7 @@ export default class Operator extends Command {
   factoryAddress: any
   operatorAddress: any
   supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
-  blockJobs: any[] = [{network:"mumbai",block:27072607}]
+  blockJobs: any[] = []
   providers: any = {}
   web3: any = {}
   wallets: any = {}
