@@ -23,7 +23,7 @@ export default class Contract extends Command {
     const {flags} = await this.parse(Contract)
     this.log('User configurations loaded.')
 
-    const allowedNetworks = ['rinkeby', 'mumbai']
+    const allowedNetworks = ['rinkeby', 'mumbai', 'fuji']
     let remainingNetworks = allowedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
 

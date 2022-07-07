@@ -64,6 +64,9 @@ export async function validateBeta1Schema(config: any): Promise<any> {
       mumbai: Joi.object({
         providerUrl: Joi.string(),
       }),
+      fuji: Joi.object({
+        providerUrl: Joi.string(),
+      }),
     }),
     user: Joi.object({
       credentials: Joi.object({

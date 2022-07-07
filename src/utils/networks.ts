@@ -108,6 +108,7 @@ export default {
   fuji: {
     chain: 43_113,
     rpc: 'https://avax.getblock.io/testnet/ext/bc/C/rpc?api_key=7bf62a30-d403-4afc-99dc-462dfbfb10de',
+    wss: 'wss://avax.getblock.io/testnet/ext/bc/C/rpc?api_key=7bf62a30-d403-4afc-99dc-462dfbfb10de',
     holographId: 4_000_000_003,
     tokenName: 'Avalanche Fuji',
     tokenSymbol: 'AVAX',
