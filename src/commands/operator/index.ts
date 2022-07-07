@@ -54,9 +54,9 @@ export default class Operator extends Command {
   operatorContract: any
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
   LAYERZERO_RECEIVERS: any = {
-    rinkeby: '0x41836E93A3D92C116087af0C9424F4EF3DdB00a2'.toLowerCase(),
-    mumbai: '0xb27c5c80eefe92591bf784dac95b7ac3db968e07'.toLowerCase(),
-    fuji: '0xbD95AbBE43CE10Cc1D2edB89c667e838d0267DF6'.toLowerCase(),
+    rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
+    mumbai: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
+    fuji: '0xE33da368F84C6B5cF93A270c6524EDDD769830A3'.toLowerCase(),
   }
 
   targetEvents: any = {
