@@ -56,7 +56,7 @@ export default class Operator extends Command {
   LAYERZERO_RECEIVERS: any = {
     rinkeby: '0x41836E93A3D92C116087af0C9424F4EF3DdB00a2'.toLowerCase(),
     mumbai: '0xb27c5c80eefe92591bf784dac95b7ac3db968e07'.toLowerCase(),
-    fuji: '0x93f54D755A063cE7bB9e6Ac47Eccc8e33411d706'.toLowerCase(),
+    fuji: '0xbD95AbBE43CE10Cc1D2edB89c667e838d0267DF6'.toLowerCase(),
   }
 
   targetEvents: any = {
