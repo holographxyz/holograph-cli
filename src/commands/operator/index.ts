@@ -183,9 +183,9 @@ export default class Operator extends Command {
       this.networkSubscribe(network)
 
       // Watch out for dropped sockets and reconnect if necessary
-      this.providers[network].on('error', this.handleDroppedSocket.bind(this, network))
-      this.providers[network].on('close', this.handleDroppedSocket.bind(this, network))
-      this.providers[network].on('end', this.handleDroppedSocket.bind(this, network))
+      // this.providers[network].on('error', this.handleDroppedSocket.bind(this, network))
+      // this.providers[network].on('close', this.handleDroppedSocket.bind(this, network))
+      // this.providers[network].on('end', this.handleDroppedSocket.bind(this, network))
     }
 
     // // Process blocks 🧱
@@ -367,42 +367,78 @@ export default class Operator extends Command {
     }
   }
 
-  networkSubscribe(network: string): void {
-    const subscription = this.wallets[network].eth
-      .subscribe('newBlockHeaders')
-      .on('connected', (subscriptionId: string) => {
-        this.log(`${capitalize(network)} subscription to new block headers successful: ${subscriptionId}`)
-      })
-      .on('data', (blockHeader: any) => {
-        if (this.latestBlockMap[network] !== 0 && blockHeader.number - this.latestBlockMap[network] > 1) {
-          this.log(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
-          let latest = this.latestBlockMap[network]
-          while (blockHeader.number - latest > 1) {
-            this.log(`Syncing ${capitalize(network)} block`, latest)
-            this.blockJobs.push({
-              network: network,
-              block: latest,
-            })
-            latest++
-          }
-        }
+  // networkSubscribe(network: string): void {
+  //   const subscription = this.wallets[network].eth
+  //     .subscribe('newBlockHeaders')
+  //     .on('connected', (subscriptionId: string) => {
+  //       this.log(`${capitalize(network)} subscription to new block headers successful: ${subscriptionId}`)
+  //     })
+  //     .on('data', (blockHeader: any) => {
+  //       if (this.latestBlockMap[network] !== 0 && blockHeader.number - this.latestBlockMap[network] > 1) {
+  //         this.log(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
+  //         let latest = this.latestBlockMap[network]
+  //         while (blockHeader.number - latest > 1) {
+  //           this.log(`Syncing ${capitalize(network)} block`, latest)
+  //           this.blockJobs.push({
+  //             network: network,
+  //             block: latest,
+  //           })
+  //           latest++
+  //         }
+  //       }
 
-        this.latestBlockMap[network] = blockHeader.number
-        this.log(`[${this.networkColors[network](capitalize(network))}] -> Block ${blockHeader.number}`)
-        this.blockJobs.push({
-          network: network,
-          block: blockHeader.number,
-        })
-      })
-      .on('error', (error: Error) => {
-        this.warn(`${capitalize(network)} subscription to new block headers error ${error.message}`)
-        try {
-          subscription.unsubscribe(this.log)
-          subscription.subscribe()
-        } catch {
-          this.networkSubscribe(network)
-        }
-      })
+  //       this.latestBlockMap[network] = blockHeader.number
+  //       this.log(`[${this.networkColors[network](capitalize(network))}] -> Block ${blockHeader.number}`)
+  //       this.blockJobs.push({
+  //         network: network,
+  //         block: blockHeader.number,
+  //       })
+  //     })
+  //     .on('error', (error: Error) => {
+  //       this.warn(`${capitalize(network)} subscription to new block headers error ${error.message}`)
+  //       try {
+  //         subscription.unsubscribe(this.log)
+  //         subscription.subscribe()
+  //       } catch {
+  //         this.networkSubscribe(network)
+  //       }
+  //     })
+  // }
+
+  networkSubscribe(network: string): void {
+    const subscription = this.providers[network].on('pending', (blockNumber: string) => {
+      this.log(`${capitalize(network)} subscription to new block headers successful: ${blockNumber}`)
+    })
+    // .on('data', (blockHeader: any) => {
+    //   if (this.latestBlockMap[network] !== 0 && blockHeader.number - this.latestBlockMap[network] > 1) {
+    //     this.log(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
+    //     let latest = this.latestBlockMap[network]
+    //     while (blockHeader.number - latest > 1) {
+    //       this.log(`Syncing ${capitalize(network)} block`, latest)
+    //       this.blockJobs.push({
+    //         network: network,
+    //         block: latest,
+    //       })
+    //       latest++
+    //     }
+    //   }
+
+    //   this.latestBlockMap[network] = blockHeader.number
+    //   this.log(`[${this.networkColors[network](capitalize(network))}] -> Block ${blockHeader.number}`)
+    //   this.blockJobs.push({
+    //     network: network,
+    //     block: blockHeader.number,
+    //   })
+    // })
+    // .on('error', (error: Error) => {
+    //   this.warn(`${capitalize(network)} subscription to new block headers error ${error.message}`)
+    //   try {
+    //     subscription.unsubscribe(this.log)
+    //     subscription.subscribe()
+    //   } catch {
+    //     this.networkSubscribe(network)
+    //   }
+    // })
   }
 
   handleDroppedSocket(network: string): void {
