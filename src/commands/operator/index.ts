@@ -44,7 +44,7 @@ export default class Operator extends Command {
   bridgeAddress: any
   factoryAddress: any
   operatorAddress: any
-  supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
+  supportedNetworks: string[] = ['rinkeby', 'mumbai']
   blockJobs: any[] = []
   providers: any = {}
   web3: any = {}
@@ -85,26 +85,24 @@ export default class Operator extends Command {
       switch (protocol) {
         case 'https:':
           this.providers[network] = new HttpProvider(rpcEndpoint)
-          if (this.operatorMode !== OperatorMode.listen) {
-            ethersProvider = new ethers.providers.JsonRpcProvider(rpcEndpoint)
-          }
+          ethersProvider = new ethers.providers.JsonRpcProvider(rpcEndpoint)
 
           break
         case 'wss:':
           this.providers[network] = new WebsocketProvider(rpcEndpoint, webSocketConfig)
-          if (this.operatorMode !== OperatorMode.listen) {
-            ethersProvider = new ethers.providers.WebSocketProvider(rpcEndpoint)
-          }
+          ethersProvider = new ethers.providers.WebSocketProvider(rpcEndpoint)
 
           break
         default:
           throw new Error('Unsupported RPC provider protocol -> ' + protocol)
       }
 
-      this.web3[network] = new Web3(this.providers[network])
-      if (this.operatorMode !== OperatorMode.listen) {
-        this.wallets[network] = userWallet.connect(ethersProvider)
-      }
+      this.wallets[network] = userWallet.connect(ethersProvider)
+
+      const holographABI = await fs.readJson('./src/abi/Holograph.json')
+      this.holograph = new ethers.ContractFactory(holographABI, '0x', this.wallets[network]).attach(
+        this.HOLOGRAPH_ADDRESS.toLowerCase(),
+      )
 
       this.latestBlockMap[network] = 0
       // TODO: You can manually set the latest block for a network to force the operator to start from a certain block
@@ -115,15 +113,10 @@ export default class Operator extends Command {
       // }
     }
 
-    // Contract is instantiated with Rinkeby, but is compatible with all networks
-    this.holograph = new this.web3[loadNetworks[0]].eth.Contract(
-      JSON.parse(fs.readFileSync('src/abi/Holograph.json', 'utf8')),
-      this.HOLOGRAPH_ADDRESS,
+    const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
+    this.operatorContract = new ethers.ContractFactory(holographOperatorABI, '0x').attach(
+      await this.holograph.getOperator(),
     )
-    this.operatorContract = new ethers.ContractFactory(
-      await fs.readJson('./src/abi/HolographOperator.json'),
-      '0x',
-    ).attach(await this.holograph.methods.getOperator().call())
   }
 
   async run(): Promise<void> {
@@ -149,10 +142,7 @@ export default class Operator extends Command {
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(
-      configPath,
-      this.operatorMode !== OperatorMode.listen,
-    )
+    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
     this.log('User configurations loaded.')
 
     if (flags.networks === undefined || '') {
@@ -164,7 +154,7 @@ export default class Operator extends Command {
       const network = flags.networks[i]
       if (this.supportedNetworks.includes(network)) {
         // First let's color our networks 🌈
-        this.networkColors[network] = color.rgb(randomNumber(100, 255), randomNumber(100, 255), randomNumber(100, 255))
+        this.networkColors[network] = color.rgb(randomNumber(100, 200), randomNumber(100, 200), randomNumber(100, 200))
       } else {
         // If network is not supported remove it from the array
         flags.networks.splice(i, 1)
@@ -175,9 +165,9 @@ export default class Operator extends Command {
 
     CliUx.ux.action.start(`Starting operator in mode: ${OperatorMode[this.operatorMode]}`)
     await this.initializeWeb3(flags.networks, configFile, userWallet)
-    this.bridgeAddress = (await this.holograph.methods.getBridge().call()).toLowerCase()
-    this.factoryAddress = (await this.holograph.methods.getFactory().call()).toLowerCase()
-    this.operatorAddress = (await this.holograph.methods.getOperator().call()).toLowerCase()
+    this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
+    this.factoryAddress = (await this.holograph.getFactory()).toLowerCase()
+    this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
 
     this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESS}`)
     this.log(`Bridge address: ${this.bridgeAddress}`)
@@ -198,8 +188,8 @@ export default class Operator extends Command {
       this.providers[network].on('end', this.handleDroppedSocket.bind(this, network))
     }
 
-    // Process blocks 🧱
-    this.blockJobHandler()
+    // // Process blocks 🧱
+    // this.blockJobHandler()
   }
 
   async executePayload(network: string, payload: string): Promise<void> {
@@ -378,7 +368,7 @@ export default class Operator extends Command {
   }
 
   networkSubscribe(network: string): void {
-    const subscription = this.web3[network].eth
+    const subscription = this.wallets[network].eth
       .subscribe('newBlockHeaders')
       .on('connected', (subscriptionId: string) => {
         this.log(`${capitalize(network)} subscription to new block headers successful: ${subscriptionId}`)
