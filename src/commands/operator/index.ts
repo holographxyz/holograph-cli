@@ -47,6 +47,7 @@ export default class Operator extends Command {
   supportedNetworks: string[] = ['rinkeby', 'mumbai']
   blockJobs: any[] = []
   providers: any = {}
+  ethersProviders: any = {}
   web3: any = {}
   wallets: any = {}
   holograph: any
@@ -81,28 +82,24 @@ export default class Operator extends Command {
       const network = loadNetworks[i]
       const rpcEndpoint = configFile.networks[network].providerUrl
       const protocol = new URL(rpcEndpoint).protocol
-      let ethersProvider
       switch (protocol) {
         case 'https:':
           this.providers[network] = new HttpProvider(rpcEndpoint)
-          ethersProvider = new ethers.providers.JsonRpcProvider(rpcEndpoint)
+          this.ethersProviders[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
 
           break
         case 'wss:':
           this.providers[network] = new WebsocketProvider(rpcEndpoint, webSocketConfig)
-          ethersProvider = new ethers.providers.WebSocketProvider(rpcEndpoint)
+          this.ethersProviders[network] = new ethers.providers.WebSocketProvider(rpcEndpoint)
 
           break
         default:
           throw new Error('Unsupported RPC provider protocol -> ' + protocol)
       }
 
-      this.wallets[network] = userWallet.connect(ethersProvider)
-
-      const holographABI = await fs.readJson('./src/abi/Holograph.json')
-      this.holograph = new ethers.ContractFactory(holographABI, '0x', this.wallets[network]).attach(
-        this.HOLOGRAPH_ADDRESS.toLowerCase(),
-      )
+      if (userWallet !== undefined) {
+        this.wallets[network] = userWallet.connect(this.ethersProviders[network])
+      }
 
       this.latestBlockMap[network] = 0
       // TODO: You can manually set the latest block for a network to force the operator to start from a certain block
@@ -112,6 +109,11 @@ export default class Operator extends Command {
       //   fuji: 'latest',
       // }
     }
+
+    const holographABI = await fs.readJson('./src/abi/Holograph.json')
+    this.holograph = new ethers.ContractFactory(holographABI, '0x', this.wallets[loadNetworks[0]]).attach(
+      this.HOLOGRAPH_ADDRESS.toLowerCase(),
+    )
 
     const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
     this.operatorContract = new ethers.ContractFactory(holographOperatorABI, '0x').attach(
@@ -406,8 +408,8 @@ export default class Operator extends Command {
   // }
 
   networkSubscribe(network: string): void {
-    const subscription = this.providers[network].on('pending', (blockNumber: string) => {
-      this.log(`${capitalize(network)} subscription to new block headers successful: ${blockNumber}`)
+    this.ethersProviders[network].on('block', (blockNumber: string) => {
+      this.log(`[${this.networkColors[network](capitalize(network))}] -> Block ${blockNumber}`)
     })
     // .on('data', (blockHeader: any) => {
     //   if (this.latestBlockMap[network] !== 0 && blockHeader.number - this.latestBlockMap[network] > 1) {
