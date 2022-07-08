@@ -45,9 +45,10 @@ export default class Operator extends Command {
   factoryAddress: any
   operatorAddress: any
   supportedNetworks: string[] = ['rinkeby', 'mumbai']
-  blockJobs: any[] = []
+  blockJobs: any[] = [{network:"mumbai",block:27072607}]
   providers: any = {}
   ethersProviders: any = {}
+  abiCoder = ethers.utils.defaultAbiCoder
   web3: any = {}
   wallets: any = {}
   holograph: any
@@ -191,7 +192,7 @@ export default class Operator extends Command {
     }
 
     // // Process blocks 🧱
-    // this.blockJobHandler()
+    this.blockJobHandler()
   }
 
   async executePayload(network: string, payload: string): Promise<void> {
@@ -223,7 +224,7 @@ export default class Operator extends Command {
   }
 
   async processBlock(job: any): Promise<void> {
-    const block = await this.web3[job.network].eth.getBlock(job.block, true)
+    const block = await this.ethersProviders[job.network].getBlockWithTransactions(job.block)
     if (block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
         this.log('Zero block transactions for block', job.block, 'on', job.network)
@@ -275,13 +276,13 @@ export default class Operator extends Command {
   async processTransactions(network: string, transactions: any, callback: any): Promise<void> {
     if (transactions.length > 0) {
       const transaction = transactions.shift()
-      const receipt = await this.web3[network].eth.getTransactionReceipt(transaction.hash)
+      const receipt = await this.ethersProviders[network].getTransactionReceipt(transaction.hash)
       if (receipt === null) {
         throw new Error(`Could not get receipt for ${transaction.hash}`)
       }
 
       if (transaction.to.toLowerCase() === this.factoryAddress) {
-        const config = decodeDeploymentConfigInput(transaction.input)
+        const config = decodeDeploymentConfigInput(transaction.data)
         let event = null
         if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
           for (let i = 0, l = receipt.logs.length; i < l; i++) {
@@ -318,12 +319,9 @@ export default class Operator extends Command {
         }
 
         if (event) {
-          const deploymentInput = this.web3[network].eth.abi.decodeParameter(
-            'bytes',
-            '0x' + transaction.input.slice(10),
-          )
+          const deploymentInput = this.abiCoder.decode(['bytes'], '0x' + transaction.data.slice(10))[0]
           const config = decodeDeploymentConfig(
-            this.web3[network].eth.abi.decodeParameter('bytes', '0x' + deploymentInput.slice(10)),
+            this.abiCoder.decode(['bytes'], '0x' + deploymentInput.slice(10))[0]
           )
           const deploymentAddress = '0x' + event[1].slice(26)
           this.log(
@@ -352,14 +350,15 @@ export default class Operator extends Command {
         }
 
         if (event) {
-          const deploymentAddress = '0x' + event[1].slice(26)
-          const payload = this.web3[network].eth.abi.decodeParameter('bytes', event)
+          const payload = this.abiCoder.decode(['bytes'], event)[0]
           this.log(
             `HolographOperator received a new bridge job on ${capitalize(
               network,
-            )} at ${deploymentAddress}\nThe job payload is ${payload}\n`,
+            )}\nThe job payload is ${payload}\n`,
           )
-          await this.executePayload(network, payload)
+          if (this.operatorMode !== OperatorMode.listen) {
+            await this.executePayload(network, payload)
+          }
         } else {
           this.log('LayerZero transaction is not relevant to AvailableJob event')
         }
@@ -369,78 +368,29 @@ export default class Operator extends Command {
     }
   }
 
-  // networkSubscribe(network: string): void {
-  //   const subscription = this.wallets[network].eth
-  //     .subscribe('newBlockHeaders')
-  //     .on('connected', (subscriptionId: string) => {
-  //       this.log(`${capitalize(network)} subscription to new block headers successful: ${subscriptionId}`)
-  //     })
-  //     .on('data', (blockHeader: any) => {
-  //       if (this.latestBlockMap[network] !== 0 && blockHeader.number - this.latestBlockMap[network] > 1) {
-  //         this.log(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
-  //         let latest = this.latestBlockMap[network]
-  //         while (blockHeader.number - latest > 1) {
-  //           this.log(`Syncing ${capitalize(network)} block`, latest)
-  //           this.blockJobs.push({
-  //             network: network,
-  //             block: latest,
-  //           })
-  //           latest++
-  //         }
-  //       }
-
-  //       this.latestBlockMap[network] = blockHeader.number
-  //       this.log(`[${this.networkColors[network](capitalize(network))}] -> Block ${blockHeader.number}`)
-  //       this.blockJobs.push({
-  //         network: network,
-  //         block: blockHeader.number,
-  //       })
-  //     })
-  //     .on('error', (error: Error) => {
-  //       this.warn(`${capitalize(network)} subscription to new block headers error ${error.message}`)
-  //       try {
-  //         subscription.unsubscribe(this.log)
-  //         subscription.subscribe()
-  //       } catch {
-  //         this.networkSubscribe(network)
-  //       }
-  //     })
-  // }
-
   networkSubscribe(network: string): void {
     this.ethersProviders[network].on('block', (blockNumber: string) => {
-      this.log(`[${this.networkColors[network](capitalize(network))}] -> Block ${blockNumber}`)
-    })
-    // .on('data', (blockHeader: any) => {
-    //   if (this.latestBlockMap[network] !== 0 && blockHeader.number - this.latestBlockMap[network] > 1) {
-    //     this.log(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
-    //     let latest = this.latestBlockMap[network]
-    //     while (blockHeader.number - latest > 1) {
-    //       this.log(`Syncing ${capitalize(network)} block`, latest)
-    //       this.blockJobs.push({
-    //         network: network,
-    //         block: latest,
-    //       })
-    //       latest++
-    //     }
-    //   }
+      let block = parseInt(blockNumber)
+      if (this.latestBlockMap[network] !== 0 && block - this.latestBlockMap[network] > 1) {
+        this.log(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
+        let latest = this.latestBlockMap[network]
+        while (block - latest > 1) {
+          this.log(`Syncing ${capitalize(network)} block`, latest)
+          this.blockJobs.push({
+            network: network,
+            block: latest,
+          })
+          latest++
+        }
+      }
 
-    //   this.latestBlockMap[network] = blockHeader.number
-    //   this.log(`[${this.networkColors[network](capitalize(network))}] -> Block ${blockHeader.number}`)
-    //   this.blockJobs.push({
-    //     network: network,
-    //     block: blockHeader.number,
-    //   })
-    // })
-    // .on('error', (error: Error) => {
-    //   this.warn(`${capitalize(network)} subscription to new block headers error ${error.message}`)
-    //   try {
-    //     subscription.unsubscribe(this.log)
-    //     subscription.subscribe()
-    //   } catch {
-    //     this.networkSubscribe(network)
-    //   }
-    // })
+      this.latestBlockMap[network] = block
+      this.log(`[${this.networkColors[network](capitalize(network))}] -> Block ${block}`)
+      this.blockJobs.push({
+        network: network,
+        block: block,
+      })
+    })
   }
 
   handleDroppedSocket(network: string): void {
