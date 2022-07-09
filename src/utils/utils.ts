@@ -29,7 +29,7 @@ const webSocketConfig = {
   },
 }
 
-const decodeDeploymentConfig = function (input: string): string {
+const decodeDeploymentConfig = function (input: string) {
   const decodedConfig = web3.eth.abi.decodeParameters(
     [
       {

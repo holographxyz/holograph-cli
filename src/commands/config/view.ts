@@ -60,7 +60,7 @@ export default class ConfigView extends Command {
       if (typeof obj[key] === 'object') {
         tabCursor = '  '
         this.log(`${capitalize(key)}:`)
-        this.serializeClean(obj[key], tabCursor)
+        this.serializeClean(obj[key] as Record<string, unknown>, tabCursor)
       } else {
         this.log(`${tabCursor}${capitalize(key)}: ${obj[key]}`)
       }
