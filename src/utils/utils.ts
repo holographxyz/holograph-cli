@@ -29,7 +29,23 @@ const webSocketConfig = {
   },
 }
 
-const decodeDeploymentConfig = function (input: string) {
+export interface DeploymentConfig {
+  config: {
+    contractType: string;
+    chainType: number;
+    salt: string;
+    byteCode: string;
+    initCode: string;
+  };
+  signature: {
+    r: string;
+    s: string;
+    v: number;
+  };
+  signer: string;
+}
+
+const decodeDeploymentConfig = function (input: string): DeploymentConfig {
   const decodedConfig = web3.eth.abi.decodeParameters(
     [
       {
