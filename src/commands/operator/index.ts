@@ -3,19 +3,14 @@ import * as path from 'node:path'
 import * as inquirer from 'inquirer'
 
 import {CliUx, Command, Flags} from '@oclif/core'
-import Web3 from 'web3'
 import {ethers} from 'ethers'
 
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
-const HttpProvider = require('../../utils/HttpProvider.js')
-const WebsocketProvider = require('../../utils/WebsocketProvider.js')
 
 import {
-  networks,
   decodeDeploymentConfig,
   decodeDeploymentConfigInput,
   capitalize,
-  webSocketConfig,
   randomNumber,
 } from '../../utils/utils'
 import color from '@oclif/color'
@@ -45,11 +40,9 @@ export default class Operator extends Command {
   factoryAddress: any
   operatorAddress: any
   supportedNetworks: string[] = ['rinkeby', 'mumbai']
-  blockJobs: any[] = [{network:"mumbai",block:27072607}]
+  blockJobs: any[] = []
   providers: any = {}
-  ethersProviders: any = {}
   abiCoder = ethers.utils.defaultAbiCoder
-  web3: any = {}
   wallets: any = {}
   holograph: any
   operatorMode: OperatorMode = OperatorMode.listen
@@ -85,13 +78,11 @@ export default class Operator extends Command {
       const protocol = new URL(rpcEndpoint).protocol
       switch (protocol) {
         case 'https:':
-          this.providers[network] = new HttpProvider(rpcEndpoint)
-          this.ethersProviders[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
+          this.providers[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
 
           break
         case 'wss:':
-          this.providers[network] = new WebsocketProvider(rpcEndpoint, webSocketConfig)
-          this.ethersProviders[network] = new ethers.providers.WebSocketProvider(rpcEndpoint)
+          this.providers[network] = new ethers.providers.WebSocketProvider(rpcEndpoint)
 
           break
         default:
@@ -99,7 +90,7 @@ export default class Operator extends Command {
       }
 
       if (userWallet !== undefined) {
-        this.wallets[network] = userWallet.connect(this.ethersProviders[network])
+        this.wallets[network] = userWallet.connect(this.providers[network])
       }
 
       this.latestBlockMap[network] = 0
@@ -224,7 +215,7 @@ export default class Operator extends Command {
   }
 
   async processBlock(job: any): Promise<void> {
-    const block = await this.ethersProviders[job.network].getBlockWithTransactions(job.block)
+    const block = await this.providers[job.network].getBlockWithTransactions(job.block)
     if (block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
         this.log('Zero block transactions for block', job.block, 'on', job.network)
@@ -276,7 +267,7 @@ export default class Operator extends Command {
   async processTransactions(network: string, transactions: any, callback: any): Promise<void> {
     if (transactions.length > 0) {
       const transaction = transactions.shift()
-      const receipt = await this.ethersProviders[network].getTransactionReceipt(transaction.hash)
+      const receipt = await this.providers[network].getTransactionReceipt(transaction.hash)
       if (receipt === null) {
         throw new Error(`Could not get receipt for ${transaction.hash}`)
       }
@@ -369,8 +360,8 @@ export default class Operator extends Command {
   }
 
   networkSubscribe(network: string): void {
-    this.ethersProviders[network].on('block', (blockNumber: string) => {
-      let block = parseInt(blockNumber)
+    this.providers[network].on('block', (blockNumber: string) => {
+      const block = Number.parseInt(blockNumber, 10)
       if (this.latestBlockMap[network] !== 0 && block - this.latestBlockMap[network] > 1) {
         this.log(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
         let latest = this.latestBlockMap[network]
@@ -393,6 +384,7 @@ export default class Operator extends Command {
     })
   }
 
+/*
   handleDroppedSocket(network: string): void {
     let resetProvider: any = null
     if (typeof resetProvider !== 'undefined') {
@@ -422,4 +414,5 @@ export default class Operator extends Command {
       }
     }, 5000) // 5 seconds
   }
+*/
 }
