@@ -20,14 +20,11 @@ export default class Contract extends Command {
     tokenId: Flags.string({description: 'The ID of the NFT on the source chain (number or 32-byte hex string)'}),
   }
 
-  public async run(): Promise<void> {
-    const {flags} = await this.parse(Contract)
+  collectionAddress: string
+  tokenId: string
 
-    // Have the user input the contract address and token ID if they don't provide flags
-    let collectionAddress: string | undefined = flags.address
-    let tokenId: string | undefined = flags.tokenId
-
-    if (!collectionAddress) {
+  async checkForCollectionValue(): Promise<void> {
+    if (this.collectionAddress === '') {
       const prompt: any = await inquirer.prompt([
         {
           name: 'collectionAddress',
@@ -38,10 +35,12 @@ export default class Contract extends Command {
           },
         },
       ])
-      collectionAddress = prompt.collectionAddress
+      this.collectionAddress = prompt.collectionAddress
     }
+  }
 
-    if (!tokenId) {
+  async checkForTokenIdValue(): Promise<void> {
+    if (this.tokenId === '') {
       const prompt: any = await inquirer.prompt([
         {
           name: 'tokenId',
@@ -52,8 +51,19 @@ export default class Contract extends Command {
           },
         },
       ])
-      tokenId = prompt.tokenId
+      this.tokenId = prompt.tokenId
     }
+  }
+
+  public async run(): Promise<void> {
+    const {flags} = await this.parse(Contract)
+
+    // Have the user input the contract address and token ID if they don't provide flags
+    this.collectionAddress = flags.address | ''
+    this.tokenId = flags.tokenId | ''
+
+    await this.checkForCollectionValue()
+    await this.checkForTokenIdValue()
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
@@ -84,11 +94,11 @@ export default class Contract extends Command {
     }
 
     // Validate the command inputs
-    if (!addressValidator.test(collectionAddress as string)) {
-      throw new Error(`Invalid collection address: ${collectionAddress}`)
+    if (!addressValidator.test(this.collectionAddress)) {
+      throw new Error(`Invalid collection address: ${this.collectionAddress}`)
     }
 
-    if (!tokenValidator.test(tokenId as string)) {
+    if (!tokenValidator.test(this.tokenId)) {
       this.error('Invalid token ID')
     }
 
@@ -139,12 +149,12 @@ export default class Contract extends Command {
 
     // Check if the contract is deployed on the source chain and not on the destination chain
     CliUx.ux.action.start('Checking if the contract is deployed on both source and destination chains')
-    if ((await sourceProvider.getCode(collectionAddress as string)) === '0x') {
-      this.error(`Contract at ${collectionAddress} does not exist on the source chain`)
+    if ((await sourceProvider.getCode(this.collectionAddress)) === '0x') {
+      this.error(`Contract at ${this.collectionAddress} does not exist on the source chain`)
     }
 
-    if ((await destinationProvider.getCode(collectionAddress as string)) === '0x') {
-      this.error(`Contract at ${collectionAddress} does not exist on the destination chain`)
+    if ((await destinationProvider.getCode(this.collectionAddress)) === '0x') {
+      this.error(`Contract at ${this.collectionAddress} does not exist on the destination chain`)
     }
 
     CliUx.ux.action.stop()
@@ -174,18 +184,16 @@ export default class Contract extends Command {
     )
 
     // Check that the contract is Holographed
-    if (holographRegistry.isHolographedContract(collectionAddress) === false) {
+    if (holographRegistry.isHolographedContract(this.collectionAddress) === false) {
       throw new Error('Contract is not a Holograph contract')
     } else {
       this.log('Holographed contract found 👍')
     }
 
     const holographErc721ABI = await fs.readJson('./src/abi/HolographERC721.json')
-    const holographErc721 = new ethers.ContractFactory(holographErc721ABI, '0x', sourceWallet).attach(
-      collectionAddress as string,
-    )
+    const holographErc721 = new ethers.ContractFactory(holographErc721ABI, '0x', sourceWallet).attach(this.collectionAddress)
 
-    const tokenIdBn = ethers.BigNumber.from(tokenId)
+    const tokenIdBn = ethers.BigNumber.from(this.tokenId)
 
     if ((await holographErc721.exists(tokenIdBn)) === false) {
       throw new Error('NFT does not exist')
@@ -219,10 +227,10 @@ export default class Contract extends Command {
         try {
           gasAmount = await holographBridge.estimateGas.erc721out(
             holographToChainId,
-            collectionAddress,
+            this.collectionAddress,
             userWallet.address,
             userWallet.address,
-            tokenId,
+            this.tokenId,
             {
               value: startingPayment,
             },
@@ -275,10 +283,10 @@ export default class Contract extends Command {
       CliUx.ux.action.start('Sending transaction to mempool')
       const deployTx = await holographBridge.erc721out(
         holographToChainId,
-        collectionAddress,
+        this.collectionAddress,
         userWallet.address,
         userWallet.address,
-        tokenId,
+        this.tokenId,
         {
           value: startingPayment,
         },

@@ -25,9 +25,9 @@ export const deploymentProcesses = [
 ]
 
 export const prepareDeploymentConfig = async function (
-  configFile: any,
-  userWallet: any,
-  flags: any,
+  configFile: Record<string, unknown>,
+  userWallet: typeof ethers.Wallet | undefined,
+  flags: Record<string, unknown>,
   allowedNetworks: string[],
 ): Promise<any> {
   let deploymentType = flags.deploymentType

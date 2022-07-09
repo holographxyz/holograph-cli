@@ -1,35 +1,13 @@
 import Web3 from 'web3'
 
-import networks from './networks'
-
 // Used for web3 utility functions
 const web3 = new Web3('ws://localhost:8545')
-
-// TODO: Not sure if we need these utility functions yet
-// function remove0x(input: string) {
-//   let output  = input.toLowerCase().trim()
-//   if (output.startsWith('0x')) {
-//     output = output.slice(2)
-//   }
-//   return output
-// }
-
-// function hexifyString(bytes: any) {
-//   let output = remove0x(bytes)
-//   bytes = bytes.padStart(bytes * 2, '0')
-//   bytes = '0x' + bytes
-//   return bytes
-// }
-
-// function  hexifyNumber(bytes: any) {
-//   return bytes.toString(16).hexify(bytes)
-// }
 
 function randomNumber(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min)) + min
 }
 
-function capitalize(input: string) {
+function capitalize(input: string): string {
   return input.charAt(0).toUpperCase() + input.slice(1)
 }
 
@@ -51,7 +29,7 @@ const webSocketConfig = {
   },
 }
 
-const decodeDeploymentConfig = function (input: any): any {
+const decodeDeploymentConfig = function (input: string): string {
   const decodedConfig = web3.eth.abi.decodeParameters(
     [
       {
@@ -137,4 +115,4 @@ const decodeDeploymentConfigInput = function (input: string): any {
   return decodeDeploymentConfig('0x' + input.slice(10))
 }
 
-export {capitalize, randomNumber, networks, decodeDeploymentConfig, decodeDeploymentConfigInput, webSocketConfig}
+export {capitalize, randomNumber, decodeDeploymentConfig, decodeDeploymentConfigInput, webSocketConfig}

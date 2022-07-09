@@ -52,7 +52,7 @@ export async function ensureConfigFileIsValid(configPath: string, unlockWallet =
   }
 }
 
-export async function validateBeta1Schema(config: any): Promise<any> {
+export async function validateBeta1Schema(config: Record<string, unknown>): Promise<void> {
   const beta1Schema = Joi.object({
     version: Joi.string().valid('beta1'),
     networks: Joi.object({
