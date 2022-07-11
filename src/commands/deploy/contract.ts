@@ -4,6 +4,7 @@ import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import {ethers} from 'ethers'
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-deployment'
 
 export default class Contract extends Command {
@@ -20,6 +21,10 @@ export default class Contract extends Command {
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
     const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
 
+    if (userWallet === undefined) {
+      throw new Error('Wallet could not be unlocked')
+    }
+
     const {flags} = await this.parse(Contract)
     this.log('User configurations loaded.')
 
@@ -27,7 +32,7 @@ export default class Contract extends Command {
     let remainingNetworks = allowedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
 
-    const destinationChainPrompt: any = await inquirer.prompt([
+    const destinationNetworkPrompt: any = await inquirer.prompt([
       {
         name: 'destinationNetwork',
         message: 'select the network to which the contract will be deployed',
@@ -35,34 +40,31 @@ export default class Contract extends Command {
         choices: remainingNetworks,
       },
     ])
-    const destinationChain = destinationChainPrompt.destinationNetwork
+    const destinationNetwork = destinationNetworkPrompt.destinationNetwork
 
     remainingNetworks = remainingNetworks.filter((item: string) => {
-      return item !== destinationChain
+      return item !== destinationNetwork
     })
 
     CliUx.ux.action.start('Loading destination network RPC provider')
-    const destinationChainProtocol = new URL(configFile.networks[destinationChain].providerUrl).protocol
-    let destinationChainProvider
-    switch (destinationChainProtocol) {
+    const destinationProviderUrl: string = (configFile.networks[destinationNetwork as keyof ConfigNetworks] as ConfigNetwork).providerUrl
+    const destinationNetworkProtocol: string = new URL(destinationProviderUrl).protocol
+    let destinationNetworkProvider
+    switch (destinationNetworkProtocol) {
       case 'https:':
-        destinationChainProvider = new ethers.providers.JsonRpcProvider(
-          configFile.networks[destinationChain].providerUrl,
-        )
+        destinationNetworkProvider = new ethers.providers.JsonRpcProvider(destinationProviderUrl)
         break
       case 'wss:':
-        destinationChainProvider = new ethers.providers.WebSocketProvider(
-          configFile.networks[destinationChain].providerUrl,
-        )
+        destinationNetworkProvider = new ethers.providers.WebSocketProvider(destinationProviderUrl)
         break
       default:
-        throw new Error('Unsupported RPC URL protocol -> ' + destinationChainProtocol)
+        throw new Error('Unsupported RPC URL protocol -> ' + destinationNetworkProtocol)
     }
 
-    const destinationWallet = userWallet.connect(destinationChainProvider)
+    const destinationWallet = userWallet.connect(destinationNetworkProvider)
     CliUx.ux.action.stop()
 
-    const deploymentConfig = await prepareDeploymentConfig(configFile, userWallet, flags, remainingNetworks)
+    const deploymentConfig = await prepareDeploymentConfig(configFile, userWallet, flags as Record<string, string | undefined>, remainingNetworks)
     this.debug(deploymentConfig)
 
     CliUx.ux.action.start('Retrieving HolographFactory contract')
