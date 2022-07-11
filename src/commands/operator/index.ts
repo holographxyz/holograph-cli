@@ -73,10 +73,9 @@ export default class Operator extends Command {
     try {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       blockHeights = await fs.readJson(path.resolve(__dirname, 'blocks.json'))
-      console.log('blockHeights', blockHeights)
+      this.log('Reading local block heights', blockHeights)
     } catch (error) {
-      console.log(error)
-      this.error('Unable to read block heights from db ')
+      this.error(`Unable to read block heights from db ${error}`)
     }
 
     for (let i = 0, l = loadNetworks.length; i < l; i++) {
@@ -127,17 +126,22 @@ export default class Operator extends Command {
     if (this.exited === false) {
       this.log(`Saving current block heights: ${JSON.stringify(this.latestBlockMap)}`)
       fs.writeFileSync(path.resolve(__dirname, 'blocks.json'), JSON.stringify(this.latestBlockMap))
-      console.log(`Exiting operator with code ${exitCode}...`)
+      this.log(`Exiting operator with code ${exitCode}...`)
       this.log('Goodbye! 👋')
       this.exited = true
     }
   }
 
   exitRouter = (options: any, exitCode: number) => {
-    if (exitCode || exitCode === 0) console.debug(`\nExit code ${exitCode}`)
+    if (exitCode || exitCode === 0) {
+      this.debug(`\nExit code ${exitCode}`)
+    }
+
     /* eslint-disable unicorn/no-process-exit */
     /* eslint-disable no-process-exit */
-    if (options.exit) process.exit()
+    if (options.exit) {
+      process.exit()
+    }
   }
 
   async run(): Promise<void> {
@@ -159,7 +163,7 @@ export default class Operator extends Command {
     }
 
     this.operatorMode = OperatorMode[mode as keyof typeof OperatorMode]
-    console.log(`Operator mode: ${this.operatorMode}`)
+    this.log(`Operator mode: ${this.operatorMode}`)
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
@@ -221,7 +225,10 @@ export default class Operator extends Command {
   }
 
   async executePayload(network: string, payload: string): Promise<void> {
-    let operate = true
+    // If the operator is in listen mode, payloads will not be executed
+    // If the operator is in manual mode, the payload must be manually executed
+    // If the operator is in auto mode, the payload will be executed automatically
+    let operate = this.operatorMode === OperatorMode.auto
     if (this.operatorMode === OperatorMode.manual) {
       const operatorPrompt: any = await inquirer.prompt([
         {
