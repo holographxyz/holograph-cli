@@ -7,12 +7,7 @@ import {ethers} from 'ethers'
 
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 
-import {
-  decodeDeploymentConfig,
-  decodeDeploymentConfigInput,
-  capitalize,
-  randomNumber,
-} from '../../utils/utils'
+import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, randomNumber} from '../../utils/utils'
 import color from '@oclif/color'
 
 enum OperatorMode {
@@ -39,7 +34,7 @@ export default class Operator extends Command {
   bridgeAddress: any
   factoryAddress: any
   operatorAddress: any
-  supportedNetworks: string[] = ['rinkeby', 'mumbai']
+  supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
   blockJobs: any[] = []
   providers: any = {}
   abiCoder = ethers.utils.defaultAbiCoder
@@ -65,6 +60,7 @@ export default class Operator extends Command {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore - Set all networks to start with latest block at index 0
   latestBlockMap: any = {}
+  exited = false
 
   rgbToHex(rgb: any) {
     const hex = Number(rgb).toString(16)
@@ -72,6 +68,17 @@ export default class Operator extends Command {
   }
 
   async initializeWeb3(loadNetworks: string[], configFile: any, userWallet: any) {
+    // Read in the block heights state from the local db
+    let blockHeights
+    try {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      blockHeights = await fs.readJson(path.resolve(__dirname, 'blocks.json'))
+      console.log('blockHeights', blockHeights)
+    } catch (error) {
+      console.log(error)
+      this.error('Unable to read block heights from db ')
+    }
+
     for (let i = 0, l = loadNetworks.length; i < l; i++) {
       const network = loadNetworks[i]
       const rpcEndpoint = configFile.networks[network].providerUrl
@@ -93,13 +100,13 @@ export default class Operator extends Command {
         this.wallets[network] = userWallet.connect(this.providers[network])
       }
 
-      this.latestBlockMap[network] = 0
-      // TODO: You can manually set the latest block for a network to force the operator to start from a certain block
-      // this.latestBlockMap = {
-      //   rinkeby: 10900000,
-      //   mumbai: 27060000,
-      //   fuji: 'latest',
-      // }
+      if (blockHeights && blockHeights[network] !== undefined) {
+        this.log(`Resuming Operator from block height ${blockHeights[network]} for ${capitalize(network)}`)
+        this.latestBlockMap[network] = blockHeights[network]
+      } else {
+        this.log(`Starting Operator from latest block height for ${network}`)
+        this.latestBlockMap[network] = 0
+      }
     }
 
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
@@ -111,6 +118,26 @@ export default class Operator extends Command {
     this.operatorContract = new ethers.ContractFactory(holographOperatorABI, '0x').attach(
       await this.holograph.getOperator(),
     )
+  }
+
+  /**
+   * Before exit, save the block heights to the local db
+   */
+  exitHandler = async (exitCode: number) => {
+    if (this.exited === false) {
+      this.log(`Saving current block heights: ${JSON.stringify(this.latestBlockMap)}`)
+      fs.writeFileSync(path.resolve(__dirname, 'blocks.json'), JSON.stringify(this.latestBlockMap))
+      console.log(`Exiting operator with code ${exitCode}...`)
+      this.log('Goodbye! 👋')
+      this.exited = true
+    }
+  }
+
+  exitRouter = (options: any, exitCode: number) => {
+    if (exitCode || exitCode === 0) console.debug(`\nExit code ${exitCode}`)
+    /* eslint-disable unicorn/no-process-exit */
+    /* eslint-disable no-process-exit */
+    if (options.exit) process.exit()
   }
 
   async run(): Promise<void> {
@@ -148,7 +175,7 @@ export default class Operator extends Command {
       const network = flags.networks[i]
       if (this.supportedNetworks.includes(network)) {
         // First let's color our networks 🌈
-        this.networkColors[network] = color.rgb(randomNumber(100, 200), randomNumber(100, 200), randomNumber(100, 200))
+        this.networkColors[network] = color.rgb(randomNumber(100, 255), randomNumber(100, 255), randomNumber(100, 255))
       } else {
         // If network is not supported remove it from the array
         flags.networks.splice(i, 1)
@@ -180,6 +207,13 @@ export default class Operator extends Command {
       // this.providers[network].on('error', this.handleDroppedSocket.bind(this, network))
       // this.providers[network].on('close', this.handleDroppedSocket.bind(this, network))
       // this.providers[network].on('end', this.handleDroppedSocket.bind(this, network))
+
+      // Catch all exit events
+      for (const eventType of [`SIGINT`, `SIGUSR1`, `SIGUSR2`, `uncaughtException`, `SIGTERM`]) {
+        process.on(eventType, this.exitRouter.bind(null, {exit: true}))
+      }
+
+      process.on('exit', this.exitHandler)
     }
 
     // // Process blocks 🧱
@@ -311,9 +345,7 @@ export default class Operator extends Command {
 
         if (event) {
           const deploymentInput = this.abiCoder.decode(['bytes'], '0x' + transaction.data.slice(10))[0]
-          const config = decodeDeploymentConfig(
-            this.abiCoder.decode(['bytes'], '0x' + deploymentInput.slice(10))[0]
-          )
+          const config = decodeDeploymentConfig(this.abiCoder.decode(['bytes'], '0x' + deploymentInput.slice(10))[0])
           const deploymentAddress = '0x' + event[1].slice(26)
           this.log(
             '\nHolographOperator executed a job which bridged a collection\n' +
@@ -343,9 +375,7 @@ export default class Operator extends Command {
         if (event) {
           const payload = this.abiCoder.decode(['bytes'], event)[0]
           this.log(
-            `HolographOperator received a new bridge job on ${capitalize(
-              network,
-            )}\nThe job payload is ${payload}\n`,
+            `HolographOperator received a new bridge job on ${capitalize(network)}\nThe job payload is ${payload}\n`,
           )
           if (this.operatorMode !== OperatorMode.listen) {
             await this.executePayload(network, payload)
@@ -384,7 +414,7 @@ export default class Operator extends Command {
     })
   }
 
-/*
+  /*
   handleDroppedSocket(network: string): void {
     let resetProvider: any = null
     if (typeof resetProvider !== 'undefined') {
