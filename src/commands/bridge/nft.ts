@@ -122,7 +122,8 @@ export default class Contract extends Command {
     }
 
     CliUx.ux.action.start('Loading RPC providers')
-    const sourceProviderUrl: string = (configFile.networks[this.sourceNetwork as keyof ConfigNetworks] as ConfigNetwork).providerUrl
+    const sourceProviderUrl: string = (configFile.networks[this.sourceNetwork as keyof ConfigNetworks] as ConfigNetwork)
+      .providerUrl
     const sourceProtocol: string = new URL(sourceProviderUrl).protocol
     let sourceProvider
     switch (sourceProtocol) {
@@ -139,7 +140,9 @@ export default class Contract extends Command {
     const sourceWallet: ethers.Wallet = userWallet.connect(sourceProvider)
     this.debug('Source network', await sourceWallet.provider.getNetwork())
 
-    const destinationProviderUrl: string = (configFile.networks[this.destinationNetwork as keyof ConfigNetworks] as ConfigNetwork).providerUrl
+    const destinationProviderUrl: string = (
+      configFile.networks[this.destinationNetwork as keyof ConfigNetworks] as ConfigNetwork
+    ).providerUrl
     const destinationProtocol: string = new URL(destinationProviderUrl).protocol
     let destinationProvider
     switch (destinationProtocol) {
@@ -202,7 +205,9 @@ export default class Contract extends Command {
     }
 
     const holographErc721ABI = await fs.readJson('./src/abi/HolographERC721.json')
-    const holographErc721 = new ethers.ContractFactory(holographErc721ABI, '0x', sourceWallet).attach(this.collectionAddress)
+    const holographErc721 = new ethers.ContractFactory(holographErc721ABI, '0x', sourceWallet).attach(
+      this.collectionAddress,
+    )
 
     const tokenIdBn = ethers.BigNumber.from(this.tokenId)
 

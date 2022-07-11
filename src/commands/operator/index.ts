@@ -59,7 +59,7 @@ export default class Operator extends Command {
   networkColors: any = {}
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore - Set all networks to start with latest block at index 0
-  latestBlockMap: any = {}
+  latestBlockHeight: any = {}
   exited = false
 
   rgbToHex(rgb: any) {
@@ -101,11 +101,18 @@ export default class Operator extends Command {
 
       if (blockHeights && blockHeights[network] !== undefined) {
         this.log(`Resuming Operator from block height ${blockHeights[network]} for ${capitalize(network)}`)
-        this.latestBlockMap[network] = blockHeights[network]
+        this.latestBlockHeight[network] = blockHeights[network]
       } else {
         this.log(`Starting Operator from latest block height for ${network}`)
-        this.latestBlockMap[network] = 0
+        this.latestBlockHeight[network] = 0
       }
+
+      // TODO: Manual override block height
+      // this.latestBlockHeight = {
+      //   // rinkeby: 0,
+      //   mumbai: 27100000,
+      //   // fuji: 0,
+      // }
     }
 
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
@@ -124,8 +131,8 @@ export default class Operator extends Command {
    */
   exitHandler = async (exitCode: number) => {
     if (this.exited === false) {
-      this.log(`Saving current block heights: ${JSON.stringify(this.latestBlockMap)}`)
-      fs.writeFileSync(path.resolve(__dirname, 'blocks.json'), JSON.stringify(this.latestBlockMap))
+      this.log(`Saving current block heights: ${JSON.stringify(this.latestBlockHeight)}`)
+      fs.writeFileSync(path.resolve(__dirname, 'blocks.json'), JSON.stringify(this.latestBlockHeight))
       this.log(`Exiting operator with code ${exitCode}...`)
       this.log('Goodbye! 👋')
       this.exited = true
@@ -225,6 +232,7 @@ export default class Operator extends Command {
   }
 
   async executePayload(network: string, payload: string): Promise<void> {
+    this.log(`Executing payload on ${network}: ${payload}`)
     // If the operator is in listen mode, payloads will not be executed
     // If the operator is in manual mode, the payload must be manually executed
     // If the operator is in auto mode, the payload will be executed automatically
@@ -284,6 +292,9 @@ export default class Operator extends Command {
       }
 
       if (interestingTransactions.length > 0) {
+        this.log(
+          `Found ${interestingTransactions.length} interesting transactions on block ${job.block} on ${job.network}`,
+        )
         this.processTransactions(job.network, interestingTransactions, this.blockJobHandler)
       } else {
         this.blockJobHandler()
@@ -321,6 +332,7 @@ export default class Operator extends Command {
             const log = receipt.logs[i]
             if (log.topics.length > 0 && log.topics[0] === this.targetEvents.BridgeableContractDeployed) {
               event = log.topics
+              this.log(`Found bridgeable contract deployed event for ${event}`)
               break
             }
           }
@@ -399,9 +411,9 @@ export default class Operator extends Command {
   networkSubscribe(network: string): void {
     this.providers[network].on('block', (blockNumber: string) => {
       const block = Number.parseInt(blockNumber, 10)
-      if (this.latestBlockMap[network] !== 0 && block - this.latestBlockMap[network] > 1) {
+      if (this.latestBlockHeight[network] !== 0 && block - this.latestBlockHeight[network] > 1) {
         this.log(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
-        let latest = this.latestBlockMap[network]
+        let latest = this.latestBlockHeight[network]
         while (block - latest > 1) {
           this.log(`Syncing ${capitalize(network)} block`, latest)
           this.blockJobs.push({
@@ -412,7 +424,7 @@ export default class Operator extends Command {
         }
       }
 
-      this.latestBlockMap[network] = block
+      this.latestBlockHeight[network] = block
       this.log(`[${this.networkColors[network](capitalize(network))}] -> Block ${block}`)
       this.blockJobs.push({
         network: network,
