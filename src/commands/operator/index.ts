@@ -139,15 +139,17 @@ export default class Operator extends Command {
     }
   }
 
-  exitRouter = (options: any, exitCode: number) => {
-    if (exitCode || exitCode === 0) {
-      this.debug(`\nExit code ${exitCode}`)
-    }
+  exitRouter = (options: any, exitCode: number | string) => {
+    if ((exitCode && exitCode === 0) || exitCode === 'SIGINT') {
+      this.log(`\nExit code ${exitCode}`)
 
-    /* eslint-disable unicorn/no-process-exit */
-    /* eslint-disable no-process-exit */
-    if (options.exit) {
-      process.exit()
+      /* eslint-disable unicorn/no-process-exit */
+      /* eslint-disable no-process-exit */
+      if (options.exit) {
+        process.exit()
+      }
+    } else {
+      this.log(`\nError: ${exitCode}`)
     }
   }
 
