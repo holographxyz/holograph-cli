@@ -4,6 +4,7 @@ import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import {ethers} from 'ethers'
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-deployment'
 
 export default class Contract extends Command {
@@ -23,6 +24,10 @@ export default class Contract extends Command {
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
     const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
+
+    if (userWallet === undefined) {
+      throw new Error('Wallet could not be unlocked')
+    }
 
     const {flags} = await this.parse(Contract)
     this.log('User configurations loaded.')
@@ -50,14 +55,16 @@ export default class Contract extends Command {
     }
 
     CliUx.ux.action.start('Loading RPC providers')
-    const sourceProtocol = new URL(configFile.networks[sourceNetwork].providerUrl).protocol
+    const sourceProviderUrl: string = (configFile.networks[sourceNetwork as keyof ConfigNetworks] as ConfigNetwork)
+      .providerUrl
+    const sourceProtocol: string = new URL(sourceProviderUrl).protocol
     let sourceProvider
     switch (sourceProtocol) {
       case 'https:':
-        sourceProvider = new ethers.providers.JsonRpcProvider(configFile.networks[sourceNetwork].providerUrl)
+        sourceProvider = new ethers.providers.JsonRpcProvider(sourceProviderUrl)
         break
       case 'wss:':
-        sourceProvider = new ethers.providers.WebSocketProvider(configFile.networks[sourceNetwork].providerUrl)
+        sourceProvider = new ethers.providers.WebSocketProvider(sourceProviderUrl)
         break
       default:
         throw new Error('Unsupported RPC URL protocol -> ' + sourceProtocol)
@@ -66,16 +73,17 @@ export default class Contract extends Command {
     const sourceWallet = userWallet.connect(sourceProvider)
     this.debug('Source network', await sourceWallet.provider.getNetwork())
 
-    const destinationProtocol = new URL(configFile.networks[destinationNetwork].providerUrl).protocol
+    const destinationProviderUrl: string = (
+      configFile.networks[destinationNetwork as keyof ConfigNetworks] as ConfigNetwork
+    ).providerUrl
+    const destinationProtocol: string = new URL(destinationProviderUrl).protocol
     let destinationProvider
     switch (destinationProtocol) {
       case 'https:':
-        destinationProvider = new ethers.providers.JsonRpcProvider(configFile.networks[destinationNetwork].providerUrl)
+        destinationProvider = new ethers.providers.JsonRpcProvider(destinationProviderUrl)
         break
       case 'wss:':
-        destinationProvider = new ethers.providers.WebSocketProvider(
-          configFile.networks[destinationNetwork].providerUrl,
-        )
+        destinationProvider = new ethers.providers.WebSocketProvider(destinationProviderUrl)
         break
       default:
         throw new Error('Unsupported RPC URL protocol -> ' + destinationProtocol)
@@ -85,14 +93,19 @@ export default class Contract extends Command {
     this.debug('Destination network', await destinationWallet.provider.getNetwork())
     CliUx.ux.action.stop()
 
-    const allowedNetworks = ['rinkeby', 'mumbai']
-    let remainingNetworks = allowedNetworks
+    const allowedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
+    let remainingNetworks: string[] = allowedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
     remainingNetworks = remainingNetworks.filter((item: string) => {
       return item !== destinationNetwork
     })
 
-    const deploymentConfig = await prepareDeploymentConfig(configFile, userWallet, flags, remainingNetworks)
+    const deploymentConfig = await prepareDeploymentConfig(
+      configFile,
+      userWallet,
+      flags as Record<string, string | undefined>,
+      remainingNetworks,
+    )
 
     this.debug(deploymentConfig)
     CliUx.ux.action.stop()

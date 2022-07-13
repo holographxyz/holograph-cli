@@ -25,12 +25,15 @@ lerna-debug.log*
 /coverage
 /.nyc_output
 
-#env
+# env
 .env
 .env.local
 .env.dev
 .env.prod
 .end.stage
+
+# DB
+blocks.json
 
 # IDEs and editors
 /.idea

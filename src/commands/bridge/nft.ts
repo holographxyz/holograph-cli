@@ -4,6 +4,7 @@ import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import {ethers} from 'ethers'
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {addressValidator, tokenValidator} from '../../utils/validation'
 
 export default class Contract extends Command {
@@ -20,14 +21,13 @@ export default class Contract extends Command {
     tokenId: Flags.string({description: 'The ID of the NFT on the source chain (number or 32-byte hex string)'}),
   }
 
-  public async run(): Promise<void> {
-    const {flags} = await this.parse(Contract)
+  collectionAddress = ''
+  tokenId = ''
+  sourceNetwork = ''
+  destinationNetwork = ''
 
-    // Have the user input the contract address and token ID if they don't provide flags
-    let collectionAddress: string | undefined = flags.address
-    let tokenId: string | undefined = flags.tokenId
-
-    if (!collectionAddress) {
+  async validateCollectionAddress(): Promise<void> {
+    if (this.collectionAddress === '') {
       const prompt: any = await inquirer.prompt([
         {
           name: 'collectionAddress',
@@ -38,10 +38,16 @@ export default class Contract extends Command {
           },
         },
       ])
-      collectionAddress = prompt.collectionAddress
+      this.collectionAddress = prompt.collectionAddress
     }
 
-    if (!tokenId) {
+    if (!addressValidator.test(this.collectionAddress)) {
+      throw new Error(`Invalid collection address: ${this.collectionAddress}`)
+    }
+  }
+
+  async validateTokenId(): Promise<void> {
+    if (this.tokenId === '') {
       const prompt: any = await inquirer.prompt([
         {
           name: 'tokenId',
@@ -52,101 +58,119 @@ export default class Contract extends Command {
           },
         },
       ])
-      tokenId = prompt.tokenId
+      this.tokenId = prompt.tokenId
     }
+
+    if (!tokenValidator.test(this.tokenId)) {
+      this.error('Invalid token ID')
+    }
+  }
+
+  async validateSourceNetwork(configFile: ConfigFile): Promise<void> {
+    if (this.sourceNetwork === '' || !(this.sourceNetwork in configFile.networks)) {
+      this.log(
+        'Source network not provided, or does not exist in the config file',
+        'Reverting to default "from" network from config',
+      )
+      this.sourceNetwork = configFile.networks.from
+    }
+  }
+
+  async validateDestinationNetwork(configFile: ConfigFile): Promise<void> {
+    if (this.destinationNetwork === '' || !(this.destinationNetwork in configFile.networks)) {
+      this.log(
+        'Destination network not provided, or does not exist in the config file',
+        'Reverting to default "from" network from config',
+      )
+      this.destinationNetwork = configFile.networks.to
+    }
+  }
+
+  async checkContractCode(chainName: string, provider: ethers.providers.Provider, checkAddress: string): Promise<void> {
+    if ((await provider.getCode(checkAddress)) === '0x') {
+      this.error(`Contract at ${checkAddress} does not exist on the ${chainName} chain`)
+    }
+  }
+
+  public async run(): Promise<void> {
+    const {flags} = await this.parse(Contract)
+
+    // Have the user input the contract address and token ID if they don't provide flags
+    this.collectionAddress = flags.address || ''
+    this.tokenId = flags.tokenId || ''
+
+    await this.validateCollectionAddress()
+    await this.validateTokenId()
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
     const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
 
+    if (userWallet === undefined) {
+      throw new Error('Wallet could not be unlocked')
+    }
+
     this.log('User configurations loaded.')
 
-    let sourceNetwork: string = flags.sourceNetwork || ''
-    if (sourceNetwork === '' || !(sourceNetwork in configFile.networks)) {
-      this.log(
-        'Source network not provided, or does not exist in the config file',
-        'Reverting to default "from" network from config',
-      )
-      sourceNetwork = configFile.networks.from
-    }
+    this.sourceNetwork = flags.sourceNetwork || ''
+    await this.validateSourceNetwork(configFile)
+    this.destinationNetwork = flags.destinationNetwork || ''
+    await this.validateDestinationNetwork(configFile)
 
-    let destinationNetwork: string = flags.destinationNetwork || ''
-    if (destinationNetwork === '' || !(destinationNetwork in configFile.networks)) {
-      this.log(
-        'Destination network not provided, or does not exist in the config file',
-        'reverting to default "to" network from config',
-      )
-      destinationNetwork = configFile.networks.to
-    }
-
-    if (sourceNetwork === destinationNetwork) {
+    if (this.sourceNetwork === this.destinationNetwork) {
       throw new Error('Cannot bridge to/from the same network')
     }
 
-    // Validate the command inputs
-    if (!addressValidator.test(collectionAddress as string)) {
-      throw new Error(`Invalid collection address: ${collectionAddress}`)
-    }
-
-    if (!tokenValidator.test(tokenId as string)) {
-      this.error('Invalid token ID')
-    }
-
     CliUx.ux.action.start('Loading RPC providers')
-    const sourceProtocol = new URL(configFile.networks[sourceNetwork].providerUrl).protocol
+    const sourceProviderUrl: string = (configFile.networks[this.sourceNetwork as keyof ConfigNetworks] as ConfigNetwork)
+      .providerUrl
+    const sourceProtocol: string = new URL(sourceProviderUrl).protocol
     let sourceProvider
     switch (sourceProtocol) {
       case 'https:':
-        sourceProvider = new ethers.providers.JsonRpcProvider(configFile.networks[sourceNetwork].providerUrl)
+        sourceProvider = new ethers.providers.JsonRpcProvider(sourceProviderUrl)
         break
       case 'wss:':
-        sourceProvider = new ethers.providers.WebSocketProvider(configFile.networks[sourceNetwork].providerUrl)
+        sourceProvider = new ethers.providers.WebSocketProvider(sourceProviderUrl)
         break
       default:
         throw new Error('Unsupported RPC URL protocol -> ' + sourceProtocol)
     }
 
-    const sourceWallet = userWallet.connect(sourceProvider)
+    const sourceWallet: ethers.Wallet = userWallet.connect(sourceProvider)
     this.debug('Source network', await sourceWallet.provider.getNetwork())
 
-    const destinationProtocol = new URL(configFile.networks[destinationNetwork].providerUrl).protocol
+    const destinationProviderUrl: string = (
+      configFile.networks[this.destinationNetwork as keyof ConfigNetworks] as ConfigNetwork
+    ).providerUrl
+    const destinationProtocol: string = new URL(destinationProviderUrl).protocol
     let destinationProvider
     switch (destinationProtocol) {
       case 'https:':
-        destinationProvider = new ethers.providers.JsonRpcProvider(configFile.networks[destinationNetwork].providerUrl)
+        destinationProvider = new ethers.providers.JsonRpcProvider(destinationProviderUrl)
         break
       case 'wss:':
-        destinationProvider = new ethers.providers.WebSocketProvider(
-          configFile.networks[destinationNetwork].providerUrl,
-        )
+        destinationProvider = new ethers.providers.WebSocketProvider(destinationProviderUrl)
         break
       default:
         throw new Error('Unsupported RPC URL protocol -> ' + destinationProtocol)
     }
 
-    const destinationWallet = userWallet.connect(destinationProvider)
-    this.debug('Destination network', await destinationWallet.provider.getNetwork())
+    const destinationWallet: ethers.Wallet = userWallet.connect(destinationProvider)
     CliUx.ux.action.stop()
+    this.debug('Destination network', await destinationWallet.provider.getNetwork())
 
-    const allowedNetworks = ['rinkeby', 'mumbai']
+    const allowedNetworks = ['rinkeby', 'mumbai', 'fuji']
     let remainingNetworks = allowedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
     remainingNetworks = remainingNetworks.filter((item: string) => {
-      return item !== destinationNetwork
+      return item !== this.destinationNetwork
     })
-
-    CliUx.ux.action.stop()
 
     // Check if the contract is deployed on the source chain and not on the destination chain
     CliUx.ux.action.start('Checking if the contract is deployed on both source and destination chains')
-    if ((await sourceProvider.getCode(collectionAddress as string)) === '0x') {
-      this.error(`Contract at ${collectionAddress} does not exist on the source chain`)
-    }
-
-    if ((await destinationProvider.getCode(collectionAddress as string)) === '0x') {
-      this.error(`Contract at ${collectionAddress} does not exist on the destination chain`)
-    }
-
+    await this.checkContractCode('source', sourceProvider, this.collectionAddress)
+    await this.checkContractCode('destination', destinationProvider, this.collectionAddress)
     CliUx.ux.action.stop()
 
     CliUx.ux.action.start('Retrieving HolographFactory contract')
@@ -174,7 +198,7 @@ export default class Contract extends Command {
     )
 
     // Check that the contract is Holographed
-    if (holographRegistry.isHolographedContract(collectionAddress) === false) {
+    if (holographRegistry.isHolographedContract(this.collectionAddress) === false) {
       throw new Error('Contract is not a Holograph contract')
     } else {
       this.log('Holographed contract found 👍')
@@ -182,10 +206,10 @@ export default class Contract extends Command {
 
     const holographErc721ABI = await fs.readJson('./src/abi/HolographERC721.json')
     const holographErc721 = new ethers.ContractFactory(holographErc721ABI, '0x', sourceWallet).attach(
-      collectionAddress as string,
+      this.collectionAddress,
     )
 
-    const tokenIdBn = ethers.BigNumber.from(tokenId)
+    const tokenIdBn = ethers.BigNumber.from(this.tokenId)
 
     if ((await holographErc721.exists(tokenIdBn)) === false) {
       throw new Error('NFT does not exist')
@@ -214,7 +238,7 @@ export default class Contract extends Command {
     const lzFeeError = 'execution reverted: LayerZero: not enough native for fees'
     let startingPayment = ethers.utils.parseUnits('0.000000001', 'ether')
     const powerOfTen = ethers.BigNumber.from(10)
-    const calculateGas = async function () {
+    const calculateGas = async function (collectionAddress: string, tokenId: string) {
       if (gasAmount === undefined) {
         try {
           gasAmount = await holographBridge.estimateGas.erc721out(
@@ -234,12 +258,12 @@ export default class Contract extends Command {
         }
 
         startingPayment = startingPayment.mul(powerOfTen)
-        await calculateGas()
+        await calculateGas(collectionAddress, tokenId)
       }
     }
 
     try {
-      await calculateGas()
+      await calculateGas(this.collectionAddress, this.tokenId)
     } catch (error: any) {
       this.error(error)
     }
@@ -275,10 +299,10 @@ export default class Contract extends Command {
       CliUx.ux.action.start('Sending transaction to mempool')
       const deployTx = await holographBridge.erc721out(
         holographToChainId,
-        collectionAddress,
+        this.collectionAddress,
         userWallet.address,
         userWallet.address,
-        tokenId,
+        this.tokenId,
         {
           value: startingPayment,
         },

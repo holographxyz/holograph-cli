@@ -7,7 +7,39 @@ import AesEncryption from './aes-encryption'
 
 export const CONFIG_FILE_NAME = 'config.json'
 
-export async function ensureConfigFileIsValid(configPath: string, unlockWallet = false): Promise<any> {
+export interface ConfigNetwork {
+  name: string
+  providerUrl: string
+}
+
+export interface ConfigNetworks {
+  from: string
+  to: string
+  rinkeby: ConfigNetwork
+  mumbai: ConfigNetwork
+  fuji: ConfigNetwork
+}
+
+export interface ConfigCredentials {
+  iv: string
+  privateKey: string
+  address: string
+}
+
+export interface ConfigUser {
+  credentials: ConfigCredentials
+}
+
+export interface ConfigFile {
+  version: string
+  networks: ConfigNetworks
+  user: ConfigUser
+}
+
+export async function ensureConfigFileIsValid(
+  configPath: string,
+  unlockWallet = false,
+): Promise<{userWallet: ethers.Wallet | undefined; configFile: ConfigFile}> {
   const exists = await fs.pathExists(configPath)
   if (!exists) {
     throw new Error('Please run `holo config` before running any other holo command')
@@ -16,7 +48,7 @@ export async function ensureConfigFileIsValid(configPath: string, unlockWallet =
   try {
     const configFile = await fs.readJson(configPath)
     await validateBeta1Schema(configFile)
-    let userWallet = null
+    let userWallet
     if (unlockWallet) {
       try {
         userWallet = new ethers.Wallet(
@@ -52,7 +84,7 @@ export async function ensureConfigFileIsValid(configPath: string, unlockWallet =
   }
 }
 
-export async function validateBeta1Schema(config: any): Promise<any> {
+export async function validateBeta1Schema(config: Record<string, unknown>): Promise<void> {
   const beta1Schema = Joi.object({
     version: Joi.string().valid('beta1'),
     networks: Joi.object({
