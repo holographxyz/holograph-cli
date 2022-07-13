@@ -8,34 +8,38 @@ import AesEncryption from './aes-encryption'
 export const CONFIG_FILE_NAME = 'config.json'
 
 export interface ConfigNetwork {
-  providerUrl: string;
+  name: string
+  providerUrl: string
 }
 
 export interface ConfigNetworks {
-  from: string;
-  to: string;
-  rinkeby: ConfigNetwork;
-  mumbai: ConfigNetwork;
-  fuji: ConfigNetwork;
+  from: string
+  to: string
+  rinkeby: ConfigNetwork
+  mumbai: ConfigNetwork
+  fuji: ConfigNetwork
 }
 
 export interface ConfigCredentials {
-  iv: string;
-  privateKey: string;
-  address: string;
+  iv: string
+  privateKey: string
+  address: string
 }
 
 export interface ConfigUser {
-  credentials: ConfigCredentials;
+  credentials: ConfigCredentials
 }
 
 export interface ConfigFile {
-  version: string;
-  networks: ConfigNetworks;
-  user: ConfigUser;
+  version: string
+  networks: ConfigNetworks
+  user: ConfigUser
 }
 
-export async function ensureConfigFileIsValid(configPath: string, unlockWallet = false): Promise<{userWallet: ethers.Wallet | undefined; configFile: ConfigFile}> {
+export async function ensureConfigFileIsValid(
+  configPath: string,
+  unlockWallet = false,
+): Promise<{userWallet: ethers.Wallet | undefined; configFile: ConfigFile}> {
   const exists = await fs.pathExists(configPath)
   if (!exists) {
     throw new Error('Please run `holo config` before running any other holo command')
