@@ -143,16 +143,16 @@ export default class Operator extends Command {
    * Before exit, save the block heights to the local db
    */
   exitRouter = (options: any, exitCode: number | string) => {
-    if (this.exited === false) {
-      this.log('')
-      this.log(`Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}`)
-      this.saveLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
-      this.log(`Exiting operator with code ${exitCode}...`)
-      this.log('Goodbye! 👋')
-      this.exited = true
-    }
-
     if ((exitCode && exitCode === 0) || exitCode === 'SIGINT') {
+      if (this.exited === false) {
+        this.log('')
+        this.log(`Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}`)
+        this.saveLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
+        this.log(`Exiting operator with code ${exitCode}...`)
+        this.log('Goodbye! 👋')
+        this.exited = true
+      }
+
       this.debug(`\nExit code ${exitCode}`)
       if (options.exit) {
         // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
@@ -160,10 +160,6 @@ export default class Operator extends Command {
       }
     } else {
       this.debug(`\nError: ${exitCode}`)
-      if (options.exit) {
-        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
-        process.exit()
-      }
     }
   }
 
@@ -272,7 +268,9 @@ export default class Operator extends Command {
     this.blockJobHandler()
   }
 
+  // you can
   async processBlock(job: any): Promise<void> {
+    this.debug(`processing [${job.network}] ${job.block}`)
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)
     if (block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
@@ -282,19 +280,14 @@ export default class Operator extends Command {
       const interestingTransactions = []
       for (let i = 0, l = block.transactions.length; i < l; i++) {
         const transaction = block.transactions[i]
-        // Only check transactions that have a "to" address
-        if ('to' in transaction && transaction.to !== null && transaction.to !== '') {
+        if (transaction.from.toLowerCase() === this.LAYERZERO_RECEIVERS[job.network]) {
+          // We have LayerZero call, need to check it it's directed towards Holograph operators
+          interestingTransactions.push(transaction)
+        } else if ('to' in transaction && transaction.to !== null && transaction.to !== '') {
+          const to: string = transaction.to.toLowerCase()
           // Check if it's a factory call
-          if (transaction.to.toLowerCase() === this.factoryAddress) {
-            // We have a potential factory deployment transaction
-            interestingTransactions.push(transaction)
-          } else if (transaction.to.toLowerCase() === this.operatorAddress) {
-            // We have a potential operator bridge transaction
-            interestingTransactions.push(transaction)
-          }
-          // Check if it's a LayerZero call
-          else if (transaction.from.toLowerCase() === this.LAYERZERO_RECEIVERS[job.network]) {
-            // We have LayerZero call, need to check it it's directed towards Holograph operators
+          if (to === this.factoryAddress || to === this.operatorAddress) {
+            // We have a potential factory deployment or operator bridge transaction
             interestingTransactions.push(transaction)
           }
         }
@@ -321,6 +314,7 @@ export default class Operator extends Command {
       const blockJob = this.blockJobs.shift()
       this.processBlock(blockJob)
     } else {
+      this.debug('no blocks')
       setTimeout(this.blockJobHandler, 1000)
     }
   }
@@ -335,7 +329,7 @@ export default class Operator extends Command {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
 
-        this.log(`Processing transaction ${transaction.hash} on ${network} at block ${receipt.blockNumber}`)
+        this.debug(`Processing transaction ${transaction.hash} on ${network} at block ${receipt.blockNumber}`)
 
         if (transaction.to.toLowerCase() === this.factoryAddress) {
           this.log(`Checking if it's a factory call to request to bridge a contract`)
@@ -343,11 +337,13 @@ export default class Operator extends Command {
           let event = null
           if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
             for (let i = 0, l = receipt.logs.length; i < l; i++) {
-              const log = receipt.logs[i]
-              if (log.topics.length > 0 && log.topics[0] === this.targetEvents.BridgeableContractDeployed) {
-                event = log.topics
-              } else {
-                this.log(`Failed with BridgeableContractDeployed event parsing ${transaction} ${receipt}`)
+              if (event === null) {
+                const log = receipt.logs[i]
+                if (log.topics.length > 0 && log.topics[0] === this.targetEvents.BridgeableContractDeployed) {
+                  event = log.topics
+                } else {
+                  this.log(`Failed with BridgeableContractDeployed event parsing ${transaction} ${receipt}`)
+                }
               }
             }
 
@@ -369,9 +365,11 @@ export default class Operator extends Command {
           let event = null
           if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
             for (let i = 0, l = receipt.logs.length; i < l; i++) {
-              const log = receipt.logs[i]
-              if (log.topics.length > 0 && log.topics[0] === this.targetEvents.BridgeableContractDeployed) {
-                event = log.topics
+              if (event === null) {
+                const log = receipt.logs[i]
+                if (log.topics.length > 0 && log.topics[0] === this.targetEvents.BridgeableContractDeployed) {
+                  event = log.topics
+                }
               }
             }
           } else {
@@ -396,40 +394,42 @@ export default class Operator extends Command {
           let event = null
           if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
             for (let i = 0, l = receipt.logs.length; i < l; i++) {
-              const log = receipt.logs[i]
-              if (
-                log.address.toLowerCase() === this.operatorAddress &&
-                log.topics.length > 0 &&
-                log.topics[0] === this.targetEvents.AvailableJob
-              ) {
-                event = log.data
-              } else {
-                this.log(
-                  `LayerZero transaction is not relevant to AvailableJob event. Transaction was relayed to ${log.address} instead of The Operator at ${this.operatorAddress}`,
-                )
-              }
-
-              if (event) {
-                const payload = this.abiCoder.decode(['bytes'], event)[0]
-                this.log(
-                  `HolographOperator received a new bridge job on ${capitalize(
-                    network,
-                  )}\nThe job payload is ${payload}\n`,
-                )
-
-                if (this.operatorMode !== OperatorMode.listen) {
-                  await this.executePayload(network, payload)
+              if (event === null) {
+                const log = receipt.logs[i]
+                if (
+                  log.address.toLowerCase() === this.operatorAddress &&
+                  log.topics.length > 0 &&
+                  log.topics[0] === this.targetEvents.AvailableJob
+                ) {
+                  event = log.data
+                } else {
+                  this.log(
+                    `LayerZero transaction is not relevant to AvailableJob event. Transaction was relayed to ${log.address} instead of The Operator at ${this.operatorAddress}`,
+                  )
                 }
-              } else {
-                this.log('Failed to find AvailableJob event from LayerZero Relayer')
               }
+            }
+
+            if (event) {
+              const payload = this.abiCoder.decode(['bytes'], event)[0]
+              this.log(
+                `HolographOperator received a new bridge job on ${capitalize(
+                  network,
+                )}\nThe job payload is ${payload}\n`,
+              )
+
+              if (this.operatorMode !== OperatorMode.listen) {
+                await this.executePayload(network, payload)
+              }
+            } else {
+              this.log('Failed to find AvailableJob event from LayerZero Relayer')
             }
           }
         }
       }
-    } else {
-      this.blockJobHandler()
     }
+
+    this.blockJobHandler()
   }
 
   async executePayload(network: string, payload: string): Promise<void> {
