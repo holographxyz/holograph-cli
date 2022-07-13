@@ -17,6 +17,7 @@ enum OperatorMode {
 }
 
 export default class Operator extends Command {
+  static LAST_BLOCKS_FILE_NAME = 'blocks.json'
   static description = 'Listen for EVM events and process them'
   static examples = ['$ holo operator --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
@@ -34,7 +35,7 @@ export default class Operator extends Command {
   bridgeAddress: any
   factoryAddress: any
   operatorAddress: any
-  supportedNetworks: string[] = ['rinkeby', 'mumbai']
+  supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
   blockJobs: any[] = []
   providers: any = {}
   abiCoder = ethers.utils.defaultAbiCoder
@@ -60,7 +61,7 @@ export default class Operator extends Command {
   networkColors: any = {}
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore - Set all networks to start with latest block at index 0
-  latestBlockHeight: any = {}
+  latestBlockHeight: {[key: string]: number} = {}
   exited = false
 
   rgbToHex(rgb: any) {
@@ -68,17 +69,22 @@ export default class Operator extends Command {
     return hex.length === 1 ? `0${hex}` : hex
   }
 
-  async initializeWeb3(loadNetworks: string[], configFile: any, userWallet: any) {
-    // Read in the block heights state from the local db
-    let blockHeights
-    try {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      blockHeights = await fs.readJson(path.resolve(__dirname, 'blocks.json'))
-      this.log('Reading local block heights', blockHeights)
-    } catch (error) {
-      this.error(`Unable to read block heights from db ${error}`)
+  async loadLastBlocks(fileName: string, configDir: string): Promise<{[key: string]: number}> {
+    const filePath = path.join(configDir, fileName)
+    let lastBlocks: {[key: string]: number} = {}
+    if (await fs.pathExists(filePath)) {
+      lastBlocks = await fs.readJson(filePath)
     }
 
+    return lastBlocks
+  }
+
+  saveLastBlocks(fileName: string, configDir: string, lastBlocks: {[key: string]: number}): void {
+    const filePath = path.join(configDir, fileName)
+    fs.writeFileSync(filePath, JSON.stringify(lastBlocks), 'utf8')
+  }
+
+  async initializeEthers(loadNetworks: string[], configFile: any, userWallet: any) {
     for (let i = 0, l = loadNetworks.length; i < l; i++) {
       const network = loadNetworks[i]
       const rpcEndpoint = configFile.networks[network].providerUrl
@@ -100,19 +106,11 @@ export default class Operator extends Command {
         this.wallets[network] = userWallet.connect(this.providers[network])
       }
 
-      if (blockHeights && blockHeights[network] !== undefined) {
-        this.log(`Resuming Operator from block height ${blockHeights[network]} for ${capitalize(network)}`)
-        this.latestBlockHeight[network] = blockHeights[network]
+      if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
+        this.log(`Resuming Operator from block height ${this.latestBlockHeight[network]} for ${capitalize(network)}`)
       } else {
         this.log(`Starting Operator from latest block height for ${network}`)
         this.latestBlockHeight[network] = 0
-      }
-
-      // TODO: Manual override block height
-      this.latestBlockHeight = {
-        rinkeby: 0,
-        mumbai: 27149251,
-        fuji: 0,
       }
     }
 
@@ -132,25 +130,40 @@ export default class Operator extends Command {
    */
   exitHandler = async (exitCode: number) => {
     if (this.exited === false) {
+      this.log('')
       this.log(`Saving current block heights: ${JSON.stringify(this.latestBlockHeight)}`)
-      fs.writeFileSync(path.resolve(__dirname, 'blocks.json'), JSON.stringify(this.latestBlockHeight))
+      this.saveLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
       this.log(`Exiting operator with code ${exitCode}...`)
       this.log('Goodbye! 👋')
       this.exited = true
     }
   }
 
+  /**
+   * Before exit, save the block heights to the local db
+   */
   exitRouter = (options: any, exitCode: number | string) => {
-    if ((exitCode && exitCode === 0) || exitCode === 'SIGINT') {
-      this.log(`\nExit code ${exitCode}`)
+    if (this.exited === false) {
+      this.log('')
+      this.log(`Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}`)
+      this.saveLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
+      this.log(`Exiting operator with code ${exitCode}...`)
+      this.log('Goodbye! 👋')
+      this.exited = true
+    }
 
-      /* eslint-disable unicorn/no-process-exit */
-      /* eslint-disable no-process-exit */
+    if ((exitCode && exitCode === 0) || exitCode === 'SIGINT') {
+      this.debug(`\nExit code ${exitCode}`)
       if (options.exit) {
+        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
         process.exit()
       }
     } else {
-      this.log(`\nError: ${exitCode}`)
+      this.debug(`\nError: ${exitCode}`)
+      if (options.exit) {
+        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+        process.exit()
+      }
     }
   }
 
@@ -167,6 +180,7 @@ export default class Operator extends Command {
           message: 'Enter the mode in which to run the operator',
           type: 'list',
           choices: ['listen', 'manual', 'auto'],
+          default: 'listen',
         },
       ])
       mode = prompt.mode
@@ -179,6 +193,30 @@ export default class Operator extends Command {
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
     const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
     this.log('User configurations loaded.')
+
+    this.latestBlockHeight = await this.loadLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir)
+    let canSync = false
+    const lastBlockKeys: string[] = Object.keys(this.latestBlockHeight)
+    for (let i = 0, l: number = lastBlockKeys.length; i < l; i++) {
+      if (this.latestBlockHeight[lastBlockKeys[i]] > 0) {
+        canSync = true
+        break
+      }
+    }
+
+    if (canSync) {
+      const syncPrompt: any = await inquirer.prompt([
+        {
+          name: 'shouldSync',
+          message: 'Operator has previous (missed) blocks that can be synced. Would you like to sync?',
+          type: 'confirm',
+          default: true,
+        },
+      ])
+      if (syncPrompt.shouldSync === false) {
+        this.latestBlockHeight = {}
+      }
+    }
 
     if (flags.networks === undefined || '') {
       // Load defaults
@@ -199,7 +237,7 @@ export default class Operator extends Command {
     }
 
     CliUx.ux.action.start(`Starting operator in mode: ${OperatorMode[this.operatorMode]}`)
-    await this.initializeWeb3(flags.networks, configFile, userWallet)
+    await this.initializeEthers(flags.networks, configFile, userWallet)
     this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
     this.factoryAddress = (await this.holograph.getFactory()).toLowerCase()
     this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
@@ -221,14 +259,14 @@ export default class Operator extends Command {
       // this.providers[network].on('error', this.handleDroppedSocket.bind(this, network))
       // this.providers[network].on('close', this.handleDroppedSocket.bind(this, network))
       // this.providers[network].on('end', this.handleDroppedSocket.bind(this, network))
-
-      // Catch all exit events
-      for (const eventType of [`SIGINT`, `SIGUSR1`, `SIGUSR2`, `uncaughtException`, `SIGTERM`]) {
-        process.on(eventType, this.exitRouter.bind(null, {exit: true}))
-      }
-
-      process.on('exit', this.exitHandler)
     }
+
+    // Catch all exit events
+    for (const eventType of [`EEXIT`, `SIGINT`, `SIGUSR1`, `SIGUSR2`, `uncaughtException`, `SIGTERM`]) {
+      process.on(eventType, this.exitRouter.bind(this, {exit: true}))
+    }
+
+    process.on('exit', this.exitHandler)
 
     // // Process blocks 🧱
     this.blockJobHandler()
@@ -430,10 +468,10 @@ export default class Operator extends Command {
     this.providers[network].on('block', (blockNumber: string) => {
       const block = Number.parseInt(blockNumber, 10)
       if (this.latestBlockHeight[network] !== 0 && block - this.latestBlockHeight[network] > 1) {
-        this.log(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
+        this.debug(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
         let latest = this.latestBlockHeight[network]
         while (block - latest > 1) {
-          this.log(`Syncing ${capitalize(network)} block`, latest)
+          this.log(`[${this.networkColors[network](capitalize(network))}] -> Block ${latest} (Syncing)`)
           this.blockJobs.push({
             network: network,
             block: latest,

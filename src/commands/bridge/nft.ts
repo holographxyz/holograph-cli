@@ -82,7 +82,7 @@ export default class Contract extends Command {
         'Destination network not provided, or does not exist in the config file',
         'Reverting to default "from" network from config',
       )
-      this.destinationNetwork = configFile.networks.from
+      this.destinationNetwork = configFile.networks.to
     }
   }
 
