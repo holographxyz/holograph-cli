@@ -18,7 +18,7 @@ export default class Config extends Command {
     '$ holo --providerUrl wss://rpc.com',
   ]
 
-  static allowedNetworks = ['rinkeby', 'mumbai']
+  static allowedNetworks = ['rinkeby', 'mumbai', 'fuji']
 
   static flags = {
     defaultFrom: Flags.string({

@@ -4,6 +4,7 @@ import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import {ethers} from 'ethers'
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-deployment'
 
 export default class Contract extends Command {
@@ -24,14 +25,18 @@ export default class Contract extends Command {
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
     const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
 
+    if (userWallet === undefined) {
+      throw new Error('Wallet could not be unlocked')
+    }
+
     const {flags} = await this.parse(Contract)
     this.log('User configurations loaded.')
 
     let sourceNetwork: string = flags.sourceNetwork || ''
     if (sourceNetwork === '' || !(sourceNetwork in configFile.networks)) {
       this.log(
-        'source network not provided, or does not exist in the config file',
-        'reverting to default "from" network from config',
+        'Source network not provided, or does not exist in the config file',
+        'Reverting to default "from" network from config',
       )
       sourceNetwork = configFile.networks.from
     }
@@ -39,7 +44,7 @@ export default class Contract extends Command {
     let destinationNetwork: string = flags.destinationNetwork || ''
     if (destinationNetwork === '' || !(destinationNetwork in configFile.networks)) {
       this.log(
-        'destination network not provided, or does not exist in the config file',
+        'Destination network not provided, or does not exist in the config file',
         'reverting to default "to" network from config',
       )
       destinationNetwork = configFile.networks.to
@@ -50,14 +55,16 @@ export default class Contract extends Command {
     }
 
     CliUx.ux.action.start('Loading RPC providers')
-    const sourceProtocol = new URL(configFile.networks[sourceNetwork].providerUrl).protocol
+    const sourceProviderUrl: string = (configFile.networks[sourceNetwork as keyof ConfigNetworks] as ConfigNetwork)
+      .providerUrl
+    const sourceProtocol: string = new URL(sourceProviderUrl).protocol
     let sourceProvider
     switch (sourceProtocol) {
       case 'https:':
-        sourceProvider = new ethers.providers.JsonRpcProvider(configFile.networks[sourceNetwork].providerUrl)
+        sourceProvider = new ethers.providers.JsonRpcProvider(sourceProviderUrl)
         break
       case 'wss:':
-        sourceProvider = new ethers.providers.WebSocketProvider(configFile.networks[sourceNetwork].providerUrl)
+        sourceProvider = new ethers.providers.WebSocketProvider(sourceProviderUrl)
         break
       default:
         throw new Error('Unsupported RPC URL protocol -> ' + sourceProtocol)
@@ -66,16 +73,17 @@ export default class Contract extends Command {
     const sourceWallet = userWallet.connect(sourceProvider)
     this.debug('Source network', await sourceWallet.provider.getNetwork())
 
-    const destinationProtocol = new URL(configFile.networks[destinationNetwork].providerUrl).protocol
+    const destinationProviderUrl: string = (
+      configFile.networks[destinationNetwork as keyof ConfigNetworks] as ConfigNetwork
+    ).providerUrl
+    const destinationProtocol: string = new URL(destinationProviderUrl).protocol
     let destinationProvider
     switch (destinationProtocol) {
       case 'https:':
-        destinationProvider = new ethers.providers.JsonRpcProvider(configFile.networks[destinationNetwork].providerUrl)
+        destinationProvider = new ethers.providers.JsonRpcProvider(destinationProviderUrl)
         break
       case 'wss:':
-        destinationProvider = new ethers.providers.WebSocketProvider(
-          configFile.networks[destinationNetwork].providerUrl,
-        )
+        destinationProvider = new ethers.providers.WebSocketProvider(destinationProviderUrl)
         break
       default:
         throw new Error('Unsupported RPC URL protocol -> ' + destinationProtocol)
@@ -85,14 +93,19 @@ export default class Contract extends Command {
     this.debug('Destination network', await destinationWallet.provider.getNetwork())
     CliUx.ux.action.stop()
 
-    const allowedNetworks = ['rinkeby', 'mumbai']
-    let remainingNetworks = allowedNetworks
+    const allowedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
+    let remainingNetworks: string[] = allowedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
     remainingNetworks = remainingNetworks.filter((item: string) => {
       return item !== destinationNetwork
     })
 
-    const deploymentConfig = await prepareDeploymentConfig(configFile, userWallet, flags, remainingNetworks)
+    const deploymentConfig = await prepareDeploymentConfig(
+      configFile,
+      userWallet,
+      flags as Record<string, string | undefined>,
+      remainingNetworks,
+    )
 
     this.debug(deploymentConfig)
     CliUx.ux.action.stop()
@@ -123,6 +136,8 @@ export default class Contract extends Command {
 
     CliUx.ux.action.start('Calculating gas amounts and prices')
     let gasAmount: ethers.BigNumber | undefined
+
+    // Don't modify lzFeeError. It is returned from LZ so we must check this exact string
     const lzFeeError = 'execution reverted: LayerZero: not enough native for fees'
     let startingPayment = ethers.utils.parseUnits('0.000000001', 'ether')
     const powerOfTen = ethers.BigNumber.from(10)
@@ -194,7 +209,7 @@ export default class Contract extends Command {
         },
       )
       this.debug(deployTx)
-      CliUx.ux.action.stop('transaction hash is ' + deployTx.hash)
+      CliUx.ux.action.stop('Transaction hash is ' + deployTx.hash)
 
       CliUx.ux.action.start('Waiting for transaction to be mined and confirmed')
       const deployReceipt = await deployTx.wait()

@@ -55,12 +55,12 @@ export default class ConfigView extends Command {
     }
   }
 
-  public serializeClean(obj: any, tabCursor: string): void {
+  public serializeClean(obj: Record<string, unknown>, tabCursor: string): void {
     for (const key of Object.keys(obj)) {
       if (typeof obj[key] === 'object') {
         tabCursor = '  '
         this.log(`${capitalize(key)}:`)
-        this.serializeClean(obj[key], tabCursor)
+        this.serializeClean(obj[key] as Record<string, unknown>, tabCursor)
       } else {
         this.log(`${tabCursor}${capitalize(key)}: ${obj[key]}`)
       }

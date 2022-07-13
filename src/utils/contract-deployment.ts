@@ -2,6 +2,7 @@ import {ethers} from 'ethers'
 import * as inquirer from 'inquirer'
 import {CliUx, Flags} from '@oclif/core'
 import {decodeDeploymentConfigInput} from './utils'
+import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 
 export const deploymentFlags = {
   tx: Flags.string({description: 'The hash of transaction that deployed the original collection'}),
@@ -13,21 +14,26 @@ export const deploymentTypes = ['deployedTx', 'deploymentConfig']
 
 export const deploymentProcesses = [
   {
-    name: 'extract deployment config from existing transaction',
+    name: 'Extract deployment config from existing transaction',
     value: 'deployedTx',
-    short: 'existing deployment'
+    short: 'existing deployment',
   },
   {
-    name: 'load custom deployment configuration',
+    name: 'Load custom deployment configuration',
     value: 'deploymentConfig',
-    short: 'custom deployment'
-  }
+    short: 'custom deployment',
+  },
 ]
 
-export const prepareDeploymentConfig = async function (configFile: any, userWallet: any, flags: any, allowedNetworks: string[]): Promise<any> {
+export const prepareDeploymentConfig = async function (
+  configFile: ConfigFile,
+  userWallet: ethers.Wallet,
+  flags: Record<string, string | undefined>,
+  allowedNetworks: string[],
+): Promise<any> {
   let deploymentType = flags.deploymentType
-  let tx = flags.tx
-  let txNetwork = flags.tx
+  let tx: string = flags.tx || ''
+  let txNetwork: string = flags.txNetwork || ''
   if (deploymentType === undefined) {
     const prompt: any = await inquirer.prompt([
       {
@@ -35,7 +41,7 @@ export const prepareDeploymentConfig = async function (configFile: any, userWall
         message: 'Select the contract deployment process to use',
         type: 'list',
         choices: deploymentProcesses,
-        default: deploymentTypes[0]
+        default: deploymentTypes[0],
       },
     ])
     deploymentType = prompt.deploymentType
@@ -45,7 +51,7 @@ export const prepareDeploymentConfig = async function (configFile: any, userWall
 
   switch (deploymentType) {
     case 'deployedTx': {
-      if (txNetwork === undefined || !allowedNetworks.includes(txNetwork)) {
+      if (txNetwork === '' || !allowedNetworks.includes(txNetwork)) {
         const txNetworkPrompt: any = await inquirer.prompt([
           {
             name: 'txNetwork',
@@ -58,22 +64,23 @@ export const prepareDeploymentConfig = async function (configFile: any, userWall
       }
 
       CliUx.ux.action.start('Loading transaction network RPC provider')
-      const txNetworkProtocol = new URL(configFile.networks[txNetwork].providerUrl).protocol
+      const providerUrl: string = (configFile.networks[txNetwork as keyof ConfigNetworks] as ConfigNetwork).providerUrl
+      const txNetworkProtocol = new URL(providerUrl).protocol
       let txNetworkProvider
       switch (txNetworkProtocol) {
         case 'https:':
-          txNetworkProvider = new ethers.providers.JsonRpcProvider(configFile.networks[txNetwork].providerUrl)
+          txNetworkProvider = new ethers.providers.JsonRpcProvider(providerUrl)
           break
         case 'wss:':
-          txNetworkProvider = new ethers.providers.WebSocketProvider(configFile.networks[txNetwork].providerUrl)
+          txNetworkProvider = new ethers.providers.WebSocketProvider(providerUrl)
           break
         default:
           throw new Error('Unsupported RPC URL protocol -> ' + txNetworkProtocol)
       }
 
-      let txNetworkWallet = userWallet.connect(txNetworkProvider)
+      const txNetworkWallet: ethers.Wallet = userWallet.connect(txNetworkProvider)
       CliUx.ux.action.stop()
-      if (tx === undefined || !(/^0x[\da-f]{64}$/i.test(tx))) {
+      if (tx === '' || !(/^0x[\da-f]{64}$/i.test(tx))) {
         const txPrompt: any = await inquirer.prompt([
           {
             name: 'tx',
@@ -93,7 +100,6 @@ export const prepareDeploymentConfig = async function (configFile: any, userWall
       deploymentConfig = decodeDeploymentConfigInput(transaction.data)
       CliUx.ux.action.stop()
 
-      txNetworkWallet = null
       break
     }
 
@@ -108,5 +114,4 @@ export const prepareDeploymentConfig = async function (configFile: any, userWall
   }
 
   return deploymentConfig
-
 }
