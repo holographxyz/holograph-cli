@@ -32,17 +32,17 @@ export default class Operator extends Command {
   /**
    * Operator class variables
    */
-  bridgeAddress: any
-  factoryAddress: any
-  operatorAddress: any
+  bridgeAddress: string | undefined
+  factoryAddress: string | undefined
+  operatorAddress: string | undefined
   supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
   blockJobs: any[] = []
-  providers: any = {}
+  providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   abiCoder = ethers.utils.defaultAbiCoder
-  wallets: any = {}
-  holograph: any
+  wallets: {[key: string]: ethers.Wallet} = {}
+  holograph!: ethers.Contract
   operatorMode: OperatorMode = OperatorMode.listen
-  operatorContract: any
+  operatorContract!: ethers.Contract
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
   LAYERZERO_RECEIVERS: any = {
     rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
@@ -238,6 +238,7 @@ export default class Operator extends Command {
 
     CliUx.ux.action.start(`Starting operator in mode: ${OperatorMode[this.operatorMode]}`)
     await this.initializeEthers(flags.networks, configFile, userWallet)
+
     this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
     this.factoryAddress = (await this.holograph.getFactory()).toLowerCase()
     this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
@@ -288,7 +289,7 @@ export default class Operator extends Command {
           // We have LayerZero call, need to check it it's directed towards Holograph operators
           interestingTransactions.push(transaction)
         } else if ('to' in transaction && transaction.to !== null && transaction.to !== '') {
-          const to: string = transaction.to.toLowerCase()
+          const to: string | undefined = transaction.to?.toLowerCase()
           // Check if it's a factory call
           if (to === this.factoryAddress || to === this.operatorAddress) {
             // We have a potential factory deployment or operator bridge transaction
@@ -327,7 +328,7 @@ export default class Operator extends Command {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
-        const receipt = await this.providers[network].getTransactionReceipt(transaction.hash)
+        const receipt = await this.providers[network].getTransactionReceipt(transaction.hash as string)
         if (receipt === null) {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
