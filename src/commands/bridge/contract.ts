@@ -55,7 +55,8 @@ export default class Contract extends Command {
     }
 
     CliUx.ux.action.start('Loading RPC providers')
-    const sourceProviderUrl: string = (configFile.networks[sourceNetwork as keyof ConfigNetworks] as ConfigNetwork).providerUrl
+    const sourceProviderUrl: string = (configFile.networks[sourceNetwork as keyof ConfigNetworks] as ConfigNetwork)
+      .providerUrl
     const sourceProtocol: string = new URL(sourceProviderUrl).protocol
     let sourceProvider
     switch (sourceProtocol) {
@@ -72,7 +73,9 @@ export default class Contract extends Command {
     const sourceWallet = userWallet.connect(sourceProvider)
     this.debug('Source network', await sourceWallet.provider.getNetwork())
 
-    const destinationProviderUrl: string = (configFile.networks[destinationNetwork as keyof ConfigNetworks] as ConfigNetwork).providerUrl
+    const destinationProviderUrl: string = (
+      configFile.networks[destinationNetwork as keyof ConfigNetworks] as ConfigNetwork
+    ).providerUrl
     const destinationProtocol: string = new URL(destinationProviderUrl).protocol
     let destinationProvider
     switch (destinationProtocol) {
@@ -90,14 +93,19 @@ export default class Contract extends Command {
     this.debug('Destination network', await destinationWallet.provider.getNetwork())
     CliUx.ux.action.stop()
 
-    const allowedNetworks: string[] = ['rinkeby', 'mumbai']
+    const allowedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
     let remainingNetworks: string[] = allowedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
     remainingNetworks = remainingNetworks.filter((item: string) => {
       return item !== destinationNetwork
     })
 
-    const deploymentConfig = await prepareDeploymentConfig(configFile, userWallet, flags as Record<string, string | undefined>, remainingNetworks)
+    const deploymentConfig = await prepareDeploymentConfig(
+      configFile,
+      userWallet,
+      flags as Record<string, string | undefined>,
+      remainingNetworks,
+    )
 
     this.debug(deploymentConfig)
     CliUx.ux.action.stop()

@@ -320,7 +320,6 @@ export default class Operator extends Command {
   }
 
   async processTransactions(network: string, transactions: any): Promise<void> {
-    // TODO: Refactor to not await in the loop
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
@@ -332,7 +331,7 @@ export default class Operator extends Command {
         this.debug(`Processing transaction ${transaction.hash} on ${network} at block ${receipt.blockNumber}`)
 
         if (transaction.to.toLowerCase() === this.factoryAddress) {
-          this.log(`Checking if it's a factory call to request to bridge a contract`)
+          this.log(`Checking if it's a factory call to request to bridge a contract...`)
           const config = decodeDeploymentConfigInput(transaction.data)
           let event = null
           if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
@@ -341,14 +340,14 @@ export default class Operator extends Command {
                 const log = receipt.logs[i]
                 if (log.topics.length > 0 && log.topics[0] === this.targetEvents.BridgeableContractDeployed) {
                   event = log.topics
+                  break
                 } else {
-                  this.log(`Failed with BridgeableContractDeployed event parsing ${transaction} ${receipt}`)
+                  this.log(`BridgeableContractDeployed event not found in ${transaction.hash}`)
                 }
               }
             }
 
             if (event) {
-              this.log(`Found bridgeable contract deployed event for ${event}`)
               const deploymentAddress = '0x' + event[1].slice(26)
               this.log(
                 `\nHolographFactory deployed a new collection on ${capitalize(
@@ -361,7 +360,7 @@ export default class Operator extends Command {
             }
           }
         } else if (transaction.to.toLowerCase() === this.operatorAddress) {
-          this.log(`Checking if an operator executed a job to bridge a contract / collection`)
+          this.log(`Checking if an operator executed a job to bridge a contract / collection...`)
           let event = null
           if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
             for (let i = 0, l = receipt.logs.length; i < l; i++) {
@@ -390,7 +389,7 @@ export default class Operator extends Command {
             )
           }
         } else {
-          this.log(`Checking if Operator was sent a bridge job via the LayerZero Relayer`)
+          this.log(`Checking if Operator was sent a bridge job via the LayerZero Relayer...`)
           let event = null
           if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
             for (let i = 0, l = receipt.logs.length; i < l; i++) {
@@ -404,7 +403,9 @@ export default class Operator extends Command {
                   event = log.data
                 } else {
                   this.log(
-                    `LayerZero transaction is not relevant to AvailableJob event. Transaction was relayed to ${log.address} instead of The Operator at ${this.operatorAddress}`,
+                    `LayerZero transaction is not relevant to AvailableJob event. ` +
+                      `Transaction was relayed to ${log.address} instead of ` +
+                      `The Operator at ${this.operatorAddress}`,
                   )
                 }
               }
@@ -421,8 +422,6 @@ export default class Operator extends Command {
               if (this.operatorMode !== OperatorMode.listen) {
                 await this.executePayload(network, payload)
               }
-            } else {
-              this.log('Failed to find AvailableJob event from LayerZero Relayer')
             }
           }
         }
@@ -433,7 +432,6 @@ export default class Operator extends Command {
   }
 
   async executePayload(network: string, payload: string): Promise<void> {
-    this.log(`Executing payload on ${network}: ${payload}`)
     // If the operator is in listen mode, payloads will not be executed
     // If the operator is in manual mode, the payload must be manually executed
     // If the operator is in auto mode, the payload will be executed automatically
