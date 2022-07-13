@@ -34,7 +34,7 @@ export default class Operator extends Command {
   bridgeAddress: any
   factoryAddress: any
   operatorAddress: any
-  supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
+  supportedNetworks: string[] = ['rinkeby', 'mumbai']
   blockJobs: any[] = []
   providers: any = {}
   abiCoder = ethers.utils.defaultAbiCoder
@@ -50,10 +50,11 @@ export default class Operator extends Command {
   }
 
   targetEvents: any = {
-    '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b': 'BridgeableContractDeployed',
     BridgeableContractDeployed: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
-    '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11': 'AvailableJob',
+    '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b': 'BridgeableContractDeployed',
+
     AvailableJob: '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11',
+    '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11': 'AvailableJob',
   }
 
   networkColors: any = {}
@@ -108,11 +109,11 @@ export default class Operator extends Command {
       }
 
       // TODO: Manual override block height
-      // this.latestBlockHeight = {
-      //   // rinkeby: 0,
-      //   mumbai: 27100000,
-      //   // fuji: 0,
-      // }
+      this.latestBlockHeight = {
+        rinkeby: 0,
+        mumbai: 27149251,
+        fuji: 0,
+      }
     }
 
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
@@ -233,38 +234,6 @@ export default class Operator extends Command {
     this.blockJobHandler()
   }
 
-  async executePayload(network: string, payload: string): Promise<void> {
-    this.log(`Executing payload on ${network}: ${payload}`)
-    // If the operator is in listen mode, payloads will not be executed
-    // If the operator is in manual mode, the payload must be manually executed
-    // If the operator is in auto mode, the payload will be executed automatically
-    let operate = this.operatorMode === OperatorMode.auto
-    if (this.operatorMode === OperatorMode.manual) {
-      const operatorPrompt: any = await inquirer.prompt([
-        {
-          name: 'shouldContinue',
-          message: `A transaction appeared on ${network} for execution, would you like to operate?`,
-          type: 'confirm',
-          default: false,
-        },
-      ])
-      operate = operatorPrompt.shouldContinue
-    }
-
-    if (operate) {
-      const contract = this.operatorContract.connect(this.wallets[network])
-      const jobTx = await contract.executeJob(payload)
-      this.debug(jobTx)
-      this.log(`Transaction hash is ${jobTx.hash}`)
-
-      const jobReceipt = await jobTx.wait()
-      this.debug(jobReceipt)
-      this.log(`Transaction ${jobTx.hash} mined and confirmed`)
-    } else {
-      this.log('Dropped potential payload to execute')
-    }
-  }
-
   async processBlock(job: any): Promise<void> {
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)
     if (block !== null && 'transactions' in block) {
@@ -297,7 +266,7 @@ export default class Operator extends Command {
         this.log(
           `Found ${interestingTransactions.length} interesting transactions on block ${job.block} on ${job.network}`,
         )
-        this.processTransactions(job.network, interestingTransactions, this.blockJobHandler)
+        this.processTransactions(job.network, interestingTransactions)
       } else {
         this.blockJobHandler()
       }
@@ -318,95 +287,142 @@ export default class Operator extends Command {
     }
   }
 
-  async processTransactions(network: string, transactions: any, callback: any): Promise<void> {
+  async processTransactions(network: string, transactions: any): Promise<void> {
+    // TODO: Refactor to not await in the loop
+    /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
-      const transaction = transactions.shift()
-      const receipt = await this.providers[network].getTransactionReceipt(transaction.hash)
-      if (receipt === null) {
-        throw new Error(`Could not get receipt for ${transaction.hash}`)
-      }
+      for (const transaction of transactions) {
+        const receipt = await this.providers[network].getTransactionReceipt(transaction.hash)
+        if (receipt === null) {
+          throw new Error(`Could not get receipt for ${transaction.hash}`)
+        }
 
-      if (transaction.to.toLowerCase() === this.factoryAddress) {
-        const config = decodeDeploymentConfigInput(transaction.data)
-        let event = null
-        if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
-          for (let i = 0, l = receipt.logs.length; i < l; i++) {
-            const log = receipt.logs[i]
-            if (log.topics.length > 0 && log.topics[0] === this.targetEvents.BridgeableContractDeployed) {
-              event = log.topics
+        this.log(`Processing transaction ${transaction.hash} on ${network} at block ${receipt.blockNumber}`)
+
+        if (transaction.to.toLowerCase() === this.factoryAddress) {
+          this.log(`Checking if it's a factory call to request to bridge a contract`)
+          const config = decodeDeploymentConfigInput(transaction.data)
+          let event = null
+          if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
+            for (let i = 0, l = receipt.logs.length; i < l; i++) {
+              const log = receipt.logs[i]
+              if (log.topics.length > 0 && log.topics[0] === this.targetEvents.BridgeableContractDeployed) {
+                event = log.topics
+              } else {
+                this.log(`Failed with BridgeableContractDeployed event parsing ${transaction} ${receipt}`)
+              }
+            }
+
+            if (event) {
               this.log(`Found bridgeable contract deployed event for ${event}`)
-              break
+              const deploymentAddress = '0x' + event[1].slice(26)
+              this.log(
+                `\nHolographFactory deployed a new collection on ${capitalize(
+                  network,
+                )} at address ${deploymentAddress}\n` +
+                  `Wallet that deployed the collection is ${transaction.from}\n` +
+                  `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n`,
+                `The transaction hash is: ${transaction.hash}\n`,
+              )
             }
           }
-        }
+        } else if (transaction.to.toLowerCase() === this.operatorAddress) {
+          this.log(`Checking if an operator executed a job to bridge a contract / collection`)
+          let event = null
+          if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
+            for (let i = 0, l = receipt.logs.length; i < l; i++) {
+              const log = receipt.logs[i]
+              if (log.topics.length > 0 && log.topics[0] === this.targetEvents.BridgeableContractDeployed) {
+                event = log.topics
+              }
+            }
+          } else {
+            this.log('Failed to find BridgeableContractDeployed event from operator job')
+          }
 
-        if (event) {
-          const deploymentAddress = '0x' + event[1].slice(26)
-          this.log(
-            `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-              `Wallet that deployed the collection is ${transaction.from}\n` +
-              `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n`,
-            `The transaction hash is: ${transaction.hash}\n`,
-          )
+          if (event) {
+            const deploymentInput = this.abiCoder.decode(['bytes'], '0x' + transaction.data.slice(10))[0]
+            const config = decodeDeploymentConfig(this.abiCoder.decode(['bytes'], '0x' + deploymentInput.slice(10))[0])
+            const deploymentAddress = '0x' + event[1].slice(26)
+            this.log(
+              '\nHolographOperator executed a job which bridged a collection\n' +
+                `HolographFactory deployed a new collection on ${capitalize(
+                  network,
+                )} at address ${deploymentAddress}\n` +
+                `Operator that deployed the collection is ${transaction.from}` +
+                `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
+            )
+          }
         } else {
-          this.log(`Failed with BridgeableContractDeployed event parsing ${transaction} ${receipt}`)
-          throw new Error('Failed with BridgeableContractDeployed event parsing')
-        }
-      } else if (transaction.to.toLowerCase() === this.operatorAddress) {
-        let event = null
-        if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
-          for (let i = 0, l = receipt.logs.length; i < l; i++) {
-            const log = receipt.logs[i]
-            if (log.topics.length > 0 && log.topics[0] === this.targetEvents.BridgeableContractDeployed) {
-              event = log.topics
-              break
+          this.log(`Checking if Operator was sent a bridge job via the LayerZero Relayer`)
+          let event = null
+          if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
+            for (let i = 0, l = receipt.logs.length; i < l; i++) {
+              const log = receipt.logs[i]
+              if (
+                log.address.toLowerCase() === this.operatorAddress &&
+                log.topics.length > 0 &&
+                log.topics[0] === this.targetEvents.AvailableJob
+              ) {
+                event = log.data
+              } else {
+                this.log(
+                  `LayerZero transaction is not relevant to AvailableJob event. Transaction was relayed to ${log.address} instead of The Operator at ${this.operatorAddress}`,
+                )
+              }
+
+              if (event) {
+                const payload = this.abiCoder.decode(['bytes'], event)[0]
+                this.log(
+                  `HolographOperator received a new bridge job on ${capitalize(
+                    network,
+                  )}\nThe job payload is ${payload}\n`,
+                )
+
+                if (this.operatorMode !== OperatorMode.listen) {
+                  await this.executePayload(network, payload)
+                }
+              } else {
+                this.log('Failed to find AvailableJob event from LayerZero Relayer')
+              }
             }
           }
-        }
-
-        if (event) {
-          const deploymentInput = this.abiCoder.decode(['bytes'], '0x' + transaction.data.slice(10))[0]
-          const config = decodeDeploymentConfig(this.abiCoder.decode(['bytes'], '0x' + deploymentInput.slice(10))[0])
-          const deploymentAddress = '0x' + event[1].slice(26)
-          this.log(
-            '\nHolographOperator executed a job which bridged a collection\n' +
-              `HolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-              `Operator that deployed the collection is ${transaction.from}` +
-              `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
-          )
-        } else {
-          this.log('Failed to find BridgeableContractDeployed event from operator job')
-        }
-      } else {
-        let event = null
-        if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
-          for (let i = 0, l = receipt.logs.length; i < l; i++) {
-            const log = receipt.logs[i]
-            if (
-              log.address.toLowerCase() === this.operatorAddress &&
-              log.topics.length > 0 &&
-              log.topics[0] === this.targetEvents.AvailableJob
-            ) {
-              event = log.data
-              break
-            }
-          }
-        }
-
-        if (event) {
-          const payload = this.abiCoder.decode(['bytes'], event)[0]
-          this.log(
-            `HolographOperator received a new bridge job on ${capitalize(network)}\nThe job payload is ${payload}\n`,
-          )
-          if (this.operatorMode !== OperatorMode.listen) {
-            await this.executePayload(network, payload)
-          }
-        } else {
-          this.log('LayerZero transaction is not relevant to AvailableJob event')
         }
       }
     } else {
-      callback()
+      this.blockJobHandler()
+    }
+  }
+
+  async executePayload(network: string, payload: string): Promise<void> {
+    this.log(`Executing payload on ${network}: ${payload}`)
+    // If the operator is in listen mode, payloads will not be executed
+    // If the operator is in manual mode, the payload must be manually executed
+    // If the operator is in auto mode, the payload will be executed automatically
+    let operate = this.operatorMode === OperatorMode.auto
+    if (this.operatorMode === OperatorMode.manual) {
+      const operatorPrompt: any = await inquirer.prompt([
+        {
+          name: 'shouldContinue',
+          message: `A transaction appeared on ${network} for execution, would you like to operate?\n`,
+          type: 'confirm',
+          default: false,
+        },
+      ])
+      operate = operatorPrompt.shouldContinue
+    }
+
+    if (operate) {
+      const contract = this.operatorContract.connect(this.wallets[network])
+      const jobTx = await contract.executeJob(payload)
+      this.debug(jobTx)
+      this.log(`Transaction hash is ${jobTx.hash}`)
+
+      const jobReceipt = await jobTx.wait()
+      this.debug(jobReceipt)
+      this.log(`Transaction ${jobTx.hash} mined and confirmed`)
+    } else {
+      this.log('Dropped potential payload to execute')
     }
   }
 
