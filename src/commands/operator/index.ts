@@ -6,6 +6,7 @@ import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 
 import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, randomNumber} from '../../utils/utils'
 import color from '@oclif/color'
@@ -15,6 +16,52 @@ enum OperatorMode {
   manual,
   auto,
 }
+
+type KeepAliveParams = {
+  provider: ethers.providers.WebSocketProvider;
+  onDisconnect: (err: any) => void;
+  expectedPongBack?: number;
+  checkInterval?: number;
+};
+
+type BlockJob = {
+  network: string;
+  block: number;
+}
+
+const keepAlive = ({
+  provider,
+  onDisconnect,
+  expectedPongBack = 15_000,
+  checkInterval = 7500,
+}: KeepAliveParams) => {
+  let pingTimeout: NodeJS.Timeout | null = null;
+  let keepAliveInterval: NodeJS.Timeout | null = null;
+
+  provider._websocket.on('open', () => {
+    keepAliveInterval = setInterval(() => {
+      provider._websocket.ping();
+
+      // Use `WebSocket#terminate()`, which immediately destroys the connection,
+      // instead of `WebSocket#close()`, which waits for the close timer.
+      // Delay should be equal to the interval at which your server
+      // sends out pings plus a conservative assumption of the latency.
+      pingTimeout = setTimeout(() => {
+        provider._websocket.terminate();
+      }, expectedPongBack);
+    }, checkInterval);
+  });
+
+  provider._websocket.on('close', (err: any) => {
+    if (keepAliveInterval) clearInterval(keepAliveInterval);
+    if (pingTimeout) clearTimeout(pingTimeout);
+    onDisconnect(err);
+  });
+
+  provider._websocket.on('pong', () => {
+    if (pingTimeout) clearInterval(pingTimeout);
+  });
+};
 
 export default class Operator extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
@@ -36,7 +83,7 @@ export default class Operator extends Command {
   factoryAddress: string | undefined
   operatorAddress: string | undefined
   supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
-  blockJobs: any[] = []
+  blockJobs: BlockJob[] = []
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   abiCoder = ethers.utils.defaultAbiCoder
   wallets: {[key: string]: ethers.Wallet} = {}
@@ -84,14 +131,26 @@ export default class Operator extends Command {
     fs.writeFileSync(filePath, JSON.stringify(lastBlocks), 'utf8')
   }
 
+  failoverWebSocketProvider(network: string, rpcEndpoint: string): ethers.providers.WebSocketProvider {
+    const provider = new ethers.providers.WebSocketProvider(rpcEndpoint)
+    keepAlive({
+      provider,
+      onDisconnect: (err) => {
+        this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint)
+        this.log('The ws connection was closed', JSON.stringify(err, null, 2))
+      },
+    })
+    return provider
+  }
+
   async initializeEthers(
     loadNetworks: string[],
-    configFile: any,
+    configFile: ConfigFile,
     userWallet: ethers.Wallet | undefined,
   ): Promise<void> {
     for (let i = 0, l = loadNetworks.length; i < l; i++) {
       const network = loadNetworks[i]
-      const rpcEndpoint = configFile.networks[network].providerUrl
+      const rpcEndpoint = (configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork).providerUrl
       const protocol = new URL(rpcEndpoint).protocol
       switch (protocol) {
         case 'https:':
@@ -99,8 +158,7 @@ export default class Operator extends Command {
 
           break
         case 'wss:':
-          this.providers[network] = new ethers.providers.WebSocketProvider(rpcEndpoint)
-
+          this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint)
           break
         default:
           throw new Error('Unsupported RPC provider protocol -> ' + protocol)
@@ -274,7 +332,7 @@ export default class Operator extends Command {
   }
 
   // you can
-  async processBlock(job: any): Promise<void> {
+  async processBlock(job: BlockJob): Promise<void> {
     this.debug(`processing [${job.network}] ${job.block}`)
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)
     if (block !== null && 'transactions' in block) {
@@ -316,7 +374,7 @@ export default class Operator extends Command {
   // For some reason defining this as function definition causes `this` to be undefined
   blockJobHandler = (): void => {
     if (this.blockJobs.length > 0) {
-      const blockJob = this.blockJobs.shift()
+      const blockJob: BlockJob = this.blockJobs.shift() as BlockJob
       this.processBlock(blockJob)
     } else {
       this.debug('no blocks')
@@ -501,7 +559,7 @@ export default class Operator extends Command {
       this.blockJobs.push({
         network: network,
         block: block,
-      })
+      } as BlockJob)
     })
   }
 
