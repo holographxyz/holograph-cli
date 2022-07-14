@@ -15,27 +15,19 @@ export default class ConfigUser extends ConfigView {
 
   async run(): Promise<void> {
     const {flags} = await this.parse(ConfigView)
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    await ensureConfigFileIsValid(configPath)
-    const config = await readConfig(configPath)
-
-    if (!config) {
-      this.error('No config file found')
-    }
-
-    const yaml = new YAML.Document()
+    await this.setup()
 
     switch (flags.output) {
       case 'json':
-        this.log(JSON.stringify({user: config.user.credentials.address}, null, 2))
+        this.log(JSON.stringify({user: this.configJson.user.credentials.address}, null, 2))
         break
       case 'yaml':
-        yaml.contents = {user: config.user.credentials.address} as any
-        this.log(yaml.toString())
+        this.yaml.contents = {user: this.configJson.user.credentials.address} as any
+        this.log(this.yaml.toString())
         break
       case 'clean':
       default:
-        this.log(`User address: ${config.user.credentials.address}`)
+        this.log(`User address: ${this.configJson.user.credentials.address}`)
         break
     }
 

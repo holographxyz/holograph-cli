@@ -21,16 +21,7 @@ export default class ConfigNetworks extends ConfigView {
 
   async run(): Promise<void> {
     const {flags} = await this.parse(ConfigView)
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    await ensureConfigFileIsValid(configPath)
-    const config = await readConfig(configPath)
-
-    if (!config) {
-      this.error('No config file found')
-    }
-
-    const yaml = new YAML.Document()
-    const configJson = JSON.parse(JSON.stringify(config))
+    await this.setup()
 
     const prompt: any = await inquirer.prompt([
       {
@@ -75,8 +66,8 @@ export default class ConfigNetworks extends ConfigView {
       ])
       this.defaultTo = toPrompt.defaultTo
 
-      configJson.networks.from = this.defaultFrom
-      configJson.networks.to = this.defaultTo
+      this.configJson.networks.from = this.defaultFrom
+      this.configJson.networks.to = this.defaultTo
 
       // It's okay to await in loop because this is a synchronous operation
       /* eslint-disable no-await-in-loop */
@@ -96,28 +87,28 @@ export default class ConfigNetworks extends ConfigView {
           },
         ])
 
-        configJson.networks[network].providerUrl = prompt.providerUrl
+        this.configJson.networks[network].providerUrl = prompt.providerUrl
       }
 
       try {
-        await fs.outputJSON(configPath, configJson, {spaces: 2})
+        await fs.outputJSON(this.configPath, this.configJson, {spaces: 2})
       } catch (error: any) {
-        this.log(`Failed to save file in ${configPath}. Please enable debugger and try again.`)
+        this.log(`Failed to save file in ${this.configPath}. Please enable debugger and try again.`)
         this.debug(error)
       }
     }
 
     switch (flags.output) {
       case 'json':
-        this.log(JSON.stringify(config.networks, null, 2))
+        this.log(JSON.stringify(this.configJson.networks, null, 2))
         break
       case 'yaml':
-        yaml.contents = config.networks
-        this.log(yaml.toString())
+        this.yaml.contents = this.configJson.networks
+        this.log(this.yaml.toString())
         break
       case 'clean':
       default:
-        this.serializeClean(configJson.networks, '')
+        this.serializeClean(this.configJson.networks, '')
         break
     }
 

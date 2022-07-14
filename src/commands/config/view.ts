@@ -18,35 +18,43 @@ export default class ConfigView extends Command {
     output: Flags.string({description: 'Output format', options: ['clean', 'json', 'yaml']}),
   }
 
+  yaml!: YAML.Document
+  configJson: any
+  configPath!: string
+
   async run(): Promise<void> {
     const {flags} = await this.parse(ConfigView)
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    await ensureConfigFileIsValid(configPath)
-    this.config = await readConfig(configPath)
-
-    if (!this.config) {
-      this.error('No config file found')
-    }
-
-    this.debug(`Configuration path ${configPath}`)
-    const yaml = new YAML.Document()
-    const configJson = JSON.parse(JSON.stringify(this.config))
+    await this.setup()
 
     switch (flags.output) {
       case 'json':
         this.log(JSON.stringify(this.config, null, 2))
         break
       case 'yaml':
-        yaml.contents = this.config as any
-        this.log(yaml.toString())
+        this.yaml.contents = this.config as any
+        this.log(this.yaml.toString())
         break
       case 'clean':
       default:
-        this.serializeClean(configJson, '')
+        this.serializeClean(this.configJson, '')
         break
     }
 
     this.exit()
+  }
+
+  public async setup(): Promise<void> {
+    this.configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
+    await ensureConfigFileIsValid(this.configPath)
+    this.config = await readConfig(this.configPath)
+
+    if (!this.config) {
+      this.error('No config file found')
+    }
+
+    this.debug(`Configuration path ${this.configPath}`)
+    this.yaml = new YAML.Document()
+    this.configJson = JSON.parse(JSON.stringify(this.config))
   }
 
   public serializeClean(obj: Record<string, unknown>, tabCursor: string): void {
