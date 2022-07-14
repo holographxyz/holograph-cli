@@ -1,8 +1,4 @@
-import YAML from 'yaml'
-import * as path from 'node:path'
-
 import ConfigView from './view'
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid, readConfig} from '../../utils/config'
 
 export default class ConfigUser extends ConfigView {
   static description = 'View the current user address'

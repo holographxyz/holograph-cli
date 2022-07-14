@@ -1,8 +1,6 @@
-import YAML from 'yaml'
 import * as fs from 'fs-extra'
-import * as path from 'node:path'
 
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid, isStringAValidURL, readConfig} from '../../utils/config'
+import {isStringAValidURL} from '../../utils/config'
 import ConfigView from './view'
 import inquirer from 'inquirer'
 
