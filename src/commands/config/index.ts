@@ -102,7 +102,7 @@ export default class Config extends Command {
       const prompt: any = await inquirer.prompt([
         {
           name: 'shouldContinue',
-          message: 'configuration already exist, are you sure you want to override existing values?',
+          message: 'Configuration already exist, are you sure you want to override existing values?',
           type: 'confirm',
           default: false,
         },
@@ -272,7 +272,7 @@ export default class Config extends Command {
       }
       await fs.outputJSON(configPath, userConfigSample)
     } catch (error: any) {
-      this.log(`Failed to save file in ${configPath}. Please try again with debugger on and try again.`)
+      this.log(`Failed to save file in ${configPath}. Please enable debugger and try again.`)
       this.debug(error)
     }
 

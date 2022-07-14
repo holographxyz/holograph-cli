@@ -1,8 +1,10 @@
 import YAML from 'yaml'
+import * as fs from 'fs-extra'
 import * as path from 'node:path'
 
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 import ConfigView from './view'
+import inquirer from 'inquirer'
 
 export default class ConfigNetworks extends ConfigView {
   static description = 'View the current network config'
@@ -13,13 +15,51 @@ export default class ConfigNetworks extends ConfigView {
     '$ holo:networks --output clean',
   ]
 
+  supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
+
   async run(): Promise<void> {
     const {flags} = await this.parse(ConfigView)
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
     await ensureConfigFileIsValid(configPath)
     const config = await this.readConfig(configPath)
     const yaml = new YAML.Document()
-    const configJson = JSON.parse(JSON.stringify(config.networks))
+    const configJson = JSON.parse(JSON.stringify(config))
+
+    const prompt: any = await inquirer.prompt([
+      {
+        name: 'update',
+        message: 'Would you like to update your network providers?',
+        type: 'confirm',
+        default: false,
+      },
+    ])
+    if (prompt.update) {
+      for (const network of this.supportedNetworks) {
+        const prompt: any = await inquirer.prompt([
+          {
+            name: 'providerUrl',
+            message: `Enter the provider url for ${network}`,
+            type: 'input',
+            validate: async (input: string) => {
+              if (!this.isStringAValidURL(input)) {
+                return 'Input is not a valid and secure URL (https or wss)'
+              }
+
+              return true
+            },
+          },
+        ])
+
+        configJson.networks[network].providerUrl = prompt.providerUrl
+      }
+
+      try {
+        await fs.outputJSON(configPath, configJson, {spaces: 2})
+      } catch (error: any) {
+        this.log(`Failed to save file in ${configPath}. Please enable debugger and try again.`)
+        this.debug(error)
+      }
+    }
 
     switch (flags.output) {
       case 'json':
@@ -31,10 +71,22 @@ export default class ConfigNetworks extends ConfigView {
         break
       case 'clean':
       default:
-        this.serializeClean(configJson, '')
+        this.serializeClean(configJson.networks, '')
         break
     }
 
     this.exit()
+  }
+
+  public isStringAValidURL(s: string): boolean {
+    const protocols = ['https', 'wss']
+    try {
+      const result = new URL(s)
+      this.debug(`provider protocol is ${result.protocol}`)
+      return result.protocol ? protocols.map(x => `${x.toLowerCase()}:`).includes(result.protocol) : false
+    } catch (error) {
+      this.debug(error)
+      return false
+    }
   }
 }
