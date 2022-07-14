@@ -160,8 +160,8 @@ export default class Contract extends Command {
     CliUx.ux.action.stop()
     this.debug('Destination network', await destinationWallet.provider.getNetwork())
 
-    const allowedNetworks = ['rinkeby', 'mumbai', 'fuji']
-    let remainingNetworks = allowedNetworks
+    const supportedNetworks = ['rinkeby', 'mumbai', 'fuji']
+    let remainingNetworks = supportedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
     remainingNetworks = remainingNetworks.filter((item: string) => {
       return item !== this.destinationNetwork

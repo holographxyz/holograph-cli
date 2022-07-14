@@ -16,6 +16,8 @@ export default class ConfigNetworks extends ConfigView {
   ]
 
   supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
+  defaultFrom!: string
+  defaultTo!: string
 
   async run(): Promise<void> {
     const {flags} = await this.parse(ConfigView)
@@ -28,12 +30,49 @@ export default class ConfigNetworks extends ConfigView {
     const prompt: any = await inquirer.prompt([
       {
         name: 'update',
-        message: 'Would you like to update your network providers?',
+        message: 'Would you like to update your network config?',
         type: 'confirm',
         default: false,
       },
     ])
     if (prompt.update) {
+      // Array will get smaller depending on input defaultFrom and defaultTo values. I copy value so I can manipulate it
+      let remainingNetworks = this.supportedNetworks
+      this.debug(`remainingNetworks = ${remainingNetworks}`)
+
+      // Collect default FROM network value
+      remainingNetworks = remainingNetworks.filter((item: string) => {
+        return item !== this.defaultTo
+      })
+      this.debug(`remainingNetworks = ${remainingNetworks}`)
+      const fromPrompt: any = await inquirer.prompt([
+        {
+          name: 'defaultFrom',
+          message: 'Select the default network to bridge FROM (origin network)',
+          type: 'list',
+          choices: remainingNetworks,
+        },
+      ])
+      this.defaultFrom = fromPrompt.defaultFrom
+
+      // Collect default TO network value
+      remainingNetworks = remainingNetworks.filter((item: string) => {
+        return item !== this.defaultFrom
+      })
+      this.debug(`remainingNetworks = ${remainingNetworks}`)
+      const toPrompt: any = await inquirer.prompt([
+        {
+          name: 'defaultTo',
+          message: 'Select the default network to bridge TO (destination network)',
+          type: 'list',
+          choices: remainingNetworks,
+        },
+      ])
+      this.defaultTo = toPrompt.defaultTo
+
+      configJson.networks.from = this.defaultFrom
+      configJson.networks.to = this.defaultTo
+
       for (const network of this.supportedNetworks) {
         const prompt: any = await inquirer.prompt([
           {

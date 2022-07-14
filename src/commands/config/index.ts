@@ -18,15 +18,15 @@ export default class Config extends Command {
     '$ holo --providerUrl wss://rpc.com',
   ]
 
-  static allowedNetworks = ['rinkeby', 'mumbai', 'fuji']
+  static supportedNetworks = ['rinkeby', 'mumbai', 'fuji']
 
   static flags = {
     defaultFrom: Flags.string({
-      options: this.allowedNetworks,
+      options: this.supportedNetworks,
       description: 'Default network to bridge FROM (origin network)',
     }),
     defaultTo: Flags.string({
-      options: this.allowedNetworks,
+      options: this.supportedNetworks,
       description: 'Default network to bridge TO (destination network)',
     }),
     privateKey: Flags.string({description: 'Default account to use when sending all transactions'}),
@@ -113,7 +113,7 @@ export default class Config extends Command {
     }
 
     // Array will get smaller depending on input defaultFrom and defaultTo values. I copy value so I can manipulate it
-    let remainingNetworks = Config.allowedNetworks
+    let remainingNetworks = Config.supportedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
 
     // Collect default FROM network value
