@@ -2,7 +2,7 @@ import YAML from 'yaml'
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
 
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {CONFIG_FILE_NAME, ensureConfigFileIsValid, isStringAValidURL, readConfig} from '../../utils/config'
 import ConfigView from './view'
 import inquirer from 'inquirer'
 
@@ -23,7 +23,12 @@ export default class ConfigNetworks extends ConfigView {
     const {flags} = await this.parse(ConfigView)
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
     await ensureConfigFileIsValid(configPath)
-    const config = await this.readConfig(configPath)
+    const config = await readConfig(configPath)
+
+    if (!config) {
+      this.error('No config file found')
+    }
+
     const yaml = new YAML.Document()
     const configJson = JSON.parse(JSON.stringify(config))
 
@@ -73,6 +78,8 @@ export default class ConfigNetworks extends ConfigView {
       configJson.networks.from = this.defaultFrom
       configJson.networks.to = this.defaultTo
 
+      // It's okay to await in loop because this is a synchronous operation
+      /* eslint-disable no-await-in-loop */
       for (const network of this.supportedNetworks) {
         const prompt: any = await inquirer.prompt([
           {
@@ -80,7 +87,7 @@ export default class ConfigNetworks extends ConfigView {
             message: `Enter the provider url for ${network}`,
             type: 'input',
             validate: async (input: string) => {
-              if (!this.isStringAValidURL(input)) {
+              if (!isStringAValidURL(input)) {
                 return 'Input is not a valid and secure URL (https or wss)'
               }
 
@@ -115,17 +122,5 @@ export default class ConfigNetworks extends ConfigView {
     }
 
     this.exit()
-  }
-
-  public isStringAValidURL(s: string): boolean {
-    const protocols = ['https', 'wss']
-    try {
-      const result = new URL(s)
-      this.debug(`provider protocol is ${result.protocol}`)
-      return result.protocol ? protocols.map(x => `${x.toLowerCase()}:`).includes(result.protocol) : false
-    } catch (error) {
-      this.debug(error)
-      return false
-    }
   }
 }

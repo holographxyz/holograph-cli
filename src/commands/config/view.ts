@@ -1,10 +1,8 @@
 import YAML from 'yaml'
-import * as fs from 'fs-extra'
-
 import * as path from 'node:path'
 import {Command, Flags} from '@oclif/core'
 
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {CONFIG_FILE_NAME, ensureConfigFileIsValid, readConfig} from '../../utils/config'
 import {capitalize} from '../../utils/utils'
 
 export default class ConfigView extends Command {
@@ -24,7 +22,12 @@ export default class ConfigView extends Command {
     const {flags} = await this.parse(ConfigView)
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
     await ensureConfigFileIsValid(configPath)
-    this.config = await this.readConfig(configPath)
+    this.config = await readConfig(configPath)
+
+    if (!this.config) {
+      this.error('No config file found')
+    }
+
     this.debug(`Configuration path ${configPath}`)
     const yaml = new YAML.Document()
     const configJson = JSON.parse(JSON.stringify(this.config))
@@ -44,15 +47,6 @@ export default class ConfigView extends Command {
     }
 
     this.exit()
-  }
-
-  public async readConfig(configPath: string): Promise<any> {
-    try {
-      return await fs.readJSON(configPath)
-    } catch (error) {
-      this.debug(error)
-      return this.error('Failed to find config file')
-    }
   }
 
   public serializeClean(obj: Record<string, unknown>, tabCursor: string): void {

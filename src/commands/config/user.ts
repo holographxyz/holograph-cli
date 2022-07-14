@@ -2,7 +2,7 @@ import YAML from 'yaml'
 import * as path from 'node:path'
 
 import ConfigView from './view'
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {CONFIG_FILE_NAME, ensureConfigFileIsValid, readConfig} from '../../utils/config'
 
 export default class ConfigUser extends ConfigView {
   static description = 'View the current user address'
@@ -17,7 +17,12 @@ export default class ConfigUser extends ConfigView {
     const {flags} = await this.parse(ConfigView)
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
     await ensureConfigFileIsValid(configPath)
-    const config = await this.readConfig(configPath)
+    const config = await readConfig(configPath)
+
+    if (!config) {
+      this.error('No config file found')
+    }
+
     const yaml = new YAML.Document()
 
     switch (flags.output) {

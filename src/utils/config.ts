@@ -120,3 +120,36 @@ export function randomASCII(bytes: number): string {
 
   return Buffer.from(text, 'hex').toString()
 }
+
+export async function checkFileExists(configPath: string): Promise<boolean> {
+  try {
+    return await fs.pathExists(configPath)
+  } catch (error) {
+    console.debug(error)
+    return false
+  }
+}
+
+export async function readConfig(configPath: string): Promise<any> {
+  try {
+    return await fs.readJSON(configPath)
+  } catch (error) {
+    console.debug(error)
+    return undefined
+  }
+}
+
+export function isStringAValidURL(s: string): boolean {
+  const protocols = ['https', 'wss']
+  try {
+    const result = new URL(s)
+    return result.protocol ? protocols.map(x => `${x.toLowerCase()}:`).includes(result.protocol) : false
+  } catch (error) {
+    console.debug(error)
+    return false
+  }
+}
+
+export function isFromAndToNetworksTheSame(from: string | undefined, to: string | undefined): boolean {
+  return from !== to
+}

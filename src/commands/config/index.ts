@@ -3,7 +3,14 @@ import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import {ethers} from 'ethers'
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid, randomASCII} from '../../utils/config'
+import {
+  checkFileExists,
+  CONFIG_FILE_NAME,
+  ensureConfigFileIsValid,
+  isFromAndToNetworksTheSame,
+  isStringAValidURL,
+  randomASCII,
+} from '../../utils/config'
 import AesEncryption from '../../utils/aes-encryption'
 
 export default class Config extends Command {
@@ -34,41 +41,6 @@ export default class Config extends Command {
     providerUrlTo: Flags.string({description: 'Provide a secure https or wss url'}),
   }
 
-  public async checkFileExists(configPath: string): Promise<boolean> {
-    try {
-      this.debug(`Configuration file exists `)
-      return await fs.pathExists(configPath)
-    } catch (error) {
-      this.debug(error)
-      return this.error('Failed to find config file')
-    }
-  }
-
-  public async readConfig(configPath: string): Promise<any> {
-    try {
-      return await fs.readJSON(configPath)
-    } catch (error) {
-      this.debug(error)
-      return this.error('Failed to find config file')
-    }
-  }
-
-  public isStringAValidURL(s: string): boolean {
-    const protocols = ['https', 'wss']
-    try {
-      const result = new URL(s)
-      this.debug(`provider protocol is ${result.protocol}`)
-      return result.protocol ? protocols.map(x => `${x.toLowerCase()}:`).includes(result.protocol) : false
-    } catch (error) {
-      this.debug(error)
-      return false
-    }
-  }
-
-  public isFromAndToNetworksTheSame(from: string | undefined, to: string | undefined): boolean {
-    return from !== to
-  }
-
   public async run(): Promise<void> {
     const {flags} = await this.parse(Config)
     let defaultFrom = flags.defaultFrom
@@ -83,7 +55,7 @@ export default class Config extends Command {
 
     // Make sure default from and to networks are not the same when using flags
     if (typeof defaultFrom !== 'undefined' && typeof defaultTo !== 'undefined') {
-      const isValidFromAndTo = this.isFromAndToNetworksTheSame(defaultFrom, defaultTo)
+      const isValidFromAndTo = isFromAndToNetworksTheSame(defaultFrom, defaultTo)
       if (!isValidFromAndTo) {
         this.log('The FROM and TO networks cannot be the same')
         this.error('Networks cannot be the same')
@@ -94,9 +66,10 @@ export default class Config extends Command {
     const configFileName = CONFIG_FILE_NAME
     const configPath = path.join(this.config.configDir, configFileName)
     this.debug(`Configuration path ${configPath}`)
-    const isConfigExist: boolean = await this.checkFileExists(configPath)
+    const isConfigExist: boolean = await checkFileExists(configPath)
 
     if (isConfigExist) {
+      this.debug(`Configuration file exists at ${configPath}`)
       currentConfigFile = await ensureConfigFileIsValid(configPath)
 
       const prompt: any = await inquirer.prompt([
@@ -108,7 +81,8 @@ export default class Config extends Command {
         },
       ])
       if (!prompt.shouldContinue) {
-        this.error('No files were modified')
+        this.log('No files were modified')
+        this.exit()
       }
     }
 
@@ -212,7 +186,7 @@ export default class Config extends Command {
           message: 'Enter the FROM (origin) provider url',
           type: 'input',
           validate: async (input: string) => {
-            if (!this.isStringAValidURL(input)) {
+            if (!isStringAValidURL(input)) {
               return 'Input is not a valid and secure URL (https or wss)'
             }
 
@@ -231,7 +205,7 @@ export default class Config extends Command {
           message: 'Enter the TO (destination) provider url',
           type: 'input',
           validate: async (input: string) => {
-            if (!this.isStringAValidURL(input)) {
+            if (!isStringAValidURL(input)) {
               return 'Input is not a valid and secure URL (https or wss)'
             }
 
