@@ -46,6 +46,7 @@
     "fs-extra": "^10.1.0",
     "http": "^0.0.1-security",
     "https": "^1.0.0",
+    "husky": "^8.0.1",
     "inquirer": "^8.0.0",
     "joi": "^17.6.0",
     "supports-color": "^9.2.2",
