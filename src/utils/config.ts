@@ -79,8 +79,8 @@ export async function ensureConfigFileIsValid(
     }
 
     return {userWallet, configFile}
-  } catch {
-    throw new Error('Config file is no longer valid, please delete it before continuing')
+  } catch (error: any) {
+    throw new Error(`Config file is no longer valid, please delete it before continuing ${error.message}`)
   }
 }
 
