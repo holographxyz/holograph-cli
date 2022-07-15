@@ -34,6 +34,14 @@ export default class Config extends Command {
       options: this.supportedNetworks,
       description: 'Default network to bridge TO (destination network)',
     }),
+    network: Flags.string({
+      options: this.supportedNetworks,
+      description: 'Network to set',
+    }),
+    url: Flags.string({
+      description: 'Provider URL of network to set',
+      dependsOn: ['network'],
+    }),
     privateKey: Flags.string({description: 'Default account to use when sending all transactions'}),
   }
 
@@ -156,10 +164,29 @@ export default class Config extends Command {
       userConfigTemplate.networks.from = defaultFrom
       userConfigTemplate.networks.to = defaultTo
 
+      // Check what networks the user wants to operate on
+      const prompt: any = await inquirer.prompt([
+        {
+          type: 'checkbox',
+          name: 'networks',
+          message: 'Networks do you want to operate?',
+          choices: Config.supportedNetworks,
+        },
+      ])
+      const networks = prompt.networks
+
+      // Remove networks the user doesn't want to operate on
+      for (const network of Object.keys(userConfigTemplate.networks)) {
+        // TODO: from and to should be moved outside of networks objects into root config object as origin and destination
+        if (!networks.includes(network) && network !== 'from' && network !== 'to') {
+          delete userConfigTemplate.networks[network]
+        }
+      }
+
       // Add networks to the user config
       // It's okay to await in loop because this is a synchronous operation
       /* eslint-disable no-await-in-loop */
-      for (const network of Config.supportedNetworks) {
+      for (const network of networks) {
         const prompt: any = await inquirer.prompt([
           {
             name: 'providerUrl',
