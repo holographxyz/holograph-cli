@@ -144,7 +144,7 @@ export function isStringAValidURL(s: string): boolean {
   try {
     const result = new URL(s)
     return result.protocol ? protocols.map(x => `${x.toLowerCase()}:`).includes(result.protocol) : false
-  } catch (error) {
+  } catch {
     return false
   }
 }
