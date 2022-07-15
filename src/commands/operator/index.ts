@@ -35,7 +35,6 @@ export default class Operator extends Command {
   bridgeAddress: string | undefined
   factoryAddress: string | undefined
   operatorAddress: string | undefined
-  supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
   blockJobs: any[] = []
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   abiCoder = ethers.utils.defaultAbiCoder
@@ -218,14 +217,19 @@ export default class Operator extends Command {
       }
     }
 
+    // Load defaults for the networks from the config file
     if (flags.networks === undefined || '') {
-      // Load defaults
-      flags.networks = this.supportedNetworks
+      // TODO: This is a hack until from and to are removed from the networks object in the config file
+      // @ts-expect-error - - This will be removed once to is moved in the config object
+      delete configFile.networks.to
+      // @ts-expect-error - This will be removed once from is moved in the config object
+      delete configFile.networks.from
+      flags.networks = Object.keys(configFile.networks)
     }
 
     for (let i = 0, l = flags.networks.length; i < l; i++) {
       const network = flags.networks[i]
-      if (this.supportedNetworks.includes(network)) {
+      if (Object.keys(configFile.networks).includes(network)) {
         // First let's color our networks 🌈
         this.networkColors[network] = color.rgb(randomNumber(100, 255), randomNumber(100, 255), randomNumber(100, 255))
       } else {
