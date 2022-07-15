@@ -21,8 +21,6 @@ export default class Config extends Command {
     '$ holo --defaultFrom rinkeby',
     '$ holo --defaultFrom rinkeby --defaultTo mumbai',
     '$ holo --privateKey abc...def',
-    '$ holo --providerUrl https://rpc.com',
-    '$ holo --providerUrl wss://rpc.com',
   ]
 
   static supportedNetworks = ['rinkeby', 'mumbai', 'fuji']
@@ -37,8 +35,6 @@ export default class Config extends Command {
       description: 'Default network to bridge TO (destination network)',
     }),
     privateKey: Flags.string({description: 'Default account to use when sending all transactions'}),
-    providerUrlFrom: Flags.string({description: 'Provide a secure https or wss url'}),
-    providerUrlTo: Flags.string({description: 'Provide a secure https or wss url'}),
   }
 
   public async run(): Promise<void> {
@@ -46,14 +42,12 @@ export default class Config extends Command {
     let defaultFrom = flags.defaultFrom
     let defaultTo = flags.defaultTo
     let privateKey = flags.privateKey
-    let providerUrlFrom = flags.providerUrlFrom
-    let providerUrlTo = flags.providerUrlTo
     let userWallet = null
     let currentConfigFile: any = null
     let encryption
-    let iv: string = ''
+    let iv = ''
 
-    let updateNetworksPrompt: any = {update: false}
+    let updateNetworksPrompt = {update: false}
     let privateKeyPrompt: any = {update: false}
 
     // Make sure default from and to networks are not the same when using flags
@@ -91,7 +85,7 @@ export default class Config extends Command {
       currentConfigFile = await ensureConfigFileIsValid(configPath)
       userConfigTemplate = Object.assign({}, userConfigTemplate, currentConfigFile.configFile)
 
-      let prompt: any = await inquirer.prompt([
+      const prompt: any = await inquirer.prompt([
         {
           name: 'shouldContinue',
           message: 'Configuration already exist, are you sure you want to override existing values?',
@@ -103,7 +97,11 @@ export default class Config extends Command {
         this.log('No files were modified')
         this.exit()
       }
+    } else {
+      this.log(`Creating a new config file file at ${configPath}`)
+    }
 
+    if (isConfigExist) {
       // See if the user wants to update network config
       updateNetworksPrompt = await inquirer.prompt([
         {
@@ -113,18 +111,6 @@ export default class Config extends Command {
           default: false,
         },
       ])
-
-      // See if the user wants to update network config
-      privateKeyPrompt = await inquirer.prompt([
-        {
-          name: 'update',
-          message: 'Would you like to update your private key?',
-          type: 'confirm',
-          default: false,
-        },
-      ])
-    } else {
-      this.log(`Creating a new config file file at ${configPath}`)
     }
 
     if (updateNetworksPrompt.update || !isConfigExist) {
@@ -194,6 +180,18 @@ export default class Config extends Command {
           userConfigTemplate.networks[network] = {providerUrl: prompt.providerUrl}
         }
       }
+    }
+
+    if (isConfigExist) {
+      // See if the user wants to update network config
+      privateKeyPrompt = await inquirer.prompt([
+        {
+          name: 'update',
+          message: 'Would you like to update your private key?',
+          type: 'confirm',
+          default: false,
+        },
+      ])
     }
 
     if (privateKeyPrompt.update || !isConfigExist) {
