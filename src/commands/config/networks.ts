@@ -42,7 +42,7 @@ export default class ConfigNetworks extends ConfigView {
       const fromPrompt: any = await inquirer.prompt([
         {
           name: 'defaultFrom',
-          message: 'Select the default network to bridge FROM (origin network)',
+          message: 'Select the default network to bridge FROM (origin network).',
           type: 'list',
           choices: remainingNetworks,
         },
@@ -57,7 +57,7 @@ export default class ConfigNetworks extends ConfigView {
       const toPrompt: any = await inquirer.prompt([
         {
           name: 'defaultTo',
-          message: 'Select the default network to bridge TO (destination network)',
+          message: 'Select the default network to bridge TO (destination network).',
           type: 'list',
           choices: remainingNetworks,
         },
@@ -73,19 +73,21 @@ export default class ConfigNetworks extends ConfigView {
         const prompt: any = await inquirer.prompt([
           {
             name: 'providerUrl',
-            message: `Enter the provider url for ${network}`,
+            message: `Enter the provider url for ${network}. Leave blank to keep current provider.`,
             type: 'input',
             validate: async (input: string) => {
-              if (!isStringAValidURL(input)) {
-                return 'Input is not a valid and secure URL (https or wss)'
+              if (isStringAValidURL(input) || input === '') {
+                return true
               }
 
-              return true
+              return 'Input is not a valid and secure URL (https or wss)'
             },
           },
         ])
 
-        this.configJson.networks[network].providerUrl = prompt.providerUrl
+        if (prompt.providerUrl !== '') {
+          this.configJson.networks[network].providerUrl = prompt.providerUrl
+        }
       }
 
       try {
