@@ -303,11 +303,6 @@ export default class Operator extends Command {
 
       // Subscribe to events 🎧
       this.networkSubscribe(network)
-
-      // Watch out for dropped sockets and reconnect if necessary
-      // this.providers[network].on('error', this.handleDroppedSocket.bind(this, network))
-      // this.providers[network].on('close', this.handleDroppedSocket.bind(this, network))
-      // this.providers[network].on('end', this.handleDroppedSocket.bind(this, network))
     }
 
     // Catch all exit events
@@ -552,36 +547,4 @@ export default class Operator extends Command {
       } as BlockJob)
     })
   }
-
-  /*
-  handleDroppedSocket(network: string): void {
-    let resetProvider: any = null
-    if (typeof resetProvider !== 'undefined') {
-      clearInterval(resetProvider)
-    }
-
-    resetProvider = setInterval((): void => {
-      this.log(`${capitalize(network)} websocket connection error`)
-      try {
-        this.web3[network].eth.clearSubscriptions()
-      } catch (error) {
-        this.warn(`Websocket clearSubscriptions error: ${error}`)
-      }
-
-      try {
-        this.providers[network] = new WebsocketProvider(networks[network].wss)
-        this.providers[network].on('error', this.handleDroppedSocket.bind(this, network))
-        this.providers[network].on('close', this.handleDroppedSocket.bind(this, network))
-        this.providers[network].on('end', this.handleDroppedSocket.bind(this, network))
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore - TODO: Come back to this
-        this.web3[network] = new Web3(this.providers[network])
-        this.networkSubscribe(network)
-        clearInterval(resetProvider)
-      } catch (error) {
-        this.log(error as string)
-      }
-    }, 5000) // 5 seconds
-  }
-*/
 }
