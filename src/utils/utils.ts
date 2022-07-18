@@ -131,4 +131,26 @@ const decodeDeploymentConfigInput = function (input: string): any {
   return decodeDeploymentConfig('0x' + input.slice(10))
 }
 
-export {capitalize, randomNumber, decodeDeploymentConfig, decodeDeploymentConfigInput, webSocketConfig}
+const NETWORK_COLORS: Record<string, string> = {
+  fuji: '#ff0000',
+  avax: '#ff0000',
+  mumbai: '##B026FF ',
+  polygon: '#B026FF ',
+  rinkeby: '#0000ff',
+  eth: '#0000ff',
+}
+
+const rgbToHex = (rgb: number): string => {
+  const hex = Number(rgb).toString(16)
+  return hex.length === 1 ? `0${hex}` : hex
+}
+
+export {
+  capitalize,
+  rgbToHex,
+  randomNumber,
+  decodeDeploymentConfig,
+  decodeDeploymentConfigInput,
+  webSocketConfig,
+  NETWORK_COLORS,
+}

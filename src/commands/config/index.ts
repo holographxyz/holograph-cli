@@ -169,9 +169,17 @@ export default class Config extends Command {
       const prompt: any = await inquirer.prompt([
         {
           type: 'checkbox',
+
           name: 'networks',
-          message: 'Networks do you want to operate?',
+          message: 'Which networks do you want to operate?',
           choices: Config.supportedNetworks,
+          validate: async (input: any) => {
+            if (input.length >= 2) {
+              return true
+            }
+
+            return 'Please select at least 2 networks to operate on. Use the arrow keys and spacebar to select.'
+          },
         },
       ])
       const networks = prompt.networks

@@ -8,7 +8,7 @@ import {ethers} from 'ethers'
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 
-import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, randomNumber} from '../../utils/utils'
+import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, NETWORK_COLORS} from '../../utils/utils'
 import color from '@oclif/color'
 
 enum OperatorMode {
@@ -92,7 +92,7 @@ export default class Operator extends Command {
     fuji: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
   }
 
-  targetEvents: any = {
+  targetEvents: Record<string, string> = {
     BridgeableContractDeployed: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
     '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b': 'BridgeableContractDeployed',
 
@@ -105,11 +105,6 @@ export default class Operator extends Command {
   // @ts-ignore - Set all networks to start with latest block at index 0
   latestBlockHeight: {[key: string]: number} = {}
   exited = false
-
-  rgbToHex(rgb: number): string {
-    const hex = Number(rgb).toString(16)
-    return hex.length === 1 ? `0${hex}` : hex
-  }
 
   async loadLastBlocks(fileName: string, configDir: string): Promise<{[key: string]: number}> {
     const filePath = path.join(configDir, fileName)
@@ -276,11 +271,11 @@ export default class Operator extends Command {
       flags.networks = Object.keys(configFile.networks)
     }
 
+    // Color the networks 🌈
     for (let i = 0, l = flags.networks.length; i < l; i++) {
       const network = flags.networks[i]
       if (Object.keys(configFile.networks).includes(network)) {
-        // First let's color our networks 🌈
-        this.networkColors[network] = color.rgb(randomNumber(100, 255), randomNumber(100, 255), randomNumber(100, 255))
+        this.networkColors[network] = color.hex(NETWORK_COLORS[network])
       } else {
         // If network is not supported remove it from the array
         flags.networks.splice(i, 1)
