@@ -66,7 +66,7 @@ export default class Contract extends Command {
     }
   }
 
-  async validateOriginNetwork(configFile: ConfigFile): Promise<void> {
+  async validateSourceNetwork(configFile: ConfigFile): Promise<void> {
     if (this.sourceNetwork === '' || !(this.sourceNetwork in configFile.bridge)) {
       this.log(
         'Source network not provided, or does not exist in the config file',
@@ -113,7 +113,7 @@ export default class Contract extends Command {
     this.log('User configurations loaded.')
 
     this.sourceNetwork = flags.sourceNetwork || ''
-    await this.validateOriginNetwork(configFile)
+    await this.validateSourceNetwork(configFile)
     this.destinationNetwork = flags.destinationNetwork || ''
     await this.validateDestinationNetwork(configFile)
 
