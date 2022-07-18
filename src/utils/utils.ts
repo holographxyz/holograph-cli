@@ -31,18 +31,18 @@ const webSocketConfig = {
 
 export interface DeploymentConfig {
   config: {
-    contractType: string;
-    chainType: number;
-    salt: string;
-    byteCode: string;
-    initCode: string;
-  };
+    contractType: string
+    chainType: number
+    salt: string
+    byteCode: string
+    initCode: string
+  }
   signature: {
-    r: string;
-    s: string;
-    v: number;
-  };
-  signer: string;
+    r: string
+    s: string
+    v: number
+  }
+  signer: string
 }
 
 const decodeDeploymentConfig = function (input: string): DeploymentConfig {
@@ -131,4 +131,26 @@ const decodeDeploymentConfigInput = function (input: string): any {
   return decodeDeploymentConfig('0x' + input.slice(10))
 }
 
-export {capitalize, randomNumber, decodeDeploymentConfig, decodeDeploymentConfigInput, webSocketConfig}
+const NETWORK_COLORS: Record<string, string> = {
+  fuji: '#ff0000',
+  avax: '#ff0000',
+  mumbai: '##B026FF ',
+  polygon: '#B026FF ',
+  rinkeby: '##83EEFF',
+  eth: '##83EEFF',
+}
+
+const rgbToHex = (rgb: number): string => {
+  const hex = Number(rgb).toString(16)
+  return hex.length === 1 ? `0${hex}` : hex
+}
+
+export {
+  capitalize,
+  rgbToHex,
+  randomNumber,
+  decodeDeploymentConfig,
+  decodeDeploymentConfigInput,
+  webSocketConfig,
+  NETWORK_COLORS,
+}

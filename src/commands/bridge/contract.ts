@@ -38,7 +38,7 @@ export default class Contract extends Command {
         'Source network not provided, or does not exist in the config file',
         'Reverting to default "from" network from config',
       )
-      sourceNetwork = configFile.networks.from
+      sourceNetwork = configFile.bridge.source
     }
 
     let destinationNetwork: string = flags.destinationNetwork || ''
@@ -47,7 +47,7 @@ export default class Contract extends Command {
         'Destination network not provided, or does not exist in the config file',
         'reverting to default "to" network from config',
       )
-      destinationNetwork = configFile.networks.to
+      destinationNetwork = configFile.bridge.destination
     }
 
     if (sourceNetwork === destinationNetwork) {
@@ -93,8 +93,8 @@ export default class Contract extends Command {
     this.debug('Destination network', await destinationWallet.provider.getNetwork())
     CliUx.ux.action.stop()
 
-    const allowedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
-    let remainingNetworks: string[] = allowedNetworks
+    const supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
+    let remainingNetworks: string[] = supportedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
     remainingNetworks = remainingNetworks.filter((item: string) => {
       return item !== destinationNetwork

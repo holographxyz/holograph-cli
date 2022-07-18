@@ -28,8 +28,8 @@ export default class Contract extends Command {
     const {flags} = await this.parse(Contract)
     this.log('User configurations loaded.')
 
-    const allowedNetworks = ['rinkeby', 'mumbai', 'fuji']
-    let remainingNetworks = allowedNetworks
+    const supportedNetworks = ['rinkeby', 'mumbai', 'fuji']
+    let remainingNetworks = supportedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
 
     const destinationNetworkPrompt: any = await inquirer.prompt([
@@ -47,7 +47,9 @@ export default class Contract extends Command {
     })
 
     CliUx.ux.action.start('Loading destination network RPC provider')
-    const destinationProviderUrl: string = (configFile.networks[destinationNetwork as keyof ConfigNetworks] as ConfigNetwork).providerUrl
+    const destinationProviderUrl: string = (
+      configFile.networks[destinationNetwork as keyof ConfigNetworks] as ConfigNetwork
+    ).providerUrl
     const destinationNetworkProtocol: string = new URL(destinationProviderUrl).protocol
     let destinationNetworkProvider
     switch (destinationNetworkProtocol) {
@@ -64,7 +66,12 @@ export default class Contract extends Command {
     const destinationWallet = userWallet.connect(destinationNetworkProvider)
     CliUx.ux.action.stop()
 
-    const deploymentConfig = await prepareDeploymentConfig(configFile, userWallet, flags as Record<string, string | undefined>, remainingNetworks)
+    const deploymentConfig = await prepareDeploymentConfig(
+      configFile,
+      userWallet,
+      flags as Record<string, string | undefined>,
+      remainingNetworks,
+    )
     this.debug(deploymentConfig)
 
     CliUx.ux.action.start('Retrieving HolographFactory contract')

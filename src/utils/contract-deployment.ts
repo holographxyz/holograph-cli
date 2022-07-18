@@ -29,7 +29,7 @@ export const prepareDeploymentConfig = async function (
   configFile: ConfigFile,
   userWallet: ethers.Wallet,
   flags: Record<string, string | undefined>,
-  allowedNetworks: string[],
+  supportedNetworks: string[],
 ): Promise<any> {
   let deploymentType = flags.deploymentType
   let tx: string = flags.tx || ''
@@ -51,13 +51,13 @@ export const prepareDeploymentConfig = async function (
 
   switch (deploymentType) {
     case 'deployedTx': {
-      if (txNetwork === '' || !allowedNetworks.includes(txNetwork)) {
+      if (txNetwork === '' || !supportedNetworks.includes(txNetwork)) {
         const txNetworkPrompt: any = await inquirer.prompt([
           {
             name: 'txNetwork',
             message: 'select the network to extract transaction details from',
             type: 'list',
-            choices: allowedNetworks,
+            choices: supportedNetworks,
           },
         ])
         txNetwork = txNetworkPrompt.txNetwork
@@ -80,7 +80,7 @@ export const prepareDeploymentConfig = async function (
 
       const txNetworkWallet: ethers.Wallet = userWallet.connect(txNetworkProvider)
       CliUx.ux.action.stop()
-      if (tx === '' || !(/^0x[\da-f]{64}$/i.test(tx))) {
+      if (tx === '' || !/^0x[\da-f]{64}$/i.test(tx)) {
         const txPrompt: any = await inquirer.prompt([
           {
             name: 'tx',

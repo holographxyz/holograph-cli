@@ -8,7 +8,7 @@ import {ethers} from 'ethers'
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 
-import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, randomNumber} from '../../utils/utils'
+import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, NETWORK_COLORS} from '../../utils/utils'
 import color from '@oclif/color'
 
 enum OperatorMode {
@@ -18,50 +18,45 @@ enum OperatorMode {
 }
 
 type KeepAliveParams = {
-  provider: ethers.providers.WebSocketProvider;
-  onDisconnect: (err: any) => void;
-  expectedPongBack?: number;
-  checkInterval?: number;
-};
-
-type BlockJob = {
-  network: string;
-  block: number;
+  provider: ethers.providers.WebSocketProvider
+  onDisconnect: (err: any) => void
+  expectedPongBack?: number
+  checkInterval?: number
 }
 
-const keepAlive = ({
-  provider,
-  onDisconnect,
-  expectedPongBack = 15_000,
-  checkInterval = 7500,
-}: KeepAliveParams) => {
-  let pingTimeout: NodeJS.Timeout | null = null;
-  let keepAliveInterval: NodeJS.Timeout | null = null;
+type BlockJob = {
+  network: string
+  block: number
+}
+
+const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInterval = 7500}: KeepAliveParams) => {
+  let pingTimeout: NodeJS.Timeout | null = null
+  let keepAliveInterval: NodeJS.Timeout | null = null
 
   provider._websocket.on('open', () => {
     keepAliveInterval = setInterval(() => {
-      provider._websocket.ping();
+      provider._websocket.ping()
 
       // Use `WebSocket#terminate()`, which immediately destroys the connection,
       // instead of `WebSocket#close()`, which waits for the close timer.
       // Delay should be equal to the interval at which your server
       // sends out pings plus a conservative assumption of the latency.
       pingTimeout = setTimeout(() => {
-        provider._websocket.terminate();
-      }, expectedPongBack);
-    }, checkInterval);
-  });
+        provider._websocket.terminate()
+      }, expectedPongBack)
+    }, checkInterval)
+  })
 
   provider._websocket.on('close', (err: any) => {
-    if (keepAliveInterval) clearInterval(keepAliveInterval);
-    if (pingTimeout) clearTimeout(pingTimeout);
-    onDisconnect(err);
-  });
+    if (keepAliveInterval) clearInterval(keepAliveInterval)
+    if (pingTimeout) clearTimeout(pingTimeout)
+    onDisconnect(err)
+  })
 
   provider._websocket.on('pong', () => {
-    if (pingTimeout) clearInterval(pingTimeout);
-  });
-};
+    if (pingTimeout) clearInterval(pingTimeout)
+  })
+}
 
 export default class Operator extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
@@ -97,7 +92,7 @@ export default class Operator extends Command {
     fuji: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
   }
 
-  targetEvents: any = {
+  targetEvents: Record<string, string> = {
     BridgeableContractDeployed: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
     '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b': 'BridgeableContractDeployed',
 
@@ -110,11 +105,6 @@ export default class Operator extends Command {
   // @ts-ignore - Set all networks to start with latest block at index 0
   latestBlockHeight: {[key: string]: number} = {}
   exited = false
-
-  rgbToHex(rgb: number): string {
-    const hex = Number(rgb).toString(16)
-    return hex.length === 1 ? `0${hex}` : hex
-  }
 
   async loadLastBlocks(fileName: string, configDir: string): Promise<{[key: string]: number}> {
     const filePath = path.join(configDir, fileName)
@@ -135,7 +125,7 @@ export default class Operator extends Command {
     const provider = new ethers.providers.WebSocketProvider(rpcEndpoint)
     keepAlive({
       provider,
-      onDisconnect: (err) => {
+      onDisconnect: err => {
         this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint)
         this.log('The ws connection was closed', JSON.stringify(err, null, 2))
       },
@@ -276,16 +266,16 @@ export default class Operator extends Command {
       }
     }
 
+    // Load defaults for the networks from the config file
     if (flags.networks === undefined || '') {
-      // Load defaults
-      flags.networks = this.supportedNetworks
+      flags.networks = Object.keys(configFile.networks)
     }
 
+    // Color the networks 🌈
     for (let i = 0, l = flags.networks.length; i < l; i++) {
       const network = flags.networks[i]
-      if (this.supportedNetworks.includes(network)) {
-        // First let's color our networks 🌈
-        this.networkColors[network] = color.rgb(randomNumber(100, 255), randomNumber(100, 255), randomNumber(100, 255))
+      if (Object.keys(configFile.networks).includes(network)) {
+        this.networkColors[network] = color.hex(NETWORK_COLORS[network])
       } else {
         // If network is not supported remove it from the array
         flags.networks.splice(i, 1)
@@ -313,11 +303,6 @@ export default class Operator extends Command {
 
       // Subscribe to events 🎧
       this.networkSubscribe(network)
-
-      // Watch out for dropped sockets and reconnect if necessary
-      // this.providers[network].on('error', this.handleDroppedSocket.bind(this, network))
-      // this.providers[network].on('close', this.handleDroppedSocket.bind(this, network))
-      // this.providers[network].on('end', this.handleDroppedSocket.bind(this, network))
     }
 
     // Catch all exit events
@@ -562,36 +547,4 @@ export default class Operator extends Command {
       } as BlockJob)
     })
   }
-
-  /*
-  handleDroppedSocket(network: string): void {
-    let resetProvider: any = null
-    if (typeof resetProvider !== 'undefined') {
-      clearInterval(resetProvider)
-    }
-
-    resetProvider = setInterval((): void => {
-      this.log(`${capitalize(network)} websocket connection error`)
-      try {
-        this.web3[network].eth.clearSubscriptions()
-      } catch (error) {
-        this.warn(`Websocket clearSubscriptions error: ${error}`)
-      }
-
-      try {
-        this.providers[network] = new WebsocketProvider(networks[network].wss)
-        this.providers[network].on('error', this.handleDroppedSocket.bind(this, network))
-        this.providers[network].on('close', this.handleDroppedSocket.bind(this, network))
-        this.providers[network].on('end', this.handleDroppedSocket.bind(this, network))
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore - TODO: Come back to this
-        this.web3[network] = new Web3(this.providers[network])
-        this.networkSubscribe(network)
-        clearInterval(resetProvider)
-      } catch (error) {
-        this.log(error as string)
-      }
-    }, 5000) // 5 seconds
-  }
-*/
 }

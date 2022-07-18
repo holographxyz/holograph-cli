@@ -67,12 +67,12 @@ export default class Contract extends Command {
   }
 
   async validateSourceNetwork(configFile: ConfigFile): Promise<void> {
-    if (this.sourceNetwork === '' || !(this.sourceNetwork in configFile.networks)) {
+    if (this.sourceNetwork === '' || !(this.sourceNetwork in configFile.bridge)) {
       this.log(
         'Source network not provided, or does not exist in the config file',
         'Reverting to default "from" network from config',
       )
-      this.sourceNetwork = configFile.networks.from
+      this.sourceNetwork = configFile.bridge.source
     }
   }
 
@@ -82,7 +82,7 @@ export default class Contract extends Command {
         'Destination network not provided, or does not exist in the config file',
         'Reverting to default "from" network from config',
       )
-      this.destinationNetwork = configFile.networks.to
+      this.destinationNetwork = configFile.bridge.destination
     }
   }
 
@@ -160,8 +160,8 @@ export default class Contract extends Command {
     CliUx.ux.action.stop()
     this.debug('Destination network', await destinationWallet.provider.getNetwork())
 
-    const allowedNetworks = ['rinkeby', 'mumbai', 'fuji']
-    let remainingNetworks = allowedNetworks
+    const supportedNetworks = ['rinkeby', 'mumbai', 'fuji']
+    let remainingNetworks = supportedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
     remainingNetworks = remainingNetworks.filter((item: string) => {
       return item !== this.destinationNetwork

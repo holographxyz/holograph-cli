@@ -12,9 +12,12 @@ export interface ConfigNetwork {
   providerUrl: string
 }
 
+export interface ConfigBridge {
+  source: string
+  destination: string
+}
+
 export interface ConfigNetworks {
-  from: string
-  to: string
   rinkeby: ConfigNetwork
   mumbai: ConfigNetwork
   fuji: ConfigNetwork
@@ -32,6 +35,7 @@ export interface ConfigUser {
 
 export interface ConfigFile {
   version: string
+  bridge: ConfigBridge
   networks: ConfigNetworks
   user: ConfigUser
 }
@@ -79,17 +83,19 @@ export async function ensureConfigFileIsValid(
     }
 
     return {userWallet, configFile}
-  } catch {
-    throw new Error('Config file is no longer valid, please delete it before continuing')
+  } catch (error: any) {
+    throw new Error(`Config file is no longer valid, please delete it before continuing ${error.message}`)
   }
 }
 
 export async function validateBeta1Schema(config: Record<string, unknown>): Promise<void> {
   const beta1Schema = Joi.object({
     version: Joi.string().valid('beta1'),
+    bridge: {
+      source: Joi.string(),
+      destination: Joi.string(),
+    },
     networks: Joi.object({
-      from: Joi.string(),
-      to: Joi.string(),
       rinkeby: Joi.object({
         providerUrl: Joi.string(),
       }),
@@ -119,4 +125,36 @@ export function randomASCII(bytes: number): string {
   }
 
   return Buffer.from(text, 'hex').toString()
+}
+
+export async function checkFileExists(configPath: string): Promise<boolean> {
+  try {
+    return await fs.pathExists(configPath)
+  } catch (error) {
+    console.debug(error)
+    return false
+  }
+}
+
+export async function readConfig(configPath: string): Promise<any> {
+  try {
+    return await fs.readJSON(configPath)
+  } catch (error) {
+    console.debug(error)
+    return undefined
+  }
+}
+
+export function isStringAValidURL(s: string): boolean {
+  const protocols = ['https', 'wss']
+  try {
+    const result = new URL(s)
+    return result.protocol ? protocols.map(x => `${x.toLowerCase()}:`).includes(result.protocol) : false
+  } catch {
+    return false
+  }
+}
+
+export function isFromAndToNetworksTheSame(from: string | undefined, to: string | undefined): boolean {
+  return from !== to
 }

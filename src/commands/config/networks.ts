@@ -1,7 +1,3 @@
-import YAML from 'yaml'
-import * as path from 'node:path'
-
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 import ConfigView from './view'
 
 export default class ConfigNetworks extends ConfigView {
@@ -15,23 +11,19 @@ export default class ConfigNetworks extends ConfigView {
 
   async run(): Promise<void> {
     const {flags} = await this.parse(ConfigView)
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    await ensureConfigFileIsValid(configPath)
-    const config = await this.readConfig(configPath)
-    const yaml = new YAML.Document()
-    const configJson = JSON.parse(JSON.stringify(config.networks))
+    await this.setup()
 
     switch (flags.output) {
       case 'json':
-        this.log(JSON.stringify(config.networks, null, 2))
+        this.log(JSON.stringify(this.configJson.networks, null, 2))
         break
       case 'yaml':
-        yaml.contents = config.networks
-        this.log(yaml.toString())
+        this.yaml.contents = this.configJson.networks
+        this.log(this.yaml.toString())
         break
       case 'clean':
       default:
-        this.serializeClean(configJson, '')
+        this.serializeClean(this.configJson.networks, '')
         break
     }
 
