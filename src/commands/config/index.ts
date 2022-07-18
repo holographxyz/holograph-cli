@@ -28,7 +28,7 @@ export default class Config extends Command {
   static flags = {
     defaultFrom: Flags.string({
       options: this.supportedNetworks,
-      description: 'Default network to bridge FROM (origin network)',
+      description: 'Default network to bridge FROM (source network)',
     }),
     defaultTo: Flags.string({
       options: this.supportedNetworks,
@@ -76,7 +76,7 @@ export default class Config extends Command {
     let userConfigTemplate: any = {
       version: 'beta1',
       bridge: {
-        origin: defaultFrom,
+        source: defaultFrom,
         destination: defaultTo,
       },
       networks: {},
@@ -136,7 +136,7 @@ export default class Config extends Command {
         const prompt: any = await inquirer.prompt([
           {
             name: 'defaultFrom',
-            message: 'Select the default network to bridge FROM (origin network)',
+            message: 'Select the default network to bridge FROM (source network)',
             type: 'list',
             choices: remainingNetworks,
           },
@@ -162,7 +162,7 @@ export default class Config extends Command {
       }
 
       // Update user config with new defaultFrom and defaultTo values
-      userConfigTemplate.bridge.origin = defaultFrom
+      userConfigTemplate.bridge.source = defaultFrom
       userConfigTemplate.bridge.destination = defaultTo
 
       // Check what networks the user wants to operate on

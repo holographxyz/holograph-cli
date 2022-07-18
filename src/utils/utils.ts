@@ -136,8 +136,8 @@ const NETWORK_COLORS: Record<string, string> = {
   avax: '#ff0000',
   mumbai: '##B026FF ',
   polygon: '#B026FF ',
-  rinkeby: '#0000ff',
-  eth: '#0000ff',
+  rinkeby: '##83EEFF',
+  eth: '##83EEFF',
 }
 
 const rgbToHex = (rgb: number): string => {

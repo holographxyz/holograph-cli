@@ -13,7 +13,7 @@ export interface ConfigNetwork {
 }
 
 export interface ConfigBridge {
-  origin: string
+  source: string
   destination: string
 }
 
@@ -92,7 +92,7 @@ export async function validateBeta1Schema(config: Record<string, unknown>): Prom
   const beta1Schema = Joi.object({
     version: Joi.string().valid('beta1'),
     bridge: {
-      origin: Joi.string(),
+      source: Joi.string(),
       destination: Joi.string(),
     },
     networks: Joi.object({
