@@ -13,7 +13,7 @@ export default class Contract extends Command {
   static examples = ['$ holo bridge:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"']
 
   static flags = {
-    sourceNetwork: Flags.string({description: 'The name of source network, from which to make the bridge request'}),
+    originNetwork: Flags.string({description: 'The name of source network, from which to make the bridge request'}),
     destinationNetwork: Flags.string({
       description: 'The name of destination network, where the bridge request is sent to',
     }),
@@ -32,13 +32,13 @@ export default class Contract extends Command {
     const {flags} = await this.parse(Contract)
     this.log('User configurations loaded.')
 
-    let sourceNetwork: string = flags.sourceNetwork || ''
-    if (sourceNetwork === '' || !(sourceNetwork in configFile.networks)) {
+    let originNetwork: string = flags.originNetwork || ''
+    if (originNetwork === '' || !(originNetwork in configFile.networks)) {
       this.log(
-        'Source network not provided, or does not exist in the config file',
+        'Origin network not provided, or does not exist in the config file',
         'Reverting to default "from" network from config',
       )
-      sourceNetwork = configFile.networks.from
+      originNetwork = configFile.bridge.origin
     }
 
     let destinationNetwork: string = flags.destinationNetwork || ''
@@ -47,15 +47,15 @@ export default class Contract extends Command {
         'Destination network not provided, or does not exist in the config file',
         'reverting to default "to" network from config',
       )
-      destinationNetwork = configFile.networks.to
+      destinationNetwork = configFile.bridge.destination
     }
 
-    if (sourceNetwork === destinationNetwork) {
+    if (originNetwork === destinationNetwork) {
       throw new Error('Cannot bridge to/from the same network')
     }
 
     CliUx.ux.action.start('Loading RPC providers')
-    const sourceProviderUrl: string = (configFile.networks[sourceNetwork as keyof ConfigNetworks] as ConfigNetwork)
+    const sourceProviderUrl: string = (configFile.networks[originNetwork as keyof ConfigNetworks] as ConfigNetwork)
       .providerUrl
     const sourceProtocol: string = new URL(sourceProviderUrl).protocol
     let sourceProvider
@@ -70,8 +70,8 @@ export default class Contract extends Command {
         throw new Error('Unsupported RPC URL protocol -> ' + sourceProtocol)
     }
 
-    const sourceWallet = userWallet.connect(sourceProvider)
-    this.debug('Source network', await sourceWallet.provider.getNetwork())
+    const originWallet = userWallet.connect(sourceProvider)
+    this.debug('Origin network', await originWallet.provider.getNetwork())
 
     const destinationProviderUrl: string = (
       configFile.networks[destinationNetwork as keyof ConfigNetworks] as ConfigNetwork
@@ -112,12 +112,12 @@ export default class Contract extends Command {
 
     CliUx.ux.action.start('Retrieving HolographFactory contract')
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
-    const holograph = new ethers.ContractFactory(holographABI, '0x', sourceWallet).attach(
+    const holograph = new ethers.ContractFactory(holographABI, '0x', originWallet).attach(
       '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase(),
     )
 
     const holographInterfacesABI = await fs.readJson('./src/abi/Interfaces.json')
-    const holographInterfaces = new ethers.ContractFactory(holographInterfacesABI, '0x', sourceWallet).attach(
+    const holographInterfaces = new ethers.ContractFactory(holographInterfacesABI, '0x', originWallet).attach(
       await holograph.getInterfaces(),
     )
 
@@ -129,7 +129,7 @@ export default class Contract extends Command {
       2,
     )
     const holographBridgeABI = await fs.readJson('./src/abi/HolographBridge.json')
-    const holographBridge = new ethers.ContractFactory(holographBridgeABI, '0x', sourceWallet).attach(
+    const holographBridge = new ethers.ContractFactory(holographBridgeABI, '0x', originWallet).attach(
       await holograph.getBridge(),
     )
     CliUx.ux.action.stop()
@@ -174,7 +174,7 @@ export default class Contract extends Command {
       this.error('Could not identify messaging costs')
     }
 
-    const gasPrice = await sourceWallet.provider.getGasPrice()
+    const gasPrice = await originWallet.provider.getGasPrice()
     CliUx.ux.action.stop()
     this.log(
       'Transaction is estimated to cost a total of',

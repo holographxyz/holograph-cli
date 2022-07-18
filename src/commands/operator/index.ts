@@ -18,50 +18,45 @@ enum OperatorMode {
 }
 
 type KeepAliveParams = {
-  provider: ethers.providers.WebSocketProvider;
-  onDisconnect: (err: any) => void;
-  expectedPongBack?: number;
-  checkInterval?: number;
-};
-
-type BlockJob = {
-  network: string;
-  block: number;
+  provider: ethers.providers.WebSocketProvider
+  onDisconnect: (err: any) => void
+  expectedPongBack?: number
+  checkInterval?: number
 }
 
-const keepAlive = ({
-  provider,
-  onDisconnect,
-  expectedPongBack = 15_000,
-  checkInterval = 7500,
-}: KeepAliveParams) => {
-  let pingTimeout: NodeJS.Timeout | null = null;
-  let keepAliveInterval: NodeJS.Timeout | null = null;
+type BlockJob = {
+  network: string
+  block: number
+}
+
+const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInterval = 7500}: KeepAliveParams) => {
+  let pingTimeout: NodeJS.Timeout | null = null
+  let keepAliveInterval: NodeJS.Timeout | null = null
 
   provider._websocket.on('open', () => {
     keepAliveInterval = setInterval(() => {
-      provider._websocket.ping();
+      provider._websocket.ping()
 
       // Use `WebSocket#terminate()`, which immediately destroys the connection,
       // instead of `WebSocket#close()`, which waits for the close timer.
       // Delay should be equal to the interval at which your server
       // sends out pings plus a conservative assumption of the latency.
       pingTimeout = setTimeout(() => {
-        provider._websocket.terminate();
-      }, expectedPongBack);
-    }, checkInterval);
-  });
+        provider._websocket.terminate()
+      }, expectedPongBack)
+    }, checkInterval)
+  })
 
   provider._websocket.on('close', (err: any) => {
-    if (keepAliveInterval) clearInterval(keepAliveInterval);
-    if (pingTimeout) clearTimeout(pingTimeout);
-    onDisconnect(err);
-  });
+    if (keepAliveInterval) clearInterval(keepAliveInterval)
+    if (pingTimeout) clearTimeout(pingTimeout)
+    onDisconnect(err)
+  })
 
   provider._websocket.on('pong', () => {
-    if (pingTimeout) clearInterval(pingTimeout);
-  });
-};
+    if (pingTimeout) clearInterval(pingTimeout)
+  })
+}
 
 export default class Operator extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
@@ -135,7 +130,7 @@ export default class Operator extends Command {
     const provider = new ethers.providers.WebSocketProvider(rpcEndpoint)
     keepAlive({
       provider,
-      onDisconnect: (err) => {
+      onDisconnect: err => {
         this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint)
         this.log('The ws connection was closed', JSON.stringify(err, null, 2))
       },
@@ -278,11 +273,6 @@ export default class Operator extends Command {
 
     // Load defaults for the networks from the config file
     if (flags.networks === undefined || '') {
-      // TODO: This is a hack until from and to are removed from the networks object in the config file
-      // @ts-expect-error - - This will be removed once to is moved in the config object
-      delete configFile.networks.to
-      // @ts-expect-error - This will be removed once from is moved in the config object
-      delete configFile.networks.from
       flags.networks = Object.keys(configFile.networks)
     }
 

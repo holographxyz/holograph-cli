@@ -12,9 +12,12 @@ export interface ConfigNetwork {
   providerUrl: string
 }
 
+export interface ConfigBridge {
+  origin: string
+  destination: string
+}
+
 export interface ConfigNetworks {
-  from: string
-  to: string
   rinkeby: ConfigNetwork
   mumbai: ConfigNetwork
   fuji: ConfigNetwork
@@ -32,6 +35,7 @@ export interface ConfigUser {
 
 export interface ConfigFile {
   version: string
+  bridge: ConfigBridge
   networks: ConfigNetworks
   user: ConfigUser
 }
@@ -87,9 +91,11 @@ export async function ensureConfigFileIsValid(
 export async function validateBeta1Schema(config: Record<string, unknown>): Promise<void> {
   const beta1Schema = Joi.object({
     version: Joi.string().valid('beta1'),
+    bridge: {
+      origin: Joi.string(),
+      destination: Joi.string(),
+    },
     networks: Joi.object({
-      from: Joi.string(),
-      to: Joi.string(),
       rinkeby: Joi.object({
         providerUrl: Joi.string(),
       }),

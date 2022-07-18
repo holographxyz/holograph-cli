@@ -75,10 +75,11 @@ export default class Config extends Command {
 
     let userConfigTemplate: any = {
       version: 'beta1',
-      networks: {
-        from: defaultFrom,
-        to: defaultTo,
+      bridge: {
+        origin: defaultFrom,
+        destination: defaultTo,
       },
+      networks: {},
       user: {
         credentials: {
           iv: iv,
@@ -161,8 +162,8 @@ export default class Config extends Command {
       }
 
       // Update user config with new defaultFrom and defaultTo values
-      userConfigTemplate.networks.from = defaultFrom
-      userConfigTemplate.networks.to = defaultTo
+      userConfigTemplate.bridge.origin = defaultFrom
+      userConfigTemplate.bridge.destination = defaultTo
 
       // Check what networks the user wants to operate on
       const prompt: any = await inquirer.prompt([
@@ -177,8 +178,7 @@ export default class Config extends Command {
 
       // Remove networks the user doesn't want to operate on
       for (const network of Object.keys(userConfigTemplate.networks)) {
-        // TODO: from and to should be moved outside of networks objects into root config object as origin and destination
-        if (!networks.includes(network) && network !== 'from' && network !== 'to') {
+        if (!networks.includes(network)) {
           delete userConfigTemplate.networks[network]
         }
       }

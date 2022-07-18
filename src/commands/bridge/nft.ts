@@ -13,7 +13,7 @@ export default class Contract extends Command {
   static examples = ['$ holo bridge:nft --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1']
 
   static flags = {
-    sourceNetwork: Flags.string({description: 'The name of source network, from which to make the bridge request'}),
+    originNetwork: Flags.string({description: 'The name of source network, from which to make the bridge request'}),
     destinationNetwork: Flags.string({
       description: 'The name of destination network, where the bridge request is sent to',
     }),
@@ -23,7 +23,7 @@ export default class Contract extends Command {
 
   collectionAddress = ''
   tokenId = ''
-  sourceNetwork = ''
+  originNetwork = ''
   destinationNetwork = ''
 
   async validateCollectionAddress(): Promise<void> {
@@ -66,13 +66,13 @@ export default class Contract extends Command {
     }
   }
 
-  async validateSourceNetwork(configFile: ConfigFile): Promise<void> {
-    if (this.sourceNetwork === '' || !(this.sourceNetwork in configFile.networks)) {
+  async validateOriginNetwork(configFile: ConfigFile): Promise<void> {
+    if (this.originNetwork === '' || !(this.originNetwork in configFile.bridge)) {
       this.log(
-        'Source network not provided, or does not exist in the config file',
+        'Origin network not provided, or does not exist in the config file',
         'Reverting to default "from" network from config',
       )
-      this.sourceNetwork = configFile.networks.from
+      this.originNetwork = configFile.bridge.origin
     }
   }
 
@@ -82,7 +82,7 @@ export default class Contract extends Command {
         'Destination network not provided, or does not exist in the config file',
         'Reverting to default "from" network from config',
       )
-      this.destinationNetwork = configFile.networks.to
+      this.destinationNetwork = configFile.bridge.destination
     }
   }
 
@@ -112,33 +112,33 @@ export default class Contract extends Command {
 
     this.log('User configurations loaded.')
 
-    this.sourceNetwork = flags.sourceNetwork || ''
-    await this.validateSourceNetwork(configFile)
+    this.originNetwork = flags.originNetwork || ''
+    await this.validateOriginNetwork(configFile)
     this.destinationNetwork = flags.destinationNetwork || ''
     await this.validateDestinationNetwork(configFile)
 
-    if (this.sourceNetwork === this.destinationNetwork) {
+    if (this.originNetwork === this.destinationNetwork) {
       throw new Error('Cannot bridge to/from the same network')
     }
 
     CliUx.ux.action.start('Loading RPC providers')
-    const sourceProviderUrl: string = (configFile.networks[this.sourceNetwork as keyof ConfigNetworks] as ConfigNetwork)
+    const originProviderUrl: string = (configFile.networks[this.originNetwork as keyof ConfigNetworks] as ConfigNetwork)
       .providerUrl
-    const sourceProtocol: string = new URL(sourceProviderUrl).protocol
-    let sourceProvider
+    const sourceProtocol: string = new URL(originProviderUrl).protocol
+    let originProvider
     switch (sourceProtocol) {
       case 'https:':
-        sourceProvider = new ethers.providers.JsonRpcProvider(sourceProviderUrl)
+        originProvider = new ethers.providers.JsonRpcProvider(originProviderUrl)
         break
       case 'wss:':
-        sourceProvider = new ethers.providers.WebSocketProvider(sourceProviderUrl)
+        originProvider = new ethers.providers.WebSocketProvider(originProviderUrl)
         break
       default:
         throw new Error('Unsupported RPC URL protocol -> ' + sourceProtocol)
     }
 
-    const sourceWallet: ethers.Wallet = userWallet.connect(sourceProvider)
-    this.debug('Source network', await sourceWallet.provider.getNetwork())
+    const originWallet: ethers.Wallet = userWallet.connect(originProvider)
+    this.debug('Origin network', await originWallet.provider.getNetwork())
 
     const destinationProviderUrl: string = (
       configFile.networks[this.destinationNetwork as keyof ConfigNetworks] as ConfigNetwork
@@ -169,18 +169,18 @@ export default class Contract extends Command {
 
     // Check if the contract is deployed on the source chain and not on the destination chain
     CliUx.ux.action.start('Checking if the contract is deployed on both source and destination chains')
-    await this.checkContractCode('source', sourceProvider, this.collectionAddress)
+    await this.checkContractCode('source', originProvider, this.collectionAddress)
     await this.checkContractCode('destination', destinationProvider, this.collectionAddress)
     CliUx.ux.action.stop()
 
     CliUx.ux.action.start('Retrieving HolographFactory contract')
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
-    const holograph = new ethers.ContractFactory(holographABI, '0x', sourceWallet).attach(
+    const holograph = new ethers.ContractFactory(holographABI, '0x', originWallet).attach(
       '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase(),
     )
 
     const holographInterfacesABI = await fs.readJson('./src/abi/Interfaces.json')
-    const holographInterfaces = new ethers.ContractFactory(holographInterfacesABI, '0x', sourceWallet).attach(
+    const holographInterfaces = new ethers.ContractFactory(holographInterfacesABI, '0x', originWallet).attach(
       await holograph.getInterfaces(),
     )
 
@@ -193,7 +193,7 @@ export default class Contract extends Command {
     )
 
     const holographRegistryABI = await fs.readJson('./src/abi/HolographRegistry.json')
-    const holographRegistry = new ethers.ContractFactory(holographRegistryABI, '0x', sourceWallet).attach(
+    const holographRegistry = new ethers.ContractFactory(holographRegistryABI, '0x', originWallet).attach(
       await holograph.getRegistry(),
     )
 
@@ -205,7 +205,7 @@ export default class Contract extends Command {
     }
 
     const holographErc721ABI = await fs.readJson('./src/abi/HolographERC721.json')
-    const holographErc721 = new ethers.ContractFactory(holographErc721ABI, '0x', sourceWallet).attach(
+    const holographErc721 = new ethers.ContractFactory(holographErc721ABI, '0x', originWallet).attach(
       this.collectionAddress,
     )
 
@@ -226,7 +226,7 @@ export default class Contract extends Command {
     }
 
     const holographBridgeABI = await fs.readJson('./src/abi/HolographBridge.json')
-    const holographBridge = new ethers.ContractFactory(holographBridgeABI, '0x', sourceWallet).attach(
+    const holographBridge = new ethers.ContractFactory(holographBridgeABI, '0x', originWallet).attach(
       await holograph.getBridge(),
     )
     CliUx.ux.action.stop()
@@ -272,7 +272,7 @@ export default class Contract extends Command {
       this.error('Could not identify messaging costs')
     }
 
-    const gasPrice = await sourceWallet.provider.getGasPrice()
+    const gasPrice = await originWallet.provider.getGasPrice()
     CliUx.ux.action.stop()
     this.log(
       'Transaction is estimated to cost a total of',
