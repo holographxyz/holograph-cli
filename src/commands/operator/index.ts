@@ -513,7 +513,7 @@ export default class Operator extends Command {
     }
   }
 
-  structuredLog(network: string, msg: string) {
+  structuredLog(network: string, msg: string): void {
     const timestamp = new Date(Date.now()).toISOString()
     const timestampColor = color.keyword('green')
 
