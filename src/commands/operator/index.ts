@@ -1,12 +1,12 @@
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
-import * as inquirer from 'inquirer'
+import axios from 'axios'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
-import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
+import {CONFIG_FILE_NAME, ConfigFile, ConfigNetwork, ConfigNetworks, ensureConfigFileIsValid} from '../../utils/config'
+import networks from '../../utils/networks'
 
 import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, NETWORK_COLORS} from '../../utils/utils'
 import color from '@oclif/color'
@@ -96,11 +96,15 @@ export default class Operator extends Command {
     BridgeableContractDeployed: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
     '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b': 'BridgeableContractDeployed',
 
+    Transfer: '0xddf252ad1be2c89b69c2b0e5cb21f252eb5faea1204e98bdda08f8c4d5cc4eb',
+    '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef': 'Transfer',
+
     AvailableJob: '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11',
     '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11': 'AvailableJob',
   }
 
   networkColors: any = {}
+  baseUrl = 'http://localhost:9001'
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore - Set all networks to start with latest block at index 0
   latestBlockHeight: {[key: string]: number} = {}
@@ -161,7 +165,7 @@ export default class Operator extends Command {
       if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
         this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
       } else {
-        this.structuredLog(network,`Starting Operator from latest block height`)
+        this.structuredLog(network, `Starting Operator from latest block height`)
         this.latestBlockHeight[network] = 0
       }
     }
@@ -218,23 +222,7 @@ export default class Operator extends Command {
   async run(): Promise<void> {
     const {flags} = await this.parse(Operator)
 
-    // Have the user input the mode if it's not provided
-    let mode: string | undefined = flags.mode
-
-    if (!mode) {
-      const prompt: any = await inquirer.prompt([
-        {
-          name: 'mode',
-          message: 'Enter the mode in which to run the operator',
-          type: 'list',
-          choices: ['listen', 'manual', 'auto'],
-          default: 'listen',
-        },
-      ])
-      mode = prompt.mode
-    }
-
-    this.operatorMode = OperatorMode[mode as keyof typeof OperatorMode]
+    // Indexer always runs in listen mode
     this.log(`Operator mode: ${this.operatorMode}`)
 
     this.log('Loading user configurations...')
@@ -242,29 +230,8 @@ export default class Operator extends Command {
     const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
     this.log('User configurations loaded.')
 
+    // Indexer always synchronizes missed blocks
     this.latestBlockHeight = await this.loadLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir)
-    let canSync = false
-    const lastBlockKeys: string[] = Object.keys(this.latestBlockHeight)
-    for (let i = 0, l: number = lastBlockKeys.length; i < l; i++) {
-      if (this.latestBlockHeight[lastBlockKeys[i]] > 0) {
-        canSync = true
-        break
-      }
-    }
-
-    if (canSync) {
-      const syncPrompt: any = await inquirer.prompt([
-        {
-          name: 'shouldSync',
-          message: 'Operator has previous (missed) blocks that can be synced. Would you like to sync?',
-          type: 'confirm',
-          default: true,
-        },
-      ])
-      if (syncPrompt.shouldSync === false) {
-        this.latestBlockHeight = {}
-      }
-    }
 
     // Load defaults for the networks from the config file
     if (flags.networks === undefined || '') {
@@ -316,7 +283,6 @@ export default class Operator extends Command {
     this.blockJobHandler()
   }
 
-  // you can
   async processBlock(job: BlockJob): Promise<void> {
     this.debug(`processing [${job.network}] ${job.block}`)
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)
@@ -342,7 +308,10 @@ export default class Operator extends Command {
       }
 
       if (interestingTransactions.length > 0) {
-        this.structuredLog(job.network, `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`)
+        this.structuredLog(
+          job.network,
+          `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`,
+        )
         this.processTransactions(job.network, interestingTransactions)
       } else {
         this.blockJobHandler()
@@ -380,7 +349,7 @@ export default class Operator extends Command {
         } else if (transaction.to?.toLowerCase() === this.operatorAddress) {
           this.handleOperatorBridgeEvents(transaction, receipt, network)
         } else {
-          this.handleOperatorRequestEvents(transaction, receipt, network)
+          this.structuredLog(network, 'Nothing to do with transaction')
         }
       }
     }
@@ -393,7 +362,7 @@ export default class Operator extends Command {
     receipt: ethers.ContractReceipt,
     network: string,
   ): void {
-    this.structuredLog(network,`Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`)
+    this.structuredLog(network, `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`)
     const config = decodeDeploymentConfigInput(transaction.data)
     let event = null
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
@@ -404,23 +373,33 @@ export default class Operator extends Command {
             event = log.topics
             break
           } else {
-            this.structuredLog(network,`BridgeableContractDeployed event not found in ${transaction.hash}`)
+            this.structuredLog(network, `BridgeableContractDeployed event not found in ${transaction.hash}`)
           }
         }
       }
 
       if (event) {
         const deploymentAddress = '0x' + event[1].slice(26)
-        this.structuredLog(network,`\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-          `Wallet that deployed the collection is ${transaction.from}\n` +
-          `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
-          `The transaction hash is: ${transaction.hash}\n`,)
+        this.structuredLog(
+          network,
+          `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
+            `Wallet that deployed the collection is ${transaction.from}\n` +
+            `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
+            `The transaction hash is: ${transaction.hash}\n`,
+        )
       }
     }
   }
 
-  handleOperatorBridgeEvents(transaction: ethers.Transaction, receipt: ethers.ContractReceipt, network: string): void {
-    this.structuredLog(network,`Checking if an operator executed a job to bridge a contract / collection at tx: ${transaction.hash}`)
+  async handleOperatorBridgeEvents(
+    transaction: ethers.Transaction,
+    receipt: ethers.ContractReceipt,
+    network: string,
+  ): Promise<void> {
+    this.structuredLog(
+      network,
+      `Checking if an operator executed a job to bridge a contract / collection at tx: ${transaction.hash}`,
+    )
     let event = null
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
@@ -432,84 +411,71 @@ export default class Operator extends Command {
         }
       }
     } else {
-      this.structuredLog(network,'Failed to find BridgeableContractDeployed event from operator job')
+      this.structuredLog(network, 'Failed to find BridgeableContractDeployed event from operator job')
     }
 
     if (event) {
       const deploymentInput = this.abiCoder.decode(['bytes'], '0x' + transaction.data.slice(10))[0]
       const config = decodeDeploymentConfig(this.abiCoder.decode(['bytes'], '0x' + deploymentInput.slice(10))[0])
       const deploymentAddress = '0x' + event[1].slice(26)
-      this.structuredLog(network,'\nHolographOperator executed a job which bridged a collection\n' +
-        `HolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-        `Operator that deployed the collection is ${transaction.from}` +
-        `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,)
-    }
-  }
+      this.structuredLog(
+        network,
+        '\nHolographOperator executed a job which bridged a collection\n' +
+          `HolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
+          `Operator that deployed the collection is ${transaction.from}` +
+          `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
+      )
 
-  async handleOperatorRequestEvents(
-    transaction: ethers.Transaction,
-    receipt: ethers.ContractReceipt,
-    network: string,
-  ): Promise<void> {
-    this.structuredLog(network, `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`)
-    let event = null
+      // Compose request to API server to update the collection
+      const data = JSON.stringify({
+        chainId: networks[network].chain,
+        status: 'DEPLOYED',
+        // salt: '0x',
+        tx: transaction.hash,
+      })
+
+      const params = {
+        url: `{baseUrl}/v1/collections/3f0b4b67-1a61-460b-b9dc-24f7a0ecfc87`,
+        headers: {
+          Authorization:
+            'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZGRyZXNzIjoiMHg5RTIyYUE1OEJmMkY1RTYwODAxYjkwRkREM2I1MUI2NWQzOGVBMjBiIiwiaWF0IjoxNjU3MTk3NzIxLCJleHAiOjE2NTk4NzYxMjF9.UAkule-7L-uat3xhFxjqAPqcBglHxyX8WDyebhhlGQM',
+          'Content-Type': 'application/json',
+        },
+        data: data,
+      }
+
+      try {
+        const res = await axios.patch(
+          `http://localhost:9001/v1/collections/3f0b4b67-1a61-460b-b9dc-24f7a0ecfc87`,
+          data,
+          params,
+        )
+        console.log(res.data)
+        this.structuredLog(network, `Successfully updated collection chainId to ${networks[network].chain}`)
+      } catch (error: any) {
+        console.log(error.message)
+      }
+    }
+
+    // TODO: This is a WIP and might need to be monitored from a different contract address
+    // Check if the operator executed a job to bridge an NFT
+    event = null
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         if (event === null) {
           const log = receipt.logs[i]
-          if (
-            log.address.toLowerCase() === this.operatorAddress &&
-            log.topics.length > 0 &&
-            log.topics[0] === this.targetEvents.AvailableJob
-          ) {
-            event = log.data
-          } else {
-            this.structuredLog(network, `LayerZero transaction is not relevant to AvailableJob event. ` +
-              `Transaction was relayed to ${log.address} instead of ` +
-              `The Operator at ${this.operatorAddress}`)
+          if (log.topics.length > 0 && log.topics[0] === this.targetEvents.Transfer) {
+            event = log.topics
           }
         }
       }
-
-      if (event) {
-        const payload = this.abiCoder.decode(['bytes'], event)[0]
-        this.structuredLog(network, `HolographOperator received a new bridge job with job payload: ${payload}\n`)
-
-        if (this.operatorMode !== OperatorMode.listen) {
-          await this.executePayload(network, payload)
-        }
-      }
-    }
-  }
-
-  async executePayload(network: string, payload: string): Promise<void> {
-    // If the operator is in listen mode, payloads will not be executed
-    // If the operator is in manual mode, the payload must be manually executed
-    // If the operator is in auto mode, the payload will be executed automatically
-    let operate = this.operatorMode === OperatorMode.auto
-    if (this.operatorMode === OperatorMode.manual) {
-      const operatorPrompt: any = await inquirer.prompt([
-        {
-          name: 'shouldContinue',
-          message: `A transaction appeared on ${network} for execution, would you like to operate?\n`,
-          type: 'confirm',
-          default: false,
-        },
-      ])
-      operate = operatorPrompt.shouldContinue
-    }
-
-    if (operate) {
-      const contract = this.operatorContract.connect(this.wallets[network])
-      const jobTx = await contract.executeJob(payload)
-      this.debug(jobTx)
-      this.structuredLog(network, `Transaction hash is ${jobTx.hash}`)
-
-      const jobReceipt = await jobTx.wait()
-      this.debug(jobReceipt)
-      this.structuredLog(network, `Transaction ${jobTx.hash} mined and confirmed`)
     } else {
-      this.structuredLog(network, 'Dropped potential payload to execute')
+      this.structuredLog(network, 'Failed to find Transfer event from operator job')
+    }
+
+    // Compose request to API server to update the NFT
+    if (event) {
+      console.log(event)
     }
   }
 
