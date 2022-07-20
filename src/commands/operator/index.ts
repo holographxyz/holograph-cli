@@ -11,6 +11,9 @@ import networks from '../../utils/networks'
 import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, NETWORK_COLORS} from '../../utils/utils'
 import color from '@oclif/color'
 
+import dotenv from 'dotenv'
+dotenv.config()
+
 enum OperatorMode {
   listen,
   manual,
@@ -437,8 +440,7 @@ export default class Operator extends Command {
       const params = {
         url: `{baseUrl}/v1/collections/3f0b4b67-1a61-460b-b9dc-24f7a0ecfc87`,
         headers: {
-          Authorization:
-            'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZGRyZXNzIjoiMHg5RTIyYUE1OEJmMkY1RTYwODAxYjkwRkREM2I1MUI2NWQzOGVBMjBiIiwiaWF0IjoxNjU3MTk3NzIxLCJleHAiOjE2NTk4NzYxMjF9.UAkule-7L-uat3xhFxjqAPqcBglHxyX8WDyebhhlGQM',
+          Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
           'Content-Type': 'application/json',
         },
         data: data,

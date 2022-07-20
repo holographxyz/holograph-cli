@@ -1,3 +1,5 @@
+/* eslint-disable unicorn/numeric-separators-style */
+/* eslint-disable camelcase */
 import dotenv from 'dotenv'
 dotenv.config()
 
