@@ -81,7 +81,7 @@ export default class Operator extends Command {
   factoryAddress: string | undefined
   operatorAddress: string | undefined
   supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
-  blockJobs: BlockJob[] = []
+  blockJobs: BlockJob[] = [{network: 'mumbai', block: 27276611}]
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   abiCoder = ethers.utils.defaultAbiCoder
   wallets: {[key: string]: ethers.Wallet} = {}
@@ -99,7 +99,7 @@ export default class Operator extends Command {
     BridgeableContractDeployed: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
     '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b': 'BridgeableContractDeployed',
 
-    Transfer: '0xddf252ad1be2c89b69c2b0e5cb21f252eb5faea1204e98bdda08f8c4d5cc4eb',
+    Transfer: '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
     '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef': 'Transfer',
 
     AvailableJob: '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11',
@@ -523,7 +523,7 @@ export default class Operator extends Command {
           },
         })
         console.log(JSON.stringify(res.data))
-        this.structuredLog(network, `Successfully updated collection chainId to ${networks[network].chain}`)
+        this.structuredLog(network, `Successfully found collection at ${deploymentAddress}`)
       } catch (error: any) {
         this.structuredLog(network, error.message)
       }
@@ -553,14 +553,15 @@ export default class Operator extends Command {
       }
     }
 
-    // TODO: This is a WIP and might need to be monitored from a different contract address
     // Check if the operator executed a job to bridge an NFT
     event = null
+    this.structuredLog(network, `Checking if an operator executed a job to bridge an NFT at tx: ${transaction.hash}`)
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         if (event === null) {
           const log = receipt.logs[i]
           if (log.topics.length > 0 && log.topics[0] === this.targetEvents.Transfer) {
+            console.log('YOOOOOO')
             event = log.topics
           }
         }
@@ -571,35 +572,63 @@ export default class Operator extends Command {
 
     // Compose request to API server to update the NFT
     if (event) {
-      console.log(event)
+      console.log('EVENT', event)
+      // const deploymentInput = this.abiCoder.decode(['bytes'], '0x' + transaction.data.slice(10))[0]
+      // const config = decodeDeploymentConfig(this.abiCoder.decode(['bytes'], '0x' + deploymentInput.slice(10))[0])
+      // const deploymentAddress = '0x' + event[1].slice(26)
 
-      // // Compose request to API server to update the collection
-      // const data = JSON.stringify({
-      //   chainId: networks[network].chain,
-      //   status: 'DEPLOYED',
-      //   salt: '0x',
-      //   tx: transaction.hash,
-      // })
-
-      // const params = {
-      //   headers: {
-      //     Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
-      //     'Content-Type': 'application/json',
-      //   },
-      //   data: data,
-      // }
-
+      // First get the nft by the address and tokenId
+      // let res
       // try {
-      //   const res = await axios.patch(
-      //     `http://localhost:9001/v1/collections/3f0b4b67-1a61-460b-b9dc-24f7a0ecfc87`,
-      //     data,
-      //     params,
-      //   )
-      //   console.log(res.data)
-      //   this.structuredLog(network, `Successfully updated collection chainId to ${networks[network].chain}`)
+      //   res = await axios.get(`http://localhost:9001/v1/nfts/contract/${deploymentAddress}/${tokenId}`, {
+      //     headers: {
+      //       Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
+      //       'Content-Type': 'application/json',
+      //     },
+      //   })
+      //   console.log(JSON.stringify(res.data))
+      //   this.structuredLog(network, `Successfully found NFT with tokenId ${tokenId}`)
       // } catch (error: any) {
       //   this.structuredLog(network, error.message)
       // }
+
+      console.log('Requesting to update NFT')
+      let res
+      try {
+        res = await axios.get(`http://localhost:9001/v1/nfts/0x040b7da679df87cd016a45863eb2d5649c0d2bab/0`, {
+          headers: {
+            Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+        })
+        console.log(JSON.stringify(res.data))
+        this.structuredLog(network, `Successfully found NFT with tokenId 0`)
+      } catch (error: any) {
+        this.structuredLog(network, error.message)
+      }
+
+      // Compose request to API server to update the nft
+      const data = JSON.stringify({
+        chainId: networks[network].chain,
+        status: 'MINTED',
+        tx: transaction.hash,
+      })
+
+      const params = {
+        headers: {
+          Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        data: data,
+      }
+
+      try {
+        const patchRes = await axios.patch(`http://localhost:9001/v1/nfts/${res?.data.id}`, data, params)
+        console.log(patchRes.data)
+        this.structuredLog(network, `Successfully updated nft chainId to ${networks[network].chain}`)
+      } catch (error: any) {
+        this.structuredLog(network, error.message)
+      }
     }
   }
 
