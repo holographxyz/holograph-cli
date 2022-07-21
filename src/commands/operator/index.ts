@@ -225,6 +225,37 @@ export default class Operator extends Command {
   async run(): Promise<void> {
     const {flags} = await this.parse(Operator)
 
+    // TODO: Remove this. Just for testing
+    // // Compose request to API server to update the collection
+    // const data = JSON.stringify({
+    //   chainId: 4,
+    //   status: 'DEPLOYED',
+    //   salt: '0x',
+    //   tx: '0xb95e82807abf64b302b6ace97e2c290b39ea4b459615da0929327c02230a3ca7',
+    // })
+
+    // console.log(process.env.BEARER_TOKEN)
+
+    // const params = {
+    //   url: `{baseUrl}/v1/collections/3f0b4b67-1a61-460b-b9dc-24f7a0ecfc87`,
+    //   headers: {
+    //     Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
+    //     'Content-Type': 'application/json',
+    //   },
+    //   data: data,
+    // }
+
+    // try {
+    //   const res = await axios.patch(
+    //     `http://localhost:9001/v1/collections/3f0b4b67-1a61-460b-b9dc-24f7a0ecfc87`,
+    //     data,
+    //     params,
+    //   )
+    //   console.log(res.data)
+    // } catch (error: any) {
+    //   console.log(error)
+    // }
+
     // Indexer always runs in listen mode
     this.log(`Operator mode: ${this.operatorMode}`)
 
@@ -352,7 +383,7 @@ export default class Operator extends Command {
         } else if (transaction.to?.toLowerCase() === this.operatorAddress) {
           this.handleOperatorBridgeEvents(transaction, receipt, network)
         } else {
-          this.structuredLog(network, 'Nothing to do with transaction')
+          this.handleOperatorRequestEvents(transaction, receipt, network)
         }
       }
     }
@@ -389,6 +420,42 @@ export default class Operator extends Command {
             `Wallet that deployed the collection is ${transaction.from}\n` +
             `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
             `The transaction hash is: ${transaction.hash}\n`,
+        )
+      }
+    }
+  }
+
+  async handleOperatorRequestEvents(
+    transaction: ethers.Transaction,
+    receipt: ethers.ContractReceipt,
+    network: string,
+  ): Promise<void> {
+    this.log(`Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`)
+    let event = null
+    if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
+      for (let i = 0, l = receipt.logs.length; i < l; i++) {
+        if (event === null) {
+          const log = receipt.logs[i]
+          if (
+            log.address.toLowerCase() === this.operatorAddress &&
+            log.topics.length > 0 &&
+            log.topics[0] === this.targetEvents.AvailableJob
+          ) {
+            event = log.data
+          } else {
+            this.log(
+              `LayerZero transaction is not relevant to AvailableJob event. ` +
+                `Transaction was relayed to ${log.address} instead of ` +
+                `The Operator at ${this.operatorAddress}`,
+            )
+          }
+        }
+      }
+
+      if (event) {
+        const payload = this.abiCoder.decode(['bytes'], event)[0]
+        this.log(
+          `HolographOperator received a new bridge job on ${capitalize(network)}\nThe job payload is ${payload}\n`,
         )
       }
     }
@@ -433,12 +500,11 @@ export default class Operator extends Command {
       const data = JSON.stringify({
         chainId: networks[network].chain,
         status: 'DEPLOYED',
-        // salt: '0x',
+        salt: '0x',
         tx: transaction.hash,
       })
 
       const params = {
-        url: `{baseUrl}/v1/collections/3f0b4b67-1a61-460b-b9dc-24f7a0ecfc87`,
         headers: {
           Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
           'Content-Type': 'application/json',
@@ -455,7 +521,7 @@ export default class Operator extends Command {
         console.log(res.data)
         this.structuredLog(network, `Successfully updated collection chainId to ${networks[network].chain}`)
       } catch (error: any) {
-        console.log(error.message)
+        this.structuredLog(network, error.message)
       }
     }
 
