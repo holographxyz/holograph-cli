@@ -226,6 +226,23 @@ export default class Operator extends Command {
     const {flags} = await this.parse(Operator)
 
     // TODO: Remove this. Just for testing
+    // First get the collection by the address
+    // let res
+    // try {
+    //   res = await axios.get(
+    //     `http://localhost:9001/v1/collections/contract/0x040b7da679df87cd016a45863eb2d5649c0d2bab`,
+    //     {
+    //       headers: {
+    //         Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
+    //         'Content-Type': 'application/json',
+    //       },
+    //     },
+    //   )
+    //   console.log(JSON.stringify(res.data.id))
+    // } catch (error: any) {
+    //   console.log(error.message)
+    // }
+
     // // Compose request to API server to update the collection
     // const data = JSON.stringify({
     //   chainId: 4,
@@ -496,6 +513,21 @@ export default class Operator extends Command {
           `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
       )
 
+      // First get the collection by the address
+      let res
+      try {
+        res = await axios.get(`http://localhost:9001/v1/collections/contract/${deploymentAddress}`, {
+          headers: {
+            Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+        })
+        console.log(JSON.stringify(res.data))
+        this.structuredLog(network, `Successfully updated collection chainId to ${networks[network].chain}`)
+      } catch (error: any) {
+        this.structuredLog(network, error.message)
+      }
+
       // Compose request to API server to update the collection
       const data = JSON.stringify({
         chainId: networks[network].chain,
@@ -513,12 +545,8 @@ export default class Operator extends Command {
       }
 
       try {
-        const res = await axios.patch(
-          `http://localhost:9001/v1/collections/3f0b4b67-1a61-460b-b9dc-24f7a0ecfc87`,
-          data,
-          params,
-        )
-        console.log(res.data)
+        const patchRes = await axios.patch(`http://localhost:9001/v1/collections/${res?.data.id}`, data, params)
+        console.log(patchRes.data)
         this.structuredLog(network, `Successfully updated collection chainId to ${networks[network].chain}`)
       } catch (error: any) {
         this.structuredLog(network, error.message)
@@ -544,6 +572,34 @@ export default class Operator extends Command {
     // Compose request to API server to update the NFT
     if (event) {
       console.log(event)
+
+      // // Compose request to API server to update the collection
+      // const data = JSON.stringify({
+      //   chainId: networks[network].chain,
+      //   status: 'DEPLOYED',
+      //   salt: '0x',
+      //   tx: transaction.hash,
+      // })
+
+      // const params = {
+      //   headers: {
+      //     Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
+      //     'Content-Type': 'application/json',
+      //   },
+      //   data: data,
+      // }
+
+      // try {
+      //   const res = await axios.patch(
+      //     `http://localhost:9001/v1/collections/3f0b4b67-1a61-460b-b9dc-24f7a0ecfc87`,
+      //     data,
+      //     params,
+      //   )
+      //   console.log(res.data)
+      //   this.structuredLog(network, `Successfully updated collection chainId to ${networks[network].chain}`)
+      // } catch (error: any) {
+      //   this.structuredLog(network, error.message)
+      // }
     }
   }
 
