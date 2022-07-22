@@ -82,8 +82,7 @@ export default class Operator extends Command {
   factoryAddress: string | undefined
   operatorAddress: string | undefined
   supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
-  blockJobs: BlockJob[] = [{network: 'mumbai', block: 27_276_611}]
-  // blockJobs: BlockJob[] = []
+  blockJobs: BlockJob[] = []
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   abiCoder = ethers.utils.defaultAbiCoder
   wallets: {[key: string]: ethers.Wallet} = {}
@@ -407,7 +406,10 @@ export default class Operator extends Command {
     receipt: ethers.ContractReceipt,
     network: string,
   ): Promise<void> {
-    this.log(`Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`)
+    this.structuredLog(
+      network,
+      `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
+    )
     let event = null
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
@@ -420,7 +422,8 @@ export default class Operator extends Command {
           ) {
             event = log.data
           } else {
-            this.log(
+            this.structuredLog(
+              network,
               `LayerZero transaction is not relevant to AvailableJob event. ` +
                 `Transaction was relayed to ${log.address} instead of ` +
                 `The Operator at ${this.operatorAddress}`,
@@ -431,7 +434,8 @@ export default class Operator extends Command {
 
       if (event) {
         const payload = this.abiCoder.decode(['bytes'], event)[0]
-        this.log(
+        this.structuredLog(
+          network,
           `HolographOperator received a new bridge job on ${capitalize(network)}\nThe job payload is ${payload}\n`,
         )
       }
