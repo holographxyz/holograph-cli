@@ -125,7 +125,7 @@ export default class Operator extends Command {
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
+    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, false)
     this.log('User configurations loaded.')
 
     // Indexer always synchronizes missed blocks
@@ -241,13 +241,17 @@ export default class Operator extends Command {
       }
     }
 
+    // Well known private key only required to initlaize wallet with provider
+    const privateKey = '0x0123456789012345678901234567890123456789012345678901234567890123'
+    const walletWithProvider = new ethers.Wallet(privateKey, this.providers.rinkeby)
+
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
-    this.holograph = new ethers.ContractFactory(holographABI, '0x', this.wallets[loadNetworks[0]]).attach(
+    this.holograph = new ethers.ContractFactory(holographABI, '0x', walletWithProvider).attach(
       this.HOLOGRAPH_ADDRESS.toLowerCase(),
     )
 
     const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
-    this.operatorContract = new ethers.ContractFactory(holographOperatorABI, '0x').attach(
+    this.operatorContract = new ethers.ContractFactory(holographOperatorABI, '0x', walletWithProvider).attach(
       await this.holograph.getOperator(),
     )
   }
