@@ -112,12 +112,25 @@ export default class Operator extends Command {
   // @ts-ignore - Set all networks to start with latest block at index 0
   latestBlockHeight: {[key: string]: number} = {}
   exited = false
+
+  // API Params
   baseUrl!: string
+  JWT!: string
 
   async run(): Promise<void> {
     const {flags} = await this.parse(Operator)
-
     this.baseUrl = flags.host
+
+    let res
+    try {
+      res = await axios.post(`${this.baseUrl}/v1/auth/operator`, {
+        hash: process.env.OPERATOR_API_KEY,
+      })
+    } catch (error: any) {
+      this.error(error.message)
+    }
+
+    this.JWT = res!.data.accessToken
 
     // Indexer always runs in listen mode
     this.log(`Operator mode: ${this.operatorMode}`)
@@ -482,7 +495,7 @@ export default class Operator extends Command {
       try {
         res = await axios.get(`${this.baseUrl}/v1/collections/contract/${deploymentAddress}`, {
           headers: {
-            Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
+            Authorization: `Bearer ${this.JWT}`,
             'Content-Type': 'application/json',
           },
         })
