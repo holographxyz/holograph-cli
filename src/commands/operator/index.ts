@@ -72,6 +72,7 @@ export default class Operator extends Command {
       options: ['listen', 'manual', 'auto'],
       char: 'm',
     }),
+    host: Flags.string({description: 'The host to listen on', char: 'h', default: 'http://localhost:9001'}),
   }
 
   /**
@@ -81,7 +82,8 @@ export default class Operator extends Command {
   factoryAddress: string | undefined
   operatorAddress: string | undefined
   supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
-  blockJobs: BlockJob[] = [{network: 'mumbai', block: 27276611}]
+  blockJobs: BlockJob[] = [{network: 'mumbai', block: 27_276_611}]
+  // blockJobs: BlockJob[] = []
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   abiCoder = ethers.utils.defaultAbiCoder
   wallets: {[key: string]: ethers.Wallet} = {}
@@ -107,11 +109,77 @@ export default class Operator extends Command {
   }
 
   networkColors: any = {}
-  baseUrl = 'http://localhost:9001'
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore - Set all networks to start with latest block at index 0
   latestBlockHeight: {[key: string]: number} = {}
   exited = false
+  baseUrl!: string
+
+  async run(): Promise<void> {
+    const {flags} = await this.parse(Operator)
+
+    this.baseUrl = flags.host
+
+    // Indexer always runs in listen mode
+    this.log(`Operator mode: ${this.operatorMode}`)
+
+    this.log('Loading user configurations...')
+    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
+    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
+    this.log('User configurations loaded.')
+
+    // Indexer always synchronizes missed blocks
+    this.latestBlockHeight = await this.loadLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir)
+
+    // Load defaults for the networks from the config file
+    if (flags.networks === undefined || '') {
+      flags.networks = Object.keys(configFile.networks)
+    }
+
+    // Color the networks 🌈
+    for (let i = 0, l = flags.networks.length; i < l; i++) {
+      const network = flags.networks[i]
+      if (Object.keys(configFile.networks).includes(network)) {
+        this.networkColors[network] = color.hex(NETWORK_COLORS[network])
+      } else {
+        // If network is not supported remove it from the array
+        flags.networks.splice(i, 1)
+        l--
+        i--
+      }
+    }
+
+    CliUx.ux.action.start(`Starting operator in mode: ${OperatorMode[this.operatorMode]}`)
+    await this.initializeEthers(flags.networks, configFile, userWallet)
+
+    this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
+    this.factoryAddress = (await this.holograph.getFactory()).toLowerCase()
+    this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
+
+    this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESS}`)
+    this.log(`Bridge address: ${this.bridgeAddress}`)
+    this.log(`Factory address: ${this.factoryAddress}`)
+    this.log(`Operator address: ${this.operatorAddress}`)
+    CliUx.ux.action.stop('🚀')
+
+    // Setup websocket subscriptions and start processing blocks
+    for (let i = 0, l = flags.networks.length; i < l; i++) {
+      const network = flags.networks[i]
+
+      // Subscribe to events 🎧
+      this.networkSubscribe(network)
+    }
+
+    // Catch all exit events
+    for (const eventType of [`EEXIT`, `SIGINT`, `SIGUSR1`, `SIGUSR2`, `uncaughtException`, `SIGTERM`]) {
+      process.on(eventType, this.exitRouter.bind(this, {exit: true}))
+    }
+
+    process.on('exit', this.exitHandler)
+
+    // // Process blocks 🧱
+    this.blockJobHandler()
+  }
 
   async loadLastBlocks(fileName: string, configDir: string): Promise<{[key: string]: number}> {
     const filePath = path.join(configDir, fileName)
@@ -220,118 +288,6 @@ export default class Operator extends Command {
     } else {
       this.debug(`\nError: ${exitCode}`)
     }
-  }
-
-  async run(): Promise<void> {
-    const {flags} = await this.parse(Operator)
-
-    // TODO: Remove this. Just for testing
-    // First get the collection by the address
-    // let res
-    // try {
-    //   res = await axios.get(
-    //     `http://localhost:9001/v1/collections/contract/0x040b7da679df87cd016a45863eb2d5649c0d2bab`,
-    //     {
-    //       headers: {
-    //         Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
-    //         'Content-Type': 'application/json',
-    //       },
-    //     },
-    //   )
-    //   console.log(JSON.stringify(res.data.id))
-    // } catch (error: any) {
-    //   console.log(error.message)
-    // }
-
-    // // Compose request to API server to update the collection
-    // const data = JSON.stringify({
-    //   chainId: 4,
-    //   status: 'DEPLOYED',
-    //   salt: '0x',
-    //   tx: '0xb95e82807abf64b302b6ace97e2c290b39ea4b459615da0929327c02230a3ca7',
-    // })
-
-    // console.log(process.env.BEARER_TOKEN)
-
-    // const params = {
-    //   url: `{baseUrl}/v1/collections/3f0b4b67-1a61-460b-b9dc-24f7a0ecfc87`,
-    //   headers: {
-    //     Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
-    //     'Content-Type': 'application/json',
-    //   },
-    //   data: data,
-    // }
-
-    // try {
-    //   const res = await axios.patch(
-    //     `http://localhost:9001/v1/collections/3f0b4b67-1a61-460b-b9dc-24f7a0ecfc87`,
-    //     data,
-    //     params,
-    //   )
-    //   console.log(res.data)
-    // } catch (error: any) {
-    //   console.log(error)
-    // }
-
-    // Indexer always runs in listen mode
-    this.log(`Operator mode: ${this.operatorMode}`)
-
-    this.log('Loading user configurations...')
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
-    this.log('User configurations loaded.')
-
-    // Indexer always synchronizes missed blocks
-    this.latestBlockHeight = await this.loadLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir)
-
-    // Load defaults for the networks from the config file
-    if (flags.networks === undefined || '') {
-      flags.networks = Object.keys(configFile.networks)
-    }
-
-    // Color the networks 🌈
-    for (let i = 0, l = flags.networks.length; i < l; i++) {
-      const network = flags.networks[i]
-      if (Object.keys(configFile.networks).includes(network)) {
-        this.networkColors[network] = color.hex(NETWORK_COLORS[network])
-      } else {
-        // If network is not supported remove it from the array
-        flags.networks.splice(i, 1)
-        l--
-        i--
-      }
-    }
-
-    CliUx.ux.action.start(`Starting operator in mode: ${OperatorMode[this.operatorMode]}`)
-    await this.initializeEthers(flags.networks, configFile, userWallet)
-
-    this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
-    this.factoryAddress = (await this.holograph.getFactory()).toLowerCase()
-    this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
-
-    this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESS}`)
-    this.log(`Bridge address: ${this.bridgeAddress}`)
-    this.log(`Factory address: ${this.factoryAddress}`)
-    this.log(`Operator address: ${this.operatorAddress}`)
-    CliUx.ux.action.stop('🚀')
-
-    // Setup websocket subscriptions and start processing blocks
-    for (let i = 0, l = flags.networks.length; i < l; i++) {
-      const network = flags.networks[i]
-
-      // Subscribe to events 🎧
-      this.networkSubscribe(network)
-    }
-
-    // Catch all exit events
-    for (const eventType of [`EEXIT`, `SIGINT`, `SIGUSR1`, `SIGUSR2`, `uncaughtException`, `SIGTERM`]) {
-      process.on(eventType, this.exitRouter.bind(this, {exit: true}))
-    }
-
-    process.on('exit', this.exitHandler)
-
-    // // Process blocks 🧱
-    this.blockJobHandler()
   }
 
   async processBlock(job: BlockJob): Promise<void> {
@@ -516,13 +472,13 @@ export default class Operator extends Command {
       // First get the collection by the address
       let res
       try {
-        res = await axios.get(`http://localhost:9001/v1/collections/contract/${deploymentAddress}`, {
+        res = await axios.get(`${this.baseUrl}/v1/collections/contract/${deploymentAddress}`, {
           headers: {
             Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
             'Content-Type': 'application/json',
           },
         })
-        console.log(JSON.stringify(res.data))
+        this.debug(JSON.stringify(res.data))
         this.structuredLog(network, `Successfully found collection at ${deploymentAddress}`)
       } catch (error: any) {
         this.structuredLog(network, error.message)
@@ -545,8 +501,8 @@ export default class Operator extends Command {
       }
 
       try {
-        const patchRes = await axios.patch(`http://localhost:9001/v1/collections/${res?.data.id}`, data, params)
-        console.log(patchRes.data)
+        const patchRes = await axios.patch(`${this.baseUrl}/v1/collections/${res?.data.id}`, data, params)
+        this.debug(patchRes.data)
         this.structuredLog(network, `Successfully updated collection chainId to ${networks[network].chain}`)
       } catch (error: any) {
         this.structuredLog(network, error.message)
@@ -561,7 +517,6 @@ export default class Operator extends Command {
         if (event === null) {
           const log = receipt.logs[i]
           if (log.topics.length > 0 && log.topics[0] === this.targetEvents.Transfer) {
-            console.log('YOOOOOO')
             event = log.topics
           }
         }
@@ -572,37 +527,21 @@ export default class Operator extends Command {
 
     // Compose request to API server to update the NFT
     if (event) {
-      console.log('EVENT', event)
-      // const deploymentInput = this.abiCoder.decode(['bytes'], '0x' + transaction.data.slice(10))[0]
-      // const config = decodeDeploymentConfig(this.abiCoder.decode(['bytes'], '0x' + deploymentInput.slice(10))[0])
-      // const deploymentAddress = '0x' + event[1].slice(26)
+      this.debug(event)
+      const deploymentInput = this.abiCoder.decode(['bytes'], '0x' + transaction.data.slice(10))[0]
+      const tokenId = Number.parseInt(event[3], 16)
+      const contractAddress = '0x' + deploymentInput.slice(98, 138)
 
-      // First get the nft by the address and tokenId
-      // let res
-      // try {
-      //   res = await axios.get(`http://localhost:9001/v1/nfts/contract/${deploymentAddress}/${tokenId}`, {
-      //     headers: {
-      //       Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
-      //       'Content-Type': 'application/json',
-      //     },
-      //   })
-      //   console.log(JSON.stringify(res.data))
-      //   this.structuredLog(network, `Successfully found NFT with tokenId ${tokenId}`)
-      // } catch (error: any) {
-      //   this.structuredLog(network, error.message)
-      // }
-
-      console.log('Requesting to update NFT')
+      this.structuredLog(network, `Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`)
       let res
       try {
-        res = await axios.get(`http://localhost:9001/v1/nfts/0x040b7da679df87cd016a45863eb2d5649c0d2bab/0`, {
+        res = await axios.get(`${this.baseUrl}/v1/nfts/${contractAddress}/${tokenId}`, {
           headers: {
             Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
             'Content-Type': 'application/json',
           },
         })
-        console.log(JSON.stringify(res.data))
-        this.structuredLog(network, `Successfully found NFT with tokenId 0`)
+        this.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
       } catch (error: any) {
         this.structuredLog(network, error.message)
       }
@@ -622,10 +561,11 @@ export default class Operator extends Command {
         data: data,
       }
 
+      this.structuredLog(network, `Requesting to update NFT with id ${res?.data.id}`)
       try {
-        const patchRes = await axios.patch(`http://localhost:9001/v1/nfts/${res?.data.id}`, data, params)
-        console.log(patchRes.data)
-        this.structuredLog(network, `Successfully updated nft chainId to ${networks[network].chain}`)
+        const patchRes = await axios.patch(`${this.baseUrl}/v1/nfts/${res?.data.id}`, data, params)
+        this.structuredLog(network, JSON.stringify(patchRes.data))
+        this.structuredLog(network, `Successfully updated NFT chainId to ${networks[network].chain}`)
       } catch (error: any) {
         this.structuredLog(network, error.message)
       }
