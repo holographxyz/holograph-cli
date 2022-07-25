@@ -14,7 +14,7 @@ import color from '@oclif/color'
 import dotenv from 'dotenv'
 dotenv.config()
 
-enum OperatorMode {
+enum IndexerMode {
   listen,
   manual,
   auto,
@@ -61,14 +61,14 @@ const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInte
   })
 }
 
-export default class Operator extends Command {
+export default class Indexer extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
   static description = 'Listen for EVM events and process them'
-  static examples = ['$ holo operator --networks="rinkeby mumbai fuji" --mode=auto']
+  static examples = ['$ holo indexer --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
     networks: Flags.string({description: 'Comma separated list of networks to operate to', multiple: true}),
     mode: Flags.string({
-      description: 'The mode in which to run the operator',
+      description: 'The mode in which to run the indexer',
       options: ['listen', 'manual', 'auto'],
       char: 'm',
     }),
@@ -76,7 +76,7 @@ export default class Operator extends Command {
   }
 
   /**
-   * Operator class variables
+   * Indexer class variables
    */
   bridgeAddress: string | undefined
   factoryAddress: string | undefined
@@ -87,8 +87,8 @@ export default class Operator extends Command {
   abiCoder = ethers.utils.defaultAbiCoder
   wallets: {[key: string]: ethers.Wallet} = {}
   holograph!: ethers.Contract
-  operatorMode: OperatorMode = OperatorMode.listen
-  operatorContract!: ethers.Contract
+  indexerMode: IndexerMode = IndexerMode.listen
+  indexerContract!: ethers.Contract
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
   LAYERZERO_RECEIVERS: any = {
     rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
@@ -118,7 +118,7 @@ export default class Operator extends Command {
   JWT!: string
 
   async run(): Promise<void> {
-    const {flags} = await this.parse(Operator)
+    const {flags} = await this.parse(Indexer)
     this.baseUrl = flags.host
 
     let res
@@ -133,7 +133,7 @@ export default class Operator extends Command {
     this.JWT = res!.data.accessToken
 
     // Indexer always runs in listen mode
-    this.log(`Operator mode: ${this.operatorMode}`)
+    this.log(`Indexer mode: ${this.indexerMode}`)
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
@@ -141,7 +141,7 @@ export default class Operator extends Command {
     this.log('User configurations loaded.')
 
     // Indexer always synchronizes missed blocks
-    this.latestBlockHeight = await this.loadLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir)
+    this.latestBlockHeight = await this.loadLastBlocks(Indexer.LAST_BLOCKS_FILE_NAME, this.config.configDir)
 
     // Load defaults for the networks from the config file
     if (flags.networks === undefined || '') {
@@ -161,7 +161,7 @@ export default class Operator extends Command {
       }
     }
 
-    CliUx.ux.action.start(`Starting operator in mode: ${OperatorMode[this.operatorMode]}`)
+    CliUx.ux.action.start(`Starting indexer in mode: ${IndexerMode[this.indexerMode]}`)
     await this.initializeEthers(flags.networks, configFile, userWallet)
 
     this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
@@ -171,7 +171,7 @@ export default class Operator extends Command {
     this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESS}`)
     this.log(`Bridge address: ${this.bridgeAddress}`)
     this.log(`Factory address: ${this.factoryAddress}`)
-    this.log(`Operator address: ${this.operatorAddress}`)
+    this.log(`Indexer address: ${this.operatorAddress}`)
     CliUx.ux.action.stop('🚀')
 
     // Setup websocket subscriptions and start processing blocks
@@ -246,9 +246,9 @@ export default class Operator extends Command {
       }
 
       if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
-        this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
+        this.structuredLog(network, `Resuming Indexer from block height ${this.latestBlockHeight[network]}`)
       } else {
-        this.structuredLog(network, `Starting Operator from latest block height`)
+        this.structuredLog(network, `Starting Indexer from latest block height`)
         this.latestBlockHeight[network] = 0
       }
     }
@@ -262,8 +262,8 @@ export default class Operator extends Command {
       this.HOLOGRAPH_ADDRESS.toLowerCase(),
     )
 
-    const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
-    this.operatorContract = new ethers.ContractFactory(holographOperatorABI, '0x', walletWithProvider).attach(
+    const holographIndexerABI = await fs.readJson('./src/abi/HolographOperator.json')
+    this.indexerContract = new ethers.ContractFactory(holographIndexerABI, '0x', walletWithProvider).attach(
       await this.holograph.getOperator(),
     )
   }
@@ -275,8 +275,8 @@ export default class Operator extends Command {
     if (this.exited === false) {
       this.log('')
       this.log(`Saving current block heights: ${JSON.stringify(this.latestBlockHeight)}`)
-      this.saveLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
-      this.log(`Exiting operator with code ${exitCode}...`)
+      this.saveLastBlocks(Indexer.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
+      this.log(`Exiting indexer with code ${exitCode}...`)
       this.log('Goodbye! 👋')
       this.exited = true
     }
@@ -290,8 +290,8 @@ export default class Operator extends Command {
       if (this.exited === false) {
         this.log('')
         this.log(`Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}`)
-        this.saveLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
-        this.log(`Exiting operator with code ${exitCode}...`)
+        this.saveLastBlocks(Indexer.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
+        this.log(`Exiting indexer with code ${exitCode}...`)
         this.log('Goodbye! 👋')
         this.exited = true
       }
@@ -318,13 +318,13 @@ export default class Operator extends Command {
       for (let i = 0, l = block.transactions.length; i < l; i++) {
         const transaction = block.transactions[i]
         if (transaction.from.toLowerCase() === this.LAYERZERO_RECEIVERS[job.network]) {
-          // We have LayerZero call, need to check it it's directed towards Holograph operators
+          // We have LayerZero call, need to check it it's directed towards Holograph indexers
           interestingTransactions.push(transaction)
         } else if ('to' in transaction && transaction.to !== null && transaction.to !== '') {
           const to: string | undefined = transaction.to?.toLowerCase()
           // Check if it's a factory call
           if (to === this.factoryAddress || to === this.operatorAddress) {
-            // We have a potential factory deployment or operator bridge transaction
+            // We have a potential factory deployment or indexer bridge transaction
             interestingTransactions.push(transaction)
           }
         }
@@ -370,9 +370,9 @@ export default class Operator extends Command {
         if (transaction.to?.toLowerCase() === this.factoryAddress) {
           this.handleContractDeployedEvents(transaction, receipt, network)
         } else if (transaction.to?.toLowerCase() === this.operatorAddress) {
-          this.handleOperatorBridgeEvents(transaction, receipt, network)
+          this.handleIndexerBridgeEvents(transaction, receipt, network)
         } else {
-          this.handleOperatorRequestEvents(transaction, receipt, network)
+          this.handleIndexerRequestEvents(transaction, receipt, network)
         }
       }
     }
@@ -414,14 +414,14 @@ export default class Operator extends Command {
     }
   }
 
-  async handleOperatorRequestEvents(
+  async handleIndexerRequestEvents(
     transaction: ethers.Transaction,
     receipt: ethers.ContractReceipt,
     network: string,
   ): Promise<void> {
     this.structuredLog(
       network,
-      `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
+      `Checking if Indexer was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
     )
     let event = null
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
@@ -439,7 +439,7 @@ export default class Operator extends Command {
               network,
               `LayerZero transaction is not relevant to AvailableJob event. ` +
                 `Transaction was relayed to ${log.address} instead of ` +
-                `The Operator at ${this.operatorAddress}`,
+                `The Indexer at ${this.operatorAddress}`,
             )
           }
         }
@@ -449,20 +449,20 @@ export default class Operator extends Command {
         const payload = this.abiCoder.decode(['bytes'], event)[0]
         this.structuredLog(
           network,
-          `HolographOperator received a new bridge job on ${capitalize(network)}\nThe job payload is ${payload}\n`,
+          `HolographIndexer received a new bridge job on ${capitalize(network)}\nThe job payload is ${payload}\n`,
         )
       }
     }
   }
 
-  async handleOperatorBridgeEvents(
+  async handleIndexerBridgeEvents(
     transaction: ethers.Transaction,
     receipt: ethers.ContractReceipt,
     network: string,
   ): Promise<void> {
     this.structuredLog(
       network,
-      `Checking if an operator executed a job to bridge a contract / collection at tx: ${transaction.hash}`,
+      `Checking if an indexer executed a job to bridge a contract / collection at tx: ${transaction.hash}`,
     )
     let event = null
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
@@ -475,7 +475,7 @@ export default class Operator extends Command {
         }
       }
     } else {
-      this.structuredLog(network, 'Failed to find BridgeableContractDeployed event from operator job')
+      this.structuredLog(network, 'Failed to find BridgeableContractDeployed event from indexer job')
     }
 
     if (event) {
@@ -484,9 +484,9 @@ export default class Operator extends Command {
       const deploymentAddress = '0x' + event[1].slice(26)
       this.structuredLog(
         network,
-        '\nHolographOperator executed a job which bridged a collection\n' +
+        '\nHolographIndexer executed a job which bridged a collection\n' +
           `HolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-          `Operator that deployed the collection is ${transaction.from}` +
+          `Indexer that deployed the collection is ${transaction.from}` +
           `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
       )
 
@@ -530,9 +530,9 @@ export default class Operator extends Command {
       }
     }
 
-    // Check if the operator executed a job to bridge an NFT
+    // Check if the indexer executed a job to bridge an NFT
     event = null
-    this.structuredLog(network, `Checking if an operator executed a job to bridge an NFT at tx: ${transaction.hash}`)
+    this.structuredLog(network, `Checking if an indexer executed a job to bridge an NFT at tx: ${transaction.hash}`)
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         if (event === null) {
@@ -543,7 +543,7 @@ export default class Operator extends Command {
         }
       }
     } else {
-      this.structuredLog(network, 'Failed to find Transfer event from operator job')
+      this.structuredLog(network, 'Failed to find Transfer event from indexer job')
     }
 
     // Compose request to API server to update the NFT
