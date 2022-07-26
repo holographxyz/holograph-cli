@@ -552,6 +552,7 @@ export default class Indexer extends Command {
         this.structuredLog(network, `Successfully updated collection chainId to ${networks[network].chain}`)
       } catch (error: any) {
         this.structuredLog(network, `Failed to update the Holograph database ${error.message}`)
+        this.debug(error)
       }
     }
 
@@ -590,6 +591,7 @@ export default class Indexer extends Command {
         this.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
       } catch (error: any) {
         this.structuredLog(network, error.message)
+        this.debug(error)
       }
 
       // Compose request to API server to update the nft
@@ -614,6 +616,7 @@ export default class Indexer extends Command {
         this.structuredLog(network, `Successfully updated NFT chainId to ${networks[network].chain}`)
       } catch (error: any) {
         this.structuredLog(network, `Failed to update the database ${error.message}`)
+        this.debug(error)
       }
     }
   }
