@@ -9,7 +9,7 @@ env:
   IAM_ROLE      : arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-operator-dev
   #
-  DEV_IMAGE_TAG : dev-${{ github.sha }} #notice:!!!!!! <------------------
+  DEV_IMAGE_TAG : dev-02708e8a0f82ba9004628494651f0539a529b690 #dev-${{ github.sha }} #notice:!!!!!! <------------------
   #
 #  STG_HOLO_OPERATOR_HELM_CHART_VERSION: #TODO # NOTICE: <-----------------------------------------
   #
