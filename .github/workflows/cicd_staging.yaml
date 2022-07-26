@@ -11,7 +11,7 @@ env:
   #
   DEV_IMAGE_TAG : dev-02708e8a0f82ba9004628494651f0539a529b690 #dev-${{ github.sha }} #notice:!!!!!! <------------------
   #
-#  STG_HOLO_OPERATOR_HELM_CHART_VERSION: #TODO # NOTICE: <-----------------------------------------
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.1 # NOTICE: <-----------------------------------------
   #
   CLUSTER_NAME   : staging
   AWS_KEY_ID     : ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
@@ -54,12 +54,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-#      - name: Pull the holo-operator helm chart version x.x.x from ECR
-#        shell: bash
-#        env:
-#          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-#        run : |
-#          helm pull oci://$ECR_REGISTRY/nest-api --version ${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}
+      - name: Pull the holo-operator helm chart version x.x.x from ECR
+        shell: bash
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run : |
+          helm pull oci://$ECR_REGISTRY/holo-operator --version ${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}
 
 #      - name: Build and push image to ECR
 #        env:
@@ -86,81 +86,37 @@ jobs:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           # todo -> set the vars in a separate workflow step
           command: |-
-            helm ls
-#            echo "Notice: Set the HPA based on the branch..."
-#            if [[ $BRANCH_NAME == 'develop' ]]; then
-#                export HPA_MIN_REPLICAS=1;
-#                export HPA_MAX_REPLICAS=5;
-#            else
-#                export HPA_MIN_REPLICAS=1;
-#                export HPA_MAX_REPLICAS=3;
-#            fi
-#
-#            echo "Notice: Set the -blue_green_deployment- var ..."
-#            if [[ $RELEASE_NAME != 'dev' ]]; then
-#              blue_green_deployment=yes
-#            fi
-#
-#            helm upgrade --install $RELEASE_NAME holo-operator-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz -n $BRANCH_NAME \
-#            --set image.repository=holo-operator-dev \
-#            --set image.image_tag=$DEV_IMAGE_TAG --set service.type=ClusterIP \
-#            --set NODE_ENV=staging \
-#            --set autoscaling.minReplicas=$HPA_MIN_REPLICAS \
-#            --set autoscaling.maxReplicas=$HPA_MAX_REPLICAS \
-#            --set autoscaling.targetMemoryUtilizationPercentage=90 \
-#            --set resources.limits.cpu=300m \
-#            --set resources.limits.memory=400Mi \
-#            --set resources.requests.cpu=100m \
-#            --set resources.requests.memory=200Mi \
-#            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-#            --set datadog_tags.service=$BRANCH_NAME-$RELEASE_NAME-holo-operator \
-#            --set datadog_tags.version=v.0.0.0 \
-#            --values .github/values_for_stg_alb_ingress.yaml \
-#            --set ingress.ingress_name=ing-$BRANCH_NAME-$RELEASE_NAME \
-#            --set ingress.host=$BRANCH_NAME.$DOMAIN \
-#            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-#            --set ingress.blue_green_deployment=$blue_green_deployment
-#
-#            echo 'HELM_RELEASES<<EOF' >> $GITHUB_ENV
-#            echo "$(helm history $RELEASE_NAME -n $BRANCH_NAME --max 5)" >> $GITHUB_ENV
-#            echo 'EOF' >> $GITHUB_ENV
-#
-#            echo "ENDPOINT=$BRANCH_NAME.$DOMAIN" >> $GITHUB_ENV
-#            echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
-#
-#            if [[ $RELEASE_NAME == '.....' ]]; then
-#              echo "Notice: Annotate the -blue- ingress so the main route should be the last to be evaluated, hence the max number 1000"
-#              kubectl annotate ingress --overwrite=true -n $BRANCH_NAME ing-$BRANCH_NAME-$RELEASE_NAME alb.ingress.kubernetes.io/group.order='1000'
-#            fi
-#
-#            if [[ $RELEASE_NAME != '...' ]]; then
-#              echo "Notice: Annotate the -green- ingress so it gets all the requests with specific headers..."
-#              HEADER_KEY=color
-#              HEADER_VALUE=green
-#              echo "HEADER_KEY=$HEADER_KEY"     >> $GITHUB_ENV
-#              echo "HEADER_VALUE=$HEADER_VALUE" >> $GITHUB_ENV
-#
-#              kubectl annotate ingress --overwrite=true -n $BRANCH_NAME ing-$BRANCH_NAME-$RELEASE_NAME alb.ingress.kubernetes.io/actions.blue-green=\{\"type\":\"forward\",\"forwardConfig\":\{\"targetGroups\":\[\{\"serviceName\":\"$RELEASE_NAME-nest-api\",\"servicePort\":443}]\}\}
-#              kubectl annotate ingress --overwrite=true -n $BRANCH_NAME ing-$BRANCH_NAME-$RELEASE_NAME alb.ingress.kubernetes.io/conditions.blue-green=\[\{\"field\":\"http-header\",\"httpHeaderConfig\":\{\"httpHeaderName\":\"$HEADER_KEY\",\"values\":\[\"$HEADER_VALUE\"\]\}\}\]
-#            fi
+            echo "Notice: Set the HPA based on the branch..."
+            if [[ $BRANCH_NAME == 'develop' ]]; then
+                export HPA_MIN_REPLICAS=1;
+                export HPA_MAX_REPLICAS=5;
+            else
+                export HPA_MIN_REPLICAS=1;
+                export HPA_MAX_REPLICAS=3;
+            fi
 
-#      - name: ---> Info for the New Deployment <---
-#        run: |
-#          echo "------------------------- Last 5 Helm releases -------------------------"
-#          echo "${{ env.HELM_RELEASES }}"
-#          echo "------------------------- Newly deployed image ------------------------- "
-#          echo "$DEV_IMAGE_TAG"
-#          echo "------------------------- Dev api endpoint ------------------------- "
-#          echo "$ENDPOINT"
-#          echo
-#          echo "Patience you must have...my young padawan..."
-#          sleep 20
-#          echo "------------------------- Test the endpoint /v1/health -------------------------"
-#
-#          if [[ ${{env.RELEASE_NAME}} == '...' ]]; then
-#            echo "curl -k -i -H \"Host: $ENDPOINT\" https://$LB_URL/v1/health"
-#            curl -k -H "Host: $ENDPOINT" https://$LB_URL/v1/health
-#          else
-#            echo "curl -k -i -H \"$HEADER_KEY: $HEADER_VALUE\" -H \"Host: $ENDPOINT\" https://$LB_URL/v1/health"
-#            curl -k -H "$HEADER_KEY: $HEADER_VALUE" -H "Host: $ENDPOINT" https://$LB_URL/v1/health
-#          fi
+            helm upgrade --install $RELEASE_NAME holo-operator-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz -n $BRANCH_NAME \
+            --set image.repository=holo-operator-dev \
+            --set image.image_tag=$DEV_IMAGE_TAG --set service.type=ClusterIP \
+            --set autoscaling.minReplicas=$HPA_MIN_REPLICAS \
+            --set autoscaling.maxReplicas=$HPA_MAX_REPLICAS \
+            --set autoscaling.targetMemoryUtilizationPercentage=90 \
+            --set resources.limits.cpu=300m \
+            --set resources.limits.memory=400Mi \
+            --set resources.requests.cpu=100m \
+            --set resources.requests.memory=200Mi
+
+            echo 'HELM_RELEASES<<EOF' >> $GITHUB_ENV
+            echo "$(helm history $RELEASE_NAME -n $BRANCH_NAME --max 5)" >> $GITHUB_ENV
+            echo 'EOF' >> $GITHUB_ENV
+
+            echo "ENDPOINT=$BRANCH_NAME.$DOMAIN" >> $GITHUB_ENV
+            echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
+
+      - name: ---> Info for the New Deployment <---
+        run: |
+          echo "------------------------- Last 5 Helm releases -------------------------"
+          echo "${{ env.HELM_RELEASES }}"
+          echo "------------------------- Newly deployed image ------------------------- "
+          echo "$DEV_IMAGE_TAG"
+
