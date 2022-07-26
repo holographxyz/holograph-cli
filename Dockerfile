@@ -15,3 +15,5 @@ COPY . .
 RUN yarn build
 
 RUN npm install -location=global ../holo-cli
+
+ENTRYPOINT ["holo"]
