@@ -61,13 +61,13 @@ jobs:
 #        run : |
 #          helm pull oci://$ECR_REGISTRY/nest-api --version ${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}
 
-      - name: Build and push image to ECR
-        env:
-          ECR_REGISTRY  : ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-        run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG .
-          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG
+#      - name: Build and push image to ECR
+#        env:
+#          ECR_REGISTRY  : ${{ steps.login-ecr.outputs.registry }}
+#          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+#        run: |
+#          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG .
+#          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
