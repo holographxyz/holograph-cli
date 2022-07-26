@@ -124,22 +124,46 @@ export default class Propagator extends Command {
     fs.writeFileSync(filePath, JSON.stringify(lastBlocks), 'utf8')
   }
 
-  failoverWebSocketProvider(network: string, rpcEndpoint: string): ethers.providers.WebSocketProvider {
+  disconnectBuilder(
+    userWallet: ethers.Wallet,
+    network: string,
+    rpcEndpoint: string,
+    subscribe: boolean,
+  ): (err: any) => void {
+    return (err: any) => {
+      ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
+        this.debug('onDisconnect')
+        this.log(network, 'WS connection was closed', JSON.stringify(err, null, 2))
+        this.providers[network] = this.failoverWebSocketProvider(userWallet, network, rpcEndpoint, subscribe)
+        this.wallets[network] = userWallet.connect(this.providers[network] as ethers.providers.WebSocketProvider)
+      })
+    }
+  }
+
+  failoverWebSocketProvider(
+    userWallet: ethers.Wallet,
+    network: string,
+    rpcEndpoint: string,
+    subscribe: boolean,
+  ): ethers.providers.WebSocketProvider {
+    this.debug('this.providers', network)
     const provider = new ethers.providers.WebSocketProvider(rpcEndpoint)
     keepAlive({
       provider,
-      onDisconnect: err => {
-        this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint)
-        this.structuredLog(network, `The ws connection was closed ${JSON.stringify(err, null, 2)}`)
-      },
+      onDisconnect: this.disconnectBuilder.bind(this)(userWallet, network, rpcEndpoint, true),
     })
+    this.providers[network] = provider
+    if (subscribe) {
+      this.networkSubscribe(network)
+    }
+
     return provider
   }
-
   async initializeEthers(
     loadNetworks: string[],
     configFile: ConfigFile,
     userWallet: ethers.Wallet | undefined,
+    subscribe: boolean,
   ): Promise<void> {
     for (let i = 0, l = loadNetworks.length; i < l; i++) {
       const network = loadNetworks[i]
@@ -151,7 +175,7 @@ export default class Propagator extends Command {
 
           break
         case 'wss:':
-          this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint)
+          this.providers[network] = this.failoverWebSocketProvider(userWallet!, network, rpcEndpoint, subscribe)
           break
         default:
           throw new Error('Unsupported RPC provider protocol -> ' + protocol)
@@ -164,7 +188,7 @@ export default class Propagator extends Command {
       if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
         this.structuredLog(network, `Resuming Propagator from block height ${this.latestBlockHeight[network]}`)
       } else {
-        this.structuredLog(network,`Starting Propagator from latest block height`)
+        this.structuredLog(network, `Starting Propagator from latest block height`)
         this.latestBlockHeight[network] = 0
       }
     }
@@ -293,7 +317,7 @@ export default class Propagator extends Command {
     }
 
     CliUx.ux.action.start(`Starting propagator in mode: ${PropagatorMode[this.propagatorMode]}`)
-    await this.initializeEthers(flags.networks, configFile, userWallet)
+    await this.initializeEthers(flags.networks, configFile, userWallet, false)
 
     this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
     this.factoryAddress = (await this.holograph.getFactory()).toLowerCase()
@@ -347,7 +371,10 @@ export default class Propagator extends Command {
       }
 
       if (interestingTransactions.length > 0) {
-        this.structuredLog(job.network, `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`)
+        this.structuredLog(
+          job.network,
+          `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`,
+        )
         this.processTransactions(job.network, interestingTransactions)
       } else {
         this.blockJobHandler()
@@ -394,7 +421,7 @@ export default class Propagator extends Command {
     receipt: ethers.ContractReceipt,
     network: string,
   ): Promise<void> {
-    this.structuredLog(network,`Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`)
+    this.structuredLog(network, `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`)
     const config: DeploymentConfig = decodeDeploymentConfigInput(transaction.data)
     let event = null
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
@@ -405,20 +432,26 @@ export default class Propagator extends Command {
             event = log.topics
             break
           } else {
-            this.structuredLog(network,`BridgeableContractDeployed event not found in ${transaction.hash}`)
+            this.structuredLog(network, `BridgeableContractDeployed event not found in ${transaction.hash}`)
           }
         }
       }
 
       if (event) {
         const deploymentAddress = '0x' + event[1].slice(26)
-        this.structuredLog(network,`\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-          `Wallet that deployed the collection is ${transaction.from}\n` +
-          `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
-          `The transaction hash is: ${transaction.hash}\n`,)
-        if (this.propagatorMode !== PropagatorMode.listen && !this.crossDeployments.includes(deploymentAddress.toLowerCase())) {
-            await this.executePayload(network, config, deploymentAddress)
-          }
+        this.structuredLog(
+          network,
+          `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
+            `Wallet that deployed the collection is ${transaction.from}\n` +
+            `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
+            `The transaction hash is: ${transaction.hash}\n`,
+        )
+        if (
+          this.propagatorMode !== PropagatorMode.listen &&
+          !this.crossDeployments.includes(deploymentAddress.toLowerCase())
+        ) {
+          await this.executePayload(network, config, deploymentAddress)
+        }
       }
     }
   }
@@ -480,7 +513,6 @@ export default class Propagator extends Command {
       }
     } else {
       this.debug(`${deploymentAddress} already deployed on ${network}`)
-
     }
   }
 
