@@ -13,9 +13,9 @@ env:
   #
 #  STG_HOLO_OPERATOR_HELM_CHART_VERSION: #TODO # NOTICE: <-----------------------------------------
   #
-#  CLUSTER_NAME   : staging
-#  AWS_KEY_ID     : ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
-#  AWS_ACCESS_KEY : ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
+  CLUSTER_NAME   : staging
+  AWS_KEY_ID     : ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
+  AWS_ACCESS_KEY : ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
 
 on:
   push:
