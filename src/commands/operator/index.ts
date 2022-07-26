@@ -121,9 +121,14 @@ export default class Operator extends Command {
     fs.writeFileSync(filePath, JSON.stringify(lastBlocks), 'utf8')
   }
 
-  disconnectBuilder(userWallet: ethers.Wallet, network: string, rpcEndpoint: string, subscribe: boolean): (err: any) => void {
+  disconnectBuilder(
+    userWallet: ethers.Wallet,
+    network: string,
+    rpcEndpoint: string,
+    subscribe: boolean,
+  ): (err: any) => void {
     return (err: any) => {
-      (this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
+      ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
         this.debug('onDisconnect')
         this.log(network, 'WS connection was closed', JSON.stringify(err, null, 2))
         this.providers[network] = this.failoverWebSocketProvider(userWallet, network, rpcEndpoint, subscribe)
@@ -132,7 +137,12 @@ export default class Operator extends Command {
     }
   }
 
-  failoverWebSocketProvider(userWallet: ethers.Wallet, network: string, rpcEndpoint: string, subscribe: boolean): ethers.providers.WebSocketProvider {
+  failoverWebSocketProvider(
+    userWallet: ethers.Wallet,
+    network: string,
+    rpcEndpoint: string,
+    subscribe: boolean,
+  ): ethers.providers.WebSocketProvider {
     this.debug('this.providers', network)
     const provider = new ethers.providers.WebSocketProvider(rpcEndpoint)
     keepAlive({

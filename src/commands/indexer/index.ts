@@ -162,7 +162,7 @@ export default class Indexer extends Command {
     }
 
     CliUx.ux.action.start(`Starting indexer in mode: ${IndexerMode[this.indexerMode]}`)
-    await this.initializeEthers(flags.networks, configFile, userWallet)
+    await this.initializeEthers(flags.networks, configFile, userWallet, false)
 
     this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
     this.factoryAddress = (await this.holograph.getFactory()).toLowerCase()
@@ -208,15 +208,39 @@ export default class Indexer extends Command {
     fs.writeFileSync(filePath, JSON.stringify(lastBlocks), 'utf8')
   }
 
-  failoverWebSocketProvider(network: string, rpcEndpoint: string): ethers.providers.WebSocketProvider {
+  disconnectBuilder(
+    userWallet: ethers.Wallet,
+    network: string,
+    rpcEndpoint: string,
+    subscribe: boolean,
+  ): (err: any) => void {
+    return (err: any) => {
+      ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
+        this.debug('onDisconnect')
+        this.log(network, 'WS connection was closed', JSON.stringify(err, null, 2))
+        this.providers[network] = this.failoverWebSocketProvider(userWallet, network, rpcEndpoint, subscribe)
+        this.wallets[network] = userWallet.connect(this.providers[network] as ethers.providers.WebSocketProvider)
+      })
+    }
+  }
+
+  failoverWebSocketProvider(
+    userWallet: ethers.Wallet,
+    network: string,
+    rpcEndpoint: string,
+    subscribe: boolean,
+  ): ethers.providers.WebSocketProvider {
+    this.debug('this.providers', network)
     const provider = new ethers.providers.WebSocketProvider(rpcEndpoint)
     keepAlive({
       provider,
-      onDisconnect: err => {
-        this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint)
-        this.structuredLog(network, `The ws connection was closed ${JSON.stringify(err, null, 2)}`)
-      },
+      onDisconnect: this.disconnectBuilder.bind(this)(userWallet, network, rpcEndpoint, true),
     })
+    this.providers[network] = provider
+    if (subscribe) {
+      this.networkSubscribe(network)
+    }
+
     return provider
   }
 
@@ -224,6 +248,7 @@ export default class Indexer extends Command {
     loadNetworks: string[],
     configFile: ConfigFile,
     userWallet: ethers.Wallet | undefined,
+    subscribe: boolean,
   ): Promise<void> {
     for (let i = 0, l = loadNetworks.length; i < l; i++) {
       const network = loadNetworks[i]
@@ -235,7 +260,7 @@ export default class Indexer extends Command {
 
           break
         case 'wss:':
-          this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint)
+          this.providers[network] = this.failoverWebSocketProvider(userWallet!, network, rpcEndpoint, subscribe)
           break
         default:
           throw new Error('Unsupported RPC provider protocol -> ' + protocol)
