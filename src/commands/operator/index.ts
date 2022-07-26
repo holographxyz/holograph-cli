@@ -121,9 +121,14 @@ export default class Operator extends Command {
     fs.writeFileSync(filePath, JSON.stringify(lastBlocks), 'utf8')
   }
 
-  disconnectBuilder(userWallet: ethers.Wallet, network: string, rpcEndpoint: string, subscribe: boolean): (err: any) => void {
+  disconnectBuilder(
+    userWallet: ethers.Wallet,
+    network: string,
+    rpcEndpoint: string,
+    subscribe: boolean,
+  ): (err: any) => void {
     return (err: any) => {
-      (this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
+      ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
         this.debug('onDisconnect')
         this.log(network, 'WS connection was closed', JSON.stringify(err, null, 2))
         this.providers[network] = this.failoverWebSocketProvider(userWallet, network, rpcEndpoint, subscribe)
@@ -132,7 +137,12 @@ export default class Operator extends Command {
     }
   }
 
-  failoverWebSocketProvider(userWallet: ethers.Wallet, network: string, rpcEndpoint: string, subscribe: boolean): ethers.providers.WebSocketProvider {
+  failoverWebSocketProvider(
+    userWallet: ethers.Wallet,
+    network: string,
+    rpcEndpoint: string,
+    subscribe: boolean,
+  ): ethers.providers.WebSocketProvider {
     this.debug('this.providers', network)
     const provider = new ethers.providers.WebSocketProvider(rpcEndpoint)
     keepAlive({
@@ -176,7 +186,7 @@ export default class Operator extends Command {
       if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
         this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
       } else {
-        this.structuredLog(network,`Starting Operator from latest block height`)
+        this.structuredLog(network, `Starting Operator from latest block height`)
         this.latestBlockHeight[network] = 0
       }
     }
@@ -331,7 +341,6 @@ export default class Operator extends Command {
     this.blockJobHandler()
   }
 
-  // you can
   async processBlock(job: BlockJob): Promise<void> {
     this.debug(`processing [${job.network}] ${job.block}`)
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)
@@ -357,7 +366,10 @@ export default class Operator extends Command {
       }
 
       if (interestingTransactions.length > 0) {
-        this.structuredLog(job.network, `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`)
+        this.structuredLog(
+          job.network,
+          `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`,
+        )
         this.processTransactions(job.network, interestingTransactions)
       } else {
         this.blockJobHandler()
@@ -408,7 +420,7 @@ export default class Operator extends Command {
     receipt: ethers.ContractReceipt,
     network: string,
   ): void {
-    this.structuredLog(network,`Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`)
+    this.structuredLog(network, `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`)
     const config = decodeDeploymentConfigInput(transaction.data)
     let event = null
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
@@ -419,23 +431,29 @@ export default class Operator extends Command {
             event = log.topics
             break
           } else {
-            this.structuredLog(network,`BridgeableContractDeployed event not found in ${transaction.hash}`)
+            this.structuredLog(network, `BridgeableContractDeployed event not found in ${transaction.hash}`)
           }
         }
       }
 
       if (event) {
         const deploymentAddress = '0x' + event[1].slice(26)
-        this.structuredLog(network,`\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-          `Wallet that deployed the collection is ${transaction.from}\n` +
-          `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
-          `The transaction hash is: ${transaction.hash}\n`,)
+        this.structuredLog(
+          network,
+          `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
+            `Wallet that deployed the collection is ${transaction.from}\n` +
+            `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
+            `The transaction hash is: ${transaction.hash}\n`,
+        )
       }
     }
   }
 
   handleOperatorBridgeEvents(transaction: ethers.Transaction, receipt: ethers.ContractReceipt, network: string): void {
-    this.structuredLog(network,`Checking if an operator executed a job to bridge a contract / collection at tx: ${transaction.hash}`)
+    this.structuredLog(
+      network,
+      `Checking if an operator executed a job to bridge a contract / collection at tx: ${transaction.hash}`,
+    )
     let event = null
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
@@ -447,17 +465,20 @@ export default class Operator extends Command {
         }
       }
     } else {
-      this.structuredLog(network,'Failed to find BridgeableContractDeployed event from operator job')
+      this.structuredLog(network, 'Failed to find BridgeableContractDeployed event from operator job')
     }
 
     if (event) {
       const deploymentInput = this.abiCoder.decode(['bytes'], '0x' + transaction.data.slice(10))[0]
       const config = decodeDeploymentConfig(this.abiCoder.decode(['bytes'], '0x' + deploymentInput.slice(10))[0])
       const deploymentAddress = '0x' + event[1].slice(26)
-      this.structuredLog(network,'\nHolographOperator executed a job which bridged a collection\n' +
-        `HolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-        `Operator that deployed the collection is ${transaction.from}` +
-        `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,)
+      this.structuredLog(
+        network,
+        '\nHolographOperator executed a job which bridged a collection\n' +
+          `HolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
+          `Operator that deployed the collection is ${transaction.from}` +
+          `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
+      )
     }
   }
 
@@ -466,7 +487,10 @@ export default class Operator extends Command {
     receipt: ethers.ContractReceipt,
     network: string,
   ): Promise<void> {
-    this.structuredLog(network, `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`)
+    this.structuredLog(
+      network,
+      `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
+    )
     let event = null
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
@@ -479,9 +503,12 @@ export default class Operator extends Command {
           ) {
             event = log.data
           } else {
-            this.structuredLog(network, `LayerZero transaction is not relevant to AvailableJob event. ` +
-              `Transaction was relayed to ${log.address} instead of ` +
-              `The Operator at ${this.operatorAddress}`)
+            this.structuredLog(
+              network,
+              `LayerZero transaction is not relevant to AvailableJob event. ` +
+                `Transaction was relayed to ${log.address} instead of ` +
+                `The Operator at ${this.operatorAddress}`,
+            )
           }
         }
       }
