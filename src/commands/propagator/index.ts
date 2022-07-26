@@ -159,6 +159,7 @@ export default class Propagator extends Command {
 
     return provider
   }
+
   async initializeEthers(
     loadNetworks: string[],
     configFile: ConfigFile,
