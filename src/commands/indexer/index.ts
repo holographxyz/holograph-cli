@@ -464,7 +464,7 @@ export default class Indexer extends Command {
               network,
               `LayerZero transaction is not relevant to AvailableJob event. ` +
                 `Transaction was relayed to ${log.address} instead of ` +
-                `The Indexer at ${this.operatorAddress}`,
+                `The Operator at ${this.operatorAddress}`,
             )
           }
         }
@@ -474,7 +474,7 @@ export default class Indexer extends Command {
         const payload = this.abiCoder.decode(['bytes'], event)[0]
         this.structuredLog(
           network,
-          `HolographIndexer received a new bridge job on ${capitalize(network)}\nThe job payload is ${payload}\n`,
+          `HolographOperator received a new bridge job on ${capitalize(network)}\nThe job payload is ${payload}\n`,
         )
       }
     }
@@ -509,7 +509,7 @@ export default class Indexer extends Command {
       const deploymentAddress = '0x' + event[1].slice(26)
       this.structuredLog(
         network,
-        '\nHolographIndexer executed a job which bridged a collection\n' +
+        '\nHolographOperator executed a job which bridged a collection\n' +
           `HolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
           `Indexer that deployed the collection is ${transaction.from}` +
           `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
@@ -625,7 +625,11 @@ export default class Indexer extends Command {
     const timestamp = new Date(Date.now()).toISOString()
     const timestampColor = color.keyword('green')
 
-    this.log(`[${timestampColor(timestamp)}] [${this.networkColors[network](capitalize(network))}] -> ${msg}`)
+    this.log(
+      `[${timestampColor(timestamp)}] [${this.constructor.name}] [${this.networkColors[network](
+        capitalize(network),
+      )}] -> ${msg}`,
+    )
   }
 
   networkSubscribe(network: string): void {
