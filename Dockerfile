@@ -4,9 +4,9 @@ RUN apk add git
 
 WORKDIR /holo-cli
 
-COPY package.json .
-COPY yarn.lock .
-COPY . .
+COPY package.json /holo-cli
+COPY yarn.lock /holo-cli
+COPY . /holo-cli
 
 RUN yarn add https://github.com/ethereumjs/ethereumjs-abi.git
 RUN yarn install --prefer-offline --silent --frozen-lockfile --non-interactive
@@ -16,6 +16,7 @@ RUN yarn build
 RUN npm install -location=global ../holo-cli
 
 # the main executable
-ENTRYPOINT ["holo"]
+ENTRYPOINT ["/usr/local/bin/holo"]
+# OR ENTRYPOINT ["holo"]
 # a default command
 CMD ["help"]
