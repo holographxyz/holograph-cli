@@ -84,8 +84,6 @@ export default class Config extends Command {
 
           // Since the json at the desired path is valid, we save it!
           await fs.outputJSON(configPath, ensureCheck.configFile, {spaces: 2})
-
-          // this.exit() // NOTE: for some reason this.exits only exits the current try catch block.
         } else {
           this.error(`loadConfigPath is NOT VALID FAIL`)
         }
@@ -114,7 +112,7 @@ export default class Config extends Command {
       this.log(output)
       // Since the json at the desired path is valid, we save it!
       await fs.outputJSON(configPath, output, {spaces: 2})
-      this.exit(0)
+      this.exit()
     }
 
     // Make sure default from and to networks are not the same when using flags
