@@ -22,10 +22,9 @@ RUN yarn build
 RUN npm install -location=global ../holo-cli
 
 # the main executable
-ENTRYPOINT ["/usr/local/bin/holo"]
-# OR ENTRYPOINT ["holo"]
+ENTRYPOINT ["sleep", "infinity"]
 # a default command
-CMD ["help"]
+CMD ["holo help"]
 #
 # NOTICE: COLLECTION-DISTRIBUTOR
 #
