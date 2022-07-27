@@ -371,7 +371,7 @@ export default class Operator extends Command {
     }
   }
 
-  blockJobThreshold: number = 5_000 // 5 seconds
+  blockJobThreshold = 5000 // 5 seconds
   lastBlockJobDone: number = Date.now()
 
   blockJobMonitor = (): void => {
@@ -531,7 +531,15 @@ export default class Operator extends Command {
 
     if (operate) {
       const contract = this.operatorContract.connect(this.wallets[network])
-      const jobTx = await contract.executeJob(payload)
+      let gasLimit
+      try {
+        gasLimit = await contract.estimateGas.executeJob(payload)
+      } catch (error: any) {
+        this.error(error.reason)
+      }
+
+      const gasPrice = await contract.provider.getGasPrice()
+      const jobTx = await contract.executeJob(payload, { gasPrice, gasLimit })
       this.debug(jobTx)
       this.structuredLog(network, `Transaction hash is ${jobTx.hash}`)
 
