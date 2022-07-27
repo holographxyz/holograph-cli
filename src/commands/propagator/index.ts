@@ -10,6 +10,7 @@ import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 
 import {decodeDeploymentConfigInput, capitalize, NETWORK_COLORS, DeploymentConfig} from '../../utils/utils'
 import color from '@oclif/color'
+import {startHealcheckServer} from '../../utils/health-check-server'
 
 enum PropagatorMode {
   listen,
@@ -60,7 +61,7 @@ const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInte
 
 export default class Propagator extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
-  static description = 'Listen for EVM events and process them'
+  static description = 'Listen for EVM events deploys collections to ther supported networks'
   static examples = ['$ holo propagator --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
     networks: Flags.string({description: 'Comma separated list of networks to operate to', multiple: true}),
@@ -345,6 +346,8 @@ export default class Propagator extends Command {
 
     process.on('exit', this.exitHandler)
 
+    // Start server
+    startHealcheckServer()
     // // Process blocks 🧱
     this.blockJobHandler()
   }

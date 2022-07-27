@@ -10,6 +10,7 @@ import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 
 import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, NETWORK_COLORS} from '../../utils/utils'
 import color from '@oclif/color'
+import {startHealcheckServer} from '../../utils/health-check-server'
 
 enum OperatorMode {
   listen,
@@ -60,7 +61,7 @@ const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInte
 
 export default class Operator extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
-  static description = 'Listen for EVM events and process them'
+  static description = 'Listen for EVM events for jobs and process them'
   static examples = ['$ holo operator --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
     networks: Flags.string({description: 'Comma separated list of networks to operate to', multiple: true}),
@@ -337,6 +338,8 @@ export default class Operator extends Command {
 
     process.on('exit', this.exitHandler)
 
+    // Start server
+    startHealcheckServer()
     // // Process blocks 🧱
     this.blockJobHandler()
   }
