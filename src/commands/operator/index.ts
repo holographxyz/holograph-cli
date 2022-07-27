@@ -530,7 +530,10 @@ export default class Operator extends Command {
 
       if (event) {
         const payload = this.abiCoder.decode(['bytes'], event)[0]
-        this.structuredLog(network, `HolographOperator received a new bridge job with job payload: ${payload}\n`)
+        this.structuredLog(
+          network,
+          `HolographOperator received a new bridge job on ${network} with job payload: ${payload}\n`,
+        )
 
         if (this.operatorMode !== OperatorMode.listen) {
           await this.executePayload(network, payload)
@@ -566,7 +569,7 @@ export default class Operator extends Command {
       }
 
       const gasPrice = await contract.provider.getGasPrice()
-      const jobTx = await contract.executeJob(payload, { gasPrice, gasLimit })
+      const jobTx = await contract.executeJob(payload, {gasPrice, gasLimit})
       this.debug(jobTx)
       this.structuredLog(network, `Transaction hash is ${jobTx.hash}`)
 

@@ -100,7 +100,9 @@ export default class Recover extends Command {
     this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
 
     const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
-    this.operatorContract = new ethers.ContractFactory(holographOperatorABI, '0x', txNetworkWallet).attach(this.operatorAddress)
+    this.operatorContract = new ethers.ContractFactory(holographOperatorABI, '0x', txNetworkWallet).attach(
+      this.operatorAddress,
+    )
 
     CliUx.ux.action.start('Retrieving transaction details from ' + network + ' network')
     const transaction = await txNetworkWallet.provider.getTransaction(tx)
@@ -108,14 +110,12 @@ export default class Recover extends Command {
     CliUx.ux.action.stop()
 
     this.handleOperatorRequestEvents(transaction, receipt)
-
   }
 
-  async handleOperatorRequestEvents(
-    transaction: ethers.Transaction,
-    receipt: ethers.ContractReceipt,
-  ): Promise<void> {
-    this.structuredLog(`Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`)
+  async handleOperatorRequestEvents(transaction: ethers.Transaction, receipt: ethers.ContractReceipt): Promise<void> {
+    this.structuredLog(
+      `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
+    )
     let event = null
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
@@ -128,16 +128,20 @@ export default class Recover extends Command {
           ) {
             event = log.data
           } else {
-            this.structuredLog(`LayerZero transaction is not relevant to AvailableJob event. ` +
-              `Transaction was relayed to ${log.address} instead of ` +
-              `The Operator at ${this.operatorAddress}`)
+            this.structuredLog(
+              `LayerZero transaction is not relevant to AvailableJob event. ` +
+                `Transaction was relayed to ${log.address} instead of ` +
+                `The Operator at ${this.operatorAddress}`,
+            )
           }
         }
       }
 
       if (event) {
         const payload = this.abiCoder.decode(['bytes'], event)[0]
-        this.structuredLog(`HolographOperator received a new bridge job with job payload: ${payload}\n`)
+        this.structuredLog(
+          `HolographOperator received a new bridge job on ${transaction.chainId} with job payload: ${payload}\n`,
+        )
         await this.executePayload(payload)
       }
     }
@@ -155,7 +159,6 @@ export default class Recover extends Command {
     const operate: boolean = operatorPrompt.shouldContinue
 
     if (operate) {
-
       CliUx.ux.action.start('Calculating gas amounts and prices')
       let gasLimit
       try {
@@ -181,8 +184,11 @@ export default class Recover extends Command {
           default: true,
         },
       ])
+
       if (!blockchainPrompt.shouldContinue) {
-        this.error('Dropping command, no blockchain transactions executed')
+        this.structuredLog('Dropping command, no blockchain transactions executed')
+        this.structuredLog('No blockchain transactions executed')
+        this.exit()
       }
 
       try {
@@ -200,13 +206,17 @@ export default class Recover extends Command {
         CliUx.ux.action.stop('Operator Job executed')
         this.structuredLog(`Transaction ${jobTx.hash} mined and confirmed`)
       } catch (error: any) {
-        this.error(error.error.reason)
+        this.structuredLog(`Transaction failed to execute: ${error.reason}`)
+        this.exit()
       }
 
       this.exit()
     } else {
       this.structuredLog('Dropped potential payload to execute')
     }
+
+    // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+    process.exit()
   }
 
   structuredLog(msg: string): void {
@@ -215,5 +225,4 @@ export default class Recover extends Command {
 
     this.log(`[${timestampColor(timestamp)}] ${msg}`)
   }
-
 }
