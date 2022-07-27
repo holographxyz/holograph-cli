@@ -70,6 +70,10 @@ export default class Propagator extends Command {
       options: ['listen', 'manual', 'auto'],
       char: 'm',
     }),
+    healthCheck: Flags.boolean({
+      description: 'Launch server on http://localhost:6000 to make sure command is still running',
+      default: false
+    })
   }
 
   crossDeployments: string[] = []
@@ -252,6 +256,8 @@ export default class Propagator extends Command {
   async run(): Promise<void> {
     const {flags} = await this.parse(Propagator)
 
+    const enableHealthCheckServer = flags.healthCheck
+
     // Have the user input the mode if it's not provided
     let mode: string | undefined = flags.mode
 
@@ -347,7 +353,9 @@ export default class Propagator extends Command {
     process.on('exit', this.exitHandler)
 
     // Start server
-    startHealcheckServer()
+    if(enableHealthCheckServer) {
+      startHealcheckServer()
+    }
     // // Process blocks 🧱
     this.blockJobHandler()
   }

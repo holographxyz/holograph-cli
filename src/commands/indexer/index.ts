@@ -74,6 +74,10 @@ export default class Indexer extends Command {
       char: 'm',
     }),
     host: Flags.string({description: 'The host to listen on', char: 'h', default: 'http://localhost:9001'}),
+    healthCheck: Flags.boolean({
+      description: 'Launch server on http://localhost:6000 to make sure command is still running',
+      default: false
+    })
   }
 
   /**
@@ -121,6 +125,7 @@ export default class Indexer extends Command {
   async run(): Promise<void> {
     const {flags} = await this.parse(Indexer)
     this.baseUrl = flags.host
+    const enableHealthCheckServer = flags.healthCheck
 
     let res
     try {
@@ -191,7 +196,9 @@ export default class Indexer extends Command {
     process.on('exit', this.exitHandler)
 
     // Start server
-    startHealcheckServer()
+    if(enableHealthCheckServer) {
+      startHealcheckServer()
+    }
     // // Process blocks 🧱
     this.blockJobHandler()
   }
