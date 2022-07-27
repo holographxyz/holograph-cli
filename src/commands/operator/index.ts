@@ -348,6 +348,7 @@ export default class Operator extends Command {
     if(enableHealthCheckServer) {
       startHealcheckServer()
     }
+
     // // Process blocks 🧱
     this.blockJobHandler()
   }

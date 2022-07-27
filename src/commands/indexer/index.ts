@@ -199,6 +199,7 @@ export default class Indexer extends Command {
     if(enableHealthCheckServer) {
       startHealcheckServer()
     }
+
     // // Process blocks 🧱
     this.blockJobHandler()
   }
