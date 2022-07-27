@@ -551,7 +551,11 @@ export default class Propagator extends Command {
     const timestamp = new Date(Date.now()).toISOString()
     const timestampColor = color.keyword('green')
 
-    this.log(`[${timestampColor(timestamp)}] [${this.networkColors[network](capitalize(network))}] -> ${msg}`)
+    this.log(
+      `[${timestampColor(timestamp)}] [${this.constructor.name}] [${this.networkColors[network](
+        capitalize(network),
+      )}] -> ${msg}`,
+    )
   }
 
   networkSubscribe(network: string): void {
