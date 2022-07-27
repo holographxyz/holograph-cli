@@ -329,6 +329,8 @@ export default class Operator extends Command {
 
     // // Process blocks 🧱
     this.blockJobHandler()
+    // // Activate Job Monitor for disconnect recovery
+    this.blockJobMonitor()
   }
 
   // you can
@@ -369,8 +371,21 @@ export default class Operator extends Command {
     }
   }
 
+  blockJobThreshold: number = 5_000 // 5 seconds
+  lastBlockJobDone: number = Date.now()
+
+  blockJobMonitor = (): void => {
+    if (Date.now() - this.lastBlockJobDone > this.blockJobThreshold) {
+      this.debug('Block Job Handler has been inactive longer than threshold time. Restarting.')
+      this.blockJobHandler()
+    } else {
+      setTimeout(this.blockJobMonitor, 1000)
+    }
+  }
+
   // For some reason defining this as function definition causes `this` to be undefined
   blockJobHandler = (): void => {
+    this.lastBlockJobDone = Date.now()
     if (this.blockJobs.length > 0) {
       const blockJob: BlockJob = this.blockJobs.shift() as BlockJob
       this.processBlock(blockJob)
