@@ -1,3 +1,6 @@
+#
+# NOTICE: COLLECTION-DISTRIBUTOR
+#
 # notice: use image from our own rgistry, cause Dockerhub imposes a pull limit and breaks the workflow
 ARG AWS_ECR_URL=177635894328.dkr.ecr.us-west-2.amazonaws.com
 ARG REPO_NAME=misc
@@ -23,3 +26,6 @@ ENTRYPOINT ["/usr/local/bin/holo"]
 # OR ENTRYPOINT ["holo"]
 # a default command
 CMD ["help"]
+#
+# NOTICE: COLLECTION-DISTRIBUTOR
+#
