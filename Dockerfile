@@ -21,11 +21,12 @@ RUN yarn build
 
 RUN npm install -location=global ../holo-cli
 
-# the main executable
-ENTRYPOINT ["/usr/local/bin/holo"]
-# OR ENTRYPOINT ["holo"]
-# a default command
-CMD ["help"]
+## the main executable
+#ENTRYPOINT ["/usr/local/bin/holo"]
+## OR ENTRYPOINT ["holo"]
+## a default command
+#CMD ["help"]
+CMD ["sh"]
 #
 # NOTICE: OPERATOR
 #
