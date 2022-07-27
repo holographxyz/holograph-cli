@@ -8,10 +8,10 @@ import {ethers} from 'ethers'
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 
-import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, NETWORK_COLORS} from '../../utils/utils'
+import {decodeDeploymentConfigInput, capitalize, NETWORK_COLORS, DeploymentConfig} from '../../utils/utils'
 import color from '@oclif/color'
 
-enum OperatorMode {
+enum PropagatorMode {
   listen,
   manual,
   auto,
@@ -58,33 +58,36 @@ const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInte
   })
 }
 
-export default class Operator extends Command {
+export default class Propagator extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
   static description = 'Listen for EVM events and process them'
-  static examples = ['$ holo operator --networks="rinkeby mumbai fuji" --mode=auto']
+  static examples = ['$ holo propagator --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
     networks: Flags.string({description: 'Comma separated list of networks to operate to', multiple: true}),
     mode: Flags.string({
-      description: 'The mode in which to run the operator',
+      description: 'The mode in which to run the propagator',
       options: ['listen', 'manual', 'auto'],
       char: 'm',
     }),
   }
 
+  crossDeployments: string[] = []
+
   /**
-   * Operator class variables
+   * Propagator class variables
    */
   bridgeAddress: string | undefined
   factoryAddress: string | undefined
   operatorAddress: string | undefined
-  supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
+  supportedNetworks: string[] = ['rinkeby', 'fuji', 'mumbai']
   blockJobs: BlockJob[] = []
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   abiCoder = ethers.utils.defaultAbiCoder
   wallets: {[key: string]: ethers.Wallet} = {}
   holograph!: ethers.Contract
-  operatorMode: OperatorMode = OperatorMode.listen
+  propagatorMode: PropagatorMode = PropagatorMode.listen
   operatorContract!: ethers.Contract
+  factoryContract!: ethers.Contract
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
   LAYERZERO_RECEIVERS: any = {
     rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
@@ -184,9 +187,9 @@ export default class Operator extends Command {
       }
 
       if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
-        this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
+        this.structuredLog(network, `Resuming Propagator from block height ${this.latestBlockHeight[network]}`)
       } else {
-        this.structuredLog(network, `Starting Operator from latest block height`)
+        this.structuredLog(network, `Starting Propagator from latest block height`)
         this.latestBlockHeight[network] = 0
       }
     }
@@ -200,6 +203,11 @@ export default class Operator extends Command {
     this.operatorContract = new ethers.ContractFactory(holographOperatorABI, '0x').attach(
       await this.holograph.getOperator(),
     )
+
+    const holographFactoryABI = await fs.readJson('./src/abi/HolographFactory.json')
+    this.factoryContract = new ethers.ContractFactory(holographFactoryABI, '0x').attach(
+      await this.holograph.getFactory(),
+    )
   }
 
   exitHandler = async (exitCode: number): Promise<void> => {
@@ -209,8 +217,8 @@ export default class Operator extends Command {
     if (this.exited === false) {
       this.log('')
       this.log(`Saving current block heights: ${JSON.stringify(this.latestBlockHeight)}`)
-      this.saveLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
-      this.log(`Exiting operator with code ${exitCode}...`)
+      this.saveLastBlocks(Propagator.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
+      this.log(`Exiting propagator with code ${exitCode}...`)
       this.log('Goodbye! 👋')
       this.exited = true
     }
@@ -224,8 +232,8 @@ export default class Operator extends Command {
       if (this.exited === false) {
         this.log('')
         this.log(`Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}`)
-        this.saveLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
-        this.log(`Exiting operator with code ${exitCode}...`)
+        this.saveLastBlocks(Propagator.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
+        this.log(`Exiting propagator with code ${exitCode}...`)
         this.log('Goodbye! 👋')
         this.exited = true
       }
@@ -241,7 +249,7 @@ export default class Operator extends Command {
   }
 
   async run(): Promise<void> {
-    const {flags} = await this.parse(Operator)
+    const {flags} = await this.parse(Propagator)
 
     // Have the user input the mode if it's not provided
     let mode: string | undefined = flags.mode
@@ -250,7 +258,7 @@ export default class Operator extends Command {
       const prompt: any = await inquirer.prompt([
         {
           name: 'mode',
-          message: 'Enter the mode in which to run the operator',
+          message: 'Enter the mode in which to run the propagator',
           type: 'list',
           choices: ['listen', 'manual', 'auto'],
           default: 'listen',
@@ -259,15 +267,15 @@ export default class Operator extends Command {
       mode = prompt.mode
     }
 
-    this.operatorMode = OperatorMode[mode as keyof typeof OperatorMode]
-    this.log(`Operator mode: ${this.operatorMode}`)
+    this.propagatorMode = PropagatorMode[mode as keyof typeof PropagatorMode]
+    this.log(`Propagator mode: ${this.propagatorMode}`)
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
     const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
     this.log('User configurations loaded.')
 
-    this.latestBlockHeight = await this.loadLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir)
+    this.latestBlockHeight = await this.loadLastBlocks(Propagator.LAST_BLOCKS_FILE_NAME, this.config.configDir)
     let canSync = false
     const lastBlockKeys: string[] = Object.keys(this.latestBlockHeight)
     for (let i = 0, l: number = lastBlockKeys.length; i < l; i++) {
@@ -281,7 +289,7 @@ export default class Operator extends Command {
       const syncPrompt: any = await inquirer.prompt([
         {
           name: 'shouldSync',
-          message: 'Operator has previous (missed) blocks that can be synced. Would you like to sync?',
+          message: 'Propagator has previous (missed) blocks that can be synced. Would you like to sync?',
           type: 'confirm',
           default: true,
         },
@@ -309,7 +317,7 @@ export default class Operator extends Command {
       }
     }
 
-    CliUx.ux.action.start(`Starting operator in mode: ${OperatorMode[this.operatorMode]}`)
+    CliUx.ux.action.start(`Starting propagator in mode: ${PropagatorMode[this.propagatorMode]}`)
     await this.initializeEthers(flags.networks, configFile, userWallet, false)
 
     this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
@@ -339,10 +347,9 @@ export default class Operator extends Command {
 
     // // Process blocks 🧱
     this.blockJobHandler()
-    // // Activate Job Monitor for disconnect recovery
-    this.blockJobMonitor()
   }
 
+  // you can
   async processBlock(job: BlockJob): Promise<void> {
     this.debug(`processing [${job.network}] ${job.block}`)
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)
@@ -354,14 +361,11 @@ export default class Operator extends Command {
       const interestingTransactions = []
       for (let i = 0, l = block.transactions.length; i < l; i++) {
         const transaction = block.transactions[i]
-        if (transaction.from.toLowerCase() === this.LAYERZERO_RECEIVERS[job.network]) {
-          // We have LayerZero call, need to check it it's directed towards Holograph operators
-          interestingTransactions.push(transaction)
-        } else if ('to' in transaction && transaction.to !== null && transaction.to !== '') {
+        if ('to' in transaction && transaction.to !== null && transaction.to !== '') {
           const to: string | undefined = transaction.to?.toLowerCase()
           // Check if it's a factory call
-          if (to === this.factoryAddress || to === this.operatorAddress) {
-            // We have a potential factory deployment or operator bridge transaction
+          if (to === this.factoryAddress) {
+            // We have a potential factory deployment transaction
             interestingTransactions.push(transaction)
           }
         }
@@ -383,21 +387,8 @@ export default class Operator extends Command {
     }
   }
 
-  blockJobThreshold = 5000 // 5 seconds
-  lastBlockJobDone: number = Date.now()
-
-  blockJobMonitor = (): void => {
-    if (Date.now() - this.lastBlockJobDone > this.blockJobThreshold) {
-      this.debug('Block Job Handler has been inactive longer than threshold time. Restarting.')
-      this.blockJobHandler()
-    } else {
-      setTimeout(this.blockJobMonitor, 1000)
-    }
-  }
-
   // For some reason defining this as function definition causes `this` to be undefined
   blockJobHandler = (): void => {
-    this.lastBlockJobDone = Date.now()
     if (this.blockJobs.length > 0) {
       const blockJob: BlockJob = this.blockJobs.shift() as BlockJob
       this.processBlock(blockJob)
@@ -418,11 +409,7 @@ export default class Operator extends Command {
 
         this.debug(`Processing transaction ${transaction.hash} on ${network} at block ${receipt.blockNumber}`)
         if (transaction.to?.toLowerCase() === this.factoryAddress) {
-          this.handleContractDeployedEvents(transaction, receipt, network)
-        } else if (transaction.to?.toLowerCase() === this.operatorAddress) {
-          this.handleOperatorBridgeEvents(transaction, receipt, network)
-        } else {
-          this.handleOperatorRequestEvents(transaction, receipt, network)
+          await this.handleContractDeployedEvents(transaction, receipt, network)
         }
       }
     }
@@ -430,13 +417,13 @@ export default class Operator extends Command {
     this.blockJobHandler()
   }
 
-  handleContractDeployedEvents(
+  async handleContractDeployedEvents(
     transaction: ethers.Transaction,
     receipt: ethers.ContractReceipt,
     network: string,
-  ): void {
+  ): Promise<void> {
     this.structuredLog(network, `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`)
-    const config = decodeDeploymentConfigInput(transaction.data)
+    const config: DeploymentConfig = decodeDeploymentConfigInput(transaction.data)
     let event = null
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
@@ -460,121 +447,103 @@ export default class Operator extends Command {
             `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
             `The transaction hash is: ${transaction.hash}\n`,
         )
-      }
-    }
-  }
-
-  handleOperatorBridgeEvents(transaction: ethers.Transaction, receipt: ethers.ContractReceipt, network: string): void {
-    this.structuredLog(
-      network,
-      `Checking if an operator executed a job to bridge a contract / collection at tx: ${transaction.hash}`,
-    )
-    let event = null
-    if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        if (event === null) {
-          const log = receipt.logs[i]
-          if (log.topics.length > 0 && log.topics[0] === this.targetEvents.BridgeableContractDeployed) {
-            event = log.topics
-          }
-        }
-      }
-    } else {
-      this.structuredLog(network, 'Failed to find BridgeableContractDeployed event from operator job')
-    }
-
-    if (event) {
-      const deploymentInput = this.abiCoder.decode(['bytes'], '0x' + transaction.data.slice(10))[0]
-      const config = decodeDeploymentConfig(this.abiCoder.decode(['bytes'], '0x' + deploymentInput.slice(10))[0])
-      const deploymentAddress = '0x' + event[1].slice(26)
-      this.structuredLog(
-        network,
-        '\nHolographOperator executed a job which bridged a collection\n' +
-          `HolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-          `Operator that deployed the collection is ${transaction.from}` +
-          `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
-      )
-    }
-  }
-
-  async handleOperatorRequestEvents(
-    transaction: ethers.Transaction,
-    receipt: ethers.ContractReceipt,
-    network: string,
-  ): Promise<void> {
-    this.structuredLog(
-      network,
-      `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
-    )
-    let event = null
-    if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        if (event === null) {
-          const log = receipt.logs[i]
-          if (
-            log.address.toLowerCase() === this.operatorAddress &&
-            log.topics.length > 0 &&
-            log.topics[0] === this.targetEvents.AvailableJob
-          ) {
-            event = log.data
-          } else {
-            this.structuredLog(
-              network,
-              `LayerZero transaction is not relevant to AvailableJob event. ` +
-                `Transaction was relayed to ${log.address} instead of ` +
-                `The Operator at ${this.operatorAddress}`,
-            )
-          }
-        }
-      }
-
-      if (event) {
-        const payload = this.abiCoder.decode(['bytes'], event)[0]
-        this.structuredLog(network, `HolographOperator received a new bridge job with job payload: ${payload}\n`)
-
-        if (this.operatorMode !== OperatorMode.listen) {
-          await this.executePayload(network, payload)
+        if (
+          this.propagatorMode !== PropagatorMode.listen &&
+          !this.crossDeployments.includes(deploymentAddress.toLowerCase())
+        ) {
+          await this.executePayload(network, config, deploymentAddress)
         }
       }
     }
   }
 
-  async executePayload(network: string, payload: string): Promise<void> {
-    // If the operator is in listen mode, payloads will not be executed
-    // If the operator is in manual mode, the payload must be manually executed
-    // If the operator is in auto mode, the payload will be executed automatically
-    let operate = this.operatorMode === OperatorMode.auto
-    if (this.operatorMode === OperatorMode.manual) {
-      const operatorPrompt: any = await inquirer.prompt([
-        {
-          name: 'shouldContinue',
-          message: `A transaction appeared on ${network} for execution, would you like to operate?\n`,
-          type: 'confirm',
-          default: false,
-        },
-      ])
-      operate = operatorPrompt.shouldContinue
-    }
-
-    if (operate) {
-      const contract = this.operatorContract.connect(this.wallets[network])
-      let gasLimit
+  async deployContract(network: string, deploymentConfig: DeploymentConfig, deploymentAddress: string): Promise<void> {
+    const contractCode = await this.providers[network].getCode(deploymentAddress)
+    if (contractCode === '0x') {
+      const factory: ethers.Contract = this.factoryContract.connect(this.wallets[network])
+      CliUx.ux.action.start('Calculating gas price')
+      let gasAmount
       try {
-        gasLimit = await contract.estimateGas.executeJob(payload)
+        this
+        gasAmount = await factory.estimateGas.deployHolographableContract(
+          deploymentConfig.config,
+          deploymentConfig.signature,
+          deploymentConfig.signer,
+        )
       } catch (error: any) {
         this.error(error.reason)
       }
 
-      const gasPrice = await contract.provider.getGasPrice()
-      const jobTx = await contract.executeJob(payload, { gasPrice, gasLimit })
-      this.debug(jobTx)
-      this.structuredLog(network, `Transaction hash is ${jobTx.hash}`)
+      const gasPrice = await this.providers[network].getGasPrice()
+      CliUx.ux.action.stop()
+      this.log(
+        'Transaction is estimated to cost a total of',
+        ethers.utils.formatUnits(gasAmount.mul(gasPrice), 'ether'),
+        'native gas tokens (in ether)',
+      )
 
-      const jobReceipt = await jobTx.wait()
-      this.debug(jobReceipt)
-      this.structuredLog(network, `Transaction ${jobTx.hash} mined and confirmed`)
+      try {
+        CliUx.ux.action.start('Sending transaction to mempool')
+        const deployTx = await factory.deployHolographableContract(
+          deploymentConfig.config,
+          deploymentConfig.signature,
+          deploymentConfig.signer,
+        )
+        this.debug(deployTx)
+        CliUx.ux.action.stop('Transaction hash is ' + deployTx.hash)
+
+        CliUx.ux.action.start('Waiting for transaction to be mined and confirmed')
+        const deployReceipt = await deployTx.wait()
+        this.debug(deployReceipt)
+        let collectionAddress
+        for (let i = 0, l = deployReceipt.logs.length; i < l; i++) {
+          const log = deployReceipt.logs[i]
+          if (
+            log.topics.length === 3 &&
+            log.topics[0] === '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b'
+          ) {
+            collectionAddress = '0x' + log.topics[1].slice(26)
+            break
+          }
+        }
+
+        CliUx.ux.action.stop('Collection deployed to ' + collectionAddress)
+        return
+      } catch (error: any) {
+        this.error(error.error.reason)
+      }
     } else {
-      this.structuredLog(network, 'Dropped potential payload to execute')
+      this.debug(`${deploymentAddress} already deployed on ${network}`)
+    }
+  }
+
+  async executePayload(network: string, config: DeploymentConfig, deploymentAddress: string): Promise<void> {
+    // If the propagator is in listen mode, contract deployments will not be executed
+    // If the propagator is in manual mode, the contract deployments must be manually executed
+    // If the propagator is in auto mode, the contract deployments will be executed automatically
+    let operate = this.propagatorMode === PropagatorMode.auto
+    if (this.propagatorMode === PropagatorMode.manual) {
+      const propagatorPrompt: any = await inquirer.prompt([
+        {
+          name: 'shouldContinue',
+          message: `A contract appeared on ${network} for cross-chain deployment, would you like to deploy?\n`,
+          type: 'confirm',
+          default: false,
+        },
+      ])
+      operate = propagatorPrompt.shouldContinue
+    }
+
+    if (operate) {
+      this.crossDeployments.push(deploymentAddress.toLowerCase())
+      for (const selectedNetwork of this.supportedNetworks) {
+        if (selectedNetwork !== network) {
+          this.debug(`trying to deploy contract from ${network} to ${selectedNetwork}`)
+          await this.deployContract(selectedNetwork, config, deploymentAddress)
+        }
+      }
+    } else {
+      this.structuredLog(network, 'Dropped potential contract deployment to execute')
     }
   }
 

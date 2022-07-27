@@ -90,30 +90,30 @@ export async function ensureConfigFileIsValid(
 
 export async function validateBeta1Schema(config: Record<string, unknown>): Promise<void> {
   const beta1Schema = Joi.object({
-    version: Joi.string().valid('beta1'),
-    bridge: {
-      source: Joi.string(),
-      destination: Joi.string(),
-    },
+    version: Joi.string().valid('beta1').required(),
+    bridge: Joi.object({
+      source: Joi.string().required(),
+      destination: Joi.string().required(),
+    }).required(),
     networks: Joi.object({
       rinkeby: Joi.object({
-        providerUrl: Joi.string(),
+        providerUrl: Joi.string().required(),
       }),
       mumbai: Joi.object({
-        providerUrl: Joi.string(),
+        providerUrl: Joi.string().required(),
       }),
       fuji: Joi.object({
-        providerUrl: Joi.string(),
+        providerUrl: Joi.string().required(),
       }),
-    }),
+    }).required(),
     user: Joi.object({
       credentials: Joi.object({
         iv: Joi.string(),
-        privateKey: Joi.string(),
-        address: Joi.string(),
-      }),
-    }),
-  }).unknown(false)
+        privateKey: Joi.string().required(),
+        address: Joi.string().required(),
+      }).required(),
+    }).required(),
+  }).required().unknown(false)
 
   await beta1Schema.validateAsync(config)
 }
