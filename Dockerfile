@@ -1,4 +1,7 @@
-FROM node:16.16.0-alpine
+# notice: use image from our own rgistry, cause Dockerhub imposes a pull limit and breaks the workflow
+ARG AWS_ECR_URL=177635894328.dkr.ecr.us-west-2.amazonaws.com
+ARG REPO_NAME=misc
+FROM $AWS_ECR_URL/$REPO_NAME:node-16.16.0-alpine
 
 RUN apk add git
 
