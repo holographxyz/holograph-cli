@@ -12,6 +12,7 @@ import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, NETWORK
 import color from '@oclif/color'
 
 import dotenv from 'dotenv'
+import {startHealcheckServer} from '../../utils/health-check-server'
 dotenv.config()
 
 enum IndexerMode {
@@ -63,7 +64,7 @@ const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInte
 
 export default class Indexer extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
-  static description = 'Listen for EVM events and process them'
+  static description = 'Listen for EVM events and update database network status'
   static examples = ['$ holo indexer --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
     networks: Flags.string({description: 'Comma separated list of networks to operate to', multiple: true}),
@@ -73,6 +74,10 @@ export default class Indexer extends Command {
       char: 'm',
     }),
     host: Flags.string({description: 'The host to listen on', char: 'h', default: 'http://localhost:9001'}),
+    healthCheck: Flags.boolean({
+      description: 'Launch server on http://localhost:6000 to make sure command is still running',
+      default: false
+    })
   }
 
   /**
@@ -120,6 +125,7 @@ export default class Indexer extends Command {
   async run(): Promise<void> {
     const {flags} = await this.parse(Indexer)
     this.baseUrl = flags.host
+    const enableHealthCheckServer = flags.healthCheck
 
     let res
     try {
@@ -188,6 +194,11 @@ export default class Indexer extends Command {
     }
 
     process.on('exit', this.exitHandler)
+
+    // Start server
+    if(enableHealthCheckServer) {
+      startHealcheckServer()
+    }
 
     // // Process blocks 🧱
     this.blockJobHandler()
