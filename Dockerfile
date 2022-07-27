@@ -7,7 +7,7 @@ WORKDIR /holo-cli
 
 COPY package.json /holo-cli
 COPY yarn.lock /holo-cli
-COPY .. /holo-cli
+COPY . /holo-cli
 
 RUN yarn add https://github.com/ethereumjs/ethereumjs-abi.git
 RUN yarn install --prefer-offline --silent --frozen-lockfile --non-interactive
