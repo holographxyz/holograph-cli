@@ -1,4 +1,5 @@
-FROM node:16.16.0-alpine
+#FROM node:16.16.0-alpine
+FROM 177635894328.dkr.ecr.us-west-2.amazonaws.com/misc:node-16.16.0-alpine
 
 RUN apk add git
 
