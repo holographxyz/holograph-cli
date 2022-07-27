@@ -11,7 +11,7 @@ env:
   #
   DEV_IMAGE_TAG : dev-${{ github.sha }} #notice:!!!!!! <------------------
   #
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.2 # NOTICE: <-----------------------------------------
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.1 # NOTICE: <-----------------------------------------
   #
   CLUSTER_NAME   : staging
   AWS_KEY_ID     : ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
@@ -54,12 +54,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-#      - name: Pull the holo-collection-distributor helm chart version x.x.x from ECR
-#        shell: bash
-#        env:
-#          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-#        run : |
-#          helm pull oci://$ECR_REGISTRY/holo-collection-distributor --version ${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}
+      - name: Pull the holo-collection-distributor helm chart version x.x.x from ECR
+        shell: bash
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run : |
+          helm pull oci://$ECR_REGISTRY/holo-collection-distributor --version ${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}
 
       - name: Build and push image to ECR
         env:
@@ -95,33 +95,34 @@ jobs:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           # todo -> set the vars in a separate workflow step
           command: |-
-            helm ls -n $BRANCH_NAME
-#            echo "Notice: Set the HPA based on the branch..."
-#            if [[ $BRANCH_NAME == 'develop' ]]; then
-#                export HPA_MIN_REPLICAS=1;
-#                export HPA_MAX_REPLICAS=5;
-#            else
-#                export HPA_MIN_REPLICAS=1;
-#                export HPA_MAX_REPLICAS=3;
-#            fi
-#
-#            helm upgrade --install $RELEASE_NAME holo-collection-distributor-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz -n $BRANCH_NAME \
-#            --set image.repository=holo-collection-distributor-dev \
-#            --set image.image_tag=$DEV_IMAGE_TAG \
-#            --set autoscaling.minReplicas=$HPA_MIN_REPLICAS \
-#            --set autoscaling.maxReplicas=$HPA_MAX_REPLICAS
-#
-#            echo 'HELM_RELEASES<<EOF' >> $GITHUB_ENV
-#            echo "$(helm history $RELEASE_NAME -n $BRANCH_NAME --max 5)" >> $GITHUB_ENV
-#            echo 'EOF' >> $GITHUB_ENV
-#
-#            echo "ENDPOINT=$BRANCH_NAME.$DOMAIN" >> $GITHUB_ENV
-#            echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
-#
-#      - name: ---> Info for the New Deployment <---
-#        run: |
-#          echo "------------------------- Last 5 Helm releases -------------------------"
-#          echo "${{ env.HELM_RELEASES }}"
-#          echo "------------------------- Newly deployed image ------------------------- "
-#          echo "$DEV_IMAGE_TAG"
+            echo "Notice: Set the HPA based on the branch..."
+            if [[ $BRANCH_NAME == 'develop' ]]; then
+                export HPA_MIN_REPLICAS=1;
+                export HPA_MAX_REPLICAS=5;
+            else
+                export HPA_MIN_REPLICAS=1;
+                export HPA_MAX_REPLICAS=3;
+            fi
+
+            helm upgrade --install $RELEASE_NAME \
+            holo-collection-distributor-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
+            -n $BRANCH_NAME \
+            --set image.repository=holo-collection-distributor-dev \
+            --set image.image_tag=$DEV_IMAGE_TAG \
+            --set autoscaling.minReplicas=$HPA_MIN_REPLICAS \
+            --set autoscaling.maxReplicas=$HPA_MAX_REPLICAS
+
+            echo 'HELM_RELEASES<<EOF' >> $GITHUB_ENV
+            echo "$(helm history $RELEASE_NAME -n $BRANCH_NAME --max 5)" >> $GITHUB_ENV
+            echo 'EOF' >> $GITHUB_ENV
+
+            echo "ENDPOINT=$BRANCH_NAME.$DOMAIN" >> $GITHUB_ENV
+            echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
+
+      - name: ---> Info for the New Deployment <---
+        run: |
+          echo "------------------------- Last 5 Helm releases -------------------------"
+          echo "${{ env.HELM_RELEASES }}"
+          echo "------------------------- Newly deployed image ------------------------- "
+          echo "$DEV_IMAGE_TAG"
 
