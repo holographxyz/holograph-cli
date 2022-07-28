@@ -3,8 +3,6 @@ ARG AWS_ECR_URL=177635894328.dkr.ecr.us-west-2.amazonaws.com
 ARG REPO_NAME=misc
 FROM $AWS_ECR_URL/$REPO_NAME:node-16.16.0-alpine
 
-ENV CONFIG_FILE=something-like-config.json
-
 RUN apk add git
 
 WORKDIR /holo-cli
@@ -20,11 +18,10 @@ RUN yarn build
 
 RUN npm install -location=global ../holo-cli
 
-#RUN holo config --fromFile $CONFIG_FILE
-
 EXPOSE 6000
 
 # the main executable
-ENTRYPOINT ["sleep", "infinity"]
+ENTRYPOINT ["entrypoint.sh"]
+#ENTRYPOINT ["sleep", "infinity"]
 # a default command
 CMD ["holo help"]
