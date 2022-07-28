@@ -11,7 +11,7 @@ env:
   #
   DEV_IMAGE_TAG : dev-${{ github.sha }} #notice:!!!!!! <------------------
   #
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.2 # NOTICE: <-----------------------------------------
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.3 # NOTICE: <-----------------------------------------
   #
   CLUSTER_NAME   : staging
   AWS_KEY_ID     : ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
@@ -20,7 +20,7 @@ env:
 on:
   push:
     branches:
-      - 'holo-cli-operator' #deleteme
+      - 'holocli' #deleteme
 #      - 'develop' # notice: the actual staging branch
       #
 #      - 'feat/*'    # matches every branch containing 'feat/'
@@ -90,7 +90,7 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           BRANCH_NAME : ${{ steps.sanitized_branch.outputs.branch }}
-          RELEASE_NAME: holo-op-dev # Notice <------------------------------[here you control blue-green deployments]
+          RELEASE_NAME: holocli-dev # Notice <------------------------------[here you control blue-green deployments]
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           # todo -> set the vars in a separate workflow step
