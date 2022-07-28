@@ -135,16 +135,16 @@ export default class Contract extends Command {
     CliUx.ux.action.stop()
 
     CliUx.ux.action.start('Calculating gas amounts and prices')
-    let gasAmount: ethers.BigNumber | undefined
+    let gasLimit: ethers.BigNumber | undefined
 
     // Don't modify lzFeeError. It is returned from LZ so we must check this exact string
     const lzFeeError = 'execution reverted: LayerZero: not enough native for fees'
     let startingPayment = ethers.utils.parseUnits('0.000000001', 'ether')
     const powerOfTen = ethers.BigNumber.from(10)
     const calculateGas = async function () {
-      if (gasAmount === undefined) {
+      if (gasLimit === undefined) {
         try {
-          gasAmount = await holographBridge.estimateGas.deployOut(
+          gasLimit = await holographBridge.estimateGas.deployOut(
             holographToChainId,
             deploymentConfig.config,
             deploymentConfig.signature,
@@ -170,7 +170,7 @@ export default class Contract extends Command {
       this.error(error)
     }
 
-    if (gasAmount === undefined) {
+    if (gasLimit === undefined) {
       this.error('Could not identify messaging costs')
     }
 
@@ -178,7 +178,7 @@ export default class Contract extends Command {
     CliUx.ux.action.stop()
     this.log(
       'Transaction is estimated to cost a total of',
-      ethers.utils.formatUnits(gasAmount.mul(gasPrice), 'ether'),
+      ethers.utils.formatUnits(gasLimit.mul(gasPrice), 'ether'),
       'native gas tokens (in ether).',
       'And you will send a value of',
       ethers.utils.formatEther(startingPayment),
@@ -205,6 +205,8 @@ export default class Contract extends Command {
         deploymentConfig.signature,
         deploymentConfig.signer,
         {
+          gasPrice,
+          gasLimit,
           value: startingPayment,
         },
       )
