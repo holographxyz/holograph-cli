@@ -143,7 +143,7 @@ export default class Indexer extends Command {
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, false)
+    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, undefined,false)
     this.log('User configurations loaded.')
 
     // Indexer always synchronizes missed blocks

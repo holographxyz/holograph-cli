@@ -104,7 +104,7 @@ export default class Contract extends Command {
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
+    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, undefined, true)
 
     if (userWallet === undefined) {
       throw new Error('Wallet could not be unlocked')

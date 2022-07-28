@@ -35,7 +35,7 @@ export default class Recover extends Command {
   async run(): Promise<void> {
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
+    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, undefined, true)
     this.log('User configurations loaded.')
 
     if (userWallet === undefined) {
