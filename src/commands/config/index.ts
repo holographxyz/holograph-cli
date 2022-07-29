@@ -9,7 +9,8 @@ import {
   isFromAndToNetworksTheSame,
   isStringAValidURL,
   randomASCII,
-  CONFIG_FILE_NAME, validateBeta1Schema,
+  CONFIG_FILE_NAME,
+  validateBeta1Schema,
 } from '../../utils/config'
 import AesEncryption from '../../utils/aes-encryption'
 
@@ -68,18 +69,26 @@ export default class Config extends Command {
     let privateKeyPrompt: any = {update: false}
 
     // Check if config Dir flag is empty
-    if(typeof loadConfigPath !== 'undefined') {
+    if (typeof loadConfigPath !== 'undefined') {
       try {
         const stats = fs.lstatSync(loadConfigPath)
-        this.debug(`Is file: ${stats.isFile()}`);
-        this.debug(`Is directory: ${stats.isDirectory()}`);
-        this.debug(`Is symbolic link: ${stats.isSymbolicLink()}`);
-        this.debug(`Is FIFO: ${stats.isFIFO()}`);
-        this.debug(`Is socket: ${stats.isSocket()}`);
-        this.debug(`Is character device: ${stats.isCharacterDevice()}`);
-        this.debug(`Is block device: ${stats.isBlockDevice()}`);
+        this.debug(`Is file: ${stats.isFile()}`)
+        this.debug(`Is directory: ${stats.isDirectory()}`)
+        this.debug(`Is symbolic link: ${stats.isSymbolicLink()}`)
+        this.debug(`Is FIFO: ${stats.isFIFO()}`)
+        this.debug(`Is socket: ${stats.isSocket()}`)
+        this.debug(`Is character device: ${stats.isCharacterDevice()}`)
+        this.debug(`Is block device: ${stats.isBlockDevice()}`)
 
-        if(stats.isFile() && !stats.isDirectory() && !stats.isSymbolicLink() && !stats.isFIFO() && !stats.isSocket() && !stats.isCharacterDevice() && !stats.isBlockDevice()) {
+        if (
+          stats.isFile() &&
+          !stats.isDirectory() &&
+          !stats.isSymbolicLink() &&
+          !stats.isFIFO() &&
+          !stats.isSocket() &&
+          !stats.isCharacterDevice() &&
+          !stats.isBlockDevice()
+        ) {
           const ensureCheck = await ensureConfigFileIsValid(loadConfigPath, undefined, false)
 
           // Since the json at the desired path is valid, we save it!
@@ -89,7 +98,7 @@ export default class Config extends Command {
         }
       } catch (error: any) {
         // Handle error
-        if(error.code === 'ENOENT'){
+        if (error.code === 'ENOENT') {
           this.error(`The input ${loadConfigPath} is not a valid file path`)
           // eslint-disable-next-line no-negated-condition
         } else if (typeof error.message !== 'undefined') {
@@ -105,7 +114,7 @@ export default class Config extends Command {
     }
 
     // Check if config Json flag is empty
-    if(typeof loadConfigJson !== 'undefined') {
+    if (typeof loadConfigJson !== 'undefined') {
       this.log(`checking loadConfigJson input`)
       const output = JSON.parse(loadConfigJson)
       await validateBeta1Schema(output)

@@ -76,8 +76,8 @@ export default class Indexer extends Command {
     host: Flags.string({description: 'The host to listen on', char: 'h', default: 'http://localhost:9001'}),
     healthCheck: Flags.boolean({
       description: 'Launch server on http://localhost:6000 to make sure command is still running',
-      default: false
-    })
+      default: false,
+    }),
   }
 
   /**
@@ -143,7 +143,7 @@ export default class Indexer extends Command {
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, undefined,false)
+    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, undefined, false)
     this.log('User configurations loaded.')
 
     // Indexer always synchronizes missed blocks
@@ -196,7 +196,7 @@ export default class Indexer extends Command {
     process.on('exit', this.exitHandler)
 
     // Start server
-    if(enableHealthCheckServer) {
+    if (enableHealthCheckServer) {
       startHealcheckServer()
     }
 
