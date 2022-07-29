@@ -19,7 +19,7 @@ export default class Contract extends Command {
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
+    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, undefined, true)
 
     if (userWallet === undefined) {
       throw new Error('Wallet could not be unlocked')
@@ -124,7 +124,8 @@ export default class Contract extends Command {
         deploymentConfig.config,
         deploymentConfig.signature,
         deploymentConfig.signer,
-        { gasPrice, gasLimit })
+        {gasPrice, gasLimit},
+      )
       this.debug(deployTx)
       CliUx.ux.action.stop('Transaction hash is ' + deployTx.hash)
 

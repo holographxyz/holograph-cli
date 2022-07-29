@@ -73,6 +73,13 @@ export default class Propagator extends Command {
     healthCheck: Flags.boolean({
       description: 'Launch server on http://localhost:6000 to make sure command is still running',
       default: false
+    }),
+    sync: Flags.boolean({
+      description: 'Start from last saved block position instead of latest block position',
+      default: false
+    }),
+    unsafePassword: Flags.string({
+      description: 'Enter the plain text password for the wallet in the holo cli config',
     })
   }
 
@@ -257,8 +264,10 @@ export default class Propagator extends Command {
     const {flags} = await this.parse(Propagator)
 
     const enableHealthCheckServer = flags.healthCheck
+    const syncFlag = flags.sync
+    const unsafePassword = flags.unsafePassword
 
-    // Have the user input the mode if it's not provided
+      // Have the user input the mode if it's not provided
     let mode: string | undefined = flags.mode
 
     if (!mode) {
@@ -279,7 +288,7 @@ export default class Propagator extends Command {
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, true)
+    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, unsafePassword,true)
     this.log('User configurations loaded.')
 
     this.latestBlockHeight = await this.loadLastBlocks(Propagator.LAST_BLOCKS_FILE_NAME, this.config.configDir)
@@ -292,7 +301,7 @@ export default class Propagator extends Command {
       }
     }
 
-    if (canSync) {
+    if (canSync && !syncFlag) {
       const syncPrompt: any = await inquirer.prompt([
         {
           name: 'shouldSync',

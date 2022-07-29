@@ -45,7 +45,7 @@ export default class ConfigView extends Command {
 
   public async setup(): Promise<void> {
     this.configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    await ensureConfigFileIsValid(this.configPath)
+    await ensureConfigFileIsValid(this.configPath, undefined, false)
     this.config = await readConfig(this.configPath)
 
     if (!this.config) {
