@@ -7,11 +7,13 @@ permissions:
 env:
   AWS_REGION    : us-west-2
   IAM_ROLE      : arn:aws:iam::177635894328:role/Github_role_to_access_ECR
-  ECR_REPOSITORY: holo-operator-dev
+  ECR_REPOSITORY: holo-cli-dev
   #
   DEV_IMAGE_TAG : dev-${{ github.sha }} #notice:!!!!!! <------------------
   #
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.4 # NOTICE: <-----------------------------------------
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION   : 0.0.4... # NOTICE: <-----------------------------------------
+  STG_HOLO_DISTRIBUTOR_HELM_CHART_VERSION: 0.0.4.... # NOTICE: <-----------------------------------------
+  STG_HOLO_INDEXER_HELM_CHART_VERSION    : 0.0.4.... # NOTICE: <-----------------------------------------
   #
   CLUSTER_NAME   : staging
   AWS_KEY_ID     : ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
