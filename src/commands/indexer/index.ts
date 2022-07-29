@@ -93,7 +93,7 @@ export default class Indexer extends Command {
   wallets: {[key: string]: ethers.Wallet} = {}
   holograph!: ethers.Contract
   indexerMode: IndexerMode = IndexerMode.listen
-  indexerContract!: ethers.Contract
+  operatorContract!: ethers.Contract
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
   LAYERZERO_RECEIVERS: any = {
     rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
@@ -298,8 +298,8 @@ export default class Indexer extends Command {
       this.HOLOGRAPH_ADDRESS.toLowerCase(),
     )
 
-    const holographIndexerABI = await fs.readJson('./src/abi/HolographOperator.json')
-    this.indexerContract = new ethers.ContractFactory(holographIndexerABI, '0x', walletWithProvider).attach(
+    const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
+    this.operatorContract = new ethers.ContractFactory(holographOperatorABI, '0x', walletWithProvider).attach(
       await this.holograph.getOperator(),
     )
   }
@@ -457,7 +457,7 @@ export default class Indexer extends Command {
   ): Promise<void> {
     this.structuredLog(
       network,
-      `Checking if Indexer was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
+      `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
     )
     let event = null
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
@@ -522,14 +522,14 @@ export default class Indexer extends Command {
         network,
         '\nHolographOperator executed a job which bridged a collection\n' +
           `HolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-          `Indexer that deployed the collection is ${transaction.from}` +
+          `Operator that deployed the collection is ${transaction.from}` +
           `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
       )
 
       // First get the collection by the address
       this.structuredLog(
         network,
-        `Requesting to get Collection with tokenId ${deploymentAddress} with Operator ${process.env.BEARER_TOKEN}`,
+        `Requesting to get Collection with tokenId ${deploymentAddress} with Operator API Key ${process.env.BEARER_TOKEN}`,
       )
       let res
       try {
@@ -564,7 +564,7 @@ export default class Indexer extends Command {
 
       this.structuredLog(
         network,
-        `Requesting to update Collection with id ${res?.data.id} with Operator ${process.env.BEARER_TOKEN}`,
+        `Requesting to update Collection with id ${res?.data.id} with Operator API Key ${process.env.BEARER_TOKEN}`,
       )
       try {
         const patchRes = await axios.patch(`${this.baseUrl}/v1/collections/${res?.data.id}`, data, params)
@@ -601,7 +601,7 @@ export default class Indexer extends Command {
 
       this.structuredLog(
         network,
-        `Requesting to get NFT with tokenId ${tokenId} from ${contractAddress} with Operator ${process.env.BEARER_TOKEN}`,
+        `Requesting to get NFT with tokenId ${tokenId} from ${contractAddress} with Operator API Key ${process.env.BEARER_TOKEN}`,
       )
       let res
       try {
@@ -613,7 +613,7 @@ export default class Indexer extends Command {
         })
         this.structuredLog(
           network,
-          `Successfully found NFT with tokenId ${tokenId} from ${contractAddress} with Operator ${process.env.BEARER_TOKEN}`,
+          `Successfully found NFT with tokenId ${tokenId} from ${contractAddress} with Operator API Key ${process.env.BEARER_TOKEN}`,
         )
       } catch (error: any) {
         this.structuredLog(network, error.message)
@@ -637,7 +637,7 @@ export default class Indexer extends Command {
 
       this.structuredLog(
         network,
-        `Requesting to update NFT with id ${res?.data.id} with Operator ${process.env.BEARER_TOKEN}`,
+        `Requesting to update NFT with id ${res?.data.id} with Operator API Key ${process.env.BEARER_TOKEN}`,
       )
       try {
         const patchRes = await axios.patch(`${this.baseUrl}/v1/nfts/${res?.data.id}`, data, params)
