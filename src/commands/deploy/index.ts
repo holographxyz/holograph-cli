@@ -9,7 +9,7 @@ export default class Deploy extends Command {
   async run(): Promise<void> {
     // These 2 lines must be at the top of every command!!
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    await ensureConfigFileIsValid(configPath)
+    await ensureConfigFileIsValid(configPath, undefined, false)
     await this.parse(Deploy)
 
     this.log(`Welcome to Holograph Factory 🌉`)

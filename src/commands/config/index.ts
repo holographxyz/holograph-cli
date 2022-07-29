@@ -80,7 +80,7 @@ export default class Config extends Command {
         this.debug(`Is block device: ${stats.isBlockDevice()}`);
 
         if(stats.isFile() && !stats.isDirectory() && !stats.isSymbolicLink() && !stats.isFIFO() && !stats.isSocket() && !stats.isCharacterDevice() && !stats.isBlockDevice()) {
-          const ensureCheck = await ensureConfigFileIsValid(loadConfigPath)
+          const ensureCheck = await ensureConfigFileIsValid(loadConfigPath, undefined, false)
 
           // Since the json at the desired path is valid, we save it!
           await fs.outputJSON(configPath, ensureCheck.configFile, {spaces: 2})
@@ -145,7 +145,7 @@ export default class Config extends Command {
 
     if (isConfigExist) {
       this.log(`Updating existing configuration file at ${configPath}`)
-      currentConfigFile = await ensureConfigFileIsValid(configPath)
+      currentConfigFile = await ensureConfigFileIsValid(configPath, undefined, false)
       userConfigTemplate = Object.assign({}, userConfigTemplate, currentConfigFile.configFile)
 
       const prompt: any = await inquirer.prompt([

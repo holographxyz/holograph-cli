@@ -42,6 +42,7 @@ export interface ConfigFile {
 
 export async function ensureConfigFileIsValid(
   configPath: string,
+  unsafePassword: string | undefined,
   unlockWallet = false,
 ): Promise<{userWallet: ethers.Wallet | undefined; configFile: ConfigFile}> {
   const exists = await fs.pathExists(configPath)
@@ -54,37 +55,49 @@ export async function ensureConfigFileIsValid(
     await validateBeta1Schema(configFile)
     let userWallet
     if (unlockWallet) {
-      try {
-        userWallet = new ethers.Wallet(
-          new AesEncryption('', configFile.user.credentials.iv).decrypt(configFile.user.credentials.privateKey),
-        )
-      } catch {
-        await inquirer.prompt([
-          {
-            name: 'encryptionPassword',
-            message: 'Please enter the password to decrypt the private key for ' + configFile.user.credentials.address,
-            type: 'password',
-            validate: async (input: string) => {
-              try {
-                // we need to check that key decoded
-                userWallet = new ethers.Wallet(
-                  new AesEncryption(input, configFile.user.credentials.iv).decrypt(
-                    configFile.user.credentials.privateKey,
-                  ),
-                )
-                return true
-              } catch {
-                return 'Password is incorrect'
-              }
+      // eslint-disable-next-line no-negated-condition
+      if (typeof unsafePassword !== 'undefined') {
+        try {
+          userWallet = new ethers.Wallet(
+            new AesEncryption(unsafePassword, configFile.user.credentials.iv).decrypt(configFile.user.credentials.privateKey),
+          )
+        } catch {
+          throw new Error('password provided for wallet in holo config is not correct')
+        }
+      } else {
+        try {
+          userWallet = new ethers.Wallet(
+            new AesEncryption('', configFile.user.credentials.iv).decrypt(configFile.user.credentials.privateKey),
+          )
+        } catch {
+          await inquirer.prompt([
+            {
+              name: 'encryptionPassword',
+              message: 'Please enter the password to decrypt the private key for ' + configFile.user.credentials.address,
+              type: 'password',
+              validate: async (input: string) => {
+                try {
+                  // we need to check that key decoded
+                  userWallet = new ethers.Wallet(
+                    new AesEncryption(input, configFile.user.credentials.iv).decrypt(
+                      configFile.user.credentials.privateKey,
+                    ),
+                  )
+                  return true
+                } catch {
+                  return 'Password is incorrect'
+                }
+              },
             },
-          },
-        ])
+          ])
+        }
       }
     }
 
     return {userWallet, configFile}
   } catch (error: any) {
-    throw new Error(`Config file is no longer valid, please delete it before continuing ${error.message}`)
+    const error_ = error.message ? error : new Error(`Config file is no longer valid, please delete it before continuing ${error.message}`);
+    throw error_;
   }
 }
 
