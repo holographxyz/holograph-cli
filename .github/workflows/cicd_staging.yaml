@@ -1,0 +1,128 @@
+name: Deploy to -new- staging
+
+permissions:
+  id-token: write
+  contents: read   # This is required for actions/checkout@v2
+
+env:
+  AWS_REGION    : us-west-2
+  IAM_ROLE      : arn:aws:iam::177635894328:role/Github_role_to_access_ECR
+  ECR_REPOSITORY: holo-cli-dev
+  #
+  DEV_IMAGE_TAG : dev-${{ github.sha }} #notice:!!!!!! <------------------
+  #
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION   : 0.0.4... # NOTICE: <-----------------------------------------
+  STG_HOLO_DISTRIBUTOR_HELM_CHART_VERSION: 0.0.4.... # NOTICE: <-----------------------------------------
+  STG_HOLO_INDEXER_HELM_CHART_VERSION    : 0.0.4.... # NOTICE: <-----------------------------------------
+  #
+  CLUSTER_NAME   : staging
+  AWS_KEY_ID     : ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
+  AWS_ACCESS_KEY : ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
+
+on:
+  push:
+    branches:
+      - 'holocli' #deleteme
+#      - 'develop' # notice: the actual staging branch
+      #
+#      - 'feat/*'    # matches every branch containing 'feat/'
+#      - 'feature/*' # matches every branch containing 'feature/'
+#      - 'hotfix/*'  # matches every branch containing 'hotfix/'
+      #
+      - '!main'     # EXCLUDES this branch
+      - '!master'   # EXCLUDES this branch
+
+jobs:
+  deploy-to-new-staging:
+    name: deploy-to-new-staging
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Sanitize the branch name to use with Helm
+        id: sanitized_branch
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF_NAME} | tr '/' '-' )"
+
+      - name: Use Githubs federated identity with AWS
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ env.IAM_ROLE }}
+          aws-region    : ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+#      - name: Pull the holo-operator helm chart version x.x.x from ECR
+#        shell: bash
+#        env:
+#          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+#        run : |
+#          helm pull oci://$ECR_REGISTRY/holo-operator --version ${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}
+
+      - name: Build and push image to ECR
+        env:
+          ECR_REGISTRY  : ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG .
+          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG
+
+#      - name: Configure AWS creds to access EKS
+#        # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
+#        uses: aws-actions/configure-aws-credentials@v1
+#        with:
+#          aws-access-key-id    : ${{ env.AWS_KEY_ID }}     #notice: unique for each env
+#          aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
+#          aws-region           : ${{ env.AWS_REGION }}
+
+#      - name: Create dev ns
+#        uses: tensor-hq/eksctl-helm-action@main
+#        env:
+#          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }}
+#        with:
+#          eks_cluster: ${{ env.CLUSTER_NAME }}
+#          command: |-
+#            kubectl create namespace $BRANCH_NAME --dry-run=client -o yaml | kubectl apply -f -
+
+#      - name: ---> Deploy in staging cluster [branch -> ${{ steps.sanitized_branch.outputs.branch }}]<--
+#        uses: tensor-hq/eksctl-helm-action@main
+#        env:
+#          BRANCH_NAME : ${{ steps.sanitized_branch.outputs.branch }}
+#          RELEASE_NAME: holocli-dev # Notice <------------------------------[here you control blue-green deployments]
+#        with:
+#          eks_cluster: ${{ env.CLUSTER_NAME }}
+#          # todo -> set the vars in a separate workflow step
+#          command: |-
+#            echo "Notice: Set the HPA based on the branch..."
+#            if [[ $BRANCH_NAME == 'develop' ]]; then
+#                export HPA_MIN_REPLICAS=1;
+#                export HPA_MAX_REPLICAS=5;
+#            else
+#                export HPA_MIN_REPLICAS=1;
+#                export HPA_MAX_REPLICAS=3;
+#            fi
+#
+#            helm upgrade --install $RELEASE_NAME holo-operator-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz -n $BRANCH_NAME \
+#            --set image.repository=${{ env.ECR_REPOSITORY }} \
+#            --set image.image_tag=$DEV_IMAGE_TAG \
+#            --set autoscaling.minReplicas=$HPA_MIN_REPLICAS \
+#            --set autoscaling.maxReplicas=$HPA_MAX_REPLICAS
+#
+#            echo 'HELM_RELEASES<<EOF' >> $GITHUB_ENV
+#            echo "$(helm history $RELEASE_NAME -n $BRANCH_NAME --max 5)" >> $GITHUB_ENV
+#            echo 'EOF' >> $GITHUB_ENV
+#
+#            echo "ENDPOINT=$BRANCH_NAME.$DOMAIN" >> $GITHUB_ENV
+#            echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
+#
+#      - name: ---> Info for the New Deployment <---
+#        run: |
+#          echo "------------------------- Last 5 Helm releases -------------------------"
+#          echo "${{ env.HELM_RELEASES }}"
+#          echo "------------------------- Newly deployed image ------------------------- "
+#          echo "$DEV_IMAGE_TAG"
+
