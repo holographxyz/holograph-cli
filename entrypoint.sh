@@ -18,7 +18,7 @@ then
 
 elif [ $HOLO_CLI_MODE == "indexer" ]
 then
-  holo $HOLO_CLI_MODE --host=$HOLO_INDEXER_HOST --healthCheck
+  holo $HOLO_CLI_MODE --host=$HOLO_INDEXER_HOST --sync --healthCheck
 
 else
   echo
