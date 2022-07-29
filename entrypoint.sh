@@ -18,7 +18,7 @@ then
 
 elif [ $HOLO_CLI_MODE == "indexer" ]
 then
-  env DEBUG=\* holo $HOLO_CLI_MODE --host=$HOLO_INDEXER_HOST --sync --healthCheck
+  env DEBUG=\* holo $HOLO_CLI_MODE --host=$HOLO_INDEXER_HOST --healthCheck
 
 else
   echo
