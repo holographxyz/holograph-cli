@@ -87,9 +87,9 @@ export default class Contract extends Command {
     CliUx.ux.action.stop()
 
     CliUx.ux.action.start('Calculating gas amounts and prices')
-    let gasAmount
+    let gasLimit
     try {
-      gasAmount = await holographFactory.estimateGas.deployHolographableContract(
+      gasLimit = await holographFactory.estimateGas.deployHolographableContract(
         deploymentConfig.config,
         deploymentConfig.signature,
         deploymentConfig.signer,
@@ -102,7 +102,7 @@ export default class Contract extends Command {
     CliUx.ux.action.stop()
     this.log(
       'Transaction is estimated to cost a total of',
-      ethers.utils.formatUnits(gasAmount.mul(gasPrice), 'ether'),
+      ethers.utils.formatUnits(gasLimit.mul(gasPrice), 'ether'),
       'native gas tokens (in ether)',
     )
 
@@ -124,7 +124,7 @@ export default class Contract extends Command {
         deploymentConfig.config,
         deploymentConfig.signature,
         deploymentConfig.signer,
-      )
+        { gasPrice, gasLimit })
       this.debug(deployTx)
       CliUx.ux.action.stop('Transaction hash is ' + deployTx.hash)
 

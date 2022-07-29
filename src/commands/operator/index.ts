@@ -351,6 +351,8 @@ export default class Operator extends Command {
 
     // // Process blocks 🧱
     this.blockJobHandler()
+    // // Activate Job Monitor for disconnect recovery
+    this.blockJobMonitor()
   }
 
   async processBlock(job: BlockJob): Promise<void> {
@@ -393,8 +395,21 @@ export default class Operator extends Command {
     }
   }
 
+  blockJobThreshold = 5000 // 5 seconds
+  lastBlockJobDone: number = Date.now()
+
+  blockJobMonitor = (): void => {
+    if (Date.now() - this.lastBlockJobDone > this.blockJobThreshold) {
+      this.debug('Block Job Handler has been inactive longer than threshold time. Restarting.')
+      this.blockJobHandler()
+    } else {
+      setTimeout(this.blockJobMonitor, 1000)
+    }
+  }
+
   // For some reason defining this as function definition causes `this` to be undefined
   blockJobHandler = (): void => {
+    this.lastBlockJobDone = Date.now()
     if (this.blockJobs.length > 0) {
       const blockJob: BlockJob = this.blockJobs.shift() as BlockJob
       this.processBlock(blockJob)
@@ -527,7 +542,10 @@ export default class Operator extends Command {
 
       if (event) {
         const payload = this.abiCoder.decode(['bytes'], event)[0]
-        this.structuredLog(network, `HolographOperator received a new bridge job with job payload: ${payload}\n`)
+        this.structuredLog(
+          network,
+          `HolographOperator received a new bridge job on ${network} with job payload: ${payload}\n`,
+        )
 
         if (this.operatorMode !== OperatorMode.listen) {
           await this.executePayload(network, payload)
@@ -555,7 +573,15 @@ export default class Operator extends Command {
 
     if (operate) {
       const contract = this.operatorContract.connect(this.wallets[network])
-      const jobTx = await contract.executeJob(payload)
+      let gasLimit
+      try {
+        gasLimit = await contract.estimateGas.executeJob(payload)
+      } catch (error: any) {
+        this.error(error.reason)
+      }
+
+      const gasPrice = await contract.provider.getGasPrice()
+      const jobTx = await contract.executeJob(payload, {gasPrice, gasLimit})
       this.debug(jobTx)
       this.structuredLog(network, `Transaction hash is ${jobTx.hash}`)
 
