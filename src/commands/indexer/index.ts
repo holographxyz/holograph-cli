@@ -527,6 +527,10 @@ export default class Indexer extends Command {
       )
 
       // First get the collection by the address
+      this.structuredLog(
+        network,
+        `Requesting to get Collection with tokenId ${deploymentAddress} with Operator ${process.env.BEARER_TOKEN}`,
+      )
       let res
       try {
         res = await axios.get(`${this.baseUrl}/v1/collections/contract/${deploymentAddress}`, {
@@ -539,6 +543,7 @@ export default class Indexer extends Command {
         this.structuredLog(network, `Successfully found collection at ${deploymentAddress}`)
       } catch (error: any) {
         this.structuredLog(network, `Failed to update the Holograph database ${error.message}`)
+        this.debug(error)
       }
 
       // Compose request to API server to update the collection
@@ -557,6 +562,10 @@ export default class Indexer extends Command {
         data: data,
       }
 
+      this.structuredLog(
+        network,
+        `Requesting to update Collection with id ${res?.data.id} with Operator ${process.env.BEARER_TOKEN}`,
+      )
       try {
         const patchRes = await axios.patch(`${this.baseUrl}/v1/collections/${res?.data.id}`, data, params)
         this.debug(patchRes.data)
@@ -590,7 +599,10 @@ export default class Indexer extends Command {
       const tokenId = Number.parseInt(event[3], 16)
       const contractAddress = '0x' + deploymentInput.slice(98, 138)
 
-      this.structuredLog(network, `Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`)
+      this.structuredLog(
+        network,
+        `Requesting to get NFT with tokenId ${tokenId} from ${contractAddress} with Operator ${process.env.BEARER_TOKEN}`,
+      )
       let res
       try {
         res = await axios.get(`${this.baseUrl}/v1/nfts/${contractAddress}/${tokenId}`, {
@@ -599,7 +611,10 @@ export default class Indexer extends Command {
             'Content-Type': 'application/json',
           },
         })
-        this.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
+        this.structuredLog(
+          network,
+          `Successfully found NFT with tokenId ${tokenId} from ${contractAddress} with Operator ${process.env.BEARER_TOKEN}`,
+        )
       } catch (error: any) {
         this.structuredLog(network, error.message)
         this.debug(error)
@@ -620,7 +635,10 @@ export default class Indexer extends Command {
         data: data,
       }
 
-      this.structuredLog(network, `Requesting to update NFT with id ${res?.data.id}`)
+      this.structuredLog(
+        network,
+        `Requesting to update NFT with id ${res?.data.id} with Operator ${process.env.BEARER_TOKEN}`,
+      )
       try {
         const patchRes = await axios.patch(`${this.baseUrl}/v1/nfts/${res?.data.id}`, data, params)
         this.structuredLog(network, JSON.stringify(patchRes.data))
