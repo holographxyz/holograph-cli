@@ -529,7 +529,7 @@ export default class Indexer extends Command {
       // First get the collection by the address
       this.structuredLog(
         network,
-        `Requesting to get Collection with tokenId ${deploymentAddress} with Operator API Key ${process.env.BEARER_TOKEN}`,
+        `Requesting to get Collection with tokenId ${deploymentAddress} with Operator token ${process.env.BEARER_TOKEN}`,
       )
       let res
       try {
@@ -564,7 +564,7 @@ export default class Indexer extends Command {
 
       this.structuredLog(
         network,
-        `Requesting to update Collection with id ${res?.data.id} with Operator API Key ${process.env.BEARER_TOKEN}`,
+        `Requesting to update Collection with id ${res?.data.id} with Operator token ${process.env.BEARER_TOKEN}`,
       )
       try {
         const patchRes = await axios.patch(`${this.baseUrl}/v1/collections/${res?.data.id}`, data, params)
@@ -601,7 +601,7 @@ export default class Indexer extends Command {
 
       this.structuredLog(
         network,
-        `Requesting to get NFT with tokenId ${tokenId} from ${contractAddress} with Operator API Key ${process.env.BEARER_TOKEN}`,
+        `Requesting to get NFT with tokenId ${tokenId} from ${contractAddress} with Operator token ${process.env.BEARER_TOKEN}`,
       )
       let res
       try {
@@ -613,7 +613,7 @@ export default class Indexer extends Command {
         })
         this.structuredLog(
           network,
-          `Successfully found NFT with tokenId ${tokenId} from ${contractAddress} with Operator API Key ${process.env.BEARER_TOKEN}`,
+          `Successfully found NFT with tokenId ${tokenId} from ${contractAddress} with Operator token ${process.env.BEARER_TOKEN}`,
         )
       } catch (error: any) {
         this.structuredLog(network, error.message)
@@ -637,7 +637,7 @@ export default class Indexer extends Command {
 
       this.structuredLog(
         network,
-        `Requesting to update NFT with id ${res?.data.id} with Operator API Key ${process.env.BEARER_TOKEN}`,
+        `Requesting to update NFT with id ${res?.data.id} with Operator token ${process.env.BEARER_TOKEN}`,
       )
       try {
         const patchRes = await axios.patch(`${this.baseUrl}/v1/nfts/${res?.data.id}`, data, params)
