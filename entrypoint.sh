@@ -1,5 +1,8 @@
 #!/bin/sh
 
-holo config --fromFile config.json
-holo operator --mode auto --healthCheck #TODO --password asdf
-sleep infinity
+#
+holo config --fromFile $CONFIG_FILE
+
+#
+holo operator --mode auto --sync --healthCheck --unsafePassword $PASSWORD
+
