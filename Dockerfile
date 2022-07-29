@@ -21,7 +21,7 @@ RUN npm install -location=global ../holo-cli
 EXPOSE 6000
 
 # the main executable
-ENTRYPOINT ["entrypoint.sh"]
-#ENTRYPOINT ["sleep", "infinity"]
-# a default command
-CMD ["holo help"]
+#ENTRYPOINT ["entrypoint.sh"]
+##ENTRYPOINT ["sleep", "infinity"]
+## a default command
+#CMD ["holo help"]
