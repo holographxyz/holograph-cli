@@ -123,6 +123,7 @@ export default class Indexer extends Command {
   JWT!: string
 
   async run(): Promise<void> {
+    this.log(`Operator command has begun!!!`)
     const {flags} = await this.parse(Indexer)
     this.baseUrl = flags.host
     const enableHealthCheckServer = flags.healthCheck
@@ -137,6 +138,14 @@ export default class Indexer extends Command {
     }
 
     this.JWT = res!.data.accessToken
+    this.log(res.data)
+
+    if(typeof this.JWT === 'undefined'){
+      this.error("Failed to authorize as an operator")
+    }
+
+    this.log(`process.env.OPERATOR_API_KEY = ${process.env.OPERATOR_API_KEY}`)
+    this.log(`this.JWT = ${this.JWT}`)
 
     // Indexer always runs in listen mode
     this.log(`Indexer mode: ${this.indexerMode}`)
@@ -533,6 +542,7 @@ export default class Indexer extends Command {
       )
       let res
       try {
+        this.log(`About to make a request for a collection with "Bearer ${this.JWT}"`)
         res = await axios.get(`${this.baseUrl}/v1/collections/contract/${deploymentAddress}`, {
           headers: {
             Authorization: `Bearer ${this.JWT}`,
