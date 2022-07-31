@@ -10,13 +10,6 @@ import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 
 import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, NETWORK_COLORS} from '../../utils/utils'
 import color from '@oclif/color'
-import {startHealcheckServer} from '../../utils/health-check-server'
-
-enum OperatorMode {
-  listen,
-  manual,
-  auto,
-}
 
 type KeepAliveParams = {
   provider: ethers.providers.WebSocketProvider
@@ -37,11 +30,6 @@ const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInte
   provider._websocket.on('open', () => {
     keepAliveInterval = setInterval(() => {
       provider._websocket.ping()
-
-      // Use `WebSocket#terminate()`, which immediately destroys the connection,
-      // instead of `WebSocket#close()`, which waits for the close timer.
-      // Delay should be equal to the interval at which your server
-      // sends out pings plus a conservative assumption of the latency.
       pingTimeout = setTimeout(() => {
         provider._websocket.terminate()
       }, expectedPongBack)
@@ -59,43 +47,22 @@ const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInte
   })
 }
 
-export default class Operator extends Command {
-  static LAST_BLOCKS_FILE_NAME = 'blocks.json'
-  static description = 'Listen for EVM events for jobs and process them'
-  static examples = ['$ holo operator --networks="rinkeby mumbai fuji" --mode=auto']
+export default class Analyze extends Command {
+  static LAST_BLOCKS_FILE_NAME = 'analyze_blocks.json'
+  static description = 'Extract all operator jobs and get their status'
+  static examples = ['$ holo analyze --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
     networks: Flags.string({description: 'Comma separated list of networks to operate to', multiple: true}),
-    mode: Flags.string({
-      description: 'The mode in which to run the operator',
-      options: ['listen', 'manual', 'auto'],
-      char: 'm',
-    }),
-    healthCheck: Flags.boolean({
-      description: 'Launch server on http://localhost:6000 to make sure command is still running',
-      default: false,
-    }),
-    sync: Flags.boolean({
-      description: 'Start from last saved block position instead of latest block position',
-      default: false,
-    }),
-    unsafePassword: Flags.string({
-      description: 'Enter the plain text password for the wallet in the holo cli config',
-    }),
   }
 
-  /**
-   * Operator class variables
-   */
-  bridgeAddress: string | undefined
-  factoryAddress: string | undefined
-  operatorAddress: string | undefined
+  bridgeAddress!: string
+  operatorAddress!: string
   supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
   blockJobs: BlockJob[] = []
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   abiCoder = ethers.utils.defaultAbiCoder
-  wallets: {[key: string]: ethers.Wallet} = {}
   holograph!: ethers.Contract
-  operatorMode: OperatorMode = OperatorMode.listen
+  bridgeContract!: ethers.Contract
   operatorContract!: ethers.Contract
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
   LAYERZERO_RECEIVERS: any = {
@@ -105,9 +72,6 @@ export default class Operator extends Command {
   }
 
   targetEvents: Record<string, string> = {
-    BridgeableContractDeployed: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
-    '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b': 'BridgeableContractDeployed',
-
     AvailableJob: '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11',
     '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11': 'AvailableJob',
   }
@@ -134,23 +98,20 @@ export default class Operator extends Command {
   }
 
   disconnectBuilder(
-    userWallet: ethers.Wallet,
     network: string,
     rpcEndpoint: string,
     subscribe: boolean,
   ): (err: any) => void {
     return (err: any) => {
-      ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
+      (this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
         this.debug('onDisconnect')
         this.log(network, 'WS connection was closed', JSON.stringify(err, null, 2))
-        this.providers[network] = this.failoverWebSocketProvider(userWallet, network, rpcEndpoint, subscribe)
-        this.wallets[network] = userWallet.connect(this.providers[network] as ethers.providers.WebSocketProvider)
+        this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint, subscribe)
       })
     }
   }
 
   failoverWebSocketProvider(
-    userWallet: ethers.Wallet,
     network: string,
     rpcEndpoint: string,
     subscribe: boolean,
@@ -159,7 +120,7 @@ export default class Operator extends Command {
     const provider = new ethers.providers.WebSocketProvider(rpcEndpoint)
     keepAlive({
       provider,
-      onDisconnect: this.disconnectBuilder.bind(this)(userWallet, network, rpcEndpoint, true),
+      onDisconnect: this.disconnectBuilder.bind(this)(network, rpcEndpoint, true),
     })
     this.providers[network] = provider
     if (subscribe) {
@@ -172,7 +133,6 @@ export default class Operator extends Command {
   async initializeEthers(
     loadNetworks: string[],
     configFile: ConfigFile,
-    userWallet: ethers.Wallet | undefined,
     subscribe: boolean,
   ): Promise<void> {
     for (let i = 0, l = loadNetworks.length; i < l; i++) {
@@ -182,17 +142,12 @@ export default class Operator extends Command {
       switch (protocol) {
         case 'https:':
           this.providers[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
-
           break
         case 'wss:':
-          this.providers[network] = this.failoverWebSocketProvider(userWallet!, network, rpcEndpoint, subscribe)
+          this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint, subscribe)
           break
         default:
           throw new Error('Unsupported RPC provider protocol -> ' + protocol)
-      }
-
-      if (userWallet !== undefined) {
-        this.wallets[network] = userWallet.connect(this.providers[network])
       }
 
       if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
@@ -204,14 +159,15 @@ export default class Operator extends Command {
     }
 
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
-    this.holograph = new ethers.ContractFactory(holographABI, '0x', this.wallets[loadNetworks[0]]).attach(
-      this.HOLOGRAPH_ADDRESS.toLowerCase(),
-    )
+    this.holograph = new ethers.Contract(this.HOLOGRAPH_ADDRESS.toLowerCase(), holographABI, this.providers[loadNetworks[0]])
+    this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
+    this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
+
+    const holographBridgeABI = await fs.readJson('./src/abi/HolographBridge.json')
+    this.bridgeContract = new ethers.Contract(this.bridgeAddress, holographBridgeABI, this.providers[loadNetworks[0]])
 
     const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
-    this.operatorContract = new ethers.ContractFactory(holographOperatorABI, '0x').attach(
-      await this.holograph.getOperator(),
-    )
+    this.operatorContract = new ethers.Contract(this.operatorAddress, holographOperatorABI, this.providers[loadNetworks[0]])
   }
 
   exitHandler = async (exitCode: number): Promise<void> => {
@@ -221,7 +177,7 @@ export default class Operator extends Command {
     if (this.exited === false) {
       this.log('')
       this.log(`Saving current block heights: ${JSON.stringify(this.latestBlockHeight)}`)
-      this.saveLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
+      this.saveLastBlocks(Analyze.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
       this.log(`Exiting operator with code ${exitCode}...`)
       this.log('Goodbye! 👋')
       this.exited = true
@@ -236,7 +192,7 @@ export default class Operator extends Command {
       if (this.exited === false) {
         this.log('')
         this.log(`Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}`)
-        this.saveLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
+        this.saveLastBlocks(Analyze.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
         this.log(`Exiting operator with code ${exitCode}...`)
         this.log('Goodbye! 👋')
         this.exited = true
@@ -253,37 +209,14 @@ export default class Operator extends Command {
   }
 
   async run(): Promise<void> {
-    const {flags} = await this.parse(Operator)
-
-    const enableHealthCheckServer = flags.healthCheck
-    const syncFlag = flags.sync
-    const unsafePassword = flags.unsafePassword
-
-    // Have the user input the mode if it's not provided
-    let mode: string | undefined = flags.mode
-
-    if (!mode) {
-      const prompt: any = await inquirer.prompt([
-        {
-          name: 'mode',
-          message: 'Enter the mode in which to run the operator',
-          type: 'list',
-          choices: ['listen', 'manual', 'auto'],
-          default: 'listen',
-        },
-      ])
-      mode = prompt.mode
-    }
-
-    this.operatorMode = OperatorMode[mode as keyof typeof OperatorMode]
-    this.log(`Operator mode: ${this.operatorMode}`)
+    const {flags} = await this.parse(Analyze)
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, unsafePassword, true)
+    const {configFile} = await ensureConfigFileIsValid(configPath)
     this.log('User configurations loaded.')
 
-    this.latestBlockHeight = await this.loadLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir)
+    this.latestBlockHeight = await this.loadLastBlocks(Analyze.LAST_BLOCKS_FILE_NAME, this.config.configDir)
     let canSync = false
     const lastBlockKeys: string[] = Object.keys(this.latestBlockHeight)
     for (let i = 0, l: number = lastBlockKeys.length; i < l; i++) {
@@ -293,7 +226,7 @@ export default class Operator extends Command {
       }
     }
 
-    if (canSync && !syncFlag) {
+    if (canSync) {
       const syncPrompt: any = await inquirer.prompt([
         {
           name: 'shouldSync',
@@ -325,18 +258,11 @@ export default class Operator extends Command {
       }
     }
 
-    CliUx.ux.action.start(`Starting operator in mode: ${OperatorMode[this.operatorMode]}`)
-    await this.initializeEthers(flags.networks, configFile, userWallet, false)
-
-    this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
-    this.factoryAddress = (await this.holograph.getFactory()).toLowerCase()
-    this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
+    await this.initializeEthers(flags.networks, configFile, false)
 
     this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESS}`)
     this.log(`Bridge address: ${this.bridgeAddress}`)
-    this.log(`Factory address: ${this.factoryAddress}`)
     this.log(`Operator address: ${this.operatorAddress}`)
-    CliUx.ux.action.stop('🚀')
 
     // Setup websocket subscriptions and start processing blocks
     for (let i = 0, l = flags.networks.length; i < l; i++) {
@@ -352,11 +278,6 @@ export default class Operator extends Command {
     }
 
     process.on('exit', this.exitHandler)
-
-    // Start server
-    if (enableHealthCheckServer) {
-      startHealcheckServer()
-    }
 
     // // Process blocks 🧱
     this.blockJobHandler()
@@ -381,10 +302,15 @@ export default class Operator extends Command {
           // We have LayerZero call, need to check it it's directed towards Holograph operators
           interestingTransactions.push(transaction)
         } else if ('to' in transaction && transaction.to !== null && transaction.to !== '') {
-          const to: string | undefined = transaction.to?.toLowerCase()
+          const to: string = transaction.to!.toLowerCase()
           // Check if it's a factory call
-          if (to === this.factoryAddress || to === this.operatorAddress) {
-            // We have a potential factory deployment or operator bridge transaction
+          if (to === this.bridgeAddress) {
+            // we have a bridge call identified
+            // check that the transaction status = true
+            interestingTransactions.push(transaction)
+          } else if (to === this.operatorAddress) {
+            // this means an operator job has been executed
+            // maybe cross-reference it to see if it's part of a transaction we are monitoring?
             interestingTransactions.push(transaction)
           }
         }
@@ -439,12 +365,20 @@ export default class Operator extends Command {
         }
 
         this.debug(`Processing transaction ${transaction.hash} on ${network} at block ${receipt.blockNumber}`)
-        if (transaction.to?.toLowerCase() === this.factoryAddress) {
-          this.handleContractDeployedEvents(transaction, receipt, network)
-        } else if (transaction.to?.toLowerCase() === this.operatorAddress) {
-          this.handleOperatorBridgeEvents(transaction, receipt, network)
+        const to: string | undefined = transaction.to?.toLowerCase()
+        const from: string | undefined = transaction.from?.toLowerCase()
+        if (to === this.bridgeAddress) {
+          // we have bridge job
+          await this.handleBridgeOutEvent(transaction, receipt, network)
+        } else if (to === this.operatorAddress) {
+          // we have a bridge job being executed
+          // check that it worked?
+          await this.handleBridgeInEvent(transaction, receipt, network)
+        } else if (from === this.LAYERZERO_RECEIVERS[network]) {
+          // we have an available operator job event
+          await this.handleAvailableOperatorJobEvent(transaction, receipt, network)
         } else {
-          this.handleOperatorRequestEvents(transaction, receipt, network)
+          this.structuredLog(network, `processTransactions function stumbled on an unknown transaction ${transaction.hash}`)
         }
       }
     }
@@ -452,6 +386,86 @@ export default class Operator extends Command {
     this.blockJobHandler()
   }
 
+  async handleBridgeOutEvent(
+    transaction: ethers.Transaction,
+    receipt: ethers.ContractReceipt,
+    network: string,
+  ): Promise<void> {
+    // 0xa1caf2ea == erc721out
+    // 0xa45561bb == erc20out
+    // 0xa4bd02d7 == deployOut
+    // let functionSignature: string = transaction.data.substring(0, 10).toLowerCase()
+    const parsedTransaction: ethers.utils.TransactionDescription = this.bridgeContract.interface.parseTransaction(transaction)
+    switch (parsedTransaction.sighash) {
+      case '0xa1caf2ea':
+        // erc721out
+      case '0xa45561bb':
+        // erc20out
+      case '0xa4bd02d7':
+        // deployOut
+        this.structuredLog(network, `Bridge-Out event captured: ${parsedTransaction.name} -->> ${parsedTransaction.args}`)
+        break
+      default:
+        this.structuredLog(network, `Unknown Bridge function executed in tx: ${transaction.hash}`)
+        break
+    }
+  }
+
+  async handleBridgeInEvent(
+    transaction: ethers.Transaction,
+    receipt: ethers.ContractReceipt,
+    network: string,
+  ): Promise<void> {
+  }
+
+  async handleAvailableOperatorJobEvent(
+    transaction: ethers.Transaction,
+    receipt: ethers.ContractReceipt,
+    network: string,
+  ): Promise<void> {
+    this.structuredLog(
+      network,
+      `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
+    )
+    let event = null
+    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+      for (let i = 0, l = receipt.logs.length; i < l; i++) {
+        if (event === null) {
+          const log = receipt.logs[i]
+          if (
+            log.address.toLowerCase() === this.operatorAddress &&
+            log.topics.length > 0 &&
+            log.topics[0] === this.targetEvents.AvailableJob
+          ) {
+            event = log.data
+          } else {
+            this.structuredLog(
+              network,
+              `LayerZero transaction is not relevant to AvailableJob event. ` +
+                `Transaction was relayed to ${log.address} instead of ` +
+                `The Operator at ${this.operatorAddress}`,
+            )
+          }
+        }
+      }
+
+      if (event) {
+        const payload = this.abiCoder.decode(['bytes'], event)[0]
+        this.structuredLog(
+          network,
+          `HolographOperator received a new bridge job on ${network} with job payload: ${payload}\n`,
+        )
+        await this.validateOperatorJob(transaction.hash!, network, payload)
+      }
+    }
+
+  }
+
+  async validateOperatorJob(transactionHash: string, network: string, payload: string): Promise<void> {
+
+  }
+
+/*
   handleContractDeployedEvents(
     transaction: ethers.Transaction,
     receipt: ethers.ContractReceipt,
@@ -582,7 +596,7 @@ export default class Operator extends Command {
     }
 
     if (operate) {
-      const contract = this.operatorContract.connect(this.wallets[network])
+      const contract = this.operatorContract.connect(this.providers[network])
       let gasLimit
       try {
         gasLimit = await contract.estimateGas.executeJob(payload)
@@ -602,6 +616,7 @@ export default class Operator extends Command {
       this.structuredLog(network, 'Dropped potential payload to execute')
     }
   }
+*/
 
   structuredLog(network: string, msg: string): void {
     const timestamp = new Date(Date.now()).toISOString()

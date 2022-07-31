@@ -42,7 +42,7 @@ export interface ConfigFile {
 
 export async function ensureConfigFileIsValid(
   configPath: string,
-  unsafePassword: string | undefined,
+  unsafePassword: string | undefined = undefined,
   unlockWallet = false,
 ): Promise<{userWallet: ethers.Wallet | undefined; configFile: ConfigFile}> {
   const exists = await fs.pathExists(configPath)
