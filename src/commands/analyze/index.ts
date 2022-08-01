@@ -2,13 +2,13 @@ import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import * as inquirer from 'inquirer'
 
-import {CliUx, Command, Flags} from '@oclif/core'
+import {Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 
-import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, NETWORK_COLORS} from '../../utils/utils'
+import {capitalize, NETWORK_COLORS} from '../../utils/utils'
 import color from '@oclif/color'
 
 type KeepAliveParams = {
@@ -58,7 +58,6 @@ export default class Analyze extends Command {
   bridgeAddress!: string
   operatorAddress!: string
   supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
-  blockJobs: BlockJob[] = []
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   abiCoder = ethers.utils.defaultAbiCoder
   holograph!: ethers.Contract
@@ -80,6 +79,9 @@ export default class Analyze extends Command {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore - Set all networks to start with latest block at index 0
   latestBlockHeight: {[key: string]: number} = {}
+  currentBlockHeight: {[key: string]: number} = {}
+  blockJobs: {[key: string]: BlockJob[]} = {}
+
   exited = false
 
   async loadLastBlocks(fileName: string, configDir: string): Promise<{[key: string]: number}> {
@@ -142,6 +144,7 @@ export default class Analyze extends Command {
       switch (protocol) {
         case 'https:':
           this.providers[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
+
           break
         case 'wss:':
           this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint, subscribe)
@@ -152,9 +155,11 @@ export default class Analyze extends Command {
 
       if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
         this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
+        this.currentBlockHeight[network] = this.latestBlockHeight[network]
       } else {
         this.structuredLog(network, `Starting Operator from latest block height`)
         this.latestBlockHeight[network] = 0
+        this.currentBlockHeight[network] = 0
       }
     }
 
@@ -204,7 +209,14 @@ export default class Analyze extends Command {
         process.exit()
       }
     } else {
+      this.debug('exitRouter triggered')
       this.debug(`\nError: ${exitCode}`)
+    }
+  }
+
+  monitorBuilder: (network: string) => () => void = (network: string): () => void => {
+    return () => {
+      this.blockJobMonitor.bind(this)(network)
     }
   }
 
@@ -213,7 +225,7 @@ export default class Analyze extends Command {
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {configFile} = await ensureConfigFileIsValid(configPath)
+    const {configFile} = await ensureConfigFileIsValid(configPath, undefined, false)
     this.log('User configurations loaded.')
 
     this.latestBlockHeight = await this.loadLastBlocks(Analyze.LAST_BLOCKS_FILE_NAME, this.config.configDir)
@@ -237,6 +249,7 @@ export default class Analyze extends Command {
       ])
       if (syncPrompt.shouldSync === false) {
         this.latestBlockHeight = {}
+        this.currentBlockHeight = {}
       }
     }
 
@@ -266,10 +279,17 @@ export default class Analyze extends Command {
 
     // Setup websocket subscriptions and start processing blocks
     for (let i = 0, l = flags.networks.length; i < l; i++) {
-      const network = flags.networks[i]
-
+      const network: string = flags.networks[i]
+      this.blockJobs[network] = []
+      this.lastBlockJobDone[network] = Date.now()
       // Subscribe to events 🎧
       this.networkSubscribe(network)
+      // // Process blocks 🧱
+      this.blockJobHandler(network)
+      // // Activate Job Monitor for disconnect recovery
+      setTimeout((): void => {
+        this.blockJobMonitorProcess[network] = setInterval(this.monitorBuilder.bind(this)(network), 1000)
+      }, 10_000)
     }
 
     // Catch all exit events
@@ -279,16 +299,10 @@ export default class Analyze extends Command {
 
     process.on('exit', this.exitHandler)
 
-    // // Process blocks 🧱
-    this.blockJobHandler()
-    // // Activate Job Monitor for disconnect recovery
-    setTimeout((): void => {
-      this.blockJobMonitorProcess = setInterval(this.blockJobMonitor, 1000)
-    }, 10000)
   }
 
   async processBlock(job: BlockJob): Promise<void> {
-    this.debug(`processing [${job.network}] ${job.block}`)
+    this.structuredLog(job.network, `processing ${job.block}`)
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)
     if (block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
@@ -321,69 +335,78 @@ export default class Analyze extends Command {
           job.network,
           `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`,
         )
-        this.processTransactions(job.network, interestingTransactions)
+        this.processTransactions(job, interestingTransactions)
       } else {
-        this.blockJobHandler()
+        this.blockJobHandler(job.network, job)
       }
     } else {
       this.structuredLog(job.network, `${job.network} ${color.red('Dropped block!')} ${job.block}`)
-      this.blockJobs.unshift(job)
-      this.blockJobHandler()
+      this.blockJobs[job.network].unshift(job)
+      this.blockJobHandler(job.network)
     }
   }
 
   blockJobThreshold = 15_000 // 15 seconds
-  lastBlockJobDone: number = Date.now()
-  blockJobMonitorProcess!: NodeJS.Timer
+  lastBlockJobDone: {[key: string]: number} = {}
+  blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
 
-  blockJobMonitor = (): void => {
-    if (Date.now() - this.lastBlockJobDone > this.blockJobThreshold) {
+  blockJobMonitor = (network: string): void => {
+    if (Date.now() - this.lastBlockJobDone[network] > this.blockJobThreshold) {
       this.debug('Block Job Handler has been inactive longer than threshold time. Restarting.')
-      this.blockJobHandler()
+      this.blockJobHandler(network)
     }
   }
 
-  // For some reason defining this as function definition causes `this` to be undefined
-  blockJobHandler = (): void => {
-    this.lastBlockJobDone = Date.now()
-    if (this.blockJobs.length > 0) {
-      const blockJob: BlockJob = this.blockJobs.shift() as BlockJob
+  jobHandlerBuilder: (network: string) => () => void = (network: string): () => void => {
+    return () => {
+      this.blockJobHandler.bind(this)(network)
+    }
+  }
+
+  blockJobHandler = (network: string, job?: BlockJob): void => {
+    if (job !== undefined) {
+      this.latestBlockHeight[job.network] = job.block
+    }
+
+    this.lastBlockJobDone[network] = Date.now()
+    if (this.blockJobs[network].length > 0) {
+      const blockJob: BlockJob = this.blockJobs[network].shift() as BlockJob
       this.processBlock(blockJob)
     } else {
-      this.debug('no blocks')
-      setTimeout(this.blockJobHandler, 1000)
+      // this.structuredLog(network, 'no blocks')
+      setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
     }
   }
 
-  async processTransactions(network: string, transactions: ethers.Transaction[]): Promise<void> {
+  async processTransactions(job: BlockJob, transactions: ethers.Transaction[]): Promise<void> {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
-        const receipt = await this.providers[network].getTransactionReceipt(transaction.hash as string)
+        const receipt = await this.providers[job.network].getTransactionReceipt(transaction.hash as string)
         if (receipt === null) {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
 
-        this.debug(`Processing transaction ${transaction.hash} on ${network} at block ${receipt.blockNumber}`)
+        this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${receipt.blockNumber}`)
         const to: string | undefined = transaction.to?.toLowerCase()
         const from: string | undefined = transaction.from?.toLowerCase()
         if (to === this.bridgeAddress) {
           // we have bridge job
-          await this.handleBridgeOutEvent(transaction, receipt, network)
+          await this.handleBridgeOutEvent(transaction, receipt, job.network)
         } else if (to === this.operatorAddress) {
           // we have a bridge job being executed
           // check that it worked?
-          await this.handleBridgeInEvent(transaction, receipt, network)
-        } else if (from === this.LAYERZERO_RECEIVERS[network]) {
+          await this.handleBridgeInEvent(transaction, receipt, job.network)
+        } else if (from === this.LAYERZERO_RECEIVERS[job.network]) {
           // we have an available operator job event
-          await this.handleAvailableOperatorJobEvent(transaction, receipt, network)
+          await this.handleAvailableOperatorJobEvent(transaction, receipt, job.network)
         } else {
-          this.structuredLog(network, `processTransactions function stumbled on an unknown transaction ${transaction.hash}`)
+          this.structuredLog(job.network, `processTransactions function stumbled on an unknown transaction ${transaction.hash}`)
         }
       }
     }
 
-    this.blockJobHandler()
+    this.blockJobHandler(job.network, job)
   }
 
   async handleBridgeOutEvent(
@@ -398,9 +421,7 @@ export default class Analyze extends Command {
     const parsedTransaction: ethers.utils.TransactionDescription = this.bridgeContract.interface.parseTransaction(transaction)
     switch (parsedTransaction.sighash) {
       case '0xa1caf2ea':
-        // erc721out
       case '0xa45561bb':
-        // erc20out
       case '0xa4bd02d7':
         // deployOut
         this.structuredLog(network, `Bridge-Out event captured: ${parsedTransaction.name} -->> ${parsedTransaction.args}`)
@@ -632,12 +653,12 @@ export default class Analyze extends Command {
   networkSubscribe(network: string): void {
     this.providers[network].on('block', (blockNumber: string) => {
       const block = Number.parseInt(blockNumber, 10)
-      if (this.latestBlockHeight[network] !== 0 && block - this.latestBlockHeight[network] > 1) {
+      if (this.currentBlockHeight[network] !== 0 && block - this.currentBlockHeight[network] > 1) {
         this.debug(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
-        let latest = this.latestBlockHeight[network]
+        let latest = this.currentBlockHeight[network]
         while (block - latest > 0) {
           this.structuredLog(network, `Block ${latest} (Syncing)`)
-          this.blockJobs.push({
+          this.blockJobs[network].push({
             network: network,
             block: latest,
           })
@@ -645,9 +666,9 @@ export default class Analyze extends Command {
         }
       }
 
-      this.latestBlockHeight[network] = block
+      this.currentBlockHeight[network] = block
       this.structuredLog(network, `Block ${block}`)
-      this.blockJobs.push({
+      this.blockJobs[network].push({
         network: network,
         block: block,
       } as BlockJob)

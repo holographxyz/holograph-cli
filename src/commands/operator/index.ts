@@ -37,11 +37,6 @@ const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInte
   provider._websocket.on('open', () => {
     keepAliveInterval = setInterval(() => {
       provider._websocket.ping()
-
-      // Use `WebSocket#terminate()`, which immediately destroys the connection,
-      // instead of `WebSocket#close()`, which waits for the close timer.
-      // Delay should be equal to the interval at which your server
-      // sends out pings plus a conservative assumption of the latency.
       pingTimeout = setTimeout(() => {
         provider._websocket.terminate()
       }, expectedPongBack)
@@ -86,11 +81,10 @@ export default class Operator extends Command {
   /**
    * Operator class variables
    */
-  bridgeAddress: string | undefined
-  factoryAddress: string | undefined
-  operatorAddress: string | undefined
+  bridgeAddress!: string
+  factoryAddress!: string
+  operatorAddress!: string
   supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
-  blockJobs: BlockJob[] = []
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   abiCoder = ethers.utils.defaultAbiCoder
   wallets: {[key: string]: ethers.Wallet} = {}
@@ -116,6 +110,9 @@ export default class Operator extends Command {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore - Set all networks to start with latest block at index 0
   latestBlockHeight: {[key: string]: number} = {}
+  currentBlockHeight: {[key: string]: number} = {}
+  blockJobs: {[key: string]: BlockJob[]} = {}
+
   exited = false
 
   async loadLastBlocks(fileName: string, configDir: string): Promise<{[key: string]: number}> {
@@ -140,7 +137,7 @@ export default class Operator extends Command {
     subscribe: boolean,
   ): (err: any) => void {
     return (err: any) => {
-      ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
+      (this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
         this.debug('onDisconnect')
         this.log(network, 'WS connection was closed', JSON.stringify(err, null, 2))
         this.providers[network] = this.failoverWebSocketProvider(userWallet, network, rpcEndpoint, subscribe)
@@ -185,7 +182,7 @@ export default class Operator extends Command {
 
           break
         case 'wss:':
-          this.providers[network] = this.failoverWebSocketProvider(userWallet!, network, rpcEndpoint, subscribe)
+          this.providers[network] = this.failoverWebSocketProvider.bind(this)(userWallet!, network, rpcEndpoint, subscribe)
           break
         default:
           throw new Error('Unsupported RPC provider protocol -> ' + protocol)
@@ -197,21 +194,21 @@ export default class Operator extends Command {
 
       if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
         this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
+        this.currentBlockHeight[network] = this.latestBlockHeight[network]
       } else {
         this.structuredLog(network, `Starting Operator from latest block height`)
         this.latestBlockHeight[network] = 0
+        this.currentBlockHeight[network] = 0
       }
     }
 
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
-    this.holograph = new ethers.ContractFactory(holographABI, '0x', this.wallets[loadNetworks[0]]).attach(
-      this.HOLOGRAPH_ADDRESS.toLowerCase(),
-    )
+    this.holograph = new ethers.Contract(this.HOLOGRAPH_ADDRESS.toLowerCase(), holographABI, this.wallets[loadNetworks[0]])
+    this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
 
     const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
-    this.operatorContract = new ethers.ContractFactory(holographOperatorABI, '0x').attach(
-      await this.holograph.getOperator(),
-    )
+    this.operatorContract = new ethers.Contract(this.operatorAddress, holographOperatorABI, this.wallets[loadNetworks[0]])
+
   }
 
   exitHandler = async (exitCode: number): Promise<void> => {
@@ -248,7 +245,14 @@ export default class Operator extends Command {
         process.exit()
       }
     } else {
+      this.debug('exitRouter triggered')
       this.debug(`\nError: ${exitCode}`)
+    }
+  }
+
+  monitorBuilder: (network: string) => () => void = (network: string): () => void => {
+    return () => {
+      this.blockJobMonitor.bind(this)(network)
     }
   }
 
@@ -304,6 +308,7 @@ export default class Operator extends Command {
       ])
       if (syncPrompt.shouldSync === false) {
         this.latestBlockHeight = {}
+        this.currentBlockHeight = {}
       }
     }
 
@@ -340,10 +345,17 @@ export default class Operator extends Command {
 
     // Setup websocket subscriptions and start processing blocks
     for (let i = 0, l = flags.networks.length; i < l; i++) {
-      const network = flags.networks[i]
-
+      const network: string = flags.networks[i]
+      this.blockJobs[network] = []
+      this.lastBlockJobDone[network] = Date.now()
       // Subscribe to events 🎧
       this.networkSubscribe(network)
+      // // Process blocks 🧱
+      this.blockJobHandler(network)
+      // // Activate Job Monitor for disconnect recovery
+      setTimeout((): void => {
+        this.blockJobMonitorProcess[network] = setInterval(this.monitorBuilder.bind(this)(network), 1000)
+      }, 10_000)
     }
 
     // Catch all exit events
@@ -358,16 +370,10 @@ export default class Operator extends Command {
       startHealcheckServer()
     }
 
-    // // Process blocks 🧱
-    this.blockJobHandler()
-    // // Activate Job Monitor for disconnect recovery
-    setTimeout((): void => {
-      this.blockJobMonitorProcess = setInterval(this.blockJobMonitor, 1000)
-    }, 10000)
   }
 
   async processBlock(job: BlockJob): Promise<void> {
-    this.debug(`processing [${job.network}] ${job.block}`)
+    this.structuredLog(job.network, `processing ${job.block}`)
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)
     if (block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
@@ -381,7 +387,7 @@ export default class Operator extends Command {
           // We have LayerZero call, need to check it it's directed towards Holograph operators
           interestingTransactions.push(transaction)
         } else if ('to' in transaction && transaction.to !== null && transaction.to !== '') {
-          const to: string | undefined = transaction.to?.toLowerCase()
+          const to: string = transaction.to!.toLowerCase()
           // Check if it's a factory call
           if (to === this.factoryAddress || to === this.operatorAddress) {
             // We have a potential factory deployment or operator bridge transaction
@@ -395,61 +401,70 @@ export default class Operator extends Command {
           job.network,
           `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`,
         )
-        this.processTransactions(job.network, interestingTransactions)
+        this.processTransactions(job, interestingTransactions)
       } else {
-        this.blockJobHandler()
+        this.blockJobHandler(job.network, job)
       }
     } else {
       this.structuredLog(job.network, `${job.network} ${color.red('Dropped block!')} ${job.block}`)
-      this.blockJobs.unshift(job)
-      this.blockJobHandler()
+      this.blockJobs[job.network].unshift(job)
+      this.blockJobHandler(job.network)
     }
   }
 
   blockJobThreshold = 15_000 // 15 seconds
-  lastBlockJobDone: number = Date.now()
-  blockJobMonitorProcess!: NodeJS.Timer
+  lastBlockJobDone: {[key: string]: number} = {}
+  blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
 
-  blockJobMonitor = (): void => {
-    if (Date.now() - this.lastBlockJobDone > this.blockJobThreshold) {
+  blockJobMonitor = (network: string): void => {
+    if (Date.now() - this.lastBlockJobDone[network] > this.blockJobThreshold) {
       this.debug('Block Job Handler has been inactive longer than threshold time. Restarting.')
-      this.blockJobHandler()
+      this.blockJobHandler(network)
     }
   }
 
-  // For some reason defining this as function definition causes `this` to be undefined
-  blockJobHandler = (): void => {
-    this.lastBlockJobDone = Date.now()
-    if (this.blockJobs.length > 0) {
-      const blockJob: BlockJob = this.blockJobs.shift() as BlockJob
+  jobHandlerBuilder: (network: string) => () => void = (network: string): () => void => {
+    return () => {
+      this.blockJobHandler.bind(this)(network)
+    }
+  }
+
+  blockJobHandler = (network: string, job?: BlockJob): void => {
+    if (job !== undefined) {
+      this.latestBlockHeight[job.network] = job.block
+    }
+
+    this.lastBlockJobDone[network] = Date.now()
+    if (this.blockJobs[network].length > 0) {
+      const blockJob: BlockJob = this.blockJobs[network].shift() as BlockJob
       this.processBlock(blockJob)
     } else {
-      this.debug('no blocks')
-      setTimeout(this.blockJobHandler, 1000)
+      // this.structuredLog(network, 'no blocks')
+      setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
     }
   }
 
-  async processTransactions(network: string, transactions: ethers.Transaction[]): Promise<void> {
+  async processTransactions(job: BlockJob, transactions: ethers.Transaction[]): Promise<void> {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
-        const receipt = await this.providers[network].getTransactionReceipt(transaction.hash as string)
+        const receipt = await this.providers[job.network].getTransactionReceipt(transaction.hash as string)
         if (receipt === null) {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
 
-        this.debug(`Processing transaction ${transaction.hash} on ${network} at block ${receipt.blockNumber}`)
+        this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${receipt.blockNumber}`)
         if (transaction.to?.toLowerCase() === this.factoryAddress) {
-          this.handleContractDeployedEvents(transaction, receipt, network)
+          this.handleContractDeployedEvents(transaction, receipt, job.network)
         } else if (transaction.to?.toLowerCase() === this.operatorAddress) {
-          this.handleOperatorBridgeEvents(transaction, receipt, network)
+          this.handleOperatorBridgeEvents(transaction, receipt, job.network)
         } else {
-          this.handleOperatorRequestEvents(transaction, receipt, network)
+          this.handleOperatorRequestEvents(transaction, receipt, job.network)
         }
       }
     }
 
-    this.blockJobHandler()
+    this.blockJobHandler(job.network, job)
   }
 
   handleContractDeployedEvents(
@@ -617,12 +632,12 @@ export default class Operator extends Command {
   networkSubscribe(network: string): void {
     this.providers[network].on('block', (blockNumber: string) => {
       const block = Number.parseInt(blockNumber, 10)
-      if (this.latestBlockHeight[network] !== 0 && block - this.latestBlockHeight[network] > 1) {
+      if (this.currentBlockHeight[network] !== 0 && block - this.currentBlockHeight[network] > 1) {
         this.debug(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
-        let latest = this.latestBlockHeight[network]
+        let latest = this.currentBlockHeight[network]
         while (block - latest > 0) {
           this.structuredLog(network, `Block ${latest} (Syncing)`)
-          this.blockJobs.push({
+          this.blockJobs[network].push({
             network: network,
             block: latest,
           })
@@ -630,9 +645,9 @@ export default class Operator extends Command {
         }
       }
 
-      this.latestBlockHeight[network] = block
+      this.currentBlockHeight[network] = block
       this.structuredLog(network, `Block ${block}`)
-      this.blockJobs.push({
+      this.blockJobs[network].push({
         network: network,
         block: block,
       } as BlockJob)
