@@ -30,7 +30,7 @@
     "@ethereumjs/common": "^2.6.4",
     "@ethereumjs/tx": "^3.5.2",
     "@oclif/color": "^1.0.1",
-    "@oclif/core": "1.9.5",
+    "@oclif/core": "1.13.0",
     "@oclif/plugin-help": "5.1.12",
     "@oclif/plugin-plugins": "2.1.0",
     "@truffle/hdwallet-provider": "^2.0.9",
