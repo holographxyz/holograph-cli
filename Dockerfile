@@ -3,7 +3,7 @@ ARG AWS_ECR_URL=177635894328.dkr.ecr.us-west-2.amazonaws.com
 ARG REPO_NAME=misc
 FROM $AWS_ECR_URL/$REPO_NAME:node-16.16.0-alpine
 
-RUN apk add git
+RUN apk update && apk add git curl
 
 WORKDIR /holo-cli
 

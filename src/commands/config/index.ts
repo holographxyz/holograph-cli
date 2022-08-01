@@ -72,6 +72,7 @@ export default class Config extends Command {
     if (typeof loadConfigPath !== 'undefined') {
       try {
         const stats = fs.lstatSync(loadConfigPath)
+
         this.debug(`Is file: ${stats.isFile()}`)
         this.debug(`Is directory: ${stats.isDirectory()}`)
         this.debug(`Is symbolic link: ${stats.isSymbolicLink()}`)
