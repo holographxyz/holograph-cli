@@ -130,7 +130,7 @@ export default class Indexer extends Command {
     let res
     try {
       res = await axios.post(`${this.baseUrl}/v1/auth/operator`, {
-        hash: process.env.OPERATOR_API_KEY,
+        hash: '65ec06ab78c73b21766ef7a0ee73fc7dc5fe23bc644378de9af6ec79f4894251',
       })
     } catch (error: any) {
       this.error(error.message)
@@ -529,7 +529,7 @@ export default class Indexer extends Command {
       // First get the collection by the address
       this.structuredLog(
         network,
-        `Requesting to get Collection with tokenId ${deploymentAddress} with Operator token ${process.env.BEARER_TOKEN}`,
+        `Requesting to get Collection with tokenId ${deploymentAddress} with Operator token ${this.JWT}`,
       )
       let res
       try {
@@ -556,7 +556,7 @@ export default class Indexer extends Command {
 
       const params = {
         headers: {
-          Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
+          Authorization: `Bearer ${this.JWT}`,
           'Content-Type': 'application/json',
         },
         data: data,
@@ -564,7 +564,7 @@ export default class Indexer extends Command {
 
       this.structuredLog(
         network,
-        `Requesting to update Collection with id ${res?.data.id} with Operator token ${process.env.BEARER_TOKEN}`,
+        `Requesting to update Collection with id ${res?.data.id} with Operator token ${this.JWT}`,
       )
       try {
         const patchRes = await axios.patch(`${this.baseUrl}/v1/collections/${res?.data.id}`, data, params)
@@ -601,19 +601,19 @@ export default class Indexer extends Command {
 
       this.structuredLog(
         network,
-        `Requesting to get NFT with tokenId ${tokenId} from ${contractAddress} with Operator token ${process.env.BEARER_TOKEN}`,
+        `Requesting to get NFT with tokenId ${tokenId} from ${contractAddress} with Operator token ${this.JWT}`,
       )
       let res
       try {
         res = await axios.get(`${this.baseUrl}/v1/nfts/${contractAddress}/${tokenId}`, {
           headers: {
-            Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
+            Authorization: `Bearer ${this.JWT}`,
             'Content-Type': 'application/json',
           },
         })
         this.structuredLog(
           network,
-          `Successfully found NFT with tokenId ${tokenId} from ${contractAddress} with Operator token ${process.env.BEARER_TOKEN}`,
+          `Successfully found NFT with tokenId ${tokenId} from ${contractAddress} with Operator token ${this.JWT}`,
         )
       } catch (error: any) {
         this.structuredLog(network, error.message)
@@ -629,16 +629,13 @@ export default class Indexer extends Command {
 
       const params = {
         headers: {
-          Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
+          Authorization: `Bearer ${this.JWT}`,
           'Content-Type': 'application/json',
         },
         data: data,
       }
 
-      this.structuredLog(
-        network,
-        `Requesting to update NFT with id ${res?.data.id} with Operator token ${process.env.BEARER_TOKEN}`,
-      )
+      this.structuredLog(network, `Requesting to update NFT with id ${res?.data.id} with Operator token ${this.JWT}`)
       try {
         const patchRes = await axios.patch(`${this.baseUrl}/v1/nfts/${res?.data.id}`, data, params)
         this.structuredLog(network, JSON.stringify(patchRes.data))
