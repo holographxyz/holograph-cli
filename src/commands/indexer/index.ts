@@ -425,11 +425,11 @@ export default class Indexer extends Command {
     this.blockJobHandler()
   }
 
-  handleContractDeployedEvents(
+  async handleContractDeployedEvents(
     transaction: ethers.Transaction,
     receipt: ethers.ContractReceipt,
     network: string,
-  ): void {
+  ): Promise<void> {
     this.structuredLog(network, `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`)
     const config = decodeDeploymentConfigInput(transaction.data)
     let event = null
@@ -455,6 +455,56 @@ export default class Indexer extends Command {
             `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
             `The transaction hash is: ${transaction.hash}\n`,
         )
+
+        // First get the collection by the address
+        this.structuredLog(
+          network,
+          `API: Requesting to get Collection with address ${deploymentAddress} with Operator token ${this.JWT}`,
+        )
+        let res
+        try {
+          this.log(`About to make a request for a collection with "Bearer ${this.JWT}"`)
+          res = await axios.get(`${this.baseUrl}/v1/collections/contract/${deploymentAddress}`, {
+            headers: {
+              Authorization: `Bearer ${this.JWT}`,
+              'Content-Type': 'application/json',
+            },
+          })
+          this.debug(JSON.stringify(res.data))
+          this.structuredLog(network, `Successfully found collection at ${deploymentAddress}`)
+        } catch (error: any) {
+          this.structuredLog(network, `Failed to update the Holograph database ${error.message}`)
+          this.debug(error)
+        }
+
+        // Compose request to API server to update the collection
+        const data = JSON.stringify({
+          chainId: networks[network].chain,
+          status: 'DEPLOYED',
+          salt: '0x',
+          tx: transaction.hash,
+        })
+
+        const params = {
+          headers: {
+            Authorization: `Bearer ${this.JWT}`,
+            'Content-Type': 'application/json',
+          },
+          data: data,
+        }
+
+        this.structuredLog(
+          network,
+          `API: Requesting to update Collection with id ${res?.data.id} with Operator token ${this.JWT}`,
+        )
+        try {
+          const patchRes = await axios.patch(`${this.baseUrl}/v1/collections/${res?.data.id}`, data, params)
+          this.debug(patchRes.data)
+          this.structuredLog(network, `Successfully updated collection chainId to ${networks[network].chain}`)
+        } catch (error: any) {
+          this.structuredLog(network, `Failed to update the Holograph database ${error.message}`)
+          this.debug(error)
+        }
       }
     }
   }
@@ -538,7 +588,7 @@ export default class Indexer extends Command {
       // First get the collection by the address
       this.structuredLog(
         network,
-        `Requesting to get Collection with tokenId ${deploymentAddress} with Operator token ${this.JWT}`,
+        `API: Requesting to get Collection with address ${deploymentAddress} with Operator token ${this.JWT}`,
       )
       let res
       try {
@@ -574,7 +624,7 @@ export default class Indexer extends Command {
 
       this.structuredLog(
         network,
-        `Requesting to update Collection with id ${res?.data.id} with Operator token ${this.JWT}`,
+        `API: Requesting to update Collection with id ${res?.data.id} with Operator token ${this.JWT}`,
       )
       try {
         const patchRes = await axios.patch(`${this.baseUrl}/v1/collections/${res?.data.id}`, data, params)
@@ -611,7 +661,7 @@ export default class Indexer extends Command {
 
       this.structuredLog(
         network,
-        `Requesting to get NFT with tokenId ${tokenId} from ${contractAddress} with Operator token ${this.JWT}`,
+        `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress} with Operator token ${this.JWT}`,
       )
       let res
       try {
@@ -645,7 +695,10 @@ export default class Indexer extends Command {
         data: data,
       }
 
-      this.structuredLog(network, `Requesting to update NFT with id ${res?.data.id} with Operator token ${this.JWT}`)
+      this.structuredLog(
+        network,
+        `API: Requesting to update NFT with id ${res?.data.id} with Operator token ${this.JWT}`,
+      )
       try {
         const patchRes = await axios.patch(`${this.baseUrl}/v1/nfts/${res?.data.id}`, data, params)
         this.structuredLog(network, JSON.stringify(patchRes.data))
