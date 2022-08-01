@@ -93,7 +93,7 @@ export default class Indexer extends Command {
   wallets: {[key: string]: ethers.Wallet} = {}
   holograph!: ethers.Contract
   indexerMode: IndexerMode = IndexerMode.listen
-  indexerContract!: ethers.Contract
+  operatorContract!: ethers.Contract
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
   LAYERZERO_RECEIVERS: any = {
     rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
@@ -123,6 +123,7 @@ export default class Indexer extends Command {
   JWT!: string
 
   async run(): Promise<void> {
+    this.log(`Operator command has begun!!!`)
     const {flags} = await this.parse(Indexer)
     this.baseUrl = flags.host
     const enableHealthCheckServer = flags.healthCheck
@@ -137,6 +138,14 @@ export default class Indexer extends Command {
     }
 
     this.JWT = res!.data.accessToken
+    this.log(res.data)
+
+    if(typeof this.JWT === 'undefined'){
+      this.error("Failed to authorize as an operator")
+    }
+
+    this.log(`process.env.OPERATOR_API_KEY = ${process.env.OPERATOR_API_KEY}`)
+    this.log(`this.JWT = ${this.JWT}`)
 
     // Indexer always runs in listen mode
     this.log(`Indexer mode: ${this.indexerMode}`)
@@ -298,8 +307,8 @@ export default class Indexer extends Command {
       this.HOLOGRAPH_ADDRESS.toLowerCase(),
     )
 
-    const holographIndexerABI = await fs.readJson('./src/abi/HolographOperator.json')
-    this.indexerContract = new ethers.ContractFactory(holographIndexerABI, '0x', walletWithProvider).attach(
+    const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
+    this.operatorContract = new ethers.ContractFactory(holographOperatorABI, '0x', walletWithProvider).attach(
       await this.holograph.getOperator(),
     )
   }
@@ -457,7 +466,7 @@ export default class Indexer extends Command {
   ): Promise<void> {
     this.structuredLog(
       network,
-      `Checking if Indexer was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
+      `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
     )
     let event = null
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
@@ -522,13 +531,18 @@ export default class Indexer extends Command {
         network,
         '\nHolographOperator executed a job which bridged a collection\n' +
           `HolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-          `Indexer that deployed the collection is ${transaction.from}` +
+          `Operator that deployed the collection is ${transaction.from}` +
           `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
       )
 
       // First get the collection by the address
+      this.structuredLog(
+        network,
+        `Requesting to get Collection with tokenId ${deploymentAddress} with Operator token ${process.env.BEARER_TOKEN}`,
+      )
       let res
       try {
+        this.log(`About to make a request for a collection with "Bearer ${this.JWT}"`)
         res = await axios.get(`${this.baseUrl}/v1/collections/contract/${deploymentAddress}`, {
           headers: {
             Authorization: `Bearer ${this.JWT}`,
@@ -539,6 +553,7 @@ export default class Indexer extends Command {
         this.structuredLog(network, `Successfully found collection at ${deploymentAddress}`)
       } catch (error: any) {
         this.structuredLog(network, `Failed to update the Holograph database ${error.message}`)
+        this.debug(error)
       }
 
       // Compose request to API server to update the collection
@@ -557,6 +572,10 @@ export default class Indexer extends Command {
         data: data,
       }
 
+      this.structuredLog(
+        network,
+        `Requesting to update Collection with id ${res?.data.id} with Operator token ${process.env.BEARER_TOKEN}`,
+      )
       try {
         const patchRes = await axios.patch(`${this.baseUrl}/v1/collections/${res?.data.id}`, data, params)
         this.debug(patchRes.data)
@@ -590,7 +609,10 @@ export default class Indexer extends Command {
       const tokenId = Number.parseInt(event[3], 16)
       const contractAddress = '0x' + deploymentInput.slice(98, 138)
 
-      this.structuredLog(network, `Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`)
+      this.structuredLog(
+        network,
+        `Requesting to get NFT with tokenId ${tokenId} from ${contractAddress} with Operator token ${process.env.BEARER_TOKEN}`,
+      )
       let res
       try {
         res = await axios.get(`${this.baseUrl}/v1/nfts/${contractAddress}/${tokenId}`, {
@@ -599,7 +621,10 @@ export default class Indexer extends Command {
             'Content-Type': 'application/json',
           },
         })
-        this.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
+        this.structuredLog(
+          network,
+          `Successfully found NFT with tokenId ${tokenId} from ${contractAddress} with Operator token ${process.env.BEARER_TOKEN}`,
+        )
       } catch (error: any) {
         this.structuredLog(network, error.message)
         this.debug(error)
@@ -620,7 +645,10 @@ export default class Indexer extends Command {
         data: data,
       }
 
-      this.structuredLog(network, `Requesting to update NFT with id ${res?.data.id}`)
+      this.structuredLog(
+        network,
+        `Requesting to update NFT with id ${res?.data.id} with Operator token ${process.env.BEARER_TOKEN}`,
+      )
       try {
         const patchRes = await axios.patch(`${this.baseUrl}/v1/nfts/${res?.data.id}`, data, params)
         this.structuredLog(network, JSON.stringify(patchRes.data))
