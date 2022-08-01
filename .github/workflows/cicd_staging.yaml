@@ -9,7 +9,7 @@ env:
   IAM_ROLE      : arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli-dev # notice: the same for all 3 cli apps
   #
-  DEV_IMAGE_TAG : dev-${{ github.sha }} #NOTICE #TODO
+  DEV_IMAGE_TAG : dev-${{ github.sha }} #NOTICE
   #
   STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.1 # NOTICE
   STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.2 # NOTICE
@@ -31,8 +31,7 @@ env:
 on:
   push:
     branches:
-      - 'holocli' #deleteme
-#      - 'develop' # notice: the actual staging branch
+      - 'develop' # notice: the actual staging branch
       #
       - '!main'     # EXCLUDES this branch
       - '!master'   # EXCLUDES this branch
@@ -56,13 +55,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-#      - name: Build and push image to ECR
-#        env:
-#          ECR_REGISTRY  : ${{ steps.login-ecr.outputs.registry }}
-#          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-#        run: |
-#          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG .
-#          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG
+      - name: Build and push image to ECR
+        env:
+          ECR_REGISTRY  : ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG .
+          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -91,21 +90,19 @@ jobs:
         run : |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-      - name: -> Deploy INDEXER cli in staging [branch -> ${{ steps.sanitized_branch.outputs.branch }}]
+      - name: -> Deploy INDEXER cli in staging [namespace -> ${{ steps.COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          NAMESPACE: ${{ steps.sanitized_branch.outputs.branch }}
           RELEASE_NAME: indexer-dev
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           # TODO -> HOLO_INDEXER_HOST <----- replace with k8s service endpoint [angello,alex should make code chamges]
-          # TODO -> set the $DEV_IMAGE_TAG
           command: |-
             helm upgrade --install $RELEASE_NAME \
             holo-indexer-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=debug-3 \
+            --set image.image_tag=${{ env.$DEV_IMAGE_TAG }} \
             --set holo_indexer_password=${{ env.HOLO_INDEXER_PASSWORD }} \
             --set HOLO_INDEXER_HOST=https://develop.cxipchain.xyz \
             --set operator_api_key=${{ env.HOLO_INDEXER_OPERATOR_API_KEY }}
@@ -122,19 +119,18 @@ jobs:
         run : |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-      - name: -> Deploy OPERATOR cli in staging [branch -> ${{ steps.sanitized_branch.outputs.branch }}]
+      - name: -> Deploy OPERATOR cli in staging [namespace -> ${{ env.COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: operator-dev
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
-          #TODO -> set the $DEV_IMAGE_TAG
           command: |-
             helm upgrade --install $RELEASE_NAME \
             holo-operator-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=debug-1 \
+            --set image.image_tag=${{ env.$DEV_IMAGE_TAG }} \
             --set holo_operator_password=${{ env.HOLO_OPERATOR_PASSWORD }}
 
       # NOTICE: --- PROPAGATOR ---
@@ -149,19 +145,18 @@ jobs:
         run : |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-      - name: -> Deploy PROPAGATOR cli in staging [branch -> ${{ steps.sanitized_branch.outputs.branch }}]
+      - name: -> Deploy PROPAGATOR cli in staging [namespace -> ${{ env.COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: propagator-dev
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
-          #TODO -> set the $DEV_IMAGE_TAG
           command: |-
             helm upgrade --install $RELEASE_NAME \
             holo-propagator-${{ env.STG_HOLO_PROPAGATOR_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=debug-1 \
+            --set image.image_tag=${{ env.$DEV_IMAGE_TAG }} \
             --set holo_propagator_password=${{ env.HOLO_PROPAGATOR_PASSWORD }}
 
       - name: -> Info for the new deployments
