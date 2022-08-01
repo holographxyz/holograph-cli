@@ -124,7 +124,8 @@ export default class Contract extends Command {
         deploymentConfig.config,
         deploymentConfig.signature,
         deploymentConfig.signer,
-        { gasPrice, gasLimit })
+        {gasPrice, gasLimit},
+      )
       this.debug(deployTx)
       CliUx.ux.action.stop('Transaction hash is ' + deployTx.hash)
 

@@ -72,15 +72,15 @@ export default class Operator extends Command {
     }),
     healthCheck: Flags.boolean({
       description: 'Launch server on http://localhost:6000 to make sure command is still running',
-      default: false
+      default: false,
     }),
     sync: Flags.boolean({
       description: 'Start from last saved block position instead of latest block position',
-      default: false
+      default: false,
     }),
     unsafePassword: Flags.string({
       description: 'Enter the plain text password for the wallet in the holo cli config',
-    })
+    }),
   }
 
   /**
@@ -280,7 +280,7 @@ export default class Operator extends Command {
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, unsafePassword,true)
+    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, unsafePassword, true)
     this.log('User configurations loaded.')
 
     this.latestBlockHeight = await this.loadLastBlocks(Operator.LAST_BLOCKS_FILE_NAME, this.config.configDir)
@@ -354,7 +354,7 @@ export default class Operator extends Command {
     process.on('exit', this.exitHandler)
 
     // Start server
-    if(enableHealthCheckServer) {
+    if (enableHealthCheckServer) {
       startHealcheckServer()
     }
 
