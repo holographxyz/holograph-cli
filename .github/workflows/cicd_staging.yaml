@@ -19,7 +19,8 @@ env:
   AWS_KEY_ID     : ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY : ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
   #
-  HOLO_INDEXER_OPERATOR_API_KEY: 65ec06ab78c73b21766ef7a0ee73fc7dc5fe23bc644378de9af6ec79f4894251 #${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
+#  HOLO_INDEXER_OPERATOR_API_KEY: 65ec06ab78c73b21766ef7a0ee73fc7dc5fe23bc644378de9af6ec79f4894251 # TODO -> ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
+  HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
   # TODO -> set the password as github secret var
   HOLO_INDEXER_PASSWORD   : asdf #TODO ${{ secrets.HOLO_INDEXER_PASSWORD }}
@@ -31,7 +32,7 @@ env:
 on:
   push:
     branches:
-      - "holocli" #deleteme
+      - "holocli"
 #      - 'develop' # notice: the actual staging branch -> [the deployment is happening into the holocli namespace!]
       #
       - '!main'     # EXCLUDES this branch
@@ -78,7 +79,8 @@ jobs:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             kubectl create namespace ${{ env.COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-
+      #
+      #
       # NOTICE: --- INDEXER ---
       - name: Pull the holo-indexer helm chart version x.x.x from ECR
         shell: bash
@@ -110,7 +112,8 @@ jobs:
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}
-
+      #
+      #
       # NOTICE: --- OPERATOR ---
       - name: Pull the holo-operator helm chart version x.x.x from ECR
         shell: bash
@@ -139,8 +142,8 @@ jobs:
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-operator \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}
-
-
+      #
+      #
       # NOTICE: --- PROPAGATOR ---
       - name: Pull the holo-propagator helm chart version x.x.x from ECR
         shell: bash
