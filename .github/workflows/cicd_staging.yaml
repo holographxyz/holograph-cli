@@ -11,7 +11,7 @@ env:
   #
   DEV_IMAGE_TAG : dev-${{ github.sha }} #NOTICE
   #
-  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.1 # NOTICE
+  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.2 # NOTICE
   STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.2 # NOTICE
   STG_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.2 # NOTICE
   #
@@ -102,7 +102,7 @@ jobs:
             holo-indexer-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=${{ env.$DEV_IMAGE_TAG }} \
+            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set holo_indexer_password=${{ env.HOLO_INDEXER_PASSWORD }} \
             --set HOLO_INDEXER_HOST=https://develop.cxipchain.xyz \
             --set operator_api_key=${{ env.HOLO_INDEXER_OPERATOR_API_KEY }}
@@ -130,7 +130,7 @@ jobs:
             holo-operator-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=${{ env.$DEV_IMAGE_TAG }} \
+            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set holo_operator_password=${{ env.HOLO_OPERATOR_PASSWORD }}
 
       # NOTICE: --- PROPAGATOR ---
@@ -156,7 +156,7 @@ jobs:
             holo-propagator-${{ env.STG_HOLO_PROPAGATOR_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=${{ env.$DEV_IMAGE_TAG }} \
+            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set holo_propagator_password=${{ env.HOLO_PROPAGATOR_PASSWORD }}
 
       - name: -> Info for the new deployments
