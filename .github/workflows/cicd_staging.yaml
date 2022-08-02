@@ -11,9 +11,9 @@ env:
   #
   DEV_IMAGE_TAG : dev-${{ github.sha }} #NOTICE
   #
-  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.2 # NOTICE
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.2 # NOTICE
-  STG_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.2 # NOTICE
+  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.5 # NOTICE
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.4 # NOTICE
+  STG_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.4 # NOTICE
   #
   CLUSTER_NAME   : staging
   AWS_KEY_ID     : ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
@@ -77,7 +77,8 @@ jobs:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             kubectl create namespace ${{ env.COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-
+      #
+      #
       # NOTICE: --- INDEXER ---
       - name: Pull the holo-indexer helm chart version x.x.x from ECR
         shell: bash
@@ -105,8 +106,12 @@ jobs:
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set holo_indexer_password=${{ env.HOLO_INDEXER_PASSWORD }} \
             --set HOLO_INDEXER_HOST=https://develop.cxipchain.xyz \
-            --set operator_api_key=${{ env.HOLO_INDEXER_OPERATOR_API_KEY }}
-
+            --set OPERATOR_API_KEY=${{ env.HOLO_INDEXER_OPERATOR_API_KEY }} \
+            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
+            --set datadog_tags.version=chart-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}
+      #
+      #
       # NOTICE: --- OPERATOR ---
       - name: Pull the holo-operator helm chart version x.x.x from ECR
         shell: bash
@@ -131,8 +136,12 @@ jobs:
             -n ${{ env.COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
-            --set holo_operator_password=${{ env.HOLO_OPERATOR_PASSWORD }}
-
+            --set holo_operator_password=${{ env.HOLO_OPERATOR_PASSWORD }} \
+            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.service=$RELEASE_NAME-holo-operator \
+            --set datadog_tags.version=chart-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}
+      #
+      #
       # NOTICE: --- PROPAGATOR ---
       - name: Pull the holo-propagator helm chart version x.x.x from ECR
         shell: bash
@@ -157,7 +166,11 @@ jobs:
             -n ${{ env.COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
-            --set holo_propagator_password=${{ env.HOLO_PROPAGATOR_PASSWORD }}
+            --set holo_propagator_password=${{ env.HOLO_PROPAGATOR_PASSWORD }} \
+            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.service=$RELEASE_NAME-holo-propagator \
+            --set datadog_tags.version=chart-${{ env.STG_HOLO_PROPAGATOR_HELM_CHART_VERSION }}
+
 
       - name: -> Info for the new deployments
         uses: tensor-hq/eksctl-helm-action@main
