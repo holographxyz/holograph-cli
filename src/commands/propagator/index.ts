@@ -72,15 +72,15 @@ export default class Propagator extends Command {
     }),
     healthCheck: Flags.boolean({
       description: 'Launch server on http://localhost:6000 to make sure command is still running',
-      default: false
+      default: false,
     }),
     sync: Flags.boolean({
       description: 'Start from last saved block position instead of latest block position',
-      default: false
+      default: false,
     }),
     unsafePassword: Flags.string({
       description: 'Enter the plain text password for the wallet in the holo cli config',
-    })
+    }),
   }
 
   crossDeployments: string[] = []
@@ -267,7 +267,7 @@ export default class Propagator extends Command {
     const syncFlag = flags.sync
     const unsafePassword = flags.unsafePassword
 
-      // Have the user input the mode if it's not provided
+    // Have the user input the mode if it's not provided
     let mode: string | undefined = flags.mode
 
     if (!mode) {
@@ -288,7 +288,7 @@ export default class Propagator extends Command {
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, unsafePassword,true)
+    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, unsafePassword, true)
     this.log('User configurations loaded.')
 
     this.latestBlockHeight = await this.loadLastBlocks(Propagator.LAST_BLOCKS_FILE_NAME, this.config.configDir)
@@ -362,15 +362,14 @@ export default class Propagator extends Command {
     process.on('exit', this.exitHandler)
 
     // Start server
-    if(enableHealthCheckServer) {
+    if (enableHealthCheckServer) {
       startHealcheckServer()
     }
 
-    // // Process blocks 🧱
+    // Process blocks 🧱
     this.blockJobHandler()
   }
 
-  // you can
   async processBlock(job: BlockJob): Promise<void> {
     this.debug(`processing [${job.network}] ${job.block}`)
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)

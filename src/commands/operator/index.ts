@@ -358,9 +358,9 @@ export default class Operator extends Command {
       startHealcheckServer()
     }
 
-    // // Process blocks 🧱
+    // Process blocks 🧱
     this.blockJobHandler()
-    // // Activate Job Monitor for disconnect recovery
+    // Activate Job Monitor for disconnect recovery
     this.blockJobMonitor()
   }
 

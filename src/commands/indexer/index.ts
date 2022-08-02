@@ -209,7 +209,7 @@ export default class Indexer extends Command {
       startHealcheckServer()
     }
 
-    // // Process blocks 🧱
+    // Process blocks 🧱
     this.blockJobHandler()
   }
 
