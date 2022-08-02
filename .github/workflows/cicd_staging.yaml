@@ -11,7 +11,7 @@ env:
   #
   DEV_IMAGE_TAG : dev-d181e021884c5bfcb3ca3016818a42bb98521ec4 #dev-${{ github.sha }} #NOTICE
   #
-  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.3 # NOTICE
+  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.4 # NOTICE
   STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.3 # NOTICE
   STG_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.3 # NOTICE
   #
@@ -19,7 +19,7 @@ env:
   AWS_KEY_ID     : ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY : ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
   #
-  HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
+  HOLO_INDEXER_OPERATOR_API_KEY: 65ec06ab78c73b21766ef7a0ee73fc7dc5fe23bc644378de9af6ec79f4894251 #${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
   # TODO -> set the password as github secret var
   HOLO_INDEXER_PASSWORD   : asdf #TODO ${{ secrets.HOLO_INDEXER_PASSWORD }}
@@ -106,7 +106,7 @@ jobs:
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set holo_indexer_password=${{ env.HOLO_INDEXER_PASSWORD }} \
             --set HOLO_INDEXER_HOST=https://develop.cxipchain.xyz \
-            --set operator_api_key=${{ env.HOLO_INDEXER_OPERATOR_API_KEY }} \
+            --set OPERATOR_API_KEY=${{ env.HOLO_INDEXER_OPERATOR_API_KEY }} \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}
