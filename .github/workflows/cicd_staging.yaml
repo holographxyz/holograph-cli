@@ -9,7 +9,7 @@ env:
   IAM_ROLE      : arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli-dev # notice: the same for all 3 cli apps
   #
-  DEV_IMAGE_TAG : dev-d181e021884c5bfcb3ca3016818a42bb98521ec4 #dev-${{ github.sha }} #NOTICE
+  DEV_IMAGE_TAG : dev-${{ github.sha }} #NOTICE
   #
   STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.4 # NOTICE
   STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.3 # NOTICE
@@ -19,7 +19,6 @@ env:
   AWS_KEY_ID     : ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY : ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
   #
-#  HOLO_INDEXER_OPERATOR_API_KEY: 65ec06ab78c73b21766ef7a0ee73fc7dc5fe23bc644378de9af6ec79f4894251 # TODO -> ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
   # TODO -> set the password as github secret var
@@ -32,8 +31,7 @@ env:
 on:
   push:
     branches:
-      - "holocli"
-#      - 'develop' # notice: the actual staging branch -> [the deployment is happening into the holocli namespace!]
+      - 'develop' # notice: the actual staging branch -> [the deployment is happening into the holocli namespace!]
       #
       - '!main'     # EXCLUDES this branch
       - '!master'   # EXCLUDES this branch
@@ -57,13 +55,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-#      - name: Build and push image to ECR
-#        env:
-#          ECR_REGISTRY  : ${{ steps.login-ecr.outputs.registry }}
-#          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-#        run: |
-#          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG .
-#          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG
+      - name: Build and push image to ECR
+        env:
+          ECR_REGISTRY  : ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG .
+          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
