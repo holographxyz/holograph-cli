@@ -109,7 +109,7 @@ export default class Nft extends Command {
   async run(): Promise<void> {
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {configFile} = await ensureConfigFileIsValid(configPath, false)
+    const {configFile} = await ensureConfigFileIsValid(configPath, undefined, false)
     this.log('User configurations loaded.')
 
     const {flags} = await this.parse(Nft)
