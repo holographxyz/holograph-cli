@@ -79,7 +79,7 @@ jobs:
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
-            kubectl create namespace ${{ env.COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+            kubectl create namespace ${{ env.PROD_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
       #
       #
       # NOTICE: --- INDEXER ---
@@ -94,7 +94,7 @@ jobs:
         run : |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-      - name: -> Deploy INDEXER cli in prod [namespace -> ${{ steps.COMMON_NAMESPACE }}]
+      - name: -> Deploy INDEXER cli in prod [namespace -> ${{ steps.PROD_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer
@@ -107,7 +107,7 @@ jobs:
           command: |-
             helm upgrade --install $RELEASE_NAME \
             holo-indexer-${{ env.PROD_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
-            -n ${{ env.COMMON_NAMESPACE }} \
+            -n ${{ env.PROD_COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.PROD_IMAGE_TAG }} \
             --set holo_indexer_password=${{ env.PROD_HOLO_INDEXER_PASSWORD }} \
@@ -130,7 +130,7 @@ jobs:
         run : |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-      - name: -> Deploy OPERATOR cli in prod [namespace -> ${{ env.COMMON_NAMESPACE }}]
+      - name: -> Deploy OPERATOR cli in prod [namespace -> ${{ env.PROD_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: operator
@@ -139,7 +139,7 @@ jobs:
           command: |-
             helm upgrade --install $RELEASE_NAME \
             holo-operator-${{ env.PROD_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
-            -n ${{ env.COMMON_NAMESPACE }} \
+            -n ${{ env.PROD_COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.PROD_IMAGE_TAG }} \
             --set holo_operator_password=${{ env.PROD_HOLO_OPERATOR_PASSWORD }} \
@@ -160,7 +160,7 @@ jobs:
         run : |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-      - name: -> Deploy PROPAGATOR cli in prod [namespace -> ${{ env.COMMON_NAMESPACE }}]
+      - name: -> Deploy PROPAGATOR cli in prod [namespace -> ${{ env.PROD_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: propagator
@@ -169,7 +169,7 @@ jobs:
           command: |-
             helm upgrade --install $RELEASE_NAME \
             holo-propagator-${{ env.PROD_HOLO_PROPAGATOR_HELM_CHART_VERSION }}.tgz \
-            -n ${{ env.COMMON_NAMESPACE }} \
+            -n ${{ env.PROD_COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.PROD_IMAGE_TAG }} \
             --set holo_propagator_password=${{ env.PROD_HOLO_PROPAGATOR_PASSWORD }} \
