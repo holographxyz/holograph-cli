@@ -112,6 +112,9 @@ export default class Operator extends Command {
   latestBlockHeight: {[key: string]: number} = {}
   currentBlockHeight: {[key: string]: number} = {}
   blockJobs: {[key: string]: BlockJob[]} = {}
+  blockJobThreshold = 15_000 // 15 seconds
+  lastBlockJobDone: {[key: string]: number} = {}
+  blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
 
   exited = false
 
@@ -137,7 +140,7 @@ export default class Operator extends Command {
     subscribe: boolean,
   ): (err: any) => void {
     return (err: any) => {
-      (this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
+      ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
         this.debug('onDisconnect')
         this.log(network, 'WS connection was closed', JSON.stringify(err, null, 2))
         this.providers[network] = this.failoverWebSocketProvider(userWallet, network, rpcEndpoint, subscribe)
@@ -182,7 +185,12 @@ export default class Operator extends Command {
 
           break
         case 'wss:':
-          this.providers[network] = this.failoverWebSocketProvider.bind(this)(userWallet!, network, rpcEndpoint, subscribe)
+          this.providers[network] = this.failoverWebSocketProvider.bind(this)(
+            userWallet!,
+            network,
+            rpcEndpoint,
+            subscribe,
+          )
           break
         default:
           throw new Error('Unsupported RPC provider protocol -> ' + protocol)
@@ -203,12 +211,19 @@ export default class Operator extends Command {
     }
 
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
-    this.holograph = new ethers.Contract(this.HOLOGRAPH_ADDRESS.toLowerCase(), holographABI, this.wallets[loadNetworks[0]])
+    this.holograph = new ethers.Contract(
+      this.HOLOGRAPH_ADDRESS.toLowerCase(),
+      holographABI,
+      this.wallets[loadNetworks[0]],
+    )
     this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
 
     const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
-    this.operatorContract = new ethers.Contract(this.operatorAddress, holographOperatorABI, this.wallets[loadNetworks[0]])
-
+    this.operatorContract = new ethers.Contract(
+      this.operatorAddress,
+      holographOperatorABI,
+      this.wallets[loadNetworks[0]],
+    )
   }
 
   exitHandler = async (exitCode: number): Promise<void> => {
@@ -250,7 +265,7 @@ export default class Operator extends Command {
     }
   }
 
-  monitorBuilder: (network: string) => () => void = (network: string): () => void => {
+  monitorBuilder: (network: string) => () => void = (network: string): (() => void) => {
     return () => {
       this.blockJobMonitor.bind(this)(network)
     }
@@ -350,9 +365,9 @@ export default class Operator extends Command {
       this.lastBlockJobDone[network] = Date.now()
       // Subscribe to events 🎧
       this.networkSubscribe(network)
-      // // Process blocks 🧱
+      // Process blocks 🧱
       this.blockJobHandler(network)
-      // // Activate Job Monitor for disconnect recovery
+      // Activate Job Monitor for disconnect recovery after 10 seconds / Monitor every second
       setTimeout((): void => {
         this.blockJobMonitorProcess[network] = setInterval(this.monitorBuilder.bind(this)(network), 1000)
       }, 10_000)
@@ -369,7 +384,6 @@ export default class Operator extends Command {
     if (enableHealthCheckServer) {
       startHealcheckServer()
     }
-
   }
 
   async processBlock(job: BlockJob): Promise<void> {
@@ -412,10 +426,6 @@ export default class Operator extends Command {
     }
   }
 
-  blockJobThreshold = 15_000 // 15 seconds
-  lastBlockJobDone: {[key: string]: number} = {}
-  blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
-
   blockJobMonitor = (network: string): void => {
     if (Date.now() - this.lastBlockJobDone[network] > this.blockJobThreshold) {
       this.debug('Block Job Handler has been inactive longer than threshold time. Restarting.')
@@ -423,7 +433,7 @@ export default class Operator extends Command {
     }
   }
 
-  jobHandlerBuilder: (network: string) => () => void = (network: string): () => void => {
+  jobHandlerBuilder: (network: string) => () => void = (network: string): (() => void) => {
     return () => {
       this.blockJobHandler.bind(this)(network)
     }

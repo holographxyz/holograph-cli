@@ -22,6 +22,12 @@ type BlockJob = {
   block: number
 }
 
+interface Scope {
+  network: string
+  startBlock: number
+  endBlock: number
+}
+
 const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInterval = 7500}: KeepAliveParams) => {
   let pingTimeout: NodeJS.Timeout | null = null
   let keepAliveInterval: NodeJS.Timeout | null = null
@@ -46,18 +52,18 @@ const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInte
   })
 }
 
-interface Scope {
-  network: string
-  startBlock: number
-  endBlock: number
-}
-
 export default class Analyze extends Command {
   static LAST_BLOCKS_FILE_NAME = 'analyze_blocks.json'
   static description = 'Extract all operator jobs and get their status'
-  static examples = [`$ holo analyze --scope='[{"network":"rinkeby","startBlock":10857626,"endBlock":11138178},{"network":"mumbai","startBlock":26758573,"endBlock":27457918},{"network":"fuji","startBlock":11406945,"endBlock":12192217}]'`]
+  static examples = [
+    `$ holo analyze --scope='[{"network":"rinkeby","startBlock":10857626,"endBlock":11138178},{"network":"mumbai","startBlock":26758573,"endBlock":27457918},{"network":"fuji","startBlock":11406945,"endBlock":12192217}]'`,
+  ]
   static flags = {
-    scope: Flags.string({description: 'single-line JSON object array of blocks to analyze "{ network:string, startBlock:number, endBlock:number }[]"', multiple: true}),
+    scope: Flags.string({
+      description:
+        'single-line JSON object array of blocks to analyze "[{ network: string, startBlock: number, endBlock: number }]"',
+      multiple: true,
+    }),
   }
 
   runningProcesses = 0
@@ -86,12 +92,9 @@ export default class Analyze extends Command {
 
   exited = false
 
-  disconnectBuilder(
-    network: string,
-    rpcEndpoint: string,
-  ): (err: any) => void {
+  disconnectBuilder(network: string, rpcEndpoint: string): (err: any) => void {
     return (err: any) => {
-      (this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
+      ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
         this.debug('onDisconnect')
         this.log(network, 'WS connection was closed', JSON.stringify(err, null, 2))
         this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint)
@@ -99,10 +102,7 @@ export default class Analyze extends Command {
     }
   }
 
-  failoverWebSocketProvider(
-    network: string,
-    rpcEndpoint: string,
-  ): ethers.providers.WebSocketProvider {
+  failoverWebSocketProvider(network: string, rpcEndpoint: string): ethers.providers.WebSocketProvider {
     this.debug('this.providers', network)
     const provider = new ethers.providers.WebSocketProvider(rpcEndpoint)
     keepAlive({
@@ -113,10 +113,7 @@ export default class Analyze extends Command {
     return provider
   }
 
-  async initializeEthers(
-    loadNetworks: string[],
-    configFile: ConfigFile,
-  ): Promise<void> {
+  async initializeEthers(loadNetworks: string[], configFile: ConfigFile): Promise<void> {
     for (let i = 0, l = loadNetworks.length; i < l; i++) {
       const network = loadNetworks[i]
       const rpcEndpoint = (configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork).providerUrl
@@ -135,7 +132,11 @@ export default class Analyze extends Command {
     }
 
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
-    this.holograph = new ethers.Contract(this.HOLOGRAPH_ADDRESS.toLowerCase(), holographABI, this.providers[loadNetworks[0]])
+    this.holograph = new ethers.Contract(
+      this.HOLOGRAPH_ADDRESS.toLowerCase(),
+      holographABI,
+      this.providers[loadNetworks[0]],
+    )
     this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
     this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
 
@@ -143,7 +144,11 @@ export default class Analyze extends Command {
     this.bridgeContract = new ethers.Contract(this.bridgeAddress, holographBridgeABI, this.providers[loadNetworks[0]])
 
     const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
-    this.operatorContract = new ethers.Contract(this.operatorAddress, holographOperatorABI, this.providers[loadNetworks[0]])
+    this.operatorContract = new ethers.Contract(
+      this.operatorAddress,
+      holographOperatorABI,
+      this.providers[loadNetworks[0]],
+    )
   }
 
   exitHandler = async (exitCode: number): Promise<void> => {
@@ -181,7 +186,7 @@ export default class Analyze extends Command {
     }
   }
 
-  monitorBuilder: (network: string) => () => void = (network: string): () => void => {
+  monitorBuilder: (network: string) => () => void = (network: string): (() => void) => {
     return () => {
       this.blockJobMonitor.bind(this)(network)
     }
@@ -198,7 +203,9 @@ export default class Analyze extends Command {
     const scopeJobs: Scope[] = []
     for (const scopeString of flags.scope) {
       try {
-        const scopeArray: {[key: string]: string | number}[] = JSON.parse(scopeString) as {[key: string]: string | number}[]
+        const scopeArray: {[key: string]: string | number}[] = JSON.parse(scopeString) as {
+          [key: string]: string | number
+        }[]
         for (const scope of scopeArray) {
           if ('network' in scope && 'startBlock' in scope && 'endBlock' in scope) {
             if (Object.keys(configFile.networks).includes(scope.network as string)) {
@@ -219,7 +226,7 @@ export default class Analyze extends Command {
       }
     }
 
-    this.log(`${JSON.stringify(scopeJobs,undefined,4)}`)
+    this.log(`${JSON.stringify(scopeJobs, undefined, 4)}`)
 
     // Color the networks 🌈
     for (let i = 0, l = networks.length; i < l; i++) {
@@ -250,9 +257,9 @@ export default class Analyze extends Command {
       }
 
       this.runningProcesses += 1
-      // // Process blocks 🧱
+      // Process blocks 🧱
       this.blockJobHandler(network)
-      // // Activate Job Monitor for disconnect recovery
+      // Activate Job Monitor for disconnect recovery
       setTimeout((): void => {
         this.blockJobMonitorProcess[network] = setInterval(this.monitorBuilder.bind(this)(network), 1000)
       }, 10_000)
@@ -264,7 +271,6 @@ export default class Analyze extends Command {
     }
 
     process.on('exit', this.exitHandler)
-
   }
 
   async processBlock(job: BlockJob): Promise<void> {
@@ -323,7 +329,7 @@ export default class Analyze extends Command {
     }
   }
 
-  jobHandlerBuilder: (network: string) => () => void = (network: string): () => void => {
+  jobHandlerBuilder: (network: string) => () => void = (network: string): (() => void) => {
     return () => {
       this.blockJobHandler.bind(this)(network)
     }
@@ -340,7 +346,7 @@ export default class Analyze extends Command {
       this.runningProcesses -= 1
       if (this.runningProcesses === 0) {
         this.log('finished the last job', 'need to output data and exit')
-        this.exitRouter({ exit: true }, 'SIGINT')
+        this.exitRouter({exit: true}, 'SIGINT')
       }
       // this.structuredLog(network, 'no blocks')
       // setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
@@ -370,7 +376,10 @@ export default class Analyze extends Command {
           // we have an available operator job event
           await this.handleAvailableOperatorJobEvent(transaction, receipt, job.network)
         } else {
-          this.structuredLog(job.network, `processTransactions function stumbled on an unknown transaction ${transaction.hash}`)
+          this.structuredLog(
+            job.network,
+            `processTransactions function stumbled on an unknown transaction ${transaction.hash}`,
+          )
         }
       }
     }
@@ -387,13 +396,17 @@ export default class Analyze extends Command {
     // 0xa45561bb == erc20out
     // 0xa4bd02d7 == deployOut
     // let functionSignature: string = transaction.data.substring(0, 10).toLowerCase()
-    const parsedTransaction: ethers.utils.TransactionDescription = this.bridgeContract.interface.parseTransaction(transaction)
+    const parsedTransaction: ethers.utils.TransactionDescription =
+      this.bridgeContract.interface.parseTransaction(transaction)
     switch (parsedTransaction.sighash) {
       case '0xa1caf2ea':
       case '0xa45561bb':
       case '0xa4bd02d7':
         // deployOut
-        this.structuredLog(network, `Bridge-Out event captured: ${parsedTransaction.name} -->> ${parsedTransaction.args}`)
+        this.structuredLog(
+          network,
+          `Bridge-Out event captured: ${parsedTransaction.name} -->> ${parsedTransaction.args}`,
+        )
         break
       default:
         this.structuredLog(network, `Unknown Bridge function executed in tx: ${transaction.hash}`)
@@ -406,13 +419,23 @@ export default class Analyze extends Command {
     receipt: ethers.ContractReceipt,
     network: string,
   ): Promise<void> {
-    const parsedTransaction: ethers.utils.TransactionDescription = this.operatorContract.interface.parseTransaction(transaction)
+    const parsedTransaction: ethers.utils.TransactionDescription =
+      this.operatorContract.interface.parseTransaction(transaction)
     let bridgeTransaction: ethers.utils.TransactionDescription
     switch (parsedTransaction.name) {
       case 'executeJob':
-        this.structuredLog(network, `Bridge-In event captured: ${parsedTransaction.name} -->> ${parsedTransaction.args}`)
-        bridgeTransaction = this.bridgeContract.interface.parseTransaction({ data: parsedTransaction.args._payload, value: ethers.BigNumber.from('0') })
-        this.structuredLog(network, `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`)
+        this.structuredLog(
+          network,
+          `Bridge-In event captured: ${parsedTransaction.name} -->> ${parsedTransaction.args}`,
+        )
+        bridgeTransaction = this.bridgeContract.interface.parseTransaction({
+          data: parsedTransaction.args._payload,
+          value: ethers.BigNumber.from('0'),
+        })
+        this.structuredLog(
+          network,
+          `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
+        )
         break
       default:
         this.structuredLog(network, `Unknown Bridge function executed in tx: ${transaction.hash}`)
@@ -460,7 +483,6 @@ export default class Analyze extends Command {
         await this.validateOperatorJob(transaction.hash!, network, payload)
       }
     }
-
   }
 
   async validateOperatorJob(transactionHash: string, network: string, payload: string): Promise<void> {
@@ -480,7 +502,7 @@ export default class Analyze extends Command {
     }
   }
 
-/*
+  /*
   handleContractDeployedEvents(
     transaction: ethers.Transaction,
     receipt: ethers.ContractReceipt,
@@ -643,5 +665,4 @@ export default class Analyze extends Command {
       )}] -> ${msg}`,
     )
   }
-
 }
