@@ -55,7 +55,7 @@ interface Scope {
 export default class Analyze extends Command {
   static LAST_BLOCKS_FILE_NAME = 'analyze_blocks.json'
   static description = 'Extract all operator jobs and get their status'
-  static examples = [`$ holo analyze --scope='[{"network":"rinkeby","startBlock":11137966,"endBlock":11137966}]'`]
+  static examples = [`$ holo analyze --scope='[{"network":"rinkeby","startBlock":10857626,"endBlock":11138178},{"network":"mumbai","startBlock":26758573,"endBlock":27457918},{"network":"fuji","startBlock":11406945,"endBlock":12192217}]'`]
   static flags = {
     scope: Flags.string({description: 'single-line JSON object array of blocks to analyze "{ network:string, startBlock:number, endBlock:number }[]"', multiple: true}),
   }
