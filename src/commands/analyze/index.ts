@@ -1,6 +1,5 @@
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
-import * as inquirer from 'inquirer'
 
 import {Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
@@ -47,17 +46,24 @@ const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInte
   })
 }
 
+interface Scope {
+  network: string
+  startBlock: number
+  endBlock: number
+}
+
 export default class Analyze extends Command {
   static LAST_BLOCKS_FILE_NAME = 'analyze_blocks.json'
   static description = 'Extract all operator jobs and get their status'
-  static examples = ['$ holo analyze --networks="rinkeby mumbai fuji" --mode=auto']
+  static examples = [`$ holo analyze --scope='[{"network":"rinkeby","startBlock":11137966,"endBlock":11137966}]'`]
   static flags = {
-    networks: Flags.string({description: 'Comma separated list of networks to operate to', multiple: true}),
+    scope: Flags.string({description: 'single-line JSON object array of blocks to analyze "{ network:string, startBlock:number, endBlock:number }[]"', multiple: true}),
   }
+
+  runningProcesses = 0
 
   bridgeAddress!: string
   operatorAddress!: string
-  supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   abiCoder = ethers.utils.defaultAbiCoder
   holograph!: ethers.Contract
@@ -76,39 +82,19 @@ export default class Analyze extends Command {
   }
 
   networkColors: any = {}
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore - Set all networks to start with latest block at index 0
-  latestBlockHeight: {[key: string]: number} = {}
-  currentBlockHeight: {[key: string]: number} = {}
   blockJobs: {[key: string]: BlockJob[]} = {}
 
   exited = false
 
-  async loadLastBlocks(fileName: string, configDir: string): Promise<{[key: string]: number}> {
-    const filePath = path.join(configDir, fileName)
-    let lastBlocks: {[key: string]: number} = {}
-    if (await fs.pathExists(filePath)) {
-      lastBlocks = await fs.readJson(filePath)
-    }
-
-    return lastBlocks
-  }
-
-  saveLastBlocks(fileName: string, configDir: string, lastBlocks: {[key: string]: number}): void {
-    const filePath = path.join(configDir, fileName)
-    fs.writeFileSync(filePath, JSON.stringify(lastBlocks), 'utf8')
-  }
-
   disconnectBuilder(
     network: string,
     rpcEndpoint: string,
-    subscribe: boolean,
   ): (err: any) => void {
     return (err: any) => {
       (this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
         this.debug('onDisconnect')
         this.log(network, 'WS connection was closed', JSON.stringify(err, null, 2))
-        this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint, subscribe)
+        this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint)
       })
     }
   }
@@ -116,26 +102,20 @@ export default class Analyze extends Command {
   failoverWebSocketProvider(
     network: string,
     rpcEndpoint: string,
-    subscribe: boolean,
   ): ethers.providers.WebSocketProvider {
     this.debug('this.providers', network)
     const provider = new ethers.providers.WebSocketProvider(rpcEndpoint)
     keepAlive({
       provider,
-      onDisconnect: this.disconnectBuilder.bind(this)(network, rpcEndpoint, true),
+      onDisconnect: this.disconnectBuilder.bind(this)(network, rpcEndpoint),
     })
     this.providers[network] = provider
-    if (subscribe) {
-      this.networkSubscribe(network)
-    }
-
     return provider
   }
 
   async initializeEthers(
     loadNetworks: string[],
     configFile: ConfigFile,
-    subscribe: boolean,
   ): Promise<void> {
     for (let i = 0, l = loadNetworks.length; i < l; i++) {
       const network = loadNetworks[i]
@@ -147,19 +127,10 @@ export default class Analyze extends Command {
 
           break
         case 'wss:':
-          this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint, subscribe)
+          this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint)
           break
         default:
           throw new Error('Unsupported RPC provider protocol -> ' + protocol)
-      }
-
-      if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
-        this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
-        this.currentBlockHeight[network] = this.latestBlockHeight[network]
-      } else {
-        this.structuredLog(network, `Starting Operator from latest block height`)
-        this.latestBlockHeight[network] = 0
-        this.currentBlockHeight[network] = 0
       }
     }
 
@@ -181,8 +152,6 @@ export default class Analyze extends Command {
      */
     if (this.exited === false) {
       this.log('')
-      this.log(`Saving current block heights: ${JSON.stringify(this.latestBlockHeight)}`)
-      this.saveLastBlocks(Analyze.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
       this.log(`Exiting operator with code ${exitCode}...`)
       this.log('Goodbye! 👋')
       this.exited = true
@@ -196,8 +165,6 @@ export default class Analyze extends Command {
     if ((exitCode && exitCode === 0) || exitCode === 'SIGINT') {
       if (this.exited === false) {
         this.log('')
-        this.log(`Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}`)
-        this.saveLastBlocks(Analyze.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
         this.log(`Exiting operator with code ${exitCode}...`)
         this.log('Goodbye! 👋')
         this.exited = true
@@ -227,63 +194,62 @@ export default class Analyze extends Command {
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
     const {configFile} = await ensureConfigFileIsValid(configPath, undefined, false)
     this.log('User configurations loaded.')
+    const networks: string[] = []
+    const scopeJobs: Scope[] = []
+    for (const scopeString of flags.scope) {
+      try {
+        const scopeArray: {[key: string]: string | number}[] = JSON.parse(scopeString) as {[key: string]: string | number}[]
+        for (const scope of scopeArray) {
+          if ('network' in scope && 'startBlock' in scope && 'endBlock' in scope) {
+            if (Object.keys(configFile.networks).includes(scope.network as string)) {
+              if (!networks.includes(scope.network as string)) {
+                networks.push(scope.network as string)
+              }
 
-    this.latestBlockHeight = await this.loadLastBlocks(Analyze.LAST_BLOCKS_FILE_NAME, this.config.configDir)
-    let canSync = false
-    const lastBlockKeys: string[] = Object.keys(this.latestBlockHeight)
-    for (let i = 0, l: number = lastBlockKeys.length; i < l; i++) {
-      if (this.latestBlockHeight[lastBlockKeys[i]] > 0) {
-        canSync = true
-        break
+              scopeJobs.push(scope as unknown as Scope)
+            } else {
+              this.log(`${scope.network} is not a supported network`)
+            }
+          } else {
+            this.log(`${scope} is an invalid Scope object`)
+          }
+        }
+      } catch {
+        this.log(`${scopeString} is an invalid Scope[] JSON object`)
       }
     }
 
-    if (canSync) {
-      const syncPrompt: any = await inquirer.prompt([
-        {
-          name: 'shouldSync',
-          message: 'Operator has previous (missed) blocks that can be synced. Would you like to sync?',
-          type: 'confirm',
-          default: true,
-        },
-      ])
-      if (syncPrompt.shouldSync === false) {
-        this.latestBlockHeight = {}
-        this.currentBlockHeight = {}
-      }
-    }
-
-    // Load defaults for the networks from the config file
-    if (flags.networks === undefined || '') {
-      flags.networks = Object.keys(configFile.networks)
-    }
+    this.log(`${JSON.stringify(scopeJobs,undefined,4)}`)
 
     // Color the networks 🌈
-    for (let i = 0, l = flags.networks.length; i < l; i++) {
-      const network = flags.networks[i]
-      if (Object.keys(configFile.networks).includes(network)) {
-        this.networkColors[network] = color.hex(NETWORK_COLORS[network])
-      } else {
-        // If network is not supported remove it from the array
-        flags.networks.splice(i, 1)
-        l--
-        i--
-      }
+    for (let i = 0, l = networks.length; i < l; i++) {
+      const network = networks[i]
+      this.networkColors[network] = color.hex(NETWORK_COLORS[network])
     }
 
-    await this.initializeEthers(flags.networks, configFile, false)
+    await this.initializeEthers(networks, configFile)
 
     this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESS}`)
     this.log(`Bridge address: ${this.bridgeAddress}`)
     this.log(`Operator address: ${this.operatorAddress}`)
 
     // Setup websocket subscriptions and start processing blocks
-    for (let i = 0, l = flags.networks.length; i < l; i++) {
-      const network: string = flags.networks[i]
+    for (let i = 0, l = networks.length; i < l; i++) {
+      const network: string = networks[i]
       this.blockJobs[network] = []
       this.lastBlockJobDone[network] = Date.now()
-      // Subscribe to events 🎧
-      this.networkSubscribe(network)
+      for (const scopeJob of scopeJobs) {
+        if (scopeJob.network === network) {
+          for (let n = scopeJob.startBlock, nl = scopeJob.endBlock; n <= nl; n++) {
+            this.blockJobs[network].push({
+              network: network,
+              block: n,
+            } as BlockJob)
+          }
+        }
+      }
+
+      this.runningProcesses += 1
       // // Process blocks 🧱
       this.blockJobHandler(network)
       // // Activate Job Monitor for disconnect recovery
@@ -337,7 +303,7 @@ export default class Analyze extends Command {
         )
         this.processTransactions(job, interestingTransactions)
       } else {
-        this.blockJobHandler(job.network, job)
+        this.blockJobHandler(job.network)
       }
     } else {
       this.structuredLog(job.network, `${job.network} ${color.red('Dropped block!')} ${job.block}`)
@@ -363,18 +329,21 @@ export default class Analyze extends Command {
     }
   }
 
-  blockJobHandler = (network: string, job?: BlockJob): void => {
-    if (job !== undefined) {
-      this.latestBlockHeight[job.network] = job.block
-    }
-
+  blockJobHandler = (network: string): void => {
     this.lastBlockJobDone[network] = Date.now()
     if (this.blockJobs[network].length > 0) {
       const blockJob: BlockJob = this.blockJobs[network].shift() as BlockJob
       this.processBlock(blockJob)
     } else {
+      this.structuredLog(network, 'all jobs done for network')
+      clearInterval(this.blockJobMonitorProcess[network])
+      this.runningProcesses -= 1
+      if (this.runningProcesses === 0) {
+        this.log('finished the last job', 'need to output data and exit')
+        this.exitRouter({ exit: true }, 'SIGINT')
+      }
       // this.structuredLog(network, 'no blocks')
-      setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
+      // setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
     }
   }
 
@@ -406,7 +375,7 @@ export default class Analyze extends Command {
       }
     }
 
-    this.blockJobHandler(job.network, job)
+    this.blockJobHandler(job.network)
   }
 
   async handleBridgeOutEvent(
@@ -437,6 +406,18 @@ export default class Analyze extends Command {
     receipt: ethers.ContractReceipt,
     network: string,
   ): Promise<void> {
+    const parsedTransaction: ethers.utils.TransactionDescription = this.operatorContract.interface.parseTransaction(transaction)
+    let bridgeTransaction: ethers.utils.TransactionDescription
+    switch (parsedTransaction.name) {
+      case 'executeJob':
+        this.structuredLog(network, `Bridge-In event captured: ${parsedTransaction.name} -->> ${parsedTransaction.args}`)
+        bridgeTransaction = this.bridgeContract.interface.parseTransaction({ data: parsedTransaction.args._payload, value: ethers.BigNumber.from('0') })
+        this.structuredLog(network, `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`)
+        break
+      default:
+        this.structuredLog(network, `Unknown Bridge function executed in tx: ${transaction.hash}`)
+        break
+    }
   }
 
   async handleAvailableOperatorJobEvent(
@@ -483,7 +464,20 @@ export default class Analyze extends Command {
   }
 
   async validateOperatorJob(transactionHash: string, network: string, payload: string): Promise<void> {
+    const contract: ethers.Contract = this.operatorContract.connect(this.providers[network])
+    let hasError = false
+    try {
+      await contract.estimateGas.executeJob(payload)
+    } catch (error: any) {
+      this.error(error.reason)
+      hasError = true
+    }
 
+    if (hasError) {
+      this.structuredLog(network, `${transactionHash} has already been done`)
+    } else {
+      this.structuredLog(network, `${transactionHash} job needs to be done`)
+    }
   }
 
 /*
@@ -650,28 +644,4 @@ export default class Analyze extends Command {
     )
   }
 
-  networkSubscribe(network: string): void {
-    this.providers[network].on('block', (blockNumber: string) => {
-      const block = Number.parseInt(blockNumber, 10)
-      if (this.currentBlockHeight[network] !== 0 && block - this.currentBlockHeight[network] > 1) {
-        this.debug(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
-        let latest = this.currentBlockHeight[network]
-        while (block - latest > 0) {
-          this.structuredLog(network, `Block ${latest} (Syncing)`)
-          this.blockJobs[network].push({
-            network: network,
-            block: latest,
-          })
-          latest++
-        }
-      }
-
-      this.currentBlockHeight[network] = block
-      this.structuredLog(network, `Block ${block}`)
-      this.blockJobs[network].push({
-        network: network,
-        block: block,
-      } as BlockJob)
-    })
-  }
 }
