@@ -93,6 +93,92 @@ export default class Analyze extends Command {
 
   exited = false
 
+  async run(): Promise<void> {
+    const {flags} = await this.parse(Analyze)
+
+    this.log('Loading user configurations...')
+    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
+    const {configFile} = await ensureConfigFileIsValid(configPath, undefined, false)
+    this.log('User configurations loaded.')
+    const networks: string[] = []
+    const scopeJobs: Scope[] = []
+    for (const scopeString of flags.scope) {
+      try {
+        const scopeArray: Scope[] = JSON.parse(scopeString)
+        for (const scope of scopeArray) {
+          if ('network' in scope && 'startBlock' in scope && 'endBlock' in scope) {
+            if (Object.keys(configFile.networks).includes(scope.network as string)) {
+              if (!networks.includes(scope.network as string)) {
+                networks.push(scope.network as string)
+              }
+
+              scopeJobs.push(scope)
+            } else {
+              this.log(`${scope.network} is not a supported network`)
+            }
+          } else {
+            this.log(`${scope} is an invalid Scope object`)
+          }
+        }
+      } catch {
+        this.log(`${scopeString} is an invalid Scope[] JSON object`)
+      }
+    }
+
+    this.log(`${JSON.stringify(scopeJobs, undefined, 4)}`)
+
+    // Color the networks 🌈
+    for (let i = 0, l = networks.length; i < l; i++) {
+      const network = networks[i]
+      this.networkColors[network] = color.hex(NETWORK_COLORS[network])
+    }
+
+    await this.initializeEthers(networks, configFile)
+
+    this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESS}`)
+    this.log(`Bridge address: ${this.bridgeAddress}`)
+    this.log(`Operator address: ${this.operatorAddress}`)
+
+    // Setup websocket subscriptions and start processing blocks
+    for (let i = 0, l = networks.length; i < l; i++) {
+      const network: string = networks[i]
+      this.blockJobs[network] = []
+      this.lastBlockJobDone[network] = Date.now()
+      for (const scopeJob of scopeJobs) {
+        if (scopeJob.network === network) {
+          // Allow syncing up to current block height if endBlock is set to 0
+          let endBlock = scopeJob.endBlock
+          if (scopeJob.endBlock === 0) {
+            /* eslint-disable no-await-in-loop */
+            endBlock = await this.providers[network].getBlockNumber()
+          }
+
+          for (let n = scopeJob.startBlock, nl = endBlock; n <= nl; n++) {
+            this.blockJobs[network].push({
+              network: network,
+              block: n,
+            } as BlockJob)
+          }
+        }
+      }
+
+      this.runningProcesses += 1
+      // Process blocks 🧱
+      this.blockJobHandler(network)
+      // Activate Job Monitor for disconnect recovery after 10 seconds / Monitor every second
+      setTimeout((): void => {
+        this.blockJobMonitorProcess[network] = setInterval(this.monitorBuilder.bind(this)(network), 1000)
+      }, 10_000)
+    }
+
+    // Catch all exit events
+    for (const eventType of [`EEXIT`, `SIGINT`, `SIGUSR1`, `SIGUSR2`, `uncaughtException`, `SIGTERM`]) {
+      process.on(eventType, this.exitRouter.bind(this, {exit: true}))
+    }
+
+    process.on('exit', this.exitHandler)
+  }
+
   disconnectBuilder(network: string, rpcEndpoint: string): (err: any) => void {
     return (err: any) => {
       ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
@@ -191,88 +277,8 @@ export default class Analyze extends Command {
     }
   }
 
-  async run(): Promise<void> {
-    const {flags} = await this.parse(Analyze)
-
-    this.log('Loading user configurations...')
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {configFile} = await ensureConfigFileIsValid(configPath, undefined, false)
-    this.log('User configurations loaded.')
-    const networks: string[] = []
-    const scopeJobs: Scope[] = []
-    for (const scopeString of flags.scope) {
-      try {
-        const scopeArray: {[key: string]: string | number}[] = JSON.parse(scopeString) as {
-          [key: string]: string | number
-        }[]
-        for (const scope of scopeArray) {
-          if ('network' in scope && 'startBlock' in scope && 'endBlock' in scope) {
-            if (Object.keys(configFile.networks).includes(scope.network as string)) {
-              if (!networks.includes(scope.network as string)) {
-                networks.push(scope.network as string)
-              }
-
-              scopeJobs.push(scope as unknown as Scope)
-            } else {
-              this.log(`${scope.network} is not a supported network`)
-            }
-          } else {
-            this.log(`${scope} is an invalid Scope object`)
-          }
-        }
-      } catch {
-        this.log(`${scopeString} is an invalid Scope[] JSON object`)
-      }
-    }
-
-    this.log(`${JSON.stringify(scopeJobs, undefined, 4)}`)
-
-    // Color the networks 🌈
-    for (let i = 0, l = networks.length; i < l; i++) {
-      const network = networks[i]
-      this.networkColors[network] = color.hex(NETWORK_COLORS[network])
-    }
-
-    await this.initializeEthers(networks, configFile)
-
-    this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESS}`)
-    this.log(`Bridge address: ${this.bridgeAddress}`)
-    this.log(`Operator address: ${this.operatorAddress}`)
-
-    // Setup websocket subscriptions and start processing blocks
-    for (let i = 0, l = networks.length; i < l; i++) {
-      const network: string = networks[i]
-      this.blockJobs[network] = []
-      this.lastBlockJobDone[network] = Date.now()
-      for (const scopeJob of scopeJobs) {
-        if (scopeJob.network === network) {
-          for (let n = scopeJob.startBlock, nl = scopeJob.endBlock; n <= nl; n++) {
-            this.blockJobs[network].push({
-              network: network,
-              block: n,
-            } as BlockJob)
-          }
-        }
-      }
-
-      this.runningProcesses += 1
-      // Process blocks 🧱
-      this.blockJobHandler(network)
-      // Activate Job Monitor for disconnect recovery after 10 seconds / Monitor every second
-      setTimeout((): void => {
-        this.blockJobMonitorProcess[network] = setInterval(this.monitorBuilder.bind(this)(network), 1000)
-      }, 10_000)
-    }
-
-    // Catch all exit events
-    for (const eventType of [`EEXIT`, `SIGINT`, `SIGUSR1`, `SIGUSR2`, `uncaughtException`, `SIGTERM`]) {
-      process.on(eventType, this.exitRouter.bind(this, {exit: true}))
-    }
-
-    process.on('exit', this.exitHandler)
-  }
-
   async processBlock(job: BlockJob): Promise<void> {
+    this.structuredLog(job.network, `Processing Block ${job.block}`)
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)
     if (block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
@@ -339,7 +345,7 @@ export default class Analyze extends Command {
       const blockJob: BlockJob = this.blockJobs[network].shift() as BlockJob
       this.processBlock(blockJob)
     } else {
-      this.structuredLog(network, 'all jobs done for network')
+      this.structuredLog(network, 'All jobs done for network')
       clearInterval(this.blockJobMonitorProcess[network])
       this.runningProcesses -= 1
       if (this.runningProcesses === 0) {
@@ -362,19 +368,19 @@ export default class Analyze extends Command {
         const to: string | undefined = transaction.to?.toLowerCase()
         const from: string | undefined = transaction.from?.toLowerCase()
         if (to === this.bridgeAddress) {
-          // we have bridge job
+          // We have bridge job
           await this.handleBridgeOutEvent(transaction, receipt, job.network)
         } else if (to === this.operatorAddress) {
-          // we have a bridge job being executed
-          // check that it worked?
+          // We have a bridge job being executed
+          // Check that it worked?
           await this.handleBridgeInEvent(transaction, receipt, job.network)
         } else if (from === this.LAYERZERO_RECEIVERS[job.network]) {
-          // we have an available operator job event
+          // We have an available operator job event
           await this.handleAvailableOperatorJobEvent(transaction, receipt, job.network)
         } else {
           this.structuredLog(
             job.network,
-            `processTransactions function stumbled on an unknown transaction ${transaction.hash}`,
+            `Function processTransactions stumbled on an unknown transaction ${transaction.hash}`,
           )
         }
       }
@@ -487,14 +493,14 @@ export default class Analyze extends Command {
     try {
       await contract.estimateGas.executeJob(payload)
     } catch (error: any) {
-      this.error(error.reason)
       hasError = true
+      this.error(error.reason)
     }
 
     if (hasError) {
-      this.structuredLog(network, `${transactionHash} has already been done`)
+      this.structuredLog(network, `Transaction: ${transactionHash} has already been done`)
     } else {
-      this.structuredLog(network, `${transactionHash} job needs to be done`)
+      this.structuredLog(network, `Transaction: ${transactionHash} job needs to be done`)
     }
   }
 

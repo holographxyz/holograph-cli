@@ -12,7 +12,7 @@ import {decodeDeploymentConfigInput, capitalize, NETWORK_COLORS, DeploymentConfi
 import color from '@oclif/color'
 import {startHealcheckServer} from '../../utils/health-check-server'
 
-enum PropagatorMode {
+enum OperatorMode {
   listen,
   manual,
   auto,
@@ -91,7 +91,7 @@ export default class Propagator extends Command {
   abiCoder = ethers.utils.defaultAbiCoder
   wallets: {[key: string]: ethers.Wallet} = {}
   holograph!: ethers.Contract
-  propagatorMode: PropagatorMode = PropagatorMode.listen
+  operatorMode: OperatorMode = OperatorMode.listen
   operatorContract!: ethers.Contract
   factoryContract!: ethers.Contract
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
@@ -142,8 +142,8 @@ export default class Propagator extends Command {
       mode = prompt.mode
     }
 
-    this.propagatorMode = PropagatorMode[mode as keyof typeof PropagatorMode]
-    this.log(`Propagator mode: ${this.propagatorMode}`)
+    this.operatorMode = OperatorMode[mode as keyof typeof OperatorMode]
+    this.log(`Propagator mode: ${this.operatorMode}`)
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
@@ -193,7 +193,7 @@ export default class Propagator extends Command {
       }
     }
 
-    CliUx.ux.action.start(`Starting propagator in mode: ${PropagatorMode[this.propagatorMode]}`)
+    CliUx.ux.action.start(`Starting propagator in mode: ${OperatorMode[this.operatorMode]}`)
     await this.initializeEthers(flags.networks, configFile, userWallet, false)
 
     this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
@@ -385,6 +385,7 @@ export default class Propagator extends Command {
   }
 
   async processBlock(job: BlockJob): Promise<void> {
+    this.structuredLog(job.network, `Processing Block ${job.block}`)
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)
     if (block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
@@ -500,7 +501,7 @@ export default class Propagator extends Command {
             `The transaction hash is: ${transaction.hash}\n`,
         )
         if (
-          this.propagatorMode !== PropagatorMode.listen &&
+          this.operatorMode !== OperatorMode.listen &&
           !this.crossDeployments.includes(deploymentAddress.toLowerCase())
         ) {
           await this.executePayload(network, config, deploymentAddress)
@@ -573,8 +574,8 @@ export default class Propagator extends Command {
     // If the propagator is in listen mode, contract deployments will not be executed
     // If the propagator is in manual mode, the contract deployments must be manually executed
     // If the propagator is in auto mode, the contract deployments will be executed automatically
-    let operate = this.propagatorMode === PropagatorMode.auto
-    if (this.propagatorMode === PropagatorMode.manual) {
+    let operate = this.operatorMode === OperatorMode.auto
+    if (this.operatorMode === OperatorMode.manual) {
       const propagatorPrompt: any = await inquirer.prompt([
         {
           name: 'shouldContinue',

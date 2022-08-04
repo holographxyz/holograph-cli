@@ -410,6 +410,7 @@ export default class Operator extends Command {
   }
 
   async processBlock(job: BlockJob): Promise<void> {
+    this.structuredLog(job.network, `Processing Block ${job.block}`)
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)
     if (block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
