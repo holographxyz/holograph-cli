@@ -55,7 +55,7 @@ const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInte
 }
 
 export default class Propagator extends Command {
-  static LAST_BLOCKS_FILE_NAME = 'blocks.json'
+  static LAST_BLOCKS_FILE_NAME = 'propagator-blocks.json'
   static description = 'Listen for EVM events deploys collections to ther supported networks'
   static examples = ['$ holo propagator --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
@@ -110,8 +110,6 @@ export default class Propagator extends Command {
   }
 
   networkColors: any = {}
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore - Set all networks to start with latest block at index 0
   latestBlockHeight: {[key: string]: number} = {}
   currentBlockHeight: {[key: string]: number} = {}
   blockJobs: {[key: string]: BlockJob[]} = {}
@@ -120,101 +118,6 @@ export default class Propagator extends Command {
   blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
 
   exited = false
-
-  async loadLastBlocks(fileName: string, configDir: string): Promise<{[key: string]: number}> {
-    const filePath = path.join(configDir, fileName)
-    let lastBlocks: {[key: string]: number} = {}
-    if (await fs.pathExists(filePath)) {
-      lastBlocks = await fs.readJson(filePath)
-    }
-
-    return lastBlocks
-  }
-
-  saveLastBlocks(fileName: string, configDir: string, lastBlocks: {[key: string]: number}): void {
-    const filePath = path.join(configDir, fileName)
-    fs.writeFileSync(filePath, JSON.stringify(lastBlocks), 'utf8')
-  }
-
-  disconnectBuilder(
-    userWallet: ethers.Wallet,
-    network: string,
-    rpcEndpoint: string,
-    subscribe: boolean,
-  ): (err: any) => void {
-    return (err: any) => {
-      ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
-        this.debug('onDisconnect')
-        this.log(network, 'WS connection was closed', JSON.stringify(err, null, 2))
-        this.providers[network] = this.failoverWebSocketProvider(userWallet, network, rpcEndpoint, subscribe)
-        this.wallets[network] = userWallet.connect(this.providers[network] as ethers.providers.WebSocketProvider)
-      })
-    }
-  }
-
-  failoverWebSocketProvider(
-    userWallet: ethers.Wallet,
-    network: string,
-    rpcEndpoint: string,
-    subscribe: boolean,
-  ): ethers.providers.WebSocketProvider {
-    this.debug('this.providers', network)
-    const provider = new ethers.providers.WebSocketProvider(rpcEndpoint)
-    keepAlive({
-      provider,
-      onDisconnect: this.disconnectBuilder.bind(this)(userWallet, network, rpcEndpoint, true),
-    })
-    this.providers[network] = provider
-    if (subscribe) {
-      this.networkSubscribe(network)
-    }
-
-    return provider
-  }
-
-  exitHandler = async (exitCode: number): Promise<void> => {
-    /**
-     * Before exit, save the block heights to the local db
-     */
-    if (this.exited === false) {
-      this.log('')
-      this.log(`Saving current block heights: ${JSON.stringify(this.latestBlockHeight)}`)
-      this.saveLastBlocks(Propagator.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
-      this.log(`Exiting propagator with code ${exitCode}...`)
-      this.log('Goodbye! 👋')
-      this.exited = true
-    }
-  }
-
-  exitRouter = (options: {[key: string]: boolean | string | number}, exitCode: number | string): void => {
-    /**
-     * Before exit, save the block heights to the local db
-     */
-    if ((exitCode && exitCode === 0) || exitCode === 'SIGINT') {
-      if (this.exited === false) {
-        this.log('')
-        this.log(`Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}`)
-        this.saveLastBlocks(Propagator.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
-        this.log(`Exiting propagator with code ${exitCode}...`)
-        this.log('Goodbye! 👋')
-        this.exited = true
-      }
-
-      this.debug(`\nExit code ${exitCode}`)
-      if (options.exit) {
-        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
-        process.exit()
-      }
-    } else {
-      this.debug(`\nError: ${exitCode}`)
-    }
-  }
-
-  monitorBuilder: (network: string) => () => void = (network: string): (() => void) => {
-    return () => {
-      this.blockJobMonitor.bind(this)(network)
-    }
-  }
 
   async run(): Promise<void> {
     const {flags} = await this.parse(Propagator)
@@ -331,6 +234,99 @@ export default class Propagator extends Command {
     }
   }
 
+  async loadLastBlocks(fileName: string, configDir: string): Promise<{[key: string]: number}> {
+    const filePath = path.join(configDir, fileName)
+    let lastBlocks: {[key: string]: number} = {}
+    if (await fs.pathExists(filePath)) {
+      lastBlocks = await fs.readJson(filePath)
+    }
+
+    return lastBlocks
+  }
+
+  saveLastBlocks(fileName: string, configDir: string, lastBlocks: {[key: string]: number}): void {
+    const filePath = path.join(configDir, fileName)
+    fs.writeFileSync(filePath, JSON.stringify(lastBlocks), 'utf8')
+  }
+
+  disconnectBuilder(
+    userWallet: ethers.Wallet,
+    network: string,
+    rpcEndpoint: string,
+    subscribe: boolean,
+  ): (err: any) => void {
+    return (err: any) => {
+      ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
+        this.log(network, 'WS connection was closed', JSON.stringify(err, null, 2))
+        this.providers[network] = this.failoverWebSocketProvider(userWallet, network, rpcEndpoint, subscribe)
+        this.wallets[network] = userWallet.connect(this.providers[network] as ethers.providers.WebSocketProvider)
+      })
+    }
+  }
+
+  failoverWebSocketProvider(
+    userWallet: ethers.Wallet,
+    network: string,
+    rpcEndpoint: string,
+    subscribe: boolean,
+  ): ethers.providers.WebSocketProvider {
+    const provider = new ethers.providers.WebSocketProvider(rpcEndpoint)
+    keepAlive({
+      provider,
+      onDisconnect: this.disconnectBuilder.bind(this)(userWallet, network, rpcEndpoint, true),
+    })
+    this.providers[network] = provider
+    if (subscribe) {
+      this.networkSubscribe(network)
+    }
+
+    return provider
+  }
+
+  exitHandler = async (exitCode: number): Promise<void> => {
+    /**
+     * Before exit, save the block heights to the local db
+     */
+    if (this.exited === false) {
+      this.log('')
+      this.log(`Saving current block heights: ${JSON.stringify(this.latestBlockHeight)}`)
+      this.saveLastBlocks(Propagator.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
+      this.log(`Exiting propagator with code ${exitCode}...`)
+      this.log('Goodbye! 👋')
+      this.exited = true
+    }
+  }
+
+  exitRouter = (options: {[key: string]: boolean | string | number}, exitCode: number | string): void => {
+    /**
+     * Before exit, save the block heights to the local db
+     */
+    if ((exitCode && exitCode === 0) || exitCode === 'SIGINT') {
+      if (this.exited === false) {
+        this.log('')
+        this.log(`Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}`)
+        this.saveLastBlocks(Propagator.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
+        this.log(`Exiting propagator with code ${exitCode}...`)
+        this.log('Goodbye! 👋')
+        this.exited = true
+      }
+
+      this.debug(`\nExit code ${exitCode}`)
+      if (options.exit) {
+        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+        process.exit()
+      }
+    } else {
+      this.debug(`\nError: ${exitCode}`)
+    }
+  }
+
+  monitorBuilder: (network: string) => () => void = (network: string): (() => void) => {
+    return () => {
+      this.blockJobMonitor.bind(this)(network)
+    }
+  }
+
   async initializeEthers(
     loadNetworks: string[],
     configFile: ConfigFile,
@@ -389,7 +385,6 @@ export default class Propagator extends Command {
   }
 
   async processBlock(job: BlockJob): Promise<void> {
-    this.structuredLog(job.network, `processing ${job.block}`)
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)
     if (block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
@@ -451,7 +446,6 @@ export default class Propagator extends Command {
       const blockJob: BlockJob = this.blockJobs[network].shift() as BlockJob
       this.processBlock(blockJob)
     } else {
-      // this.structuredLog(network, 'no blocks')
       setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
     }
   }

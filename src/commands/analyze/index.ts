@@ -53,11 +53,12 @@ const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInte
 }
 
 export default class Analyze extends Command {
-  static LAST_BLOCKS_FILE_NAME = 'analyze_blocks.json'
+  static LAST_BLOCKS_FILE_NAME = 'analyze-blocks.json'
   static description = 'Extract all operator jobs and get their status'
   static examples = [
     `$ holo analyze --scope='[{"network":"rinkeby","startBlock":10857626,"endBlock":11138178},{"network":"mumbai","startBlock":26758573,"endBlock":27457918},{"network":"fuji","startBlock":11406945,"endBlock":12192217}]'`,
   ]
+
   static flags = {
     scope: Flags.string({
       description:
@@ -95,7 +96,6 @@ export default class Analyze extends Command {
   disconnectBuilder(network: string, rpcEndpoint: string): (err: any) => void {
     return (err: any) => {
       ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
-        this.debug('onDisconnect')
         this.log(network, 'WS connection was closed', JSON.stringify(err, null, 2))
         this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint)
       })
@@ -103,7 +103,6 @@ export default class Analyze extends Command {
   }
 
   failoverWebSocketProvider(network: string, rpcEndpoint: string): ethers.providers.WebSocketProvider {
-    this.debug('this.providers', network)
     const provider = new ethers.providers.WebSocketProvider(rpcEndpoint)
     keepAlive({
       provider,
@@ -259,7 +258,7 @@ export default class Analyze extends Command {
       this.runningProcesses += 1
       // Process blocks 🧱
       this.blockJobHandler(network)
-      // Activate Job Monitor for disconnect recovery
+      // Activate Job Monitor for disconnect recovery after 10 seconds / Monitor every second
       setTimeout((): void => {
         this.blockJobMonitorProcess[network] = setInterval(this.monitorBuilder.bind(this)(network), 1000)
       }, 10_000)
@@ -274,7 +273,6 @@ export default class Analyze extends Command {
   }
 
   async processBlock(job: BlockJob): Promise<void> {
-    this.structuredLog(job.network, `processing ${job.block}`)
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)
     if (block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
@@ -348,8 +346,6 @@ export default class Analyze extends Command {
         this.log('finished the last job', 'need to output data and exit')
         this.exitRouter({exit: true}, 'SIGINT')
       }
-      // this.structuredLog(network, 'no blocks')
-      // setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
     }
   }
 
@@ -501,159 +497,6 @@ export default class Analyze extends Command {
       this.structuredLog(network, `${transactionHash} job needs to be done`)
     }
   }
-
-  /*
-  handleContractDeployedEvents(
-    transaction: ethers.Transaction,
-    receipt: ethers.ContractReceipt,
-    network: string,
-  ): void {
-    this.structuredLog(network, `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`)
-    const config = decodeDeploymentConfigInput(transaction.data)
-    let event = null
-    if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        if (event === null) {
-          const log = receipt.logs[i]
-          if (log.topics.length > 0 && log.topics[0] === this.targetEvents.BridgeableContractDeployed) {
-            event = log.topics
-            break
-          } else {
-            this.structuredLog(network, `BridgeableContractDeployed event not found in ${transaction.hash}`)
-          }
-        }
-      }
-
-      if (event) {
-        const deploymentAddress = '0x' + event[1].slice(26)
-        this.structuredLog(
-          network,
-          `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-            `Wallet that deployed the collection is ${transaction.from}\n` +
-            `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
-            `The transaction hash is: ${transaction.hash}\n`,
-        )
-      }
-    }
-  }
-
-  handleOperatorBridgeEvents(transaction: ethers.Transaction, receipt: ethers.ContractReceipt, network: string): void {
-    this.structuredLog(
-      network,
-      `Checking if an operator executed a job to bridge a contract / collection at tx: ${transaction.hash}`,
-    )
-    let event = null
-    if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        if (event === null) {
-          const log = receipt.logs[i]
-          if (log.topics.length > 0 && log.topics[0] === this.targetEvents.BridgeableContractDeployed) {
-            event = log.topics
-          }
-        }
-      }
-    } else {
-      this.structuredLog(network, 'Failed to find BridgeableContractDeployed event from operator job')
-    }
-
-    if (event) {
-      const deploymentInput = this.abiCoder.decode(['bytes'], '0x' + transaction.data.slice(10))[0]
-      const config = decodeDeploymentConfig(this.abiCoder.decode(['bytes'], '0x' + deploymentInput.slice(10))[0])
-      const deploymentAddress = '0x' + event[1].slice(26)
-      this.structuredLog(
-        network,
-        '\nHolographOperator executed a job which bridged a collection\n' +
-          `HolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-          `Operator that deployed the collection is ${transaction.from}` +
-          `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
-      )
-    }
-  }
-
-  async handleOperatorRequestEvents(
-    transaction: ethers.Transaction,
-    receipt: ethers.ContractReceipt,
-    network: string,
-  ): Promise<void> {
-    this.structuredLog(
-      network,
-      `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
-    )
-    let event = null
-    if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        if (event === null) {
-          const log = receipt.logs[i]
-          if (
-            log.address.toLowerCase() === this.operatorAddress &&
-            log.topics.length > 0 &&
-            log.topics[0] === this.targetEvents.AvailableJob
-          ) {
-            event = log.data
-          } else {
-            this.structuredLog(
-              network,
-              `LayerZero transaction is not relevant to AvailableJob event. ` +
-                `Transaction was relayed to ${log.address} instead of ` +
-                `The Operator at ${this.operatorAddress}`,
-            )
-          }
-        }
-      }
-
-      if (event) {
-        const payload = this.abiCoder.decode(['bytes'], event)[0]
-        this.structuredLog(
-          network,
-          `HolographOperator received a new bridge job on ${network} with job payload: ${payload}\n`,
-        )
-
-        if (this.operatorMode !== OperatorMode.listen) {
-          await this.executePayload(network, payload)
-        }
-      }
-    }
-  }
-
-  async executePayload(network: string, payload: string): Promise<void> {
-    // If the operator is in listen mode, payloads will not be executed
-    // If the operator is in manual mode, the payload must be manually executed
-    // If the operator is in auto mode, the payload will be executed automatically
-    let operate = this.operatorMode === OperatorMode.auto
-    if (this.operatorMode === OperatorMode.manual) {
-      const operatorPrompt: any = await inquirer.prompt([
-        {
-          name: 'shouldContinue',
-          message: `A transaction appeared on ${network} for execution, would you like to operate?\n`,
-          type: 'confirm',
-          default: false,
-        },
-      ])
-      operate = operatorPrompt.shouldContinue
-    }
-
-    if (operate) {
-      const contract = this.operatorContract.connect(this.providers[network])
-      let gasLimit
-      try {
-        gasLimit = await contract.estimateGas.executeJob(payload)
-      } catch (error: any) {
-        this.error(error.reason)
-      }
-
-      const gasPrice = await contract.provider.getGasPrice()
-      const jobTx = await contract.executeJob(payload, {gasPrice, gasLimit})
-      this.debug(jobTx)
-      this.structuredLog(network, `Transaction hash is ${jobTx.hash}`)
-
-      const jobReceipt = await jobTx.wait()
-      this.debug(jobReceipt)
-      this.structuredLog(network, `Transaction ${jobTx.hash} mined and confirmed`)
-    } else {
-      this.structuredLog(network, 'Dropped potential payload to execute')
-    }
-  }
-*/
 
   structuredLog(network: string, msg: string): void {
     const timestamp = new Date(Date.now()).toISOString()
