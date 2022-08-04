@@ -119,7 +119,7 @@ jobs:
             --values .github/values_for_stg_alb_ingress.yaml \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer
+            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
             --set ingress.blue_green_deployment=no
       #
       #
@@ -155,7 +155,7 @@ jobs:
             --values .github/values_for_stg_alb_ingress.yaml \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator
+            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
             --set ingress.blue_green_deployment=no
       #
       #
@@ -191,7 +191,7 @@ jobs:
             --values .github/values_for_stg_alb_ingress.yaml \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-propagator
+            --set ingress.target_svc_name=$RELEASE_NAME-holo-propagator \
             --set ingress.blue_green_deployment=no
 
       - name: -> Info for the new deployments
