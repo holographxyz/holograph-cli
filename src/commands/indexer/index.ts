@@ -15,7 +15,7 @@ import dotenv from 'dotenv'
 import {startHealcheckServer} from '../../utils/health-check-server'
 dotenv.config()
 
-enum IndexerMode {
+enum OperatorMode {
   listen,
   manual,
   auto,
@@ -40,11 +40,6 @@ const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInte
   provider._websocket.on('open', () => {
     keepAliveInterval = setInterval(() => {
       provider._websocket.ping()
-
-      // Use `WebSocket#terminate()`, which immediately destroys the connection,
-      // instead of `WebSocket#close()`, which waits for the close timer.
-      // Delay should be equal to the interval at which your server
-      // sends out pings plus a conservative assumption of the latency.
       pingTimeout = setTimeout(() => {
         provider._websocket.terminate()
       }, expectedPongBack)
@@ -63,7 +58,7 @@ const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInte
 }
 
 export default class Indexer extends Command {
-  static LAST_BLOCKS_FILE_NAME = 'blocks.json'
+  static LAST_BLOCKS_FILE_NAME = 'indexer-blocks.json'
   static description = 'Listen for EVM events and update database network status'
   static examples = ['$ holo indexer --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
@@ -83,16 +78,19 @@ export default class Indexer extends Command {
   /**
    * Indexer class variables
    */
-  bridgeAddress: string | undefined
-  factoryAddress: string | undefined
-  operatorAddress: string | undefined
+  // API Params
+  baseUrl!: string
+  JWT!: string
+
+  bridgeAddress!: string
+  factoryAddress!: string
+  operatorAddress!: string
   supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
-  blockJobs: BlockJob[] = []
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   abiCoder = ethers.utils.defaultAbiCoder
   wallets: {[key: string]: ethers.Wallet} = {}
   holograph!: ethers.Contract
-  indexerMode: IndexerMode = IndexerMode.listen
+  operatorMode: OperatorMode = OperatorMode.listen
   operatorContract!: ethers.Contract
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
   LAYERZERO_RECEIVERS: any = {
@@ -113,14 +111,14 @@ export default class Indexer extends Command {
   }
 
   networkColors: any = {}
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore - Set all networks to start with latest block at index 0
   latestBlockHeight: {[key: string]: number} = {}
-  exited = false
+  currentBlockHeight: {[key: string]: number} = {}
+  blockJobs: {[key: string]: BlockJob[]} = {}
+  blockJobThreshold = 15_000 // 15 seconds
+  lastBlockJobDone: {[key: string]: number} = {}
+  blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
 
-  // API Params
-  baseUrl!: string
-  JWT!: string
+  exited = false
 
   async run(): Promise<void> {
     this.log(`Operator command has begun!!!`)
@@ -128,11 +126,13 @@ export default class Indexer extends Command {
     this.baseUrl = flags.host
     const enableHealthCheckServer = flags.healthCheck
 
+    this.log(`API: Authenticating with ${this.baseUrl}`)
     let res
     try {
       res = await axios.post(`${this.baseUrl}/v1/auth/operator`, {
         hash: process.env.OPERATOR_API_KEY,
       })
+      this.debug(res)
     } catch (error: any) {
       this.error(error.message)
     }
@@ -148,7 +148,7 @@ export default class Indexer extends Command {
     this.log(`this.JWT = ${this.JWT}`)
 
     // Indexer always runs in listen mode
-    this.log(`Indexer mode: ${this.indexerMode}`)
+    this.log(`Indexer mode: ${this.operatorMode}`)
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
@@ -176,7 +176,7 @@ export default class Indexer extends Command {
       }
     }
 
-    CliUx.ux.action.start(`Starting indexer in mode: ${IndexerMode[this.indexerMode]}`)
+    CliUx.ux.action.start(`Starting indexer in mode: ${OperatorMode[this.operatorMode]}`)
     await this.initializeEthers(flags.networks, configFile, userWallet, false)
 
     this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
@@ -186,15 +186,22 @@ export default class Indexer extends Command {
     this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESS}`)
     this.log(`Bridge address: ${this.bridgeAddress}`)
     this.log(`Factory address: ${this.factoryAddress}`)
-    this.log(`Indexer address: ${this.operatorAddress}`)
+    this.log(`Operator address: ${this.operatorAddress}`)
     CliUx.ux.action.stop('🚀')
 
     // Setup websocket subscriptions and start processing blocks
     for (let i = 0, l = flags.networks.length; i < l; i++) {
-      const network = flags.networks[i]
-
+      const network: string = flags.networks[i]
+      this.blockJobs[network] = []
+      this.lastBlockJobDone[network] = Date.now()
       // Subscribe to events 🎧
       this.networkSubscribe(network)
+      // Process blocks 🧱
+      this.blockJobHandler(network)
+      // Activate Job Monitor for disconnect recovery after 10 seconds / Monitor every second
+      setTimeout((): void => {
+        this.blockJobMonitorProcess[network] = setInterval(this.monitorBuilder.bind(this)(network), 1000)
+      }, 10_000)
     }
 
     // Catch all exit events
@@ -208,9 +215,6 @@ export default class Indexer extends Command {
     if (enableHealthCheckServer) {
       startHealcheckServer()
     }
-
-    // // Process blocks 🧱
-    this.blockJobHandler()
   }
 
   async loadLastBlocks(fileName: string, configDir: string): Promise<{[key: string]: number}> {
@@ -236,7 +240,6 @@ export default class Indexer extends Command {
   ): (err: any) => void {
     return (err: any) => {
       ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
-        this.debug('onDisconnect')
         this.log(network, 'WS connection was closed', JSON.stringify(err, null, 2))
         this.providers[network] = this.failoverWebSocketProvider(userWallet, network, rpcEndpoint, subscribe)
         this.wallets[network] = userWallet.connect(this.providers[network] as ethers.providers.WebSocketProvider)
@@ -250,7 +253,6 @@ export default class Indexer extends Command {
     rpcEndpoint: string,
     subscribe: boolean,
   ): ethers.providers.WebSocketProvider {
-    this.debug('this.providers', network)
     const provider = new ethers.providers.WebSocketProvider(rpcEndpoint)
     keepAlive({
       provider,
@@ -262,6 +264,78 @@ export default class Indexer extends Command {
     }
 
     return provider
+  }
+
+  exitHandler = async (exitCode: number): Promise<void> => {
+    /**
+     * Before exit, save the block heights to the local db
+     */
+    if (this.exited === false) {
+      this.log('')
+      this.log(`Saving current block heights: ${JSON.stringify(this.latestBlockHeight)}`)
+      this.saveLastBlocks(Indexer.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
+      this.log(`Exiting operator with code ${exitCode}...`)
+      this.log('Goodbye! 👋')
+      this.exited = true
+    }
+  }
+
+  exitRouter = (options: {[key: string]: boolean | string | number}, exitCode: number | string): void => {
+    /**
+     * Before exit, save the block heights to the local db
+     */
+    if ((exitCode && exitCode === 0) || exitCode === 'SIGINT') {
+      if (this.exited === false) {
+        this.log('')
+        this.log(`Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}`)
+        this.saveLastBlocks(Indexer.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
+        this.log(`Exiting operator with code ${exitCode}...`)
+        this.log('Goodbye! 👋')
+        this.exited = true
+      }
+
+      this.debug(`\nExit code ${exitCode}`)
+      if (options.exit) {
+        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+        process.exit()
+      }
+    } else {
+      this.debug('exitRouter triggered')
+      this.debug(`\nError: ${exitCode}`)
+    }
+  }
+
+  monitorBuilder: (network: string) => () => void = (network: string): (() => void) => {
+    return () => {
+      this.blockJobMonitor.bind(this)(network)
+    }
+  }
+
+  blockJobMonitor = (network: string): void => {
+    if (Date.now() - this.lastBlockJobDone[network] > this.blockJobThreshold) {
+      this.debug('Block Job Handler has been inactive longer than threshold time. Restarting.')
+      this.blockJobHandler(network)
+    }
+  }
+
+  jobHandlerBuilder: (network: string) => () => void = (network: string): (() => void) => {
+    return () => {
+      this.blockJobHandler.bind(this)(network)
+    }
+  }
+
+  blockJobHandler = (network: string, job?: BlockJob): void => {
+    if (job !== undefined) {
+      this.latestBlockHeight[job.network] = job.block
+    }
+
+    this.lastBlockJobDone[network] = Date.now()
+    if (this.blockJobs[network].length > 0) {
+      const blockJob: BlockJob = this.blockJobs[network].shift() as BlockJob
+      this.processBlock(blockJob)
+    } else {
+      setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
+    }
   }
 
   async initializeEthers(
@@ -313,46 +387,8 @@ export default class Indexer extends Command {
     )
   }
 
-  exitHandler = async (exitCode: number): Promise<void> => {
-    /**
-     * Before exit, save the block heights to the local db
-     */
-    if (this.exited === false) {
-      this.log('')
-      this.log(`Saving current block heights: ${JSON.stringify(this.latestBlockHeight)}`)
-      this.saveLastBlocks(Indexer.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
-      this.log(`Exiting indexer with code ${exitCode}...`)
-      this.log('Goodbye! 👋')
-      this.exited = true
-    }
-  }
-
-  exitRouter = (options: {[key: string]: boolean | string | number}, exitCode: number | string): void => {
-    /**
-     * Before exit, save the block heights to the local db
-     */
-    if ((exitCode && exitCode === 0) || exitCode === 'SIGINT') {
-      if (this.exited === false) {
-        this.log('')
-        this.log(`Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}`)
-        this.saveLastBlocks(Indexer.LAST_BLOCKS_FILE_NAME, this.config.configDir, this.latestBlockHeight)
-        this.log(`Exiting indexer with code ${exitCode}...`)
-        this.log('Goodbye! 👋')
-        this.exited = true
-      }
-
-      this.debug(`\nExit code ${exitCode}`)
-      if (options.exit) {
-        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
-        process.exit()
-      }
-    } else {
-      this.debug(`\nError: ${exitCode}`)
-    }
-  }
-
   async processBlock(job: BlockJob): Promise<void> {
-    this.debug(`processing [${job.network}] ${job.block}`)
+    this.structuredLog(job.network, `Processing Block ${job.block}`)
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)
     if (block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
@@ -363,13 +399,13 @@ export default class Indexer extends Command {
       for (let i = 0, l = block.transactions.length; i < l; i++) {
         const transaction = block.transactions[i]
         if (transaction.from.toLowerCase() === this.LAYERZERO_RECEIVERS[job.network]) {
-          // We have LayerZero call, need to check it it's directed towards Holograph indexers
+          // We have LayerZero call, need to check it it's directed towards Holograph operators
           interestingTransactions.push(transaction)
         } else if ('to' in transaction && transaction.to !== null && transaction.to !== '') {
-          const to: string | undefined = transaction.to?.toLowerCase()
+          const to: string = transaction.to!.toLowerCase()
           // Check if it's a factory call
           if (to === this.factoryAddress || to === this.operatorAddress) {
-            // We have a potential factory deployment or indexer bridge transaction
+            // We have a potential factory deployment or operator bridge transaction
             interestingTransactions.push(transaction)
           }
         }
@@ -380,49 +416,38 @@ export default class Indexer extends Command {
           job.network,
           `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`,
         )
-        this.processTransactions(job.network, interestingTransactions)
+        this.processTransactions(job, interestingTransactions)
       } else {
-        this.blockJobHandler()
+        this.blockJobHandler(job.network, job)
       }
     } else {
       this.structuredLog(job.network, `${job.network} ${color.red('Dropped block!')} ${job.block}`)
-      this.blockJobs.unshift(job)
-      this.blockJobHandler()
+      this.blockJobs[job.network].unshift(job)
+      this.blockJobHandler(job.network)
     }
   }
 
-  // For some reason defining this as function definition causes `this` to be undefined
-  blockJobHandler = (): void => {
-    if (this.blockJobs.length > 0) {
-      const blockJob: BlockJob = this.blockJobs.shift() as BlockJob
-      this.processBlock(blockJob)
-    } else {
-      this.debug('no blocks')
-      setTimeout(this.blockJobHandler, 1000)
-    }
-  }
-
-  async processTransactions(network: string, transactions: ethers.Transaction[]): Promise<void> {
+  async processTransactions(job: BlockJob, transactions: ethers.Transaction[]): Promise<void> {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
-        const receipt = await this.providers[network].getTransactionReceipt(transaction.hash as string)
+        const receipt = await this.providers[job.network].getTransactionReceipt(transaction.hash as string)
         if (receipt === null) {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
 
-        this.debug(`Processing transaction ${transaction.hash} on ${network} at block ${receipt.blockNumber}`)
+        this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${receipt.blockNumber}`)
         if (transaction.to?.toLowerCase() === this.factoryAddress) {
-          this.handleContractDeployedEvents(transaction, receipt, network)
+          this.handleContractDeployedEvents(transaction, receipt, job.network)
         } else if (transaction.to?.toLowerCase() === this.operatorAddress) {
-          this.handleIndexerBridgeEvents(transaction, receipt, network)
+          this.handleOperatorBridgeEvents(transaction, receipt, job.network)
         } else {
-          this.handleIndexerRequestEvents(transaction, receipt, network)
+          this.handleOperatorRequestEvents(transaction, receipt, job.network)
         }
       }
     }
 
-    this.blockJobHandler()
+    this.blockJobHandler(job.network, job)
   }
 
   async handleContractDeployedEvents(
@@ -509,7 +534,7 @@ export default class Indexer extends Command {
     }
   }
 
-  async handleIndexerRequestEvents(
+  async handleOperatorRequestEvents(
     transaction: ethers.Transaction,
     receipt: ethers.ContractReceipt,
     network: string,
@@ -550,7 +575,7 @@ export default class Indexer extends Command {
     }
   }
 
-  async handleIndexerBridgeEvents(
+  async handleOperatorBridgeEvents(
     transaction: ethers.Transaction,
     receipt: ethers.ContractReceipt,
     network: string,
@@ -724,12 +749,12 @@ export default class Indexer extends Command {
   networkSubscribe(network: string): void {
     this.providers[network].on('block', (blockNumber: string) => {
       const block = Number.parseInt(blockNumber, 10)
-      if (this.latestBlockHeight[network] !== 0 && block - this.latestBlockHeight[network] > 1) {
+      if (this.currentBlockHeight[network] !== 0 && block - this.currentBlockHeight[network] > 1) {
         this.debug(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
-        let latest = this.latestBlockHeight[network]
-        while (block - latest > 1) {
+        let latest = this.currentBlockHeight[network]
+        while (block - latest > 0) {
           this.structuredLog(network, `Block ${latest} (Syncing)`)
-          this.blockJobs.push({
+          this.blockJobs[network].push({
             network: network,
             block: latest,
           })
@@ -737,9 +762,9 @@ export default class Indexer extends Command {
         }
       }
 
-      this.latestBlockHeight[network] = block
+      this.currentBlockHeight[network] = block
       this.structuredLog(network, `Block ${block}`)
-      this.blockJobs.push({
+      this.blockJobs[network].push({
         network: network,
         block: block,
       } as BlockJob)
