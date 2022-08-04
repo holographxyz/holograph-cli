@@ -12,7 +12,7 @@ import {decodeDeploymentConfigInput, capitalize, NETWORK_COLORS, DeploymentConfi
 import color from '@oclif/color'
 import {startHealcheckServer} from '../../utils/health-check-server'
 
-enum PropagatorMode {
+enum OperatorMode {
   listen,
   manual,
   auto,
@@ -37,11 +37,6 @@ const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInte
   provider._websocket.on('open', () => {
     keepAliveInterval = setInterval(() => {
       provider._websocket.ping()
-
-      // Use `WebSocket#terminate()`, which immediately destroys the connection,
-      // instead of `WebSocket#close()`, which waits for the close timer.
-      // Delay should be equal to the interval at which your server
-      // sends out pings plus a conservative assumption of the latency.
       pingTimeout = setTimeout(() => {
         provider._websocket.terminate()
       }, expectedPongBack)
@@ -88,16 +83,15 @@ export default class Propagator extends Command {
   /**
    * Propagator class variables
    */
-  bridgeAddress: string | undefined
-  factoryAddress: string | undefined
-  operatorAddress: string | undefined
+  bridgeAddress!: string
+  factoryAddress!: string
+  operatorAddress!: string
   supportedNetworks: string[] = ['rinkeby', 'fuji', 'mumbai']
-  blockJobs: BlockJob[] = []
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   abiCoder = ethers.utils.defaultAbiCoder
   wallets: {[key: string]: ethers.Wallet} = {}
   holograph!: ethers.Contract
-  propagatorMode: PropagatorMode = PropagatorMode.listen
+  operatorMode: OperatorMode = OperatorMode.listen
   operatorContract!: ethers.Contract
   factoryContract!: ethers.Contract
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
@@ -116,10 +110,129 @@ export default class Propagator extends Command {
   }
 
   networkColors: any = {}
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore - Set all networks to start with latest block at index 0
   latestBlockHeight: {[key: string]: number} = {}
+  currentBlockHeight: {[key: string]: number} = {}
+  blockJobs: {[key: string]: BlockJob[]} = {}
+  blockJobThreshold = 15_000 // 15 seconds
+  lastBlockJobDone: {[key: string]: number} = {}
+  blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
+
   exited = false
+
+  async run(): Promise<void> {
+    const {flags} = await this.parse(Propagator)
+
+    const enableHealthCheckServer = flags.healthCheck
+    const syncFlag = flags.sync
+    const unsafePassword = flags.unsafePassword
+
+    // Have the user input the mode if it's not provided
+    let mode: string | undefined = flags.mode
+
+    if (!mode) {
+      const prompt: any = await inquirer.prompt([
+        {
+          name: 'mode',
+          message: 'Enter the mode in which to run the operator',
+          type: 'list',
+          choices: ['listen', 'manual', 'auto'],
+          default: 'listen',
+        },
+      ])
+      mode = prompt.mode
+    }
+
+    this.operatorMode = OperatorMode[mode as keyof typeof OperatorMode]
+    this.log(`Operator mode: ${this.operatorMode}`)
+
+    this.log('Loading user configurations...')
+    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
+    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, unsafePassword, true)
+    this.log('User configurations loaded.')
+
+    this.latestBlockHeight = await this.loadLastBlocks(Propagator.LAST_BLOCKS_FILE_NAME, this.config.configDir)
+    let canSync = false
+    const lastBlockKeys: string[] = Object.keys(this.latestBlockHeight)
+    for (let i = 0, l: number = lastBlockKeys.length; i < l; i++) {
+      if (this.latestBlockHeight[lastBlockKeys[i]] > 0) {
+        canSync = true
+        break
+      }
+    }
+
+    if (canSync && !syncFlag) {
+      const syncPrompt: any = await inquirer.prompt([
+        {
+          name: 'shouldSync',
+          message: 'Operator has previous (missed) blocks that can be synced. Would you like to sync?',
+          type: 'confirm',
+          default: true,
+        },
+      ])
+      if (syncPrompt.shouldSync === false) {
+        this.latestBlockHeight = {}
+        this.currentBlockHeight = {}
+      }
+    }
+
+    // Load defaults for the networks from the config file
+    if (flags.networks === undefined || '') {
+      flags.networks = Object.keys(configFile.networks)
+    }
+
+    // Color the networks 🌈
+    for (let i = 0, l = flags.networks.length; i < l; i++) {
+      const network = flags.networks[i]
+      if (Object.keys(configFile.networks).includes(network)) {
+        this.networkColors[network] = color.hex(NETWORK_COLORS[network])
+      } else {
+        // If network is not supported remove it from the array
+        flags.networks.splice(i, 1)
+        l--
+        i--
+      }
+    }
+
+    CliUx.ux.action.start(`Starting operator in mode: ${OperatorMode[this.operatorMode]}`)
+    await this.initializeEthers(flags.networks, configFile, userWallet, false)
+
+    this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
+    this.factoryAddress = (await this.holograph.getFactory()).toLowerCase()
+    this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
+
+    this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESS}`)
+    this.log(`Bridge address: ${this.bridgeAddress}`)
+    this.log(`Factory address: ${this.factoryAddress}`)
+    this.log(`Operator address: ${this.operatorAddress}`)
+    CliUx.ux.action.stop('🚀')
+
+    // Setup websocket subscriptions and start processing blocks
+    for (let i = 0, l = flags.networks.length; i < l; i++) {
+      const network: string = flags.networks[i]
+      this.blockJobs[network] = []
+      this.lastBlockJobDone[network] = Date.now()
+      // Subscribe to events 🎧
+      this.networkSubscribe(network)
+      // Process blocks 🧱
+      this.blockJobHandler(network)
+      // Activate Job Monitor for disconnect recovery after 10 seconds / Monitor every second
+      setTimeout((): void => {
+        this.blockJobMonitorProcess[network] = setInterval(this.monitorBuilder.bind(this)(network), 1000)
+      }, 10_000)
+    }
+
+    // Catch all exit events
+    for (const eventType of [`EEXIT`, `SIGINT`, `SIGUSR1`, `SIGUSR2`, `uncaughtException`, `SIGTERM`]) {
+      process.on(eventType, this.exitRouter.bind(this, {exit: true}))
+    }
+
+    process.on('exit', this.exitHandler)
+
+    // Start server
+    if (enableHealthCheckServer) {
+      startHealcheckServer()
+    }
+  }
 
   async loadLastBlocks(fileName: string, configDir: string): Promise<{[key: string]: number}> {
     const filePath = path.join(configDir, fileName)
@@ -172,56 +285,6 @@ export default class Propagator extends Command {
     return provider
   }
 
-  async initializeEthers(
-    loadNetworks: string[],
-    configFile: ConfigFile,
-    userWallet: ethers.Wallet | undefined,
-    subscribe: boolean,
-  ): Promise<void> {
-    for (let i = 0, l = loadNetworks.length; i < l; i++) {
-      const network = loadNetworks[i]
-      const rpcEndpoint = (configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork).providerUrl
-      const protocol = new URL(rpcEndpoint).protocol
-      switch (protocol) {
-        case 'https:':
-          this.providers[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
-
-          break
-        case 'wss:':
-          this.providers[network] = this.failoverWebSocketProvider(userWallet!, network, rpcEndpoint, subscribe)
-          break
-        default:
-          throw new Error('Unsupported RPC provider protocol -> ' + protocol)
-      }
-
-      if (userWallet !== undefined) {
-        this.wallets[network] = userWallet.connect(this.providers[network])
-      }
-
-      if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
-        this.structuredLog(network, `Resuming Propagator from block height ${this.latestBlockHeight[network]}`)
-      } else {
-        this.structuredLog(network, `Starting Propagator from latest block height`)
-        this.latestBlockHeight[network] = 0
-      }
-    }
-
-    const holographABI = await fs.readJson('./src/abi/Holograph.json')
-    this.holograph = new ethers.ContractFactory(holographABI, '0x', this.wallets[loadNetworks[0]]).attach(
-      this.HOLOGRAPH_ADDRESS.toLowerCase(),
-    )
-
-    const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
-    this.operatorContract = new ethers.ContractFactory(holographOperatorABI, '0x').attach(
-      await this.holograph.getOperator(),
-    )
-
-    const holographFactoryABI = await fs.readJson('./src/abi/HolographFactory.json')
-    this.factoryContract = new ethers.ContractFactory(holographFactoryABI, '0x').attach(
-      await this.holograph.getFactory(),
-    )
-  }
-
   exitHandler = async (exitCode: number): Promise<void> => {
     /**
      * Before exit, save the block heights to the local db
@@ -260,119 +323,103 @@ export default class Propagator extends Command {
     }
   }
 
-  async run(): Promise<void> {
-    const {flags} = await this.parse(Propagator)
-
-    const enableHealthCheckServer = flags.healthCheck
-    const syncFlag = flags.sync
-    const unsafePassword = flags.unsafePassword
-
-    // Have the user input the mode if it's not provided
-    let mode: string | undefined = flags.mode
-
-    if (!mode) {
-      const prompt: any = await inquirer.prompt([
-        {
-          name: 'mode',
-          message: 'Enter the mode in which to run the propagator',
-          type: 'list',
-          choices: ['listen', 'manual', 'auto'],
-          default: 'listen',
-        },
-      ])
-      mode = prompt.mode
+  monitorBuilder: (network: string) => () => void = (network: string): (() => void) => {
+    return () => {
+      this.blockJobMonitor.bind(this)(network)
     }
-
-    this.propagatorMode = PropagatorMode[mode as keyof typeof PropagatorMode]
-    this.log(`Propagator mode: ${this.propagatorMode}`)
-
-    this.log('Loading user configurations...')
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, unsafePassword, true)
-    this.log('User configurations loaded.')
-
-    this.latestBlockHeight = await this.loadLastBlocks(Propagator.LAST_BLOCKS_FILE_NAME, this.config.configDir)
-    let canSync = false
-    const lastBlockKeys: string[] = Object.keys(this.latestBlockHeight)
-    for (let i = 0, l: number = lastBlockKeys.length; i < l; i++) {
-      if (this.latestBlockHeight[lastBlockKeys[i]] > 0) {
-        canSync = true
-        break
-      }
-    }
-
-    if (canSync && !syncFlag) {
-      const syncPrompt: any = await inquirer.prompt([
-        {
-          name: 'shouldSync',
-          message: 'Propagator has previous (missed) blocks that can be synced. Would you like to sync?',
-          type: 'confirm',
-          default: true,
-        },
-      ])
-      if (syncPrompt.shouldSync === false) {
-        this.latestBlockHeight = {}
-      }
-    }
-
-    // Load defaults for the networks from the config file
-    if (flags.networks === undefined || '') {
-      flags.networks = Object.keys(configFile.networks)
-    }
-
-    // Color the networks 🌈
-    for (let i = 0, l = flags.networks.length; i < l; i++) {
-      const network = flags.networks[i]
-      if (Object.keys(configFile.networks).includes(network)) {
-        this.networkColors[network] = color.hex(NETWORK_COLORS[network])
-      } else {
-        // If network is not supported remove it from the array
-        flags.networks.splice(i, 1)
-        l--
-        i--
-      }
-    }
-
-    CliUx.ux.action.start(`Starting propagator in mode: ${PropagatorMode[this.propagatorMode]}`)
-    await this.initializeEthers(flags.networks, configFile, userWallet, false)
-
-    this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
-    this.factoryAddress = (await this.holograph.getFactory()).toLowerCase()
-    this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
-
-    this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESS}`)
-    this.log(`Bridge address: ${this.bridgeAddress}`)
-    this.log(`Factory address: ${this.factoryAddress}`)
-    this.log(`Operator address: ${this.operatorAddress}`)
-    CliUx.ux.action.stop('🚀')
-
-    // Setup websocket subscriptions and start processing blocks
-    for (let i = 0, l = flags.networks.length; i < l; i++) {
-      const network = flags.networks[i]
-
-      // Subscribe to events 🎧
-      this.networkSubscribe(network)
-    }
-
-    // Catch all exit events
-    for (const eventType of [`EEXIT`, `SIGINT`, `SIGUSR1`, `SIGUSR2`, `uncaughtException`, `SIGTERM`]) {
-      process.on(eventType, this.exitRouter.bind(this, {exit: true}))
-    }
-
-    process.on('exit', this.exitHandler)
-
-    // Start server
-    if (enableHealthCheckServer) {
-      startHealcheckServer()
-    }
-
-    // // Process blocks 🧱
-    this.blockJobHandler()
   }
 
-  // you can
+  blockJobMonitor = (network: string): void => {
+    if (Date.now() - this.lastBlockJobDone[network] > this.blockJobThreshold) {
+      this.debug('Block Job Handler has been inactive longer than threshold time. Restarting.')
+      this.blockJobHandler(network)
+    }
+  }
+
+  jobHandlerBuilder: (network: string) => () => void = (network: string): (() => void) => {
+    return () => {
+      this.blockJobHandler.bind(this)(network)
+    }
+  }
+
+  blockJobHandler = (network: string, job?: BlockJob): void => {
+    if (job !== undefined) {
+      this.latestBlockHeight[job.network] = job.block
+    }
+
+    this.lastBlockJobDone[network] = Date.now()
+    if (this.blockJobs[network].length > 0) {
+      const blockJob: BlockJob = this.blockJobs[network].shift() as BlockJob
+      this.processBlock(blockJob)
+    } else {
+      setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
+    }
+  }
+
+  async initializeEthers(
+    loadNetworks: string[],
+    configFile: ConfigFile,
+    userWallet: ethers.Wallet | undefined,
+    subscribe: boolean,
+  ): Promise<void> {
+    for (let i = 0, l = loadNetworks.length; i < l; i++) {
+      const network = loadNetworks[i]
+      const rpcEndpoint = (configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork).providerUrl
+      const protocol = new URL(rpcEndpoint).protocol
+      switch (protocol) {
+        case 'https:':
+          this.providers[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
+
+          break
+        case 'wss:':
+          this.providers[network] = this.failoverWebSocketProvider.bind(this)(
+            userWallet!,
+            network,
+            rpcEndpoint,
+            subscribe,
+          )
+          break
+        default:
+          throw new Error('Unsupported RPC provider protocol -> ' + protocol)
+      }
+
+      if (userWallet !== undefined) {
+        this.wallets[network] = userWallet.connect(this.providers[network])
+      }
+
+      if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
+        this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
+        this.currentBlockHeight[network] = this.latestBlockHeight[network]
+      } else {
+        this.structuredLog(network, `Starting Operator from latest block height`)
+        this.latestBlockHeight[network] = 0
+        this.currentBlockHeight[network] = 0
+      }
+    }
+
+    const holographABI = await fs.readJson('./src/abi/Holograph.json')
+    this.holograph = new ethers.Contract(
+      this.HOLOGRAPH_ADDRESS.toLowerCase(),
+      holographABI,
+      this.wallets[loadNetworks[0]],
+    )
+    this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
+
+    const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
+    this.operatorContract = new ethers.Contract(
+      this.operatorAddress,
+      holographOperatorABI,
+      this.wallets[loadNetworks[0]],
+    )
+
+    const holographFactoryABI = await fs.readJson('./src/abi/HolographFactory.json')
+    this.factoryContract = new ethers.ContractFactory(holographFactoryABI, '0x').attach(
+      await this.holograph.getFactory(),
+    )
+  }
+
   async processBlock(job: BlockJob): Promise<void> {
-    this.debug(`processing [${job.network}] ${job.block}`)
+    this.structuredLog(job.network, `Processing Block ${job.block}`)
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)
     if (block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
@@ -382,11 +429,14 @@ export default class Propagator extends Command {
       const interestingTransactions = []
       for (let i = 0, l = block.transactions.length; i < l; i++) {
         const transaction = block.transactions[i]
-        if ('to' in transaction && transaction.to !== null && transaction.to !== '') {
-          const to: string | undefined = transaction.to?.toLowerCase()
+        if (transaction.from.toLowerCase() === this.LAYERZERO_RECEIVERS[job.network]) {
+          // We have LayerZero call, need to check it it's directed towards Holograph operators
+          interestingTransactions.push(transaction)
+        } else if ('to' in transaction && transaction.to !== null && transaction.to !== '') {
+          const to: string = transaction.to!.toLowerCase()
           // Check if it's a factory call
-          if (to === this.factoryAddress) {
-            // We have a potential factory deployment transaction
+          if (to === this.factoryAddress || to === this.operatorAddress) {
+            // We have a potential factory deployment or operator bridge transaction
             interestingTransactions.push(transaction)
           }
         }
@@ -397,45 +447,34 @@ export default class Propagator extends Command {
           job.network,
           `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`,
         )
-        this.processTransactions(job.network, interestingTransactions)
+        this.processTransactions(job, interestingTransactions)
       } else {
-        this.blockJobHandler()
+        this.blockJobHandler(job.network, job)
       }
     } else {
       this.structuredLog(job.network, `${job.network} ${color.red('Dropped block!')} ${job.block}`)
-      this.blockJobs.unshift(job)
-      this.blockJobHandler()
+      this.blockJobs[job.network].unshift(job)
+      this.blockJobHandler(job.network)
     }
   }
 
-  // For some reason defining this as function definition causes `this` to be undefined
-  blockJobHandler = (): void => {
-    if (this.blockJobs.length > 0) {
-      const blockJob: BlockJob = this.blockJobs.shift() as BlockJob
-      this.processBlock(blockJob)
-    } else {
-      this.debug('no blocks')
-      setTimeout(this.blockJobHandler, 1000)
-    }
-  }
-
-  async processTransactions(network: string, transactions: ethers.Transaction[]): Promise<void> {
+  async processTransactions(job: BlockJob, transactions: ethers.Transaction[]): Promise<void> {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
-        const receipt = await this.providers[network].getTransactionReceipt(transaction.hash as string)
+        const receipt = await this.providers[job.network].getTransactionReceipt(transaction.hash as string)
         if (receipt === null) {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
 
-        this.debug(`Processing transaction ${transaction.hash} on ${network} at block ${receipt.blockNumber}`)
+        this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${receipt.blockNumber}`)
         if (transaction.to?.toLowerCase() === this.factoryAddress) {
-          await this.handleContractDeployedEvents(transaction, receipt, network)
+          this.handleContractDeployedEvents(transaction, receipt, job.network)
         }
       }
     }
 
-    this.blockJobHandler()
+    this.blockJobHandler(job.network, job)
   }
 
   async handleContractDeployedEvents(
@@ -469,7 +508,7 @@ export default class Propagator extends Command {
             `The transaction hash is: ${transaction.hash}\n`,
         )
         if (
-          this.propagatorMode !== PropagatorMode.listen &&
+          this.operatorMode !== OperatorMode.listen &&
           !this.crossDeployments.includes(deploymentAddress.toLowerCase())
         ) {
           await this.executePayload(network, config, deploymentAddress)
@@ -542,8 +581,8 @@ export default class Propagator extends Command {
     // If the propagator is in listen mode, contract deployments will not be executed
     // If the propagator is in manual mode, the contract deployments must be manually executed
     // If the propagator is in auto mode, the contract deployments will be executed automatically
-    let operate = this.propagatorMode === PropagatorMode.auto
-    if (this.propagatorMode === PropagatorMode.manual) {
+    let operate = this.operatorMode === OperatorMode.auto
+    if (this.operatorMode === OperatorMode.manual) {
       const propagatorPrompt: any = await inquirer.prompt([
         {
           name: 'shouldContinue',
@@ -582,12 +621,12 @@ export default class Propagator extends Command {
   networkSubscribe(network: string): void {
     this.providers[network].on('block', (blockNumber: string) => {
       const block = Number.parseInt(blockNumber, 10)
-      if (this.latestBlockHeight[network] !== 0 && block - this.latestBlockHeight[network] > 1) {
+      if (this.currentBlockHeight[network] !== 0 && block - this.currentBlockHeight[network] > 1) {
         this.debug(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
-        let latest = this.latestBlockHeight[network]
-        while (block - latest > 1) {
+        let latest = this.currentBlockHeight[network]
+        while (block - latest > 0) {
           this.structuredLog(network, `Block ${latest} (Syncing)`)
-          this.blockJobs.push({
+          this.blockJobs[network].push({
             network: network,
             block: latest,
           })
@@ -595,9 +634,9 @@ export default class Propagator extends Command {
         }
       }
 
-      this.latestBlockHeight[network] = block
+      this.currentBlockHeight[network] = block
       this.structuredLog(network, `Block ${block}`)
-      this.blockJobs.push({
+      this.blockJobs[network].push({
         network: network,
         block: block,
       } as BlockJob)
