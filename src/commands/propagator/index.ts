@@ -74,9 +74,9 @@ export default class Propagator extends Command {
       default: false,
       char: 's',
     }),
-    warp: Flags.boolean({
+    warp: Flags.integer({
       description: 'Start from the beginning of the chain',
-      default: false,
+      default: 0,
       char: 'w',
     }),
     unsafePassword: Flags.string({
@@ -123,7 +123,10 @@ export default class Propagator extends Command {
   lastBlockJobDone: {[key: string]: number} = {}
   blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
 
-  warp = false
+  warp = 0
+  startBlocks: {[key: string]: number} = {}
+  allDone: {[key: string]: boolean} = {}
+
   exited = false
 
   async run(): Promise<void> {
@@ -397,15 +400,17 @@ export default class Propagator extends Command {
         this.wallets[network] = userWallet.connect(this.providers[network])
       }
 
-      if (this.warp === true) {
-        this.structuredLog(network, `Starting Operator from beginning of time...`)
-        /* eslint-disable no-await-in-loop */
-        const startBlock = await this.providers[network].getBlockNumber()
-        this.latestBlockHeight[network] = startBlock - 43_200
-        this.currentBlockHeight[network] = startBlock - 43_200
+      /* eslint-disable no-await-in-loop */
+      this.startBlocks.network = await this.providers[network].getBlockNumber()
+      if (this.warp !== 0) {
+        this.structuredLog(network, `Starting Operator from ${this.warp} blocks back...`)
+
+        // Intialize all networks to not be done yet
+        this.allDone[network] = false
+        this.latestBlockHeight[network] = this.startBlocks.network - this.warp
+        this.currentBlockHeight[network] = this.startBlocks.network - this.warp
       } else if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
-        this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
-        this.currentBlockHeight[network] = this.latestBlockHeight[network]
+        this.structuredLog(network, `Resuming Indexer from block height ${this.latestBlockHeight[network]}`)
       } else {
         this.structuredLog(network, `Starting Operator from latest block height`)
         this.latestBlockHeight[network] = 0
@@ -435,6 +440,21 @@ export default class Propagator extends Command {
   }
 
   async processBlock(job: BlockJob): Promise<void> {
+    // Check if all the networks are done warping
+    if (this.warp !== 0) {
+      for (const b of this.supportedNetworks) {
+        if (job.block === this.startBlocks.network) {
+          this.allDone[b] = true
+        }
+      }
+
+      if (Object.values(this.allDone).every(Boolean)) {
+        this.structuredLog(job.network, `All chains have reached current block height `)
+        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+        process.exit()
+      }
+    }
+
     this.structuredLog(job.network, `Processing Block ${job.block}`)
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)
     if (block !== null && 'transactions' in block) {
