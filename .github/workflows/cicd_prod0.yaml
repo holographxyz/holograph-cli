@@ -9,7 +9,7 @@ env:
   IAM_ROLE      : arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli # notice: the same for all 3 cli apps
   #
-  PROD_IMAGE_TAG : main-a880ca457f7de054a71cc5cd8d1ed994e0387038 #main-${{ github.sha }} #NOTICE
+  PROD_IMAGE_TAG : main-${{ github.sha }} #NOTICE
   #
   PROD_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.7 # NOTICE
   PROD_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.6 # NOTICE
@@ -22,7 +22,7 @@ env:
   #TODO - create new gh secret for prod. should be different from staging????
   PROD_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   # TODO -> HOLO_INDEXER_HOST <----- replace with k8s service endpoint [angello,alex should make code changes]
-  PROD_HOLO_INDEXER_HOST: https://develop.cxipchain.xyz # TODO https://api.holograph.xyz
+  PROD_HOLO_INDEXER_HOST: https://api.holograph.xyz
   #
   # TODO -> set the password as github secret var
   PROD_HOLO_INDEXER_PASSWORD   : asdf #TODO ${{ secrets.HOLO_INDEXER_PASSWORD }}
@@ -30,23 +30,17 @@ env:
   PROD_HOLO_PROPAGATOR_PASSWORD: asdf #TODO ${{ secrets.HOLO_PROPAGATOR_PASSWORD }}
   #
   # switching between the keys in the config map
-  HOLO_CONFIG_FILE_DATA: prod-config-file # [stg-config-file/prod-config-file]
+  HOLO_CONFIG_FILE_DATA: prod-config-file # [stg-config-file/prod-config-file] #TODO - a different config file for prod?
   #
   PROD_COMMON_NAMESPACE: holocli
-  PROD_DOMAIN: "cxipchain.xyz" #todo "holograph.xyz"
+  PROD_DOMAIN: "holograph.xyz"
 
-on: # deleteme
-  push: # deleteme
+on: # notice: TRIGGERs ONLY FOR THE main BRANCH
+  pull_request:
     branches:
-      - 'holocli' # deleteme
-      #
-      - '!main'     # EXCLUDES this branch
-      - '!master'   # EXCLUDES this branch
-#on: # notice: TRIGGERs ONLY FOR THE main BRANCH
-#  pull_request:
-#    branches:
+      - TODO->first_solve_al_the_TODOs_and_then_let_it_deploy # TODO <--------------------------------------------------
 #      - main
-#    types: [closed]
+    types: [closed]
 
 jobs:
   deploy-to-prod0:
@@ -67,13 +61,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-#      - name: Build and push image to ECR
-#        env:
-#          ECR_REGISTRY  : ${{ steps.login-ecr.outputs.registry }}
-#          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-#        run: |
-#          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$PROD_IMAGE_TAG .
-#          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$PROD_IMAGE_TAG
+      - name: Build and push image to ECR
+        env:
+          ECR_REGISTRY  : ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$PROD_IMAGE_TAG .
+          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$PROD_IMAGE_TAG
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
