@@ -122,6 +122,8 @@ jobs:
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
             --set datadog_tags.version=chart-${{ env.PROD_HOLO_INDEXER_HELM_CHART_VERSION }} \
+            --set autoscaling.minReplicas=0 \
+            --set autoscaling.maxReplicas=0 \
             --values .github/values_for_prod_alb_ingress.yaml \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.PROD_DOMAIN }} \
@@ -158,6 +160,8 @@ jobs:
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-operator \
             --set datadog_tags.version=chart-${{ env.PROD_HOLO_OPERATOR_HELM_CHART_VERSION }} \
+            --set autoscaling.minReplicas=0 \
+            --set autoscaling.maxReplicas=0 \
             --values .github/values_for_prod_alb_ingress.yaml \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.PROD_DOMAIN }} \
@@ -194,6 +198,8 @@ jobs:
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-propagator \
             --set datadog_tags.version=chart-${{ env.PROD_HOLO_PROPAGATOR_HELM_CHART_VERSION }} \
+            --set autoscaling.minReplicas=0 \
+            --set autoscaling.maxReplicas=0 \
             --values .github/values_for_prod_alb_ingress.yaml \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.PROD_DOMAIN }} \
