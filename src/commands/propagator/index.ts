@@ -399,9 +399,10 @@ export default class Propagator extends Command {
 
       if (this.warp === true) {
         this.structuredLog(network, `Starting Operator from beginning of time...`)
+        /* eslint-disable no-await-in-loop */
         const startBlock = await this.providers[network].getBlockNumber()
-        this.latestBlockHeight[network] = startBlock - 43200
-        this.currentBlockHeight[network] = startBlock - 43200
+        this.latestBlockHeight[network] = startBlock - 43_200
+        this.currentBlockHeight[network] = startBlock - 43_200
       } else if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
         this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
         this.currentBlockHeight[network] = this.latestBlockHeight[network]
@@ -553,10 +554,20 @@ export default class Propagator extends Command {
         this.error(error.reason)
       }
 
-      const gasPrice = network === 'mumbai' ? BigNumber.from('55000000000') : (await this.providers[network].getGasPrice());
+      const gasPrice =
+        network === 'mumbai' ? BigNumber.from('55000000000') : await this.providers[network].getGasPrice()
 
-      this.structuredLog(network, `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, "gwei")} for collection ${deploymentAddress}`)
-      this.structuredLog(network, `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(gasAmount.mul(gasPrice), 'ether')} native gas tokens (in ether) for collection ${deploymentAddress}`)
+      this.structuredLog(
+        network,
+        `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, 'gwei')} for collection ${deploymentAddress}`,
+      )
+      this.structuredLog(
+        network,
+        `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(
+          gasAmount.mul(gasPrice),
+          'ether',
+        )} native gas tokens (in ether) for collection ${deploymentAddress}`,
+      )
 
       try {
         const deployTx = await factory.deployHolographableContract(
@@ -566,7 +577,10 @@ export default class Propagator extends Command {
         )
         this.debug(JSON.stringify(deployTx, null, 2))
 
-        this.structuredLog(network, `Transaction created with hash ${deployTx.hash} for collection ${deploymentAddress}`)
+        this.structuredLog(
+          network,
+          `Transaction created with hash ${deployTx.hash} for collection ${deploymentAddress}`,
+        )
 
         const deployReceipt = await deployTx.wait()
 
@@ -587,7 +601,7 @@ export default class Propagator extends Command {
         this.structuredLog(network, `Successfully deployed collection ${collectionAddress} = ${deploymentAddress}`)
         return
       } catch (error: any) {
-        this.structuredLog(network,`Submitting tx for collection ${deploymentAddress} failed`)
+        this.structuredLog(network, `Submitting tx for collection ${deploymentAddress} failed`)
         this.log(error)
         this.error(error.error.reason)
       }
