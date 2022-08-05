@@ -1,4 +1,4 @@
-name: Deploy to staging
+name: Deploy holoclis to staging
 
 permissions:
   id-token: write
@@ -23,9 +23,9 @@ env:
   STG_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
   # TODO -> set the password as github secret var
-  HOLO_INDEXER_PASSWORD   : asdf #TODO ${{ secrets.HOLO_INDEXER_PASSWORD }}
-  HOLO_OPERATOR_PASSWORD  : asdf #TODO ${{ secrets.HOLO_OPERATOR_PASSWORD }}
-  HOLO_PROPAGATOR_PASSWORD: asdf #TODO ${{ secrets.HOLO_PROPAGATOR_PASSWORD }}
+  STG_HOLO_INDEXER_PASSWORD   : asdf #TODO ${{ secrets.HOLO_INDEXER_PASSWORD }}
+  STG_HOLO_OPERATOR_PASSWORD  : asdf #TODO ${{ secrets.HOLO_OPERATOR_PASSWORD }}
+  STG_HOLO_PROPAGATOR_PASSWORD: asdf #TODO ${{ secrets.HOLO_PROPAGATOR_PASSWORD }}
   #
   # switching between the keys in the config map
   HOLO_CONFIG_FILE_DATA: stg-config-file # [stg-config-file/prod-config-file]
@@ -100,9 +100,10 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer-dev
+          # TODO -> HOLO_INDEXER_HOST <----- replace with k8s service endpoint [angello,alex should make code chamges]
+          STG_HOLO_INDEXER_HOST: https://develop.cxipchain.xyz
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
-          # TODO -> HOLO_INDEXER_HOST <----- replace with k8s service endpoint [angello,alex should make code chamges]
           command: |-
             helm upgrade --install $RELEASE_NAME \
             holo-indexer-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
@@ -110,8 +111,8 @@ jobs:
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.HOLO_CONFIG_FILE_DATA }} \
-            --set holo_indexer_password=${{ env.HOLO_INDEXER_PASSWORD }} \
-            --set HOLO_INDEXER_HOST=https://develop.cxipchain.xyz \
+            --set holo_indexer_password=${{ env.STG_HOLO_INDEXER_PASSWORD }} \
+            --set HOLO_INDEXER_HOST=$STG_HOLO_INDEXER_HOST \
             --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
@@ -148,7 +149,7 @@ jobs:
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.HOLO_CONFIG_FILE_DATA }} \
-            --set holo_operator_password=${{ env.HOLO_OPERATOR_PASSWORD }} \
+            --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-operator \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }} \
@@ -184,7 +185,7 @@ jobs:
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.HOLO_CONFIG_FILE_DATA }} \
-            --set holo_propagator_password=${{ env.HOLO_PROPAGATOR_PASSWORD }} \
+            --set holo_propagator_password=${{ env.STG_HOLO_PROPAGATOR_PASSWORD }} \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-propagator \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_PROPAGATOR_HELM_CHART_VERSION }} \
