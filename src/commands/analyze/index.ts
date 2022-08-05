@@ -364,7 +364,10 @@ export default class Analyze extends Command {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
 
-        this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${receipt.blockNumber}`)
+        this.structuredLog(
+          job.network,
+          `Processing transaction ${transaction.hash} on ${job.network} at block ${receipt.blockNumber}`,
+        )
         const to: string | undefined = transaction.to?.toLowerCase()
         const from: string | undefined = transaction.from?.toLowerCase()
         if (to === this.bridgeAddress) {

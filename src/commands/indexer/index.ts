@@ -68,6 +68,11 @@ export default class Indexer extends Command {
       options: ['listen', 'manual', 'auto'],
       char: 'm',
     }),
+    warp: Flags.boolean({
+      description: 'Start from the beginning of the chain',
+      default: false,
+      char: 'w',
+    }),
     host: Flags.string({description: 'The host to listen on', char: 'h', default: 'http://localhost:9001'}),
     healthCheck: Flags.boolean({
       description: 'Launch server on http://localhost:6000 to make sure command is still running',
@@ -118,6 +123,7 @@ export default class Indexer extends Command {
   lastBlockJobDone: {[key: string]: number} = {}
   blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
 
+  warp = false
   exited = false
 
   async run(): Promise<void> {
@@ -125,6 +131,7 @@ export default class Indexer extends Command {
     const {flags} = await this.parse(Indexer)
     this.baseUrl = flags.host
     const enableHealthCheckServer = flags.healthCheck
+    this.warp = flags.warp
 
     this.log(`API: Authenticating with ${this.baseUrl}`)
     let res
@@ -364,11 +371,17 @@ export default class Indexer extends Command {
         this.wallets[network] = userWallet.connect(this.providers[network])
       }
 
-      if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
+      if (this.warp === true) {
+        this.structuredLog(network, `Starting Operator from a while back...`)
+        const startBlock = await this.providers[network].getBlockNumber()
+        this.latestBlockHeight[network] = startBlock - 43200
+        this.currentBlockHeight[network] = startBlock - 43200
+      } else if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
         this.structuredLog(network, `Resuming Indexer from block height ${this.latestBlockHeight[network]}`)
       } else {
-        this.structuredLog(network, `Starting Indexer from latest block height`)
+        this.structuredLog(network, `Starting Operator from latest block height`)
         this.latestBlockHeight[network] = 0
+        this.currentBlockHeight[network] = 0
       }
     }
 
@@ -436,7 +449,10 @@ export default class Indexer extends Command {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
 
-        this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${receipt.blockNumber}`)
+        this.structuredLog(
+          job.network,
+          `Processing transaction ${transaction.hash} on ${job.network} at block ${receipt.blockNumber}`,
+        )
         if (transaction.to?.toLowerCase() === this.factoryAddress) {
           this.handleContractDeployedEvents(transaction, receipt, job.network)
         } else if (transaction.to?.toLowerCase() === this.operatorAddress) {

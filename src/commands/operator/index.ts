@@ -458,7 +458,10 @@ export default class Operator extends Command {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
 
-        this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${receipt.blockNumber}`)
+        this.structuredLog(
+          job.network,
+          `Processing transaction ${transaction.hash} on ${job.network} at block ${receipt.blockNumber}`,
+        )
         if (transaction.to?.toLowerCase() === this.factoryAddress) {
           this.handleContractDeployedEvents(transaction, receipt, job.network)
         } else if (transaction.to?.toLowerCase() === this.operatorAddress) {

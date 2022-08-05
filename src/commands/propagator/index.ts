@@ -72,6 +72,12 @@ export default class Propagator extends Command {
     sync: Flags.boolean({
       description: 'Start from last saved block position instead of latest block position',
       default: false,
+      char: 's',
+    }),
+    warp: Flags.boolean({
+      description: 'Start from the beginning of the chain',
+      default: false,
+      char: 'w',
     }),
     unsafePassword: Flags.string({
       description: 'Enter the plain text password for the wallet in the holo cli config',
@@ -117,6 +123,7 @@ export default class Propagator extends Command {
   lastBlockJobDone: {[key: string]: number} = {}
   blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
 
+  warp = false
   exited = false
 
   async run(): Promise<void> {
@@ -125,6 +132,7 @@ export default class Propagator extends Command {
     const enableHealthCheckServer = flags.healthCheck
     const syncFlag = flags.sync
     const unsafePassword = flags.unsafePassword
+    this.warp = flags.warp
 
     // Have the user input the mode if it's not provided
     let mode: string | undefined = flags.mode
@@ -160,6 +168,8 @@ export default class Propagator extends Command {
       }
     }
 
+    // TODO: Rethink this (we probably always want the propagator to sync)
+    // So it doesn't make sense to ask. If it's can't sync we can just start from latest block
     if (canSync && !syncFlag) {
       const syncPrompt: any = await inquirer.prompt([
         {
@@ -387,7 +397,12 @@ export default class Propagator extends Command {
         this.wallets[network] = userWallet.connect(this.providers[network])
       }
 
-      if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
+      if (this.warp === true) {
+        this.structuredLog(network, `Starting Operator from beginning of time...`)
+        const startBlock = await this.providers[network].getBlockNumber()
+        this.latestBlockHeight[network] = startBlock - 43200
+        this.currentBlockHeight[network] = startBlock - 43200
+      } else if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
         this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
         this.currentBlockHeight[network] = this.latestBlockHeight[network]
       } else {
@@ -467,7 +482,10 @@ export default class Propagator extends Command {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
 
-        this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${receipt.blockNumber}`)
+        this.structuredLog(
+          job.network,
+          `Processing transaction ${transaction.hash} on ${job.network} at block ${receipt.blockNumber}`,
+        )
         if (transaction.to?.toLowerCase() === this.factoryAddress) {
           this.handleContractDeployedEvents(transaction, receipt, job.network)
         }
