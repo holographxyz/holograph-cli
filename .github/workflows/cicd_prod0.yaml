@@ -52,26 +52,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Use Githubs federated identity with AWS
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          role-to-assume: ${{ env.IAM_ROLE }}
-          aws-region    : ${{ env.AWS_REGION }}
-
-      - name: Login to ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Build and push image to ECR
-        env:
-          ECR_REGISTRY  : ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-        run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$PROD_IMAGE_TAG .
-          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$PROD_IMAGE_TAG
+#      - name: Use Githubs federated identity with AWS
+#        uses: aws-actions/configure-aws-credentials@v1
+#        with:
+#          role-to-assume: ${{ env.IAM_ROLE }}
+#          aws-region    : ${{ env.AWS_REGION }}
+#
+#      - name: Login to ECR
+#        id: login-ecr
+#        uses: aws-actions/amazon-ecr-login@v1
+#
+#      - name: Checkout code
+#        uses: actions/checkout@v2
+#
+#      - name: Build and push image to ECR
+#        env:
+#          ECR_REGISTRY  : ${{ steps.login-ecr.outputs.registry }}
+#          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+#        run: |
+#          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$PROD_IMAGE_TAG .
+#          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$PROD_IMAGE_TAG
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
