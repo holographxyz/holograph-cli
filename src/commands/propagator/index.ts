@@ -3,7 +3,7 @@ import * as path from 'node:path'
 import * as inquirer from 'inquirer'
 
 import {CliUx, Command, Flags} from '@oclif/core'
-import {ethers} from 'ethers'
+import {BigNumber, ethers} from 'ethers'
 
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
@@ -258,7 +258,7 @@ export default class Propagator extends Command {
     return (err: any) => {
       ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
         this.debug('onDisconnect')
-        this.log(network, 'WS connection was closed', JSON.stringify(err, null, 2))
+        this.structuredLog(network, `WS connection was closed ${JSON.stringify(err, null, 2)}`)
         this.providers[network] = this.failoverWebSocketProvider(userWallet, network, rpcEndpoint, subscribe)
         this.wallets[network] = userWallet.connect(this.providers[network] as ethers.providers.WebSocketProvider)
       })
@@ -521,40 +521,39 @@ export default class Propagator extends Command {
     const contractCode = await this.providers[network].getCode(deploymentAddress)
     if (contractCode === '0x') {
       const factory: ethers.Contract = this.factoryContract.connect(this.wallets[network])
-      CliUx.ux.action.start('Calculating gas price')
+      this.structuredLog(network, `Calculating gas price for collection ${deploymentAddress}`)
       let gasAmount
       try {
-        this
         gasAmount = await factory.estimateGas.deployHolographableContract(
           deploymentConfig.config,
           deploymentConfig.signature,
           deploymentConfig.signer,
         )
       } catch (error: any) {
+        this.structuredLog(network, `Calculating Gas has failed for collection ${deploymentAddress}`)
+        this.log(error)
         this.error(error.reason)
       }
 
-      const gasPrice = await this.providers[network].getGasPrice()
-      CliUx.ux.action.stop()
-      this.log(
-        'Transaction is estimated to cost a total of',
-        ethers.utils.formatUnits(gasAmount.mul(gasPrice), 'ether'),
-        'native gas tokens (in ether)',
-      )
+      const gasPrice = network === 'mumbai' ? BigNumber.from('55000000000') : (await this.providers[network].getGasPrice());
+
+      this.structuredLog(network, `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, "gwei")} for collection ${deploymentAddress}`)
+      this.structuredLog(network, `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(gasAmount.mul(gasPrice), 'ether')} native gas tokens (in ether) for collection ${deploymentAddress}`)
 
       try {
-        CliUx.ux.action.start('Sending transaction to mempool')
         const deployTx = await factory.deployHolographableContract(
           deploymentConfig.config,
           deploymentConfig.signature,
           deploymentConfig.signer,
         )
-        this.debug(deployTx)
-        CliUx.ux.action.stop('Transaction hash is ' + deployTx.hash)
+        this.debug(JSON.stringify(deployTx, null, 2))
 
-        CliUx.ux.action.start('Waiting for transaction to be mined and confirmed')
+        this.structuredLog(network, `Transaction created with hash ${deployTx.hash} for collection ${deploymentAddress}`)
+
         const deployReceipt = await deployTx.wait()
-        this.debug(deployReceipt)
+
+        this.structuredLog(network, `Transaction minted with hash ${deployTx.hash} for collection ${deploymentAddress}`)
+        this.debug(JSON.stringify(deployReceipt, null, 2))
         let collectionAddress
         for (let i = 0, l = deployReceipt.logs.length; i < l; i++) {
           const log = deployReceipt.logs[i]
@@ -567,13 +566,15 @@ export default class Propagator extends Command {
           }
         }
 
-        CliUx.ux.action.stop('Collection deployed to ' + collectionAddress)
+        this.structuredLog(network, `Successfully deployed collection ${collectionAddress} = ${deploymentAddress}`)
         return
       } catch (error: any) {
+        this.structuredLog(network,`Submitting tx for collection ${deploymentAddress} failed`)
+        this.log(error)
         this.error(error.error.reason)
       }
     } else {
-      this.debug(`${deploymentAddress} already deployed on ${network}`)
+      this.structuredLog(network, `collection ${deploymentAddress} already deployed`)
     }
   }
 
@@ -598,7 +599,7 @@ export default class Propagator extends Command {
       this.crossDeployments.push(deploymentAddress.toLowerCase())
       for (const selectedNetwork of this.supportedNetworks) {
         if (selectedNetwork !== network) {
-          this.debug(`trying to deploy contract from ${network} to ${selectedNetwork}`)
+          this.structuredLog(network, `Trying to deploy contract from ${network} to ${selectedNetwork}`)
           await this.deployContract(selectedNetwork, config, deploymentAddress)
         }
       }
