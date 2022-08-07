@@ -369,7 +369,6 @@ export default class Propagator extends Command {
       switch (protocol) {
         case 'https:':
           this.providers[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
-
           break
         case 'wss:':
           this.providers[network] = this.failoverWebSocketProvider.bind(this)(
