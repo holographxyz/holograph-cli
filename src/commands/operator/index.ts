@@ -10,7 +10,7 @@ import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 
 import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, NETWORK_COLORS} from '../../utils/utils'
 import color from '@oclif/color'
-import {startHealcheckServer} from '../../utils/health-check-server'
+import {startHealtcheckServer} from '../../utils/health-check-server'
 
 enum OperatorMode {
   listen,
@@ -227,7 +227,7 @@ export default class Operator extends Command {
 
     // Start server
     if (enableHealthCheckServer) {
-      startHealcheckServer()
+      startHealtcheckServer()
     }
   }
 

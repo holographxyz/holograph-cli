@@ -9,7 +9,7 @@ import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 import {decodeDeploymentConfigInput, capitalize, DeploymentConfig} from '../../utils/utils'
 
 import {BlockJob, NetworkMonitor} from '../../utils/network-monitor'
-import {startHealcheckServer} from '../../utils/health-check-server'
+import {startHealtcheckServer} from '../../utils/health-check-server'
 
 import color from '@oclif/color'
 
@@ -137,7 +137,7 @@ export default class Propagator extends Command {
 
     // Start server
     if (enableHealthCheckServer) {
-      startHealcheckServer()
+      startHealtcheckServer()
     }
   }
 

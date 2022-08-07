@@ -12,7 +12,7 @@ import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, NETWORK
 import color from '@oclif/color'
 
 import dotenv from 'dotenv'
-import {startHealcheckServer} from '../../utils/health-check-server'
+import {startHealtcheckServer} from '../../utils/health-check-server'
 dotenv.config()
 
 enum OperatorMode {
@@ -213,7 +213,7 @@ export default class Indexer extends Command {
 
     // Start server
     if (enableHealthCheckServer) {
-      startHealcheckServer()
+      startHealtcheckServer()
     }
   }
 

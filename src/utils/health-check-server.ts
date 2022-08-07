@@ -12,7 +12,7 @@ const requestListener = function (req: IncomingMessage, res: ServerResponse) {
   }
 }
 
-export function startHealcheckServer(): void {
+export function startHealtcheckServer(): void {
   const host = '0.0.0.0'
   const port = 6000
   const server = http.createServer(requestListener)
