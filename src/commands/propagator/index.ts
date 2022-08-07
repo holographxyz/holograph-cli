@@ -8,19 +8,12 @@ import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 
 import {decodeDeploymentConfigInput, capitalize, DeploymentConfig} from '../../utils/utils'
 
-import {BlockJob, NetworkMonitor} from '../../utils/network-monitor'
+import {OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealtcheckServer} from '../../utils/health-check-server'
 
 import color from '@oclif/color'
 
-enum OperatorMode {
-  listen,
-  manual,
-  auto,
-}
-
 export default class Propagator extends Command {
-  static LAST_BLOCKS_FILE_NAME = 'propagator-blocks.json'
   static description = 'Listen for EVM events deploys collections to ther supported networks'
   static examples = ['$ holo propagator --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
@@ -120,7 +113,7 @@ export default class Propagator extends Command {
       const syncPrompt: any = await inquirer.prompt([
         {
           name: 'shouldSync',
-          message: 'Operator has previous (missed) blocks that can be synced. Would you like to sync?',
+          message: 'Propagator has previous (missed) blocks that can be synced. Would you like to sync?',
           type: 'confirm',
           default: true,
         },
@@ -131,7 +124,7 @@ export default class Propagator extends Command {
       }
     }
 
-    CliUx.ux.action.start(`Starting operator in mode: ${OperatorMode[this.operatorMode]}`)
+    CliUx.ux.action.start(`Starting propagator in mode: ${OperatorMode[this.operatorMode]}`)
     await this.networkMonitor.run(true, blockJobs)
     CliUx.ux.action.stop('🚀')
 

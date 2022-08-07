@@ -9,6 +9,12 @@ import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {capitalize, NETWORK_COLORS} from './utils'
 import color from '@oclif/color'
 
+export enum OperatorMode {
+  listen,
+  manual,
+  auto,
+}
+
 export type KeepAliveParams = {
   provider: ethers.providers.WebSocketProvider
   onDisconnect: (err: any) => void
