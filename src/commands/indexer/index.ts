@@ -411,10 +411,8 @@ export default class Indexer extends Command {
   async processBlock(job: BlockJob): Promise<void> {
     // Check if all the networks are done warping
     if (this.warp !== 0) {
-      for (const b of this.supportedNetworks) {
-        if (job.block === this.startBlocks[network]) {
-          this.allDone[b] = true
-        }
+      if (job.block === this.startBlocks[job.network]) {
+        this.allDone[job.network] = true
       }
 
       if (Object.values(this.allDone).every(Boolean)) {
