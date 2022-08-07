@@ -376,14 +376,14 @@ export default class Indexer extends Command {
       }
 
       /* eslint-disable no-await-in-loop */
-      this.startBlocks.network = await this.providers[network].getBlockNumber()
+      this.startBlocks[network] = await this.providers[network].getBlockNumber()
       if (this.warp !== 0) {
         this.structuredLog(network, `Starting Operator from ${this.warp} blocks back...`)
 
         // Intialize all networks to not be done yet
         this.allDone[network] = false
-        this.latestBlockHeight[network] = this.startBlocks.network - this.warp
-        this.currentBlockHeight[network] = this.startBlocks.network - this.warp
+        this.latestBlockHeight[network] = this.startBlocks[network] - this.warp
+        this.currentBlockHeight[network] = this.startBlocks[network] - this.warp
       } else if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
         this.structuredLog(network, `Resuming Indexer from block height ${this.latestBlockHeight[network]}`)
       } else {
@@ -412,7 +412,7 @@ export default class Indexer extends Command {
     // Check if all the networks are done warping
     if (this.warp !== 0) {
       for (const b of this.supportedNetworks) {
-        if (job.block === this.startBlocks.network) {
+        if (job.block === this.startBlocks[network]) {
           this.allDone[b] = true
         }
       }
