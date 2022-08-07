@@ -76,7 +76,7 @@ export default class Indexer extends Command {
 
     this.log('Loading user configurations...')
     const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, undefined, false)
+    const {configFile} = await ensureConfigFileIsValid(configPath, undefined, false)
     this.log('User configurations loaded.')
 
     // Load defaults for the networks from the config file
@@ -98,7 +98,7 @@ export default class Indexer extends Command {
       }
     }
 
-    this.networkMonitor = new NetworkMonitor(this, configFile, flags.networks, this.debug, this.processBlock, userWallet, 'indexer-blocks.json')
+    this.networkMonitor = new NetworkMonitor(this, configFile, flags.networks, this.debug, this.processBlock, undefined, 'indexer-blocks.json')
 
     // Indexer always synchronizes missed blocks
     this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
