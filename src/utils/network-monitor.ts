@@ -2,12 +2,20 @@ import * as fs from 'fs-extra'
 import * as path from 'node:path'
 
 import {ethers} from 'ethers'
-import {Command} from '@oclif/core'
+import {Command, Flags} from '@oclif/core'
 
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 
 import {capitalize, NETWORK_COLORS} from './utils'
 import color from '@oclif/color'
+
+export const warpFlag = {
+  warp: Flags.integer({
+    description: 'Start from the beginning of the chain',
+    default: 0,
+    char: 'w',
+  })
+}
 
 export enum OperatorMode {
   listen,
@@ -72,6 +80,7 @@ type NetworkMonitorOptions = {
   processBlock: (job: BlockJob) => Promise<void>
   userWallet?: ethers.Wallet
   lastBlockFilename?: string
+  warp?: number
 }
 
 export class NetworkMonitor {
@@ -110,6 +119,7 @@ export class NetworkMonitor {
   }
 
   needToSubscribe = false
+  warp = 0
 
   targetEvents: Record<string, string> = {
     BridgeableContractDeployed: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
@@ -132,6 +142,10 @@ export class NetworkMonitor {
     this.processBlock = options.processBlock.bind(this.parent)
     if (options.userWallet !== undefined) {
       this.userWallet = options.userWallet
+    }
+
+    if (options.warp !== undefined && options.warp > 0) {
+      this.warp = options.warp
     }
 
     // Color the networks 🌈
@@ -242,6 +256,12 @@ export class NetworkMonitor {
 
       if (this.userWallet !== undefined) {
         this.wallets[network] = this.userWallet.connect(this.providers[network])
+      }
+
+      if (this.warp > 0) {
+        this.structuredLog(network, `Starting Operator from ${this.warp} blocks back...`)
+        /* eslint-disable no-await-in-loop */
+        this.latestBlockHeight[network] = (await this.providers[network].getBlockNumber()) - this.warp
       }
 
       if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {

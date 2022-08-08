@@ -151,7 +151,7 @@ export default class Analyze extends Command {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
 
-        this.structuredLog(
+        this.networkMonitor.structuredLog(
           job.network,
           `Processing transaction ${transaction.hash} on ${job.network} at block ${receipt.blockNumber}`,
         )
