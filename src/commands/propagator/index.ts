@@ -125,7 +125,7 @@ export default class Propagator extends Command {
 
   warp = 0
   startBlocks: {[key: string]: number} = {}
-  allDone: number = 0
+  allDone = 0
 
   exited = false
 
@@ -442,7 +442,8 @@ export default class Propagator extends Command {
   async processBlock(job: BlockJob): Promise<void> {
     // Check if all the networks are done warping
     if (this.warp !== 0) {
-      for (const b of this.supportedNetworks) {
+      for (const network of this.supportedNetworks) {
+        this.debug(`Checking if ${network} is done warping`)
         if (job.block === this.startBlocks.network) {
           this.allDone -= 1
         }
