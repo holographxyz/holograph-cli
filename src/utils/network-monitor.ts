@@ -163,7 +163,9 @@ export class NetworkMonitor {
     this.log(`Factory address: ${this.factoryAddress}`)
     this.log(`Operator address: ${this.operatorAddress}`)
 
-    this.blockJobs = blockJobs
+    if (this.blockJobs === {}) {
+      this.blockJobs = blockJobs
+    }
 
     for (const network of this.networks) {
       this.lastBlockJobDone[network] = Date.now()
@@ -261,10 +263,15 @@ export class NetworkMonitor {
       if (this.warp > 0) {
         this.structuredLog(network, `Starting Operator from ${this.warp} blocks back...`)
         /* eslint-disable no-await-in-loop */
-        this.latestBlockHeight[network] = (await this.providers[network].getBlockNumber()) - this.warp
-      }
-
-      if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
+        const currentBlock: number = await this.providers[network].getBlockNumber()
+        this.blockJobs[network] = []
+        for (let n = currentBlock - this.warp, nl = currentBlock; n <= nl; n++) {
+          this.blockJobs[network].push({
+            network,
+            block: n,
+          })
+        }
+      } else if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
         this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
         this.currentBlockHeight[network] = this.latestBlockHeight[network]
       } else {
