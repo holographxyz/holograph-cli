@@ -9,7 +9,7 @@ import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize} from '../../utils/utils'
 
 import {OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
-import {startHealtcheckServer} from '../../utils/health-check-server'
+import {startHealthcheckServer} from '../../utils/health-check-server'
 
 import color from '@oclif/color'
 
@@ -95,15 +95,15 @@ export default class Operator extends Command {
 
     const networks: string[] = flags.networks
 
-    this.networkMonitor = new NetworkMonitor(
-      this,
+    this.networkMonitor = new NetworkMonitor({
+      parent: this,
       configFile,
       networks,
-      this.debug,
-      this.processBlock,
+      debug: this.debug,
+      processBlock: this.processBlock,
       userWallet,
-      'operator-blocks.json',
-    )
+      lastBlockFilename: 'operator-blocks.json',
+    })
 
     this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
     let canSync = false
@@ -136,7 +136,7 @@ export default class Operator extends Command {
 
     // Start server
     if (enableHealthCheckServer) {
-      startHealtcheckServer()
+      startHealthcheckServer()
     }
   }
 

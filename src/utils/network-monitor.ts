@@ -38,7 +38,7 @@ export const keepAlive = ({
   onDisconnect,
   expectedPongBack = 15_000,
   checkInterval = 7500,
-}: KeepAliveParams) => {
+}: KeepAliveParams): void => {
   let pingTimeout: NodeJS.Timeout | null = null
   let keepAliveInterval: NodeJS.Timeout | null = null
 
@@ -63,6 +63,16 @@ export const keepAlive = ({
 }
 
 type ImplementsCommand = Command
+
+type NetworkMonitorOptions = {
+  parent: ImplementsCommand
+  configFile: ConfigFile
+  networks: string[]
+  debug: (...args: string[]) => void
+  processBlock: (job: BlockJob) => Promise<void>
+  userWallet?: ethers.Wallet
+  lastBlockFilename?: string
+}
 
 export class NetworkMonitor {
   parent: ImplementsCommand
@@ -112,29 +122,21 @@ export class NetworkMonitor {
     '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11': 'AvailableJob',
   }
 
-  constructor(
-    parent: ImplementsCommand,
-    configFile: ConfigFile,
-    networks: string[],
-    debug: (...args: string[]) => void,
-    processBlock: (job: BlockJob) => Promise<void>,
-    userWallet?: ethers.Wallet,
-    lastBlockFilename = 'blocks.json',
-  ) {
-    this.parent = parent
-    this.configFile = configFile
-    this.LAST_BLOCKS_FILE_NAME = lastBlockFilename
-    this.networks = networks
+  constructor(options: NetworkMonitorOptions) {
+    this.parent = options.parent
+    this.configFile = options.configFile
+    this.LAST_BLOCKS_FILE_NAME = options.lastBlockFilename || 'blocks.json'
+    this.networks = options.networks
     this.log = this.parent.log.bind(this.parent)
-    this.debug = debug.bind(this.parent)
-    this.processBlock = processBlock.bind(this.parent)
-    if (userWallet !== undefined) {
-      this.userWallet = userWallet
+    this.debug = options.debug.bind(this.parent)
+    this.processBlock = options.processBlock.bind(this.parent)
+    if (options.userWallet !== undefined) {
+      this.userWallet = options.userWallet
     }
 
     // Color the networks 🌈
-    for (let i = 0, l = networks.length; i < l; i++) {
-      const network = networks[i]
+    for (let i = 0, l = this.networks.length; i < l; i++) {
+      const network = this.networks[i]
       this.networkColors[network] = color.hex(NETWORK_COLORS[network])
     }
   }

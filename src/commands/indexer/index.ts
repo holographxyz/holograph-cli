@@ -9,7 +9,7 @@ import networks from '../../utils/networks'
 
 import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize} from '../../utils/utils'
 import {OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
-import {startHealtcheckServer} from '../../utils/health-check-server'
+import {startHealthcheckServer} from '../../utils/health-check-server'
 
 import color from '@oclif/color'
 import dotenv from 'dotenv'
@@ -98,15 +98,14 @@ export default class Indexer extends Command {
       }
     }
 
-    this.networkMonitor = new NetworkMonitor(
-      this,
+    this.networkMonitor = new NetworkMonitor({
+      parent: this,
       configFile,
-      flags.networks,
-      this.debug,
-      this.processBlock,
-      undefined,
-      'indexer-blocks.json',
-    )
+      networks: flags.networks,
+      debug: this.debug,
+      processBlock: this.processBlock,
+      lastBlockFilename: 'indexer-blocks.json',
+    })
 
     // Indexer always synchronizes missed blocks
     this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
@@ -117,7 +116,7 @@ export default class Indexer extends Command {
 
     // Start server
     if (enableHealthCheckServer) {
-      startHealtcheckServer()
+      startHealthcheckServer()
     }
   }
 

@@ -58,15 +58,14 @@ export default class Analyze extends Command {
     }
 
     this.log(`${JSON.stringify(scopeJobs, undefined, 4)}`)
-    this.networkMonitor = new NetworkMonitor(
-      this,
+
+    this.networkMonitor = new NetworkMonitor({
+      parent: this,
       configFile,
       networks,
-      this.debug,
-      this.processBlock,
-      undefined,
-      'analyze-blocks.json',
-    )
+      debug: this.debug,
+      processBlock: this.processBlock
+    })
 
     const blockJobs: {[key: string]: BlockJob[]} = {}
 
