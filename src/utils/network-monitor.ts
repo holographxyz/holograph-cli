@@ -33,7 +33,12 @@ export interface Scope {
   endBlock: number
 }
 
-export const keepAlive = ({provider, onDisconnect, expectedPongBack = 15_000, checkInterval = 7500}: KeepAliveParams) => {
+export const keepAlive = ({
+  provider,
+  onDisconnect,
+  expectedPongBack = 15_000,
+  checkInterval = 7500,
+}: KeepAliveParams) => {
   let pingTimeout: NodeJS.Timeout | null = null
   let keepAliveInterval: NodeJS.Timeout | null = null
 
@@ -107,7 +112,15 @@ export class NetworkMonitor {
     '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11': 'AvailableJob',
   }
 
-  constructor(parent: ImplementsCommand, configFile: ConfigFile, networks: string[], debug: (...args: string[]) => void, processBlock: (job: BlockJob) => Promise<void>, userWallet?: ethers.Wallet, lastBlockFilename = 'blocks.json') {
+  constructor(
+    parent: ImplementsCommand,
+    configFile: ConfigFile,
+    networks: string[],
+    debug: (...args: string[]) => void,
+    processBlock: (job: BlockJob) => Promise<void>,
+    userWallet?: ethers.Wallet,
+    lastBlockFilename = 'blocks.json',
+  ) {
     this.parent = parent
     this.configFile = configFile
     this.LAST_BLOCKS_FILE_NAME = lastBlockFilename
@@ -176,13 +189,9 @@ export class NetworkMonitor {
     fs.writeFileSync(filePath, JSON.stringify(lastBlocks), 'utf8')
   }
 
-  disconnectBuilder(
-    network: string,
-    rpcEndpoint: string,
-    subscribe: boolean,
-  ): (err: any) => void {
+  disconnectBuilder(network: string, rpcEndpoint: string, subscribe: boolean): (err: any) => void {
     return (err: any) => {
-      (this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
+      ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
         this.debug('onDisconnect')
         this.structuredLog(network, `WS connection was closed ${JSON.stringify(err, null, 2)}`)
         this.providers[network] = this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
@@ -257,10 +266,18 @@ export class NetworkMonitor {
     this.bridgeContract = new ethers.Contract(this.bridgeAddress, holographBridgeABI, this.providers[this.networks[0]])
 
     const holographFactoryABI = await fs.readJson('./src/abi/HolographFactory.json')
-    this.factoryContract = new ethers.Contract(this.factoryAddress, holographFactoryABI, this.providers[this.networks[0]])
+    this.factoryContract = new ethers.Contract(
+      this.factoryAddress,
+      holographFactoryABI,
+      this.providers[this.networks[0]],
+    )
 
     const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
-    this.operatorContract = new ethers.Contract(this.operatorAddress, holographOperatorABI, this.providers[this.networks[0]])
+    this.operatorContract = new ethers.Contract(
+      this.operatorAddress,
+      holographOperatorABI,
+      this.providers[this.networks[0]],
+    )
   }
 
   exitHandler = async (exitCode: number): Promise<void> => {
@@ -384,5 +401,4 @@ export class NetworkMonitor {
       )}] -> ${msg}`,
     )
   }
-
 }

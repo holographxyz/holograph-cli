@@ -58,7 +58,15 @@ export default class Analyze extends Command {
     }
 
     this.log(`${JSON.stringify(scopeJobs, undefined, 4)}`)
-    this.networkMonitor = new NetworkMonitor(this, configFile, networks, this.debug, this.processBlock, undefined, 'analyze-blocks.json')
+    this.networkMonitor = new NetworkMonitor(
+      this,
+      configFile,
+      networks,
+      this.debug,
+      this.processBlock,
+      undefined,
+      'analyze-blocks.json',
+    )
 
     const blockJobs: {[key: string]: BlockJob[]} = {}
 
@@ -86,7 +94,6 @@ export default class Analyze extends Command {
     }
 
     await this.networkMonitor.run(false, blockJobs)
-
   }
 
   async processBlock(job: BlockJob): Promise<void> {
@@ -138,7 +145,9 @@ export default class Analyze extends Command {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
-        const receipt = await this.networkMonitor.providers[job.network].getTransactionReceipt(transaction.hash as string)
+        const receipt = await this.networkMonitor.providers[job.network].getTransactionReceipt(
+          transaction.hash as string,
+        )
         if (receipt === null) {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
@@ -267,7 +276,9 @@ export default class Analyze extends Command {
   }
 
   async validateOperatorJob(transactionHash: string, network: string, payload: string): Promise<void> {
-    const contract: ethers.Contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.providers[network])
+    const contract: ethers.Contract = this.networkMonitor.operatorContract.connect(
+      this.networkMonitor.providers[network],
+    )
     let hasError = false
     try {
       await contract.estimateGas.executeJob(payload)

@@ -97,7 +97,15 @@ export default class Propagator extends Command {
 
     const networks: string[] = flags.networks
 
-    this.networkMonitor = new NetworkMonitor(this, configFile, networks, this.debug, this.processBlock, userWallet, 'propagator-blocks.json')
+    this.networkMonitor = new NetworkMonitor(
+      this,
+      configFile,
+      networks,
+      this.debug,
+      this.processBlock,
+      userWallet,
+      'propagator-blocks.json',
+    )
 
     this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
     let canSync = false
@@ -178,7 +186,9 @@ export default class Propagator extends Command {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
-        const receipt = await this.networkMonitor.providers[job.network].getTransactionReceipt(transaction.hash as string)
+        const receipt = await this.networkMonitor.providers[job.network].getTransactionReceipt(
+          transaction.hash as string,
+        )
         if (receipt === null) {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
@@ -198,7 +208,10 @@ export default class Propagator extends Command {
     receipt: ethers.ContractReceipt,
     network: string,
   ): Promise<void> {
-    this.networkMonitor.structuredLog(network, `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`)
+    this.networkMonitor.structuredLog(
+      network,
+      `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`,
+    )
     const config: DeploymentConfig = decodeDeploymentConfigInput(transaction.data)
     let event = null
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
@@ -209,7 +222,10 @@ export default class Propagator extends Command {
             event = log.topics
             break
           } else {
-            this.networkMonitor.structuredLog(network, `BridgeableContractDeployed event not found in ${transaction.hash}`)
+            this.networkMonitor.structuredLog(
+              network,
+              `BridgeableContractDeployed event not found in ${transaction.hash}`,
+            )
           }
         }
       }
@@ -251,10 +267,22 @@ export default class Propagator extends Command {
         this.error(error.reason)
       }
 
-      const gasPrice = network === 'mumbai' ? BigNumber.from('55000000000') : (await this.networkMonitor.providers[network].getGasPrice());
+      const gasPrice =
+        network === 'mumbai'
+          ? BigNumber.from('55000000000')
+          : await this.networkMonitor.providers[network].getGasPrice()
 
-      this.networkMonitor.structuredLog(network, `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, "gwei")} for collection ${deploymentAddress}`)
-      this.networkMonitor.structuredLog(network, `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(gasAmount.mul(gasPrice), 'ether')} native gas tokens (in ether) for collection ${deploymentAddress}`)
+      this.networkMonitor.structuredLog(
+        network,
+        `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, 'gwei')} for collection ${deploymentAddress}`,
+      )
+      this.networkMonitor.structuredLog(
+        network,
+        `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(
+          gasAmount.mul(gasPrice),
+          'ether',
+        )} native gas tokens (in ether) for collection ${deploymentAddress}`,
+      )
 
       try {
         const deployTx = await factory.deployHolographableContract(
@@ -264,11 +292,17 @@ export default class Propagator extends Command {
         )
         this.debug(JSON.stringify(deployTx, null, 2))
 
-        this.networkMonitor.structuredLog(network, `Transaction created with hash ${deployTx.hash} for collection ${deploymentAddress}`)
+        this.networkMonitor.structuredLog(
+          network,
+          `Transaction created with hash ${deployTx.hash} for collection ${deploymentAddress}`,
+        )
 
         const deployReceipt = await deployTx.wait()
 
-        this.networkMonitor.structuredLog(network, `Transaction minted with hash ${deployTx.hash} for collection ${deploymentAddress}`)
+        this.networkMonitor.structuredLog(
+          network,
+          `Transaction minted with hash ${deployTx.hash} for collection ${deploymentAddress}`,
+        )
         this.debug(JSON.stringify(deployReceipt, null, 2))
         let collectionAddress
         for (let i = 0, l = deployReceipt.logs.length; i < l; i++) {
@@ -282,10 +316,13 @@ export default class Propagator extends Command {
           }
         }
 
-        this.networkMonitor.structuredLog(network, `Successfully deployed collection ${collectionAddress} = ${deploymentAddress}`)
+        this.networkMonitor.structuredLog(
+          network,
+          `Successfully deployed collection ${collectionAddress} = ${deploymentAddress}`,
+        )
         return
       } catch (error: any) {
-        this.networkMonitor.structuredLog(network,`Submitting tx for collection ${deploymentAddress} failed`)
+        this.networkMonitor.structuredLog(network, `Submitting tx for collection ${deploymentAddress} failed`)
         this.log(error)
         this.error(error.error.reason)
       }

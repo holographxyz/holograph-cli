@@ -59,7 +59,9 @@ export async function ensureConfigFileIsValid(
       if (typeof unsafePassword !== 'undefined') {
         try {
           userWallet = new ethers.Wallet(
-            new AesEncryption(unsafePassword, configFile.user.credentials.iv).decrypt(configFile.user.credentials.privateKey),
+            new AesEncryption(unsafePassword, configFile.user.credentials.iv).decrypt(
+              configFile.user.credentials.privateKey,
+            ),
           )
         } catch {
           throw new Error('password provided for wallet in holo config is not correct')
@@ -73,7 +75,8 @@ export async function ensureConfigFileIsValid(
           await inquirer.prompt([
             {
               name: 'encryptionPassword',
-              message: 'Please enter the password to decrypt the private key for ' + configFile.user.credentials.address,
+              message:
+                'Please enter the password to decrypt the private key for ' + configFile.user.credentials.address,
               type: 'password',
               validate: async (input: string) => {
                 try {
@@ -96,8 +99,10 @@ export async function ensureConfigFileIsValid(
 
     return {userWallet, configFile}
   } catch (error: any) {
-    const error_ = error.message ? error : new Error(`Config file is no longer valid, please delete it before continuing ${error.message}`);
-    throw error_;
+    const error_ = error.message
+      ? error
+      : new Error(`Config file is no longer valid, please delete it before continuing ${error.message}`)
+    throw error_
   }
 }
 
@@ -126,7 +131,9 @@ export async function validateBeta1Schema(config: Record<string, unknown>): Prom
         address: Joi.string().required(),
       }).required(),
     }).required(),
-  }).required().unknown(false)
+  })
+    .required()
+    .unknown(false)
 
   await beta1Schema.validateAsync(config)
 }

@@ -95,7 +95,15 @@ export default class Operator extends Command {
 
     const networks: string[] = flags.networks
 
-    this.networkMonitor = new NetworkMonitor(this, configFile, networks, this.debug, this.processBlock, userWallet, 'operator-blocks.json')
+    this.networkMonitor = new NetworkMonitor(
+      this,
+      configFile,
+      networks,
+      this.debug,
+      this.processBlock,
+      userWallet,
+      'operator-blocks.json',
+    )
 
     this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
     let canSync = false
@@ -176,7 +184,9 @@ export default class Operator extends Command {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
-        const receipt = await this.networkMonitor.providers[job.network].getTransactionReceipt(transaction.hash as string)
+        const receipt = await this.networkMonitor.providers[job.network].getTransactionReceipt(
+          transaction.hash as string,
+        )
         if (receipt === null) {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
@@ -200,7 +210,10 @@ export default class Operator extends Command {
     receipt: ethers.ContractReceipt,
     network: string,
   ): void {
-    this.networkMonitor.structuredLog(network, `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`)
+    this.networkMonitor.structuredLog(
+      network,
+      `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`,
+    )
     const config = decodeDeploymentConfigInput(transaction.data)
     let event = null
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
@@ -211,7 +224,10 @@ export default class Operator extends Command {
             event = log.topics
             break
           } else {
-            this.networkMonitor.structuredLog(network, `BridgeableContractDeployed event not found in ${transaction.hash}`)
+            this.networkMonitor.structuredLog(
+              network,
+              `BridgeableContractDeployed event not found in ${transaction.hash}`,
+            )
           }
         }
       }
@@ -250,7 +266,9 @@ export default class Operator extends Command {
 
     if (event) {
       const deploymentInput = this.networkMonitor.abiCoder.decode(['bytes'], '0x' + transaction.data.slice(10))[0]
-      const config = decodeDeploymentConfig(this.networkMonitor.abiCoder.decode(['bytes'], '0x' + deploymentInput.slice(10))[0])
+      const config = decodeDeploymentConfig(
+        this.networkMonitor.abiCoder.decode(['bytes'], '0x' + deploymentInput.slice(10))[0],
+      )
       const deploymentAddress = '0x' + event[1].slice(26)
       this.networkMonitor.structuredLog(
         network,

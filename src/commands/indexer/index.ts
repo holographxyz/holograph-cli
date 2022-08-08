@@ -98,7 +98,15 @@ export default class Indexer extends Command {
       }
     }
 
-    this.networkMonitor = new NetworkMonitor(this, configFile, flags.networks, this.debug, this.processBlock, undefined, 'indexer-blocks.json')
+    this.networkMonitor = new NetworkMonitor(
+      this,
+      configFile,
+      flags.networks,
+      this.debug,
+      this.processBlock,
+      undefined,
+      'indexer-blocks.json',
+    )
 
     // Indexer always synchronizes missed blocks
     this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
@@ -157,7 +165,9 @@ export default class Indexer extends Command {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
-        const receipt = await this.networkMonitor.providers[job.network].getTransactionReceipt(transaction.hash as string)
+        const receipt = await this.networkMonitor.providers[job.network].getTransactionReceipt(
+          transaction.hash as string,
+        )
         if (receipt === null) {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
@@ -181,7 +191,10 @@ export default class Indexer extends Command {
     receipt: ethers.ContractReceipt,
     network: string,
   ): Promise<void> {
-    this.networkMonitor.structuredLog(network, `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`)
+    this.networkMonitor.structuredLog(
+      network,
+      `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`,
+    )
     const config = decodeDeploymentConfigInput(transaction.data)
     let event = null
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
@@ -192,7 +205,10 @@ export default class Indexer extends Command {
             event = log.topics
             break
           } else {
-            this.networkMonitor.structuredLog(network, `BridgeableContractDeployed event not found in ${transaction.hash}`)
+            this.networkMonitor.structuredLog(
+              network,
+              `BridgeableContractDeployed event not found in ${transaction.hash}`,
+            )
           }
         }
       }
@@ -251,7 +267,10 @@ export default class Indexer extends Command {
         try {
           const patchRes = await axios.patch(`${this.baseUrl}/v1/collections/${res?.data.id}`, data, params)
           this.debug(patchRes.data)
-          this.networkMonitor.structuredLog(network, `Successfully updated collection chainId to ${networks[network].chain}`)
+          this.networkMonitor.structuredLog(
+            network,
+            `Successfully updated collection chainId to ${networks[network].chain}`,
+          )
         } catch (error: any) {
           this.networkMonitor.structuredLog(network, `Failed to update the Holograph database ${error.message}`)
           this.debug(error)
@@ -326,7 +345,9 @@ export default class Indexer extends Command {
 
     if (event) {
       const deploymentInput = this.networkMonitor.abiCoder.decode(['bytes'], '0x' + transaction.data.slice(10))[0]
-      const config = decodeDeploymentConfig(this.networkMonitor.abiCoder.decode(['bytes'], '0x' + deploymentInput.slice(10))[0])
+      const config = decodeDeploymentConfig(
+        this.networkMonitor.abiCoder.decode(['bytes'], '0x' + deploymentInput.slice(10))[0],
+      )
       const deploymentAddress = '0x' + event[1].slice(26)
       this.networkMonitor.structuredLog(
         network,
@@ -380,7 +401,10 @@ export default class Indexer extends Command {
       try {
         const patchRes = await axios.patch(`${this.baseUrl}/v1/collections/${res?.data.id}`, data, params)
         this.debug(patchRes.data)
-        this.networkMonitor.structuredLog(network, `Successfully updated collection chainId to ${networks[network].chain}`)
+        this.networkMonitor.structuredLog(
+          network,
+          `Successfully updated collection chainId to ${networks[network].chain}`,
+        )
       } catch (error: any) {
         this.networkMonitor.structuredLog(network, `Failed to update the Holograph database ${error.message}`)
         this.debug(error)
@@ -389,7 +413,10 @@ export default class Indexer extends Command {
 
     // Check if the indexer executed a job to bridge an NFT
     event = null
-    this.networkMonitor.structuredLog(network, `Checking if an indexer executed a job to bridge an NFT at tx: ${transaction.hash}`)
+    this.networkMonitor.structuredLog(
+      network,
+      `Checking if an indexer executed a job to bridge an NFT at tx: ${transaction.hash}`,
+    )
     if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         if (event === null) {
