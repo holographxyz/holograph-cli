@@ -125,7 +125,7 @@ export default class Propagator extends Command {
 
   warp = 0
   startBlocks: {[key: string]: number} = {}
-  allDone: {[key: string]: boolean} = {}
+  allDone: number = 0
 
   exited = false
 
@@ -405,8 +405,8 @@ export default class Propagator extends Command {
       if (this.warp !== 0) {
         this.structuredLog(network, `Starting Operator from ${this.warp} blocks back...`)
 
-        // Intialize all networks to not be done yet
-        this.allDone[network] = false
+        // Count how many networks need to be done so we can know when to exit
+        this.allDone += 1
         this.latestBlockHeight[network] = this.startBlocks.network - this.warp
         this.currentBlockHeight[network] = this.startBlocks.network - this.warp
       } else if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
@@ -444,14 +444,14 @@ export default class Propagator extends Command {
     if (this.warp !== 0) {
       for (const b of this.supportedNetworks) {
         if (job.block === this.startBlocks.network) {
-          this.allDone[b] = true
+          this.allDone -= 1
         }
-      }
 
-      if (Object.values(this.allDone).every(Boolean)) {
-        this.structuredLog(job.network, `All chains have reached current block height `)
-        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
-        process.exit()
+        if (this.allDone === 0) {
+          this.structuredLog(job.network, `All chains have reached current block height `)
+          // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+          process.exit()
+        }
       }
     }
 
