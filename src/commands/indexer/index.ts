@@ -8,7 +8,7 @@ import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 import networks from '../../utils/networks'
 
 import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize} from '../../utils/utils'
-import {OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
+import {warpFlag, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
 import color from '@oclif/color'
@@ -31,6 +31,7 @@ export default class Indexer extends Command {
       description: 'Launch server on http://localhost:6000 to make sure command is still running',
       default: false,
     }),
+    ...warpFlag,
   }
 
   /**
@@ -105,13 +106,14 @@ export default class Indexer extends Command {
       debug: this.debug,
       processBlock: this.processBlock,
       lastBlockFilename: 'indexer-blocks.json',
+      warp: flags.warp,
     })
 
     // Indexer always synchronizes missed blocks
     this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
 
     CliUx.ux.action.start(`Starting indexer in mode: ${OperatorMode[this.operatorMode]}`)
-    await this.networkMonitor.run(true, blockJobs)
+    await this.networkMonitor.run(!(flags.warp > 0), blockJobs)
     CliUx.ux.action.stop('🚀')
 
     // Start server
