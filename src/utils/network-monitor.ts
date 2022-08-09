@@ -14,7 +14,7 @@ export const warpFlag = {
     description: 'Start from the beginning of the chain',
     default: 0,
     char: 'w',
-  })
+  }),
 }
 
 export enum OperatorMode {
@@ -389,7 +389,7 @@ export class NetworkMonitor {
       clearInterval(this.blockJobMonitorProcess[network])
       this.runningProcesses -= 1
       if (this.runningProcesses === 0) {
-        this.log('finished the last job', 'need to output data and exit')
+        this.log('Finished the last job', 'need to output data and exit')
         this.exitRouter({exit: true}, 'SIGINT')
       }
     }
