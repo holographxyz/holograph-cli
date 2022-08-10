@@ -441,6 +441,30 @@ export class NetworkMonitor {
     }
   }
 
+  filterTransaction(job: BlockJob, transaction: ethers.Transaction, interestingTransactions: ethers.Transaction[]): void {
+    const to: string = transaction.to?.toLowerCase() || ''
+    const from: string = transaction.from?.toLowerCase() || ''
+    for(const filter of this.filters) {
+      const match: string = (filter.networkDependant ? ((filter.match as {[key: string]: string})[job.network]) : (filter.match as string))
+      switch (filter.type) {
+        case FilterType.to:
+          if (to === match) {
+            interestingTransactions.push(transaction)
+          }
+
+          break
+        case FilterType.from:
+          if (from === match) {
+            interestingTransactions.push(transaction)
+          }
+
+          break
+        default:
+          break
+      }
+    }
+  }
+
   async processBlock(job: BlockJob): Promise<void> {
     this.structuredLog(job.network, `Processing Block ${job.block}`)
     const block = await this.providers[job.network].getBlockWithTransactions(job.block)
@@ -449,30 +473,9 @@ export class NetworkMonitor {
         this.structuredLog(job.network, `Zero block transactions for block ${job.block}`)
       }
 
-      const interestingTransactions = []
+      const interestingTransactions: ethers.Transaction[] = []
       for (let i = 0, l = block.transactions.length; i < l; i++) {
-        const transaction = block.transactions[i]
-        const to: string = transaction.to?.toLowerCase() || ''
-        const from: string = transaction.from?.toLowerCase() || ''
-        for(const filter of this.filters) {
-          const match: string = (filter.networkDependant ? ((filter.match as {[key: string]: string})[job.network]) : (filter.match as string))
-          switch (filter.type) {
-            case FilterType.to:
-              if (to === match) {
-                interestingTransactions.push(transaction)
-              }
-
-              break
-            case FilterType.from:
-              if (from === match) {
-                interestingTransactions.push(transaction)
-              }
-
-              break
-            default:
-              break
-          }
-        }
+        this.filterTransaction(job, block.transactions[i], interestingTransactions)
       }
 
       if (interestingTransactions.length > 0) {

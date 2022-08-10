@@ -1,9 +1,7 @@
-import * as path from 'node:path'
-
 import {Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {ConfigFile, ensureConfigFileIsValid} from '../../utils/config'
 
 import {FilterType, BlockJob, Scope, NetworkMonitor} from '../../utils/network-monitor'
 
@@ -23,37 +21,46 @@ export default class Analyze extends Command {
 
   networkMonitor!: NetworkMonitor
 
-  async run(): Promise<void> {
-    const {flags} = await this.parse(Analyze)
+  validateScope(scope: Scope, configFile: ConfigFile, networks: string[], scopeJobs: Scope[]): void {
+    if ('network' in scope && 'startBlock' in scope && 'endBlock' in scope) {
+      if (Object.keys(configFile.networks).includes(scope.network as string)) {
+        if (!networks.includes(scope.network as string)) {
+          networks.push(scope.network as string)
+        }
 
-    this.log('Loading user configurations...')
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {configFile} = await ensureConfigFileIsValid(configPath, undefined, false)
-    this.log('User configurations loaded.')
+        scopeJobs.push(scope)
+      } else {
+        this.log(`${scope.network} is not a supported network`)
+      }
+    } else {
+      this.log(`${scope} is an invalid Scope object`)
+    }
+  }
+
+  scopeOut(configFile: ConfigFile, scopeFlags: string[]): {networks: string[], scopeJobs: Scope[]} {
     const networks: string[] = []
     const scopeJobs: Scope[] = []
-    for (const scopeString of flags.scope) {
+    for (const scopeString of scopeFlags) {
       try {
         const scopeArray: Scope[] = JSON.parse(scopeString)
         for (const scope of scopeArray) {
-          if ('network' in scope && 'startBlock' in scope && 'endBlock' in scope) {
-            if (Object.keys(configFile.networks).includes(scope.network as string)) {
-              if (!networks.includes(scope.network as string)) {
-                networks.push(scope.network as string)
-              }
-
-              scopeJobs.push(scope)
-            } else {
-              this.log(`${scope.network} is not a supported network`)
-            }
-          } else {
-            this.log(`${scope} is an invalid Scope object`)
-          }
+          this.validateScope(scope, configFile, networks, scopeJobs)
         }
       } catch {
         this.log(`${scopeString} is an invalid Scope[] JSON object`)
       }
     }
+
+    return {networks, scopeJobs}
+  }
+
+  async run(): Promise<void> {
+    const {flags} = await this.parse(Analyze)
+
+    this.log('Loading user configurations...')
+    const {configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
+    this.log('User configurations loaded.')
+    const {networks, scopeJobs} = this.scopeOut(configFile, flags.scope)
 
     this.log(`${JSON.stringify(scopeJobs, undefined, 4)}`)
 

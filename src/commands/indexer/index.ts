@@ -1,10 +1,9 @@
-import * as path from 'node:path'
 import axios from 'axios'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {ensureConfigFileIsValid} from '../../utils/config'
 import networks from '../../utils/networks'
 
 import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize} from '../../utils/utils'
@@ -75,8 +74,7 @@ export default class Indexer extends Command {
     this.log(`Indexer mode: ${this.operatorMode}`)
 
     this.log('Loading user configurations...')
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {configFile} = await ensureConfigFileIsValid(configPath, undefined, false)
+    const {configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
     this.log('User configurations loaded.')
 
     this.networkMonitor = new NetworkMonitor({

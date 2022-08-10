@@ -1,10 +1,9 @@
-import * as path from 'node:path'
 import * as inquirer from 'inquirer'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {ensureConfigFileIsValid} from '../../utils/config'
 
 import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize} from '../../utils/utils'
 
@@ -68,8 +67,7 @@ export default class Operator extends Command {
     this.log(`Operator mode: ${this.operatorMode}`)
 
     this.log('Loading user configurations...')
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, unsafePassword, true)
+    const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, unsafePassword, true)
     this.log('User configurations loaded.')
 
     this.networkMonitor = new NetworkMonitor({

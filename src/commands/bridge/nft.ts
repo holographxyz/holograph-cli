@@ -1,9 +1,8 @@
 import {CliUx, Command, Flags} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
-import * as path from 'node:path'
 import {ethers} from 'ethers'
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {addressValidator, tokenValidator} from '../../utils/validation'
 
@@ -103,13 +102,7 @@ export default class Contract extends Command {
     await this.validateTokenId()
 
     this.log('Loading user configurations...')
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, undefined, true)
-
-    if (userWallet === undefined) {
-      throw new Error('Wallet could not be unlocked')
-    }
-
+    const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
     this.log('User configurations loaded.')
 
     this.sourceNetwork = flags.sourceNetwork || ''
