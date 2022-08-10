@@ -5,9 +5,7 @@ import {ethers} from 'ethers'
 
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 
-import color from '@oclif/color'
-
-import {BlockJob, Scope, NetworkMonitor} from '../../utils/network-monitor'
+import {FilterType, BlockJob, Scope, NetworkMonitor} from '../../utils/network-monitor'
 
 export default class Analyze extends Command {
   static description = 'Extract all operator jobs and get their status'
@@ -64,7 +62,7 @@ export default class Analyze extends Command {
       configFile,
       networks,
       debug: this.debug,
-      processBlock: this.processBlock
+      processTransactions: this.processTransactions,
     })
 
     const blockJobs: {[key: string]: BlockJob[]} = {}
@@ -92,52 +90,28 @@ export default class Analyze extends Command {
       }
     }
 
-    await this.networkMonitor.run(false, blockJobs)
+    await this.networkMonitor.run(false, blockJobs, this.filterBuilder)
   }
 
-  async processBlock(job: BlockJob): Promise<void> {
-    this.networkMonitor.structuredLog(job.network, `Processing Block ${job.block}`)
-    const block = await this.networkMonitor.providers[job.network].getBlockWithTransactions(job.block)
-    if (block !== null && 'transactions' in block) {
-      if (block.transactions.length === 0) {
-        this.networkMonitor.structuredLog(job.network, `Zero block transactions for block ${job.block}`)
-      }
-
-      const interestingTransactions = []
-      for (let i = 0, l = block.transactions.length; i < l; i++) {
-        const transaction = block.transactions[i]
-        if (transaction.from.toLowerCase() === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
-          // We have LayerZero call, need to check it it's directed towards Holograph operators
-          interestingTransactions.push(transaction)
-        } else if ('to' in transaction && transaction.to !== null && transaction.to !== '') {
-          const to: string = transaction.to!.toLowerCase()
-          // Check if it's a factory call
-          if (to === this.networkMonitor.bridgeAddress) {
-            // we have a bridge call identified
-            // check that the transaction status = true
-            interestingTransactions.push(transaction)
-          } else if (to === this.networkMonitor.operatorAddress) {
-            // this means an operator job has been executed
-            // maybe cross-reference it to see if it's part of a transaction we are monitoring?
-            interestingTransactions.push(transaction)
-          }
-        }
-      }
-
-      if (interestingTransactions.length > 0) {
-        this.networkMonitor.structuredLog(
-          job.network,
-          `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`,
-        )
-        this.processTransactions(job, interestingTransactions)
-      } else {
-        this.networkMonitor.blockJobHandler(job.network)
-      }
-    } else {
-      this.networkMonitor.structuredLog(job.network, `${job.network} ${color.red('Dropped block!')} ${job.block}`)
-      this.networkMonitor.blockJobs[job.network].unshift(job)
-      this.networkMonitor.blockJobHandler(job.network)
-    }
+  async filterBuilder(): Promise<void> {
+    this.networkMonitor.filters = [
+      {
+        type: FilterType.from,
+        match: this.networkMonitor.LAYERZERO_RECEIVERS,
+        networkDependant: true,
+      },
+      {
+        type: FilterType.to,
+        match: this.networkMonitor.bridgeAddress,
+        networkDependant: false,
+      },
+      {
+        type: FilterType.to,
+        match: this.networkMonitor.operatorAddress,
+        networkDependant: false,
+      },
+    ]
+    Promise.resolve()
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.Transaction[]): Promise<void> {
@@ -175,8 +149,6 @@ export default class Analyze extends Command {
         }
       }
     }
-
-    this.networkMonitor.blockJobHandler(job.network)
   }
 
   async handleBridgeOutEvent(

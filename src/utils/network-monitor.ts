@@ -41,6 +41,17 @@ export interface Scope {
   endBlock: number
 }
 
+export enum FilterType {
+  to,
+  from,
+}
+
+export type TransactionFilter = {
+  type: FilterType
+  match: string | {[key: string]: string}
+  networkDependant: boolean
+}
+
 export const keepAlive = ({
   provider,
   onDisconnect,
@@ -77,7 +88,8 @@ type NetworkMonitorOptions = {
   configFile: ConfigFile
   networks: string[]
   debug: (...args: string[]) => void
-  processBlock: (job: BlockJob) => Promise<void>
+  processTransactions: (job: BlockJob, transactions: ethers.Transaction[]) => Promise<void>
+  filters?: TransactionFilter[]
   userWallet?: ethers.Wallet
   lastBlockFilename?: string
   warp?: number
@@ -88,7 +100,8 @@ export class NetworkMonitor {
   configFile: ConfigFile
   userWallet?: ethers.Wallet
   LAST_BLOCKS_FILE_NAME: string
-  processBlock: (job: BlockJob) => Promise<void>
+  filters: TransactionFilter[] = []
+  processTransactions: (job: BlockJob, transactions: ethers.Transaction[]) => Promise<void>
   log: (message: string, ...args: any[]) => void
   debug: (...args: any[]) => void
   networks!: string[]
@@ -112,7 +125,7 @@ export class NetworkMonitor {
   factoryContract!: ethers.Contract
   operatorContract!: ethers.Contract
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
-  LAYERZERO_RECEIVERS: any = {
+  LAYERZERO_RECEIVERS: {[key: string]: string} = {
     rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     mumbai: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     fuji: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
@@ -139,7 +152,11 @@ export class NetworkMonitor {
     this.networks = options.networks
     this.log = this.parent.log.bind(this.parent)
     this.debug = options.debug.bind(this.parent)
-    this.processBlock = options.processBlock.bind(this.parent)
+    if (options.filters !== undefined) {
+      this.filters = options.filters
+    }
+
+    this.processTransactions = options.processTransactions.bind(this.parent)
     if (options.userWallet !== undefined) {
       this.userWallet = options.userWallet
     }
@@ -155,19 +172,25 @@ export class NetworkMonitor {
     }
   }
 
-  async run(continuous: boolean, blockJobs: {[key: string]: BlockJob[]} = {}): Promise<void> {
+  async run(continuous: boolean, blockJobs?: {[key: string]: BlockJob[]}, ethersInitializedCallback?: () => Promise<void>): Promise<void> {
     await this.initializeEthers()
+    if (ethersInitializedCallback !== undefined) {
+      await ethersInitializedCallback.bind(this.parent)()
+    }
 
     this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESS}`)
     this.log(`Bridge address: ${this.bridgeAddress}`)
     this.log(`Factory address: ${this.factoryAddress}`)
     this.log(`Operator address: ${this.operatorAddress}`)
 
-    if (this.blockJobs === {}) {
+    if (blockJobs !== undefined) {
       this.blockJobs = blockJobs
     }
 
     for (const network of this.networks) {
+      if (!(network in this.blockJobs)) {
+        this.blockJobs[network] = []
+      }
       this.lastBlockJobDone[network] = Date.now()
       this.runningProcesses += 1
       if (continuous) {
@@ -392,6 +415,57 @@ export class NetworkMonitor {
         this.log('Finished the last job', 'need to output data and exit')
         this.exitRouter({exit: true}, 'SIGINT')
       }
+    }
+  }
+
+  async processBlock(job: BlockJob): Promise<void> {
+    this.structuredLog(job.network, `Processing Block ${job.block}`)
+    const block = await this.providers[job.network].getBlockWithTransactions(job.block)
+    if (block !== null && 'transactions' in block) {
+      if (block.transactions.length === 0) {
+        this.structuredLog(job.network, `Zero block transactions for block ${job.block}`)
+      }
+
+      const interestingTransactions = []
+      for (let i = 0, l = block.transactions.length; i < l; i++) {
+        const transaction = block.transactions[i]
+        const to: string = transaction.to?.toLowerCase() || ''
+        const from: string = transaction.from?.toLowerCase() || ''
+        for(const filter of this.filters) {
+          const match: string = (filter.networkDependant ? ((filter.match as {[key: string]: string})[job.network]) : (filter.match as string))
+          switch (filter.type) {
+            case FilterType.to:
+              if (to === match) {
+                interestingTransactions.push(transaction)
+              }
+
+              break
+            case FilterType.from:
+              if (from === match) {
+                interestingTransactions.push(transaction)
+              }
+
+              break
+            default:
+              break
+          }
+        }
+      }
+
+      if (interestingTransactions.length > 0) {
+        this.structuredLog(
+          job.network,
+          `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`,
+        )
+        await this.processTransactions.bind(this.parent)(job, interestingTransactions)
+        this.blockJobHandler(job.network)
+      } else {
+        this.blockJobHandler(job.network)
+      }
+    } else {
+      this.structuredLog(job.network, `${job.network} ${color.red('Dropped block!')} ${job.block}`)
+      this.blockJobs[job.network].unshift(job)
+      this.blockJobHandler(job.network)
     }
   }
 

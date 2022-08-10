@@ -8,10 +8,8 @@ import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 
 import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize} from '../../utils/utils'
 
-import {OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
+import {FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
-
-import color from '@oclif/color'
 
 export default class Operator extends Command {
   static description = 'Listen for EVM events for jobs and process them'
@@ -100,7 +98,7 @@ export default class Operator extends Command {
       configFile,
       networks,
       debug: this.debug,
-      processBlock: this.processBlock,
+      processTransactions: this.processTransactions,
       userWallet,
       lastBlockFilename: 'operator-blocks.json',
     })
@@ -131,7 +129,7 @@ export default class Operator extends Command {
     }
 
     CliUx.ux.action.start(`Starting operator in mode: ${OperatorMode[this.operatorMode]}`)
-    await this.networkMonitor.run(true, blockJobs)
+    await this.networkMonitor.run(true, blockJobs, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
     // Start server
@@ -140,44 +138,25 @@ export default class Operator extends Command {
     }
   }
 
-  async processBlock(job: BlockJob): Promise<void> {
-    this.networkMonitor.structuredLog(job.network, `Processing Block ${job.block}`)
-    const block = await this.networkMonitor.providers[job.network].getBlockWithTransactions(job.block)
-    if (block !== null && 'transactions' in block) {
-      if (block.transactions.length === 0) {
-        this.networkMonitor.structuredLog(job.network, `Zero block transactions for block ${job.block}`)
-      }
-
-      const interestingTransactions = []
-      for (let i = 0, l = block.transactions.length; i < l; i++) {
-        const transaction = block.transactions[i]
-        if (transaction.from.toLowerCase() === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
-          // We have LayerZero call, need to check it it's directed towards Holograph operators
-          interestingTransactions.push(transaction)
-        } else if ('to' in transaction && transaction.to !== null && transaction.to !== '') {
-          const to: string = transaction.to!.toLowerCase()
-          // Check if it's a factory call
-          if (to === this.networkMonitor.factoryAddress || to === this.networkMonitor.operatorAddress) {
-            // We have a potential factory deployment or operator bridge transaction
-            interestingTransactions.push(transaction)
-          }
-        }
-      }
-
-      if (interestingTransactions.length > 0) {
-        this.networkMonitor.structuredLog(
-          job.network,
-          `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`,
-        )
-        this.processTransactions(job, interestingTransactions)
-      } else {
-        this.networkMonitor.blockJobHandler(job.network, job)
-      }
-    } else {
-      this.networkMonitor.structuredLog(job.network, `${job.network} ${color.red('Dropped block!')} ${job.block}`)
-      this.networkMonitor.blockJobs[job.network].unshift(job)
-      this.networkMonitor.blockJobHandler(job.network)
-    }
+  async filterBuilder(): Promise<void> {
+    this.networkMonitor.filters = [
+      {
+        type: FilterType.from,
+        match: this.networkMonitor.LAYERZERO_RECEIVERS,
+        networkDependant: true,
+      },
+      {
+        type: FilterType.to,
+        match: this.networkMonitor.factoryAddress,
+        networkDependant: false,
+      },
+      {
+        type: FilterType.to,
+        match: this.networkMonitor.operatorAddress,
+        networkDependant: false,
+      },
+    ]
+    Promise.resolve()
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.Transaction[]): Promise<void> {
@@ -201,8 +180,6 @@ export default class Operator extends Command {
         }
       }
     }
-
-    this.networkMonitor.blockJobHandler(job.network, job)
   }
 
   handleContractDeployedEvents(
