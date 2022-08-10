@@ -202,6 +202,20 @@ export default class Indexer extends Command {
           this.debug(error)
         }
 
+        // Only update the database if this transaction happened in a later block than the last block we indexed
+        if (
+          res &&
+          res.data &&
+          res.data.transactions[0] !== undefined &&
+          this.networkMonitor.latestBlockHeight > res.data.transaction[0]
+        ) {
+          this.networkMonitor.structuredLog(
+            network,
+            `Latest transaction in the database is more recent than this transaction. Skipping update.`,
+          )
+          return
+        }
+
         // Compose request to API server to update the collection
         const data = JSON.stringify({
           chainId: networks[network].chain,
@@ -336,6 +350,20 @@ export default class Indexer extends Command {
         this.debug(error)
       }
 
+      // Only update the database if this transaction happened in a later block than the last block we indexed
+      if (
+        res &&
+        res.data &&
+        res.data.transactions[0] !== undefined &&
+        this.networkMonitor.latestBlockHeight > res.data.transaction[0]
+      ) {
+        this.networkMonitor.structuredLog(
+          network,
+          `Latest transaction in the database is more recent than this transaction. Skipping update.`,
+        )
+        return
+      }
+
       // Compose request to API server to update the collection
       const data = JSON.stringify({
         chainId: networks[network].chain,
@@ -414,6 +442,20 @@ export default class Indexer extends Command {
       } catch (error: any) {
         this.networkMonitor.structuredLog(network, error.message)
         this.debug(error)
+      }
+
+      // Only update the database if this transaction happened in a later block than the last block we indexed
+      if (
+        res &&
+        res.data &&
+        res.data.transactions[0] !== undefined &&
+        this.networkMonitor.latestBlockHeight > res.data.transaction[0]
+      ) {
+        this.networkMonitor.structuredLog(
+          network,
+          `Latest transaction in the database is more recent than this transaction. Skipping update.`,
+        )
+        return
       }
 
       // Compose request to API server to update the nft
