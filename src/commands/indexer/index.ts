@@ -79,25 +79,6 @@ export default class Indexer extends Command {
     const {configFile} = await ensureConfigFileIsValid(configPath, undefined, false)
     this.log('User configurations loaded.')
 
-    // Load defaults for the networks from the config file
-    if (flags.networks === undefined || '') {
-      flags.networks = Object.keys(configFile.networks)
-    }
-
-    const blockJobs: {[key: string]: BlockJob[]} = {}
-
-    for (let i = 0, l = flags.networks.length; i < l; i++) {
-      const network = flags.networks[i]
-      if (Object.keys(configFile.networks).includes(network)) {
-        blockJobs[network] = []
-      } else {
-        // If network is not supported remove it from the array
-        flags.networks.splice(i, 1)
-        l--
-        i--
-      }
-    }
-
     this.networkMonitor = new NetworkMonitor({
       parent: this,
       configFile,
@@ -112,7 +93,7 @@ export default class Indexer extends Command {
     this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
 
     CliUx.ux.action.start(`Starting indexer in mode: ${OperatorMode[this.operatorMode]}`)
-    await this.networkMonitor.run(!(flags.warp > 0), blockJobs, this.filterBuilder)
+    await this.networkMonitor.run(!(flags.warp > 0), undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
     // Start server

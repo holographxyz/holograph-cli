@@ -86,7 +86,7 @@ type ImplementsCommand = Command
 type NetworkMonitorOptions = {
   parent: ImplementsCommand
   configFile: ConfigFile
-  networks: string[]
+  networks?: string[]
   debug: (...args: string[]) => void
   processTransactions: (job: BlockJob, transactions: ethers.Transaction[]) => Promise<void>
   filters?: TransactionFilter[]
@@ -104,7 +104,7 @@ export class NetworkMonitor {
   processTransactions: (job: BlockJob, transactions: ethers.Transaction[]) => Promise<void>
   log: (message: string, ...args: any[]) => void
   debug: (...args: any[]) => void
-  networks!: string[]
+  networks: string[] = []
   runningProcesses = 0
   bridgeAddress!: string
   factoryAddress!: string
@@ -149,7 +149,6 @@ export class NetworkMonitor {
     this.parent = options.parent
     this.configFile = options.configFile
     this.LAST_BLOCKS_FILE_NAME = options.lastBlockFilename || 'blocks.json'
-    this.networks = options.networks
     this.log = this.parent.log.bind(this.parent)
     this.debug = options.debug.bind(this.parent)
     if (options.filters !== undefined) {
@@ -163,6 +162,25 @@ export class NetworkMonitor {
 
     if (options.warp !== undefined && options.warp > 0) {
       this.warp = options.warp
+    }
+
+    if (options.networks === undefined || '') {
+      options.networks = Object.keys(this.configFile.networks)
+    } else {
+      for (let i = 0, l = options.networks.length; i < l; i++) {
+        const network = options.networks[i]
+        if (Object.keys(this.configFile.networks).includes(network)) {
+          this.blockJobs[network] = []
+        } else {
+          this.structuredLog(network, `${network} is not a valid network and will be ignored`)
+          // If network is not supported remove it from the array
+          options.networks.splice(i, 1)
+          l--
+          i--
+        }
+      }
+
+      this.networks = options.networks
     }
 
     // Color the networks 🌈
@@ -191,6 +209,7 @@ export class NetworkMonitor {
       if (!(network in this.blockJobs)) {
         this.blockJobs[network] = []
       }
+
       this.lastBlockJobDone[network] = Date.now()
       this.runningProcesses += 1
       if (continuous) {

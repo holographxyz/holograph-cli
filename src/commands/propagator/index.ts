@@ -74,31 +74,10 @@ export default class Propagator extends Command {
     const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, unsafePassword, true)
     this.log('User configurations loaded.')
 
-    // Load defaults for the networks from the config file
-    if (flags.networks === undefined || '') {
-      flags.networks = Object.keys(configFile.networks)
-    }
-
-    const blockJobs: {[key: string]: BlockJob[]} = {}
-
-    for (let i = 0, l = flags.networks.length; i < l; i++) {
-      const network = flags.networks[i]
-      if (Object.keys(configFile.networks).includes(network)) {
-        blockJobs[network] = []
-      } else {
-        // If network is not supported remove it from the array
-        flags.networks.splice(i, 1)
-        l--
-        i--
-      }
-    }
-
-    const networks: string[] = flags.networks
-
     this.networkMonitor = new NetworkMonitor({
       parent: this,
       configFile,
-      networks,
+      networks: flags.networks,
       debug: this.debug,
       processTransactions: this.processTransactions,
       userWallet,
@@ -131,7 +110,7 @@ export default class Propagator extends Command {
     }
 
     CliUx.ux.action.start(`Starting propagator in mode: ${OperatorMode[this.operatorMode]}`)
-    await this.networkMonitor.run(true, blockJobs, this.filterBuilder)
+    await this.networkMonitor.run(true, undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
     // Start server
