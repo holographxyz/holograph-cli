@@ -37,7 +37,7 @@ export default class Analyze extends Command {
     }
   }
 
-  scopeOut(configFile: ConfigFile, scopeFlags: string[]): {networks: string[], scopeJobs: Scope[]} {
+  scopeOut(configFile: ConfigFile, scopeFlags: string[]): {networks: string[]; scopeJobs: Scope[]} {
     const networks: string[] = []
     const scopeJobs: Scope[] = []
     for (const scopeString of scopeFlags) {
