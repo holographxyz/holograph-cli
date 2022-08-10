@@ -17,6 +17,10 @@ export const warpFlag = {
   }),
 }
 
+export const networkFlag = {
+  networks: Flags.string({description: 'Comma separated list of networks to operate on', multiple: true}),
+}
+
 export enum OperatorMode {
   listen,
   manual,
@@ -179,9 +183,9 @@ export class NetworkMonitor {
           i--
         }
       }
-
-      this.networks = options.networks
     }
+
+    this.networks = options.networks
 
     // Color the networks 🌈
     for (let i = 0, l = this.networks.length; i < l; i++) {

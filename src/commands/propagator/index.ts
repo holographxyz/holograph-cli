@@ -8,14 +8,13 @@ import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 
 import {decodeDeploymentConfigInput, capitalize, DeploymentConfig} from '../../utils/utils'
 
-import {FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
+import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
 export default class Propagator extends Command {
   static description = 'Listen for EVM events deploys collections to ther supported networks'
   static examples = ['$ holo propagator --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
-    networks: Flags.string({description: 'Comma separated list of networks to operate to', multiple: true}),
     mode: Flags.string({
       description: 'The mode in which to run the propagator',
       options: ['listen', 'manual', 'auto'],
@@ -32,6 +31,7 @@ export default class Propagator extends Command {
     unsafePassword: Flags.string({
       description: 'Enter the plain text password for the wallet in the holo cli config',
     }),
+    ...networkFlag,
   }
 
   crossDeployments: string[] = []

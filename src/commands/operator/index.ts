@@ -8,14 +8,13 @@ import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 
 import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize} from '../../utils/utils'
 
-import {FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
+import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
 export default class Operator extends Command {
   static description = 'Listen for EVM events for jobs and process them'
   static examples = ['$ holo operator --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
-    networks: Flags.string({description: 'Comma separated list of networks to operate to', multiple: true}),
     mode: Flags.string({
       description: 'The mode in which to run the operator',
       options: ['listen', 'manual', 'auto'],
@@ -32,6 +31,7 @@ export default class Operator extends Command {
     unsafePassword: Flags.string({
       description: 'Enter the plain text password for the wallet in the holo cli config',
     }),
+    ...networkFlag,
   }
 
   /**

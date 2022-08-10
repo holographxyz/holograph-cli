@@ -8,7 +8,7 @@ import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 import networks from '../../utils/networks'
 
 import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize} from '../../utils/utils'
-import {warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
+import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
 import dotenv from 'dotenv'
@@ -19,7 +19,6 @@ export default class Indexer extends Command {
   static description = 'Listen for EVM events and update database network status'
   static examples = ['$ holo indexer --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
-    networks: Flags.string({description: 'Comma separated list of networks to operate to', multiple: true}),
     mode: Flags.string({
       description: 'The mode in which to run the indexer',
       options: ['listen', 'manual', 'auto'],
@@ -30,6 +29,7 @@ export default class Indexer extends Command {
       description: 'Launch server on http://localhost:6000 to make sure command is still running',
       default: false,
     }),
+    ...networkFlag,
     ...warpFlag,
   }
 
