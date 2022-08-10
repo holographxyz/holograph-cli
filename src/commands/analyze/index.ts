@@ -258,7 +258,9 @@ export default class Analyze extends Command {
       await contract.estimateGas.executeJob(payload)
     } catch (error: any) {
       hasError = true
-      this.error(error.reason)
+      if (error.reason !== 'execution reverted: HOLOGRAPH: invalid job') {
+        this.networkMonitor.structuredLog(network, error.reason)
+      }
     }
 
     if (hasError) {
