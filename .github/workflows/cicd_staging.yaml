@@ -24,10 +24,10 @@ env:
   # TODO -> HOLO_INDEXER_HOST <----- replace with k8s service endpoint [angello,alex should make code chamges]
   STG_HOLO_INDEXER_HOST: https://develop.cxipchain.xyz
   #
-  # TODO -> set the password as github secret var
-  STG_HOLO_INDEXER_PASSWORD   : d82aFsZdmtVxpWMJLpJu #TODO ${{ secrets.HOLO_INDEXER_PASSWORD }}
-  STG_HOLO_OPERATOR_PASSWORD  : d82aFsZdmtVxpWMJLpJu #TODO ${{ secrets.HOLO_OPERATOR_PASSWORD }}
-  STG_HOLO_PROPAGATOR_PASSWORD: d82aFsZdmtVxpWMJLpJu #TODO ${{ secrets.HOLO_PROPAGATOR_PASSWORD }}
+  # notice: all 3 have the same password
+  STG_HOLO_INDEXER_PASSWORD   : ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
+  STG_HOLO_OPERATOR_PASSWORD  : ${{ secrets.STG_HOLO_OPERATOR_PASSWORD }}
+  STG_HOLO_PROPAGATOR_PASSWORD: ${{ secrets.STG_HOLO_PROPAGATOR_PASSWORD }}
   #
   # switching between the keys in the config map
   HOLO_CONFIG_FILE_DATA: stg-config-file # [stg-config-file/prod-config-file]
