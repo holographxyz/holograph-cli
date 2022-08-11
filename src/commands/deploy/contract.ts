@@ -92,7 +92,7 @@ export default class Contract extends Command {
       this.error(error.reason)
     }
 
-    const gasPrice = await destinationWallet.provider.getGasPrice()
+    const gasPrice = (await destinationWallet.provider.getGasPrice()).mul(ethers.BigNumber.from('1.25'))
     CliUx.ux.action.stop()
     this.log(
       'Transaction is estimated to cost a total of',

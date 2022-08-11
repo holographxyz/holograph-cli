@@ -20,8 +20,8 @@ export interface ConfigBridge {
 
 export interface ConfigNetworks {
   rinkeby: ConfigNetwork
-  mumbai: ConfigNetwork
   fuji: ConfigNetwork
+  mumbai: ConfigNetwork
 }
 
 export interface ConfigCredentials {
@@ -42,7 +42,7 @@ export interface ConfigFile {
 }
 
 async function tryToUnlockWallet(configFile: ConfigFile, unlockWallet: boolean, unsafePassword: string | undefined): Promise<ethers.Wallet> {
-  let userWallet!: ethers.Wallet
+  let userWallet: ethers.Wallet | undefined
   if (unlockWallet) {
     // eslint-disable-next-line no-negated-condition
     if (typeof unsafePassword !== 'undefined') {
@@ -90,7 +90,7 @@ async function tryToUnlockWallet(configFile: ConfigFile, unlockWallet: boolean, 
     }
   }
 
-  return userWallet
+  return userWallet as ethers.Wallet
 }
 
 export async function ensureConfigFileIsValid(
@@ -143,10 +143,10 @@ export async function validateBeta1Schema(config: Record<string, unknown>): Prom
       rinkeby: Joi.object({
         providerUrl: Joi.string().required(),
       }),
-      mumbai: Joi.object({
+      fuji: Joi.object({
         providerUrl: Joi.string().required(),
       }),
-      fuji: Joi.object({
+      mumbai: Joi.object({
         providerUrl: Joi.string().required(),
       }),
     }).required(),

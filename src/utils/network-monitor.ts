@@ -415,7 +415,7 @@ export class NetworkMonitor {
 
   jobHandlerBuilder: (network: string) => () => void = (network: string): (() => void) => {
     return () => {
-      this.blockJobHandler.bind(this)(network)
+      this.blockJobHandler(network)
     }
   }
 
@@ -484,9 +484,9 @@ export class NetworkMonitor {
           `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`,
         )
         await this.processTransactions.bind(this.parent)(job, interestingTransactions)
-        this.blockJobHandler(job.network)
+        this.blockJobHandler(job.network, job)
       } else {
-        this.blockJobHandler(job.network)
+        this.blockJobHandler(job.network, job)
       }
     } else {
       this.structuredLog(job.network, `${job.network} ${color.red('Dropped block!')} ${job.block}`)

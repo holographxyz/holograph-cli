@@ -37,7 +37,7 @@ export default class Analyze extends Command {
     }
   }
 
-  scopeOut(configFile: ConfigFile, scopeFlags: string[]): {networks: string[]; scopeJobs: Scope[]} {
+  scopeItOut(configFile: ConfigFile, scopeFlags: string[]): {networks: string[]; scopeJobs: Scope[]} {
     const networks: string[] = []
     const scopeJobs: Scope[] = []
     for (const scopeString of scopeFlags) {
@@ -60,7 +60,7 @@ export default class Analyze extends Command {
     this.log('Loading user configurations...')
     const {configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
     this.log('User configurations loaded.')
-    const {networks, scopeJobs} = this.scopeOut(configFile, flags.scope)
+    const {networks, scopeJobs} = this.scopeItOut(configFile, flags.scope)
 
     this.log(`${JSON.stringify(scopeJobs, undefined, 4)}`)
 
