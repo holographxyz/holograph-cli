@@ -206,6 +206,7 @@ export default class Indexer extends Command {
         if (
           res &&
           res.data &&
+          res.data.transactions !== undefined &&
           res.data.transactions[0] !== undefined &&
           this.networkMonitor.latestBlockHeight > res.data.transaction[0]
         ) {
@@ -354,6 +355,7 @@ export default class Indexer extends Command {
       if (
         res &&
         res.data &&
+        res.data.transactions !== undefined &&
         res.data.transactions[0] !== undefined &&
         this.networkMonitor.latestBlockHeight > res.data.transaction[0]
       ) {
@@ -448,6 +450,7 @@ export default class Indexer extends Command {
       if (
         res &&
         res.data &&
+        res.data.transactions !== undefined &&
         res.data.transactions[0] !== undefined &&
         this.networkMonitor.latestBlockHeight > res.data.transaction[0]
       ) {
