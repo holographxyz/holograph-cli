@@ -209,9 +209,9 @@ export default class Propagator extends Command {
     if (contractCode === '0x') {
       const factory: ethers.Contract = this.networkMonitor.factoryContract.connect(this.networkMonitor.wallets[network])
       this.networkMonitor.structuredLog(network, `Calculating gas price for collection ${deploymentAddress}`)
-      let gasAmount
+      let gasLimit
       try {
-        gasAmount = await factory.estimateGas.deployHolographableContract(
+        gasLimit = await factory.estimateGas.deployHolographableContract(
           deploymentConfig.config,
           deploymentConfig.signature,
           deploymentConfig.signer,
@@ -234,7 +234,7 @@ export default class Propagator extends Command {
       this.networkMonitor.structuredLog(
         network,
         `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(
-          gasAmount.mul(gasPrice),
+          gasLimit.mul(gasPrice),
           'ether',
         )} native gas tokens (in ether) for collection ${deploymentAddress}`,
       )
@@ -244,6 +244,7 @@ export default class Propagator extends Command {
           deploymentConfig.config,
           deploymentConfig.signature,
           deploymentConfig.signer,
+          {gasPrice, gasLimit}
         )
         this.debug(JSON.stringify(deployTx, null, 2))
 
