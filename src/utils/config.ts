@@ -1,3 +1,4 @@
+import * as path from 'node:path'
 import * as fs from 'fs-extra'
 import * as inquirer from 'inquirer'
 import * as Joi from 'joi'
@@ -19,8 +20,8 @@ export interface ConfigBridge {
 
 export interface ConfigNetworks {
   rinkeby: ConfigNetwork
-  mumbai: ConfigNetwork
   fuji: ConfigNetwork
+  mumbai: ConfigNetwork
 }
 
 export interface ConfigCredentials {
@@ -40,11 +41,78 @@ export interface ConfigFile {
   user: ConfigUser
 }
 
+async function tryToUnlockWallet(configFile: ConfigFile, unlockWallet: boolean, unsafePassword: string | undefined): Promise<ethers.Wallet> {
+  let userWallet: ethers.Wallet | undefined
+  if (unlockWallet) {
+    // eslint-disable-next-line no-negated-condition
+    if (typeof unsafePassword !== 'undefined') {
+      try {
+        userWallet = new ethers.Wallet(
+          new AesEncryption(unsafePassword, configFile.user.credentials.iv).decrypt(
+            configFile.user.credentials.privateKey,
+          ),
+        )
+      } catch {
+        throw new Error('password provided for wallet in holo config is not correct')
+      }
+    } else {
+      try {
+        userWallet = new ethers.Wallet(
+          new AesEncryption('', configFile.user.credentials.iv).decrypt(configFile.user.credentials.privateKey),
+        )
+      } catch {
+        await inquirer.prompt([
+          {
+            name: 'encryptionPassword',
+            message:
+              'Please enter the password to decrypt the private key for ' + configFile.user.credentials.address,
+            type: 'password',
+            validate: async (input: string) => {
+              try {
+                // we need to check that key decoded
+                userWallet = new ethers.Wallet(
+                  new AesEncryption(input, configFile.user.credentials.iv).decrypt(
+                    configFile.user.credentials.privateKey,
+                  ),
+                )
+                return true
+              } catch {
+                return 'Password is incorrect'
+              }
+            },
+          },
+        ])
+      }
+    }
+
+    if (userWallet === undefined) {
+      throw new Error('Wallet could not be unlocked')
+    }
+  }
+
+  return userWallet as ethers.Wallet
+}
+
 export async function ensureConfigFileIsValid(
-  configPath: string,
+  configDir: string,
   unsafePassword: string | undefined,
   unlockWallet = false,
-): Promise<{userWallet: ethers.Wallet | undefined; configFile: ConfigFile}> {
+): Promise<{userWallet: ethers.Wallet; configFile: ConfigFile}> {
+  console.log ('CONFIG_FILE_NAME', CONFIG_FILE_NAME)
+  let configPath = configDir
+  console.log ('configDir', configDir)
+  console.log ('configPath', configPath)
+  try {
+    await fs.pathExists(configDir)
+    const stats = await fs.stat(configDir)
+    if (!stats.isFile()) {
+      throw new Error('The configDir is a directory and not a file')
+    }
+  } catch {
+    configPath = path.join(configDir, CONFIG_FILE_NAME)
+    console.log ('configPath', configPath)
+  }
+
   const exists = await fs.pathExists(configPath)
   if (!exists) {
     throw new Error('Please run `holo config` before running any other holo command')
@@ -53,51 +121,14 @@ export async function ensureConfigFileIsValid(
   try {
     const configFile = await fs.readJson(configPath)
     await validateBeta1Schema(configFile)
-    let userWallet
-    if (unlockWallet) {
-      // eslint-disable-next-line no-negated-condition
-      if (typeof unsafePassword !== 'undefined') {
-        try {
-          userWallet = new ethers.Wallet(
-            new AesEncryption(unsafePassword, configFile.user.credentials.iv).decrypt(configFile.user.credentials.privateKey),
-          )
-        } catch {
-          throw new Error('password provided for wallet in holo config is not correct')
-        }
-      } else {
-        try {
-          userWallet = new ethers.Wallet(
-            new AesEncryption('', configFile.user.credentials.iv).decrypt(configFile.user.credentials.privateKey),
-          )
-        } catch {
-          await inquirer.prompt([
-            {
-              name: 'encryptionPassword',
-              message: 'Please enter the password to decrypt the private key for ' + configFile.user.credentials.address,
-              type: 'password',
-              validate: async (input: string) => {
-                try {
-                  // we need to check that key decoded
-                  userWallet = new ethers.Wallet(
-                    new AesEncryption(input, configFile.user.credentials.iv).decrypt(
-                      configFile.user.credentials.privateKey,
-                    ),
-                  )
-                  return true
-                } catch {
-                  return 'Password is incorrect'
-                }
-              },
-            },
-          ])
-        }
-      }
-    }
+    const userWallet: ethers.Wallet = await tryToUnlockWallet(configFile as ConfigFile, unlockWallet, unsafePassword)
 
     return {userWallet, configFile}
   } catch (error: any) {
-    const error_ = error.message ? error : new Error(`Config file is no longer valid, please delete it before continuing ${error.message}`);
-    throw error_;
+    const error_ = error.message
+      ? error
+      : new Error(`Config file is no longer valid, please delete it before continuing ${error.message}`)
+    throw error_
   }
 }
 
@@ -112,10 +143,10 @@ export async function validateBeta1Schema(config: Record<string, unknown>): Prom
       rinkeby: Joi.object({
         providerUrl: Joi.string().required(),
       }),
-      mumbai: Joi.object({
+      fuji: Joi.object({
         providerUrl: Joi.string().required(),
       }),
-      fuji: Joi.object({
+      mumbai: Joi.object({
         providerUrl: Joi.string().required(),
       }),
     }).required(),
@@ -126,7 +157,9 @@ export async function validateBeta1Schema(config: Record<string, unknown>): Prom
         address: Joi.string().required(),
       }).required(),
     }).required(),
-  }).required().unknown(false)
+  })
+    .required()
+    .unknown(false)
 
   await beta1Schema.validateAsync(config)
 }

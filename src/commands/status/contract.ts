@@ -1,11 +1,10 @@
 import * as fs from 'fs-extra'
-import * as path from 'node:path'
 import * as inquirer from 'inquirer'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {addressValidator} from '../../utils/validation'
 
@@ -15,15 +14,19 @@ export default class Contract extends Command {
   static examples = ['$ holo status:contract --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78"']
   static flags = {
     address: Flags.string({description: 'The address of contract to check status of'}),
-    output: Flags.string({options: ['csv', 'json', 'yaml', ''], description: 'Define table output type', default: 'yaml'}),
+    output: Flags.string({
+      options: ['csv', 'json', 'yaml', ''],
+      description: 'Define table output type',
+      default: 'yaml',
+    }),
   }
 
   registryAddress!: string
   supportedNetworks: string[] = []
-  blockExplorers: { [key: string]: string; } = {
-    'rinkeby': 'https://rinkeby.etherscan.io/',
-    'mumbai': 'https://mumbai.polygonscan.com/',
-    'fuji': 'https://testnet.snowtrace.io/',
+  blockExplorers: {[key: string]: string} = {
+    rinkeby: 'https://rinkeby.etherscan.io/',
+    mumbai: 'https://mumbai.polygonscan.com/',
+    fuji: 'https://testnet.snowtrace.io/',
   }
 
   contractAddress!: string
@@ -34,9 +37,7 @@ export default class Contract extends Command {
   ownableContract!: ethers.Contract
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
 
-  async initializeEthers(
-    configFile: ConfigFile,
-  ): Promise<void> {
+  async initializeEthers(configFile: ConfigFile): Promise<void> {
     for (let i = 0, l = this.supportedNetworks.length; i < l; i++) {
       const network = this.supportedNetworks[i]
       const rpcEndpoint = (configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork).providerUrl
@@ -55,13 +56,25 @@ export default class Contract extends Command {
     }
 
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
-    this.holograph = new ethers.Contract(this.HOLOGRAPH_ADDRESS, holographABI, this.providers[this.supportedNetworks[0]])
+    this.holograph = new ethers.Contract(
+      this.HOLOGRAPH_ADDRESS,
+      holographABI,
+      this.providers[this.supportedNetworks[0]],
+    )
 
     const holographRegistryABI = await fs.readJson('./src/abi/HolographRegistry.json')
     this.registryAddress = await this.holograph.getRegistry()
-    this.registryContract = new ethers.Contract(this.registryAddress, holographRegistryABI, this.providers[this.supportedNetworks[0]])
+    this.registryContract = new ethers.Contract(
+      this.registryAddress,
+      holographRegistryABI,
+      this.providers[this.supportedNetworks[0]],
+    )
     const ownerABI = await fs.readJson('./src/abi/Owner.json')
-    this.ownableContract = new ethers.Contract(this.contractAddress, ownerABI, this.providers[this.supportedNetworks[0]])
+    this.ownableContract = new ethers.Contract(
+      this.contractAddress,
+      ownerABI,
+      this.providers[this.supportedNetworks[0]],
+    )
   }
 
   async validateContractAddress(): Promise<void> {
@@ -86,8 +99,7 @@ export default class Contract extends Command {
 
   async run(): Promise<void> {
     this.log('Loading user configurations...')
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {configFile} = await ensureConfigFileIsValid(configPath, undefined, false)
+    const {configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
     this.log('User configurations loaded.')
 
     const {flags} = await this.parse(Contract)
@@ -100,9 +112,9 @@ export default class Contract extends Command {
 
     // data we want
     // network -- deployed -- valid -- address -- explorer link
-    const data: { network: string; deployed: boolean; valid: boolean; owner: string; link: string; }[] = []
+    const data: {network: string; deployed: boolean; valid: boolean; owner: string; link: string}[] = []
     for (const network of this.supportedNetworks) {
-      const d: { network: string; deployed: boolean; valid: boolean; owner: string; link: string; } = {
+      const d: {network: string; deployed: boolean; valid: boolean; owner: string; link: string} = {
         network,
         deployed: false,
         valid: false,
@@ -128,29 +140,32 @@ export default class Contract extends Command {
       data.push(d)
     }
 
-    CliUx.ux.table(data, {
-      network: {
-        header: 'Network',
+    CliUx.ux.table(
+      data,
+      {
+        network: {
+          header: 'Network',
+        },
+        deployed: {
+          header: 'Deployed',
+        },
+        valid: {
+          header: 'Valid',
+        },
+        owner: {
+          header: 'Owner',
+        },
+        link: {
+          header: 'Explorer Link',
+        },
       },
-      deployed: {
-        header: 'Deployed',
+      {
+        printLine: this.log.bind(this),
+        'no-truncate': true,
+        'no-header': false,
+        output: flags.output,
       },
-      valid: {
-        header: 'Valid',
-      },
-      owner: {
-        header: 'Owner',
-      },
-      link: {
-        header: 'Explorer Link',
-      },
-    }, {
-      printLine: this.log.bind(this),
-      'no-truncate': true,
-      'no-header': false,
-      output: flags.output,
-    })
+    )
     this.exit()
   }
-
 }

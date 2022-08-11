@@ -1,4 +1,4 @@
-import * as crypto from 'node:crypto';
+import * as crypto from 'node:crypto'
 
 const encryptionType = 'aes-256-cbc'
 const encryptionEncoding = 'base64'
