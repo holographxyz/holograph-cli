@@ -50,28 +50,11 @@ export default class Config extends Command {
     fromJson: Flags.string({description: 'JSON object to use as the config'}),
   }
 
-  public async run(): Promise<void> {
-    const {flags} = await this.parse(Config)
-    let defaultFrom = flags.defaultFrom
-    let defaultTo = flags.defaultTo
-    let privateKey = flags.privateKey
-    let userWallet = null
-    let currentConfigFile: any = null
-    let encryption
-    let iv = ''
-    const loadConfigPath = flags.fromFile
-    const loadConfigJson = flags.fromJson
-
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    this.debug(`Configuration path ${configPath}`)
-
-    let updateNetworksPrompt = {update: false}
-    let privateKeyPrompt: any = {update: false}
-
+  async loadConfigPath(configPath: string, filePath: string | undefined): Promise<void> {
     // Check if config Dir flag is empty
-    if (typeof loadConfigPath !== 'undefined') {
+    if (filePath !== undefined) {
       try {
-        const stats = fs.lstatSync(loadConfigPath)
+        const stats = fs.lstatSync(filePath)
 
         this.debug(`Is file: ${stats.isFile()}`)
         this.debug(`Is directory: ${stats.isDirectory()}`)
@@ -90,22 +73,22 @@ export default class Config extends Command {
           !stats.isCharacterDevice() &&
           !stats.isBlockDevice()
         ) {
-          const ensureCheck = await ensureConfigFileIsValid(loadConfigPath, undefined, false)
+          const ensureCheck = await ensureConfigFileIsValid(filePath, undefined, false)
 
           // Since the json at the desired path is valid, we save it!
           await fs.outputJSON(configPath, ensureCheck.configFile, {spaces: 2})
         } else {
-          this.error(`loadConfigPath is NOT VALID FAIL`)
+          this.error(`filePath is NOT VALID FAIL`)
         }
       } catch (error: any) {
         // Handle error
         if (error.code === 'ENOENT') {
-          this.error(`The input ${loadConfigPath} is not a valid file path`)
+          this.error(`The input ${filePath} is not a valid file path`)
           // eslint-disable-next-line no-negated-condition
         } else if (typeof error.message !== 'undefined') {
           this.error(error.message)
         } else {
-          this.error(`Failed to load ${loadConfigPath}`)
+          this.error(`Failed to load ${filePath}`)
         }
 
         this.exit()
@@ -113,26 +96,52 @@ export default class Config extends Command {
 
       this.exit()
     }
+  }
 
+  async loadConfigJson(configPath: string, jsonString: string | undefined): Promise<void> {
     // Check if config Json flag is empty
-    if (typeof loadConfigJson !== 'undefined') {
-      this.log(`checking loadConfigJson input`)
-      const output = JSON.parse(loadConfigJson)
+    if (jsonString !== undefined) {
+      this.log(`checking jsonString input`)
+      const output = JSON.parse(jsonString)
       await validateBeta1Schema(output)
       this.log(output)
       // Since the json at the desired path is valid, we save it!
       await fs.outputJSON(configPath, output, {spaces: 2})
       this.exit()
     }
+  }
 
+  validateToAndFrom(defaultTo: string | undefined, defaultFrom: string | undefined): void {
     // Make sure default from and to networks are not the same when using flags
-    if (typeof defaultFrom !== 'undefined' && typeof defaultTo !== 'undefined') {
+    if (defaultFrom !== undefined && defaultTo !== undefined) {
       const isValidFromAndTo = isFromAndToNetworksTheSame(defaultFrom, defaultTo)
       if (!isValidFromAndTo) {
         this.log('The FROM and TO networks cannot be the same')
         this.error('Networks cannot be the same')
       }
     }
+  }
+
+  public async run(): Promise<void> {
+    const {flags} = await this.parse(Config)
+    let defaultFrom = flags.defaultFrom
+    let defaultTo = flags.defaultTo
+    let privateKey = flags.privateKey
+    let userWallet = null
+    let currentConfigFile: any = null
+    let encryption
+    let iv = ''
+
+    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
+    this.debug(`Configuration path ${configPath}`)
+
+    let updateNetworksPrompt = {update: false}
+    let privateKeyPrompt: any = {update: false}
+
+    await this.loadConfigPath(configPath, flags.fromFile)
+    await this.loadConfigJson(configPath, flags.fromJson)
+
+    this.validateToAndFrom(defaultTo, defaultFrom)
 
     // Check if config file exists
     const isConfigExist: boolean = await checkFileExists(configPath)

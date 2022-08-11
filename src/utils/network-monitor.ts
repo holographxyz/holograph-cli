@@ -17,6 +17,10 @@ export const warpFlag = {
   }),
 }
 
+export const networkFlag = {
+  networks: Flags.string({description: 'Comma separated list of networks to operate on', multiple: true}),
+}
+
 export enum OperatorMode {
   listen,
   manual,
@@ -39,6 +43,17 @@ export interface Scope {
   network: string
   startBlock: number
   endBlock: number
+}
+
+export enum FilterType {
+  to,
+  from,
+}
+
+export type TransactionFilter = {
+  type: FilterType
+  match: string | {[key: string]: string}
+  networkDependant: boolean
 }
 
 export const keepAlive = ({
@@ -75,9 +90,10 @@ type ImplementsCommand = Command
 type NetworkMonitorOptions = {
   parent: ImplementsCommand
   configFile: ConfigFile
-  networks: string[]
+  networks?: string[]
   debug: (...args: string[]) => void
-  processBlock: (job: BlockJob) => Promise<void>
+  processTransactions: (job: BlockJob, transactions: ethers.Transaction[]) => Promise<void>
+  filters?: TransactionFilter[]
   userWallet?: ethers.Wallet
   lastBlockFilename?: string
   warp?: number
@@ -88,10 +104,11 @@ export class NetworkMonitor {
   configFile: ConfigFile
   userWallet?: ethers.Wallet
   LAST_BLOCKS_FILE_NAME: string
-  processBlock: (job: BlockJob) => Promise<void>
+  filters: TransactionFilter[] = []
+  processTransactions: (job: BlockJob, transactions: ethers.Transaction[]) => Promise<void>
   log: (message: string, ...args: any[]) => void
   debug: (...args: any[]) => void
-  networks!: string[]
+  networks: string[] = []
   runningProcesses = 0
   bridgeAddress!: string
   factoryAddress!: string
@@ -112,7 +129,7 @@ export class NetworkMonitor {
   factoryContract!: ethers.Contract
   operatorContract!: ethers.Contract
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
-  LAYERZERO_RECEIVERS: any = {
+  LAYERZERO_RECEIVERS: {[key: string]: string} = {
     rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     mumbai: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     fuji: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
@@ -136,10 +153,13 @@ export class NetworkMonitor {
     this.parent = options.parent
     this.configFile = options.configFile
     this.LAST_BLOCKS_FILE_NAME = options.lastBlockFilename || 'blocks.json'
-    this.networks = options.networks
     this.log = this.parent.log.bind(this.parent)
     this.debug = options.debug.bind(this.parent)
-    this.processBlock = options.processBlock.bind(this.parent)
+    if (options.filters !== undefined) {
+      this.filters = options.filters
+    }
+
+    this.processTransactions = options.processTransactions.bind(this.parent)
     if (options.userWallet !== undefined) {
       this.userWallet = options.userWallet
     }
@@ -148,6 +168,25 @@ export class NetworkMonitor {
       this.warp = options.warp
     }
 
+    if (options.networks === undefined || '') {
+      options.networks = Object.keys(this.configFile.networks)
+    } else {
+      for (let i = 0, l = options.networks.length; i < l; i++) {
+        const network = options.networks[i]
+        if (Object.keys(this.configFile.networks).includes(network)) {
+          this.blockJobs[network] = []
+        } else {
+          this.structuredLog(network, `${network} is not a valid network and will be ignored`)
+          // If network is not supported remove it from the array
+          options.networks.splice(i, 1)
+          l--
+          i--
+        }
+      }
+    }
+
+    this.networks = options.networks
+
     // Color the networks 🌈
     for (let i = 0, l = this.networks.length; i < l; i++) {
       const network = this.networks[i]
@@ -155,19 +194,26 @@ export class NetworkMonitor {
     }
   }
 
-  async run(continuous: boolean, blockJobs: {[key: string]: BlockJob[]} = {}): Promise<void> {
+  async run(continuous: boolean, blockJobs?: {[key: string]: BlockJob[]}, ethersInitializedCallback?: () => Promise<void>): Promise<void> {
     await this.initializeEthers()
+    if (ethersInitializedCallback !== undefined) {
+      await ethersInitializedCallback.bind(this.parent)()
+    }
 
     this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESS}`)
     this.log(`Bridge address: ${this.bridgeAddress}`)
     this.log(`Factory address: ${this.factoryAddress}`)
     this.log(`Operator address: ${this.operatorAddress}`)
 
-    if (this.blockJobs === {}) {
+    if (blockJobs !== undefined) {
       this.blockJobs = blockJobs
     }
 
     for (const network of this.networks) {
+      if (!(network in this.blockJobs)) {
+        this.blockJobs[network] = []
+      }
+
       this.lastBlockJobDone[network] = Date.now()
       this.runningProcesses += 1
       if (continuous) {
@@ -369,7 +415,7 @@ export class NetworkMonitor {
 
   jobHandlerBuilder: (network: string) => () => void = (network: string): (() => void) => {
     return () => {
-      this.blockJobHandler.bind(this)(network)
+      this.blockJobHandler(network)
     }
   }
 
@@ -392,6 +438,60 @@ export class NetworkMonitor {
         this.log('Finished the last job', 'need to output data and exit')
         this.exitRouter({exit: true}, 'SIGINT')
       }
+    }
+  }
+
+  filterTransaction(job: BlockJob, transaction: ethers.Transaction, interestingTransactions: ethers.Transaction[]): void {
+    const to: string = transaction.to?.toLowerCase() || ''
+    const from: string = transaction.from?.toLowerCase() || ''
+    for(const filter of this.filters) {
+      const match: string = (filter.networkDependant ? ((filter.match as {[key: string]: string})[job.network]) : (filter.match as string))
+      switch (filter.type) {
+        case FilterType.to:
+          if (to === match) {
+            interestingTransactions.push(transaction)
+          }
+
+          break
+        case FilterType.from:
+          if (from === match) {
+            interestingTransactions.push(transaction)
+          }
+
+          break
+        default:
+          break
+      }
+    }
+  }
+
+  async processBlock(job: BlockJob): Promise<void> {
+    this.structuredLog(job.network, `Processing Block ${job.block}`)
+    const block = await this.providers[job.network].getBlockWithTransactions(job.block)
+    if (block !== null && 'transactions' in block) {
+      if (block.transactions.length === 0) {
+        this.structuredLog(job.network, `Zero block transactions for block ${job.block}`)
+      }
+
+      const interestingTransactions: ethers.Transaction[] = []
+      for (let i = 0, l = block.transactions.length; i < l; i++) {
+        this.filterTransaction(job, block.transactions[i], interestingTransactions)
+      }
+
+      if (interestingTransactions.length > 0) {
+        this.structuredLog(
+          job.network,
+          `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`,
+        )
+        await this.processTransactions.bind(this.parent)(job, interestingTransactions)
+        this.blockJobHandler(job.network, job)
+      } else {
+        this.blockJobHandler(job.network, job)
+      }
+    } else {
+      this.structuredLog(job.network, `${job.network} ${color.red('Dropped block!')} ${job.block}`)
+      this.blockJobs[job.network].unshift(job)
+      this.blockJobHandler(job.network)
     }
   }
 

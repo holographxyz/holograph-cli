@@ -1,9 +1,8 @@
 import {CliUx, Command} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
-import * as path from 'node:path'
 import {ethers} from 'ethers'
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-deployment'
 
@@ -18,12 +17,7 @@ export default class Contract extends Command {
 
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, undefined, true)
-
-    if (userWallet === undefined) {
-      throw new Error('Wallet could not be unlocked')
-    }
+    const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
 
     const {flags} = await this.parse(Contract)
     this.log('User configurations loaded.')
@@ -63,12 +57,12 @@ export default class Contract extends Command {
         throw new Error('Unsupported RPC URL protocol -> ' + destinationNetworkProtocol)
     }
 
-    const destinationWallet = userWallet.connect(destinationNetworkProvider)
+    const destinationWallet = userWallet?.connect(destinationNetworkProvider)
     CliUx.ux.action.stop()
 
     const deploymentConfig = await prepareDeploymentConfig(
       configFile,
-      userWallet,
+      userWallet!,
       flags as Record<string, string | undefined>,
       remainingNetworks,
     )
@@ -98,7 +92,7 @@ export default class Contract extends Command {
       this.error(error.reason)
     }
 
-    const gasPrice = await destinationWallet.provider.getGasPrice()
+    const gasPrice = (await destinationWallet!.provider.getGasPrice()).mul(ethers.BigNumber.from('1.25'))
     CliUx.ux.action.stop()
     this.log(
       'Transaction is estimated to cost a total of',

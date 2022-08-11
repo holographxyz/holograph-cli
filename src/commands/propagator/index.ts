@@ -1,23 +1,19 @@
-import * as path from 'node:path'
 import * as inquirer from 'inquirer'
 
 import {CliUx, Command, Flags} from '@oclif/core'
-import {BigNumber, ethers} from 'ethers'
+import {ethers} from 'ethers'
 
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {ensureConfigFileIsValid} from '../../utils/config'
 
 import {decodeDeploymentConfigInput, capitalize, DeploymentConfig} from '../../utils/utils'
 
-import {OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
+import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
-
-import color from '@oclif/color'
 
 export default class Propagator extends Command {
   static description = 'Listen for EVM events deploys collections to ther supported networks'
   static examples = ['$ holo propagator --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
-    networks: Flags.string({description: 'Comma separated list of networks to operate to', multiple: true}),
     mode: Flags.string({
       description: 'The mode in which to run the propagator',
       options: ['listen', 'manual', 'auto'],
@@ -34,6 +30,8 @@ export default class Propagator extends Command {
     unsafePassword: Flags.string({
       description: 'Enter the plain text password for the wallet in the holo cli config',
     }),
+    ...warpFlag,
+    ...networkFlag,
   }
 
   crossDeployments: string[] = []
@@ -72,37 +70,15 @@ export default class Propagator extends Command {
     this.log(`Operator mode: ${this.operatorMode}`)
 
     this.log('Loading user configurations...')
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, unsafePassword, true)
+    const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, unsafePassword, true)
     this.log('User configurations loaded.')
-
-    // Load defaults for the networks from the config file
-    if (flags.networks === undefined || '') {
-      flags.networks = Object.keys(configFile.networks)
-    }
-
-    const blockJobs: {[key: string]: BlockJob[]} = {}
-
-    for (let i = 0, l = flags.networks.length; i < l; i++) {
-      const network = flags.networks[i]
-      if (Object.keys(configFile.networks).includes(network)) {
-        blockJobs[network] = []
-      } else {
-        // If network is not supported remove it from the array
-        flags.networks.splice(i, 1)
-        l--
-        i--
-      }
-    }
-
-    const networks: string[] = flags.networks
 
     this.networkMonitor = new NetworkMonitor({
       parent: this,
       configFile,
-      networks,
+      networks: flags.networks,
       debug: this.debug,
-      processBlock: this.processBlock,
+      processTransactions: this.processTransactions,
       userWallet,
       lastBlockFilename: 'propagator-blocks.json',
     })
@@ -133,7 +109,7 @@ export default class Propagator extends Command {
     }
 
     CliUx.ux.action.start(`Starting propagator in mode: ${OperatorMode[this.operatorMode]}`)
-    await this.networkMonitor.run(true, blockJobs)
+    await this.networkMonitor.run(true, undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
     // Start server
@@ -142,44 +118,25 @@ export default class Propagator extends Command {
     }
   }
 
-  async processBlock(job: BlockJob): Promise<void> {
-    this.networkMonitor.structuredLog(job.network, `Processing Block ${job.block}`)
-    const block = await this.networkMonitor.providers[job.network].getBlockWithTransactions(job.block)
-    if (block !== null && 'transactions' in block) {
-      if (block.transactions.length === 0) {
-        this.networkMonitor.structuredLog(job.network, `Zero block transactions for block ${job.block}`)
-      }
-
-      const interestingTransactions = []
-      for (let i = 0, l = block.transactions.length; i < l; i++) {
-        const transaction = block.transactions[i]
-        if (transaction.from.toLowerCase() === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
-          // We have LayerZero call, need to check it it's directed towards Holograph operators
-          interestingTransactions.push(transaction)
-        } else if ('to' in transaction && transaction.to !== null && transaction.to !== '') {
-          const to: string = transaction.to!.toLowerCase()
-          // Check if it's a factory call
-          if (to === this.networkMonitor.factoryAddress || to === this.networkMonitor.operatorAddress) {
-            // We have a potential factory deployment or operator bridge transaction
-            interestingTransactions.push(transaction)
-          }
-        }
-      }
-
-      if (interestingTransactions.length > 0) {
-        this.networkMonitor.structuredLog(
-          job.network,
-          `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`,
-        )
-        this.processTransactions(job, interestingTransactions)
-      } else {
-        this.networkMonitor.blockJobHandler(job.network, job)
-      }
-    } else {
-      this.networkMonitor.structuredLog(job.network, `${job.network} ${color.red('Dropped block!')} ${job.block}`)
-      this.networkMonitor.blockJobs[job.network].unshift(job)
-      this.networkMonitor.blockJobHandler(job.network)
-    }
+  async filterBuilder(): Promise<void> {
+    this.networkMonitor.filters = [
+      {
+        type: FilterType.from,
+        match: this.networkMonitor.LAYERZERO_RECEIVERS,
+        networkDependant: true,
+      },
+      {
+        type: FilterType.to,
+        match: this.networkMonitor.factoryAddress,
+        networkDependant: false,
+      },
+      {
+        type: FilterType.to,
+        match: this.networkMonitor.operatorAddress,
+        networkDependant: false,
+      },
+    ]
+    Promise.resolve()
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.Transaction[]): Promise<void> {
@@ -199,8 +156,6 @@ export default class Propagator extends Command {
         }
       }
     }
-
-    this.networkMonitor.blockJobHandler(job.network, job)
   }
 
   async handleContractDeployedEvents(
@@ -254,9 +209,9 @@ export default class Propagator extends Command {
     if (contractCode === '0x') {
       const factory: ethers.Contract = this.networkMonitor.factoryContract.connect(this.networkMonitor.wallets[network])
       this.networkMonitor.structuredLog(network, `Calculating gas price for collection ${deploymentAddress}`)
-      let gasAmount
+      let gasLimit
       try {
-        gasAmount = await factory.estimateGas.deployHolographableContract(
+        gasLimit = await factory.estimateGas.deployHolographableContract(
           deploymentConfig.config,
           deploymentConfig.signature,
           deploymentConfig.signer,
@@ -267,10 +222,7 @@ export default class Propagator extends Command {
         this.error(error.reason)
       }
 
-      const gasPrice =
-        network === 'mumbai'
-          ? BigNumber.from('55000000000')
-          : await this.networkMonitor.providers[network].getGasPrice()
+      const gasPrice = (await this.networkMonitor.providers[network].getGasPrice()).mul(ethers.BigNumber.from('1.25'))
 
       this.networkMonitor.structuredLog(
         network,
@@ -279,7 +231,7 @@ export default class Propagator extends Command {
       this.networkMonitor.structuredLog(
         network,
         `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(
-          gasAmount.mul(gasPrice),
+          gasLimit.mul(gasPrice),
           'ether',
         )} native gas tokens (in ether) for collection ${deploymentAddress}`,
       )
@@ -289,6 +241,7 @@ export default class Propagator extends Command {
           deploymentConfig.config,
           deploymentConfig.signature,
           deploymentConfig.signer,
+          {gasPrice, gasLimit}
         )
         this.debug(JSON.stringify(deployTx, null, 2))
 

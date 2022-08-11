@@ -1,17 +1,15 @@
-import * as path from 'node:path'
 import axios from 'axios'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {ensureConfigFileIsValid} from '../../utils/config'
 import networks from '../../utils/networks'
 
 import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize} from '../../utils/utils'
-import {warpFlag, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
+import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
-import color from '@oclif/color'
 import dotenv from 'dotenv'
 dotenv.config()
 
@@ -20,7 +18,6 @@ export default class Indexer extends Command {
   static description = 'Listen for EVM events and update database network status'
   static examples = ['$ holo indexer --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
-    networks: Flags.string({description: 'Comma separated list of networks to operate to', multiple: true}),
     mode: Flags.string({
       description: 'The mode in which to run the indexer',
       options: ['listen', 'manual', 'auto'],
@@ -31,6 +28,7 @@ export default class Indexer extends Command {
       description: 'Launch server on http://localhost:6000 to make sure command is still running',
       default: false,
     }),
+    ...networkFlag,
     ...warpFlag,
   }
 
@@ -76,35 +74,15 @@ export default class Indexer extends Command {
     this.log(`Indexer mode: ${this.operatorMode}`)
 
     this.log('Loading user configurations...')
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {configFile} = await ensureConfigFileIsValid(configPath, undefined, false)
+    const {configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
     this.log('User configurations loaded.')
-
-    // Load defaults for the networks from the config file
-    if (flags.networks === undefined || '') {
-      flags.networks = Object.keys(configFile.networks)
-    }
-
-    const blockJobs: {[key: string]: BlockJob[]} = {}
-
-    for (let i = 0, l = flags.networks.length; i < l; i++) {
-      const network = flags.networks[i]
-      if (Object.keys(configFile.networks).includes(network)) {
-        blockJobs[network] = []
-      } else {
-        // If network is not supported remove it from the array
-        flags.networks.splice(i, 1)
-        l--
-        i--
-      }
-    }
 
     this.networkMonitor = new NetworkMonitor({
       parent: this,
       configFile,
       networks: flags.networks,
       debug: this.debug,
-      processBlock: this.processBlock,
+      processTransactions: this.processTransactions,
       lastBlockFilename: 'indexer-blocks.json',
       warp: flags.warp,
     })
@@ -113,7 +91,7 @@ export default class Indexer extends Command {
     this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
 
     CliUx.ux.action.start(`Starting indexer in mode: ${OperatorMode[this.operatorMode]}`)
-    await this.networkMonitor.run(!(flags.warp > 0), blockJobs)
+    await this.networkMonitor.run(!(flags.warp > 0), undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
     // Start server
@@ -122,44 +100,25 @@ export default class Indexer extends Command {
     }
   }
 
-  async processBlock(job: BlockJob): Promise<void> {
-    this.networkMonitor.structuredLog(job.network, `Processing Block ${job.block}`)
-    const block = await this.networkMonitor.providers[job.network].getBlockWithTransactions(job.block)
-    if (block !== null && 'transactions' in block) {
-      if (block.transactions.length === 0) {
-        this.networkMonitor.structuredLog(job.network, `Zero block transactions for block ${job.block}`)
-      }
-
-      const interestingTransactions = []
-      for (let i = 0, l = block.transactions.length; i < l; i++) {
-        const transaction = block.transactions[i]
-        if (transaction.from.toLowerCase() === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
-          // We have LayerZero call, need to check it it's directed towards Holograph operators
-          interestingTransactions.push(transaction)
-        } else if ('to' in transaction && transaction.to !== null && transaction.to !== '') {
-          const to: string = transaction.to!.toLowerCase()
-          // Check if it's a factory call
-          if (to === this.networkMonitor.factoryAddress || to === this.networkMonitor.operatorAddress) {
-            // We have a potential factory deployment or operator bridge transaction
-            interestingTransactions.push(transaction)
-          }
-        }
-      }
-
-      if (interestingTransactions.length > 0) {
-        this.networkMonitor.structuredLog(
-          job.network,
-          `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`,
-        )
-        this.processTransactions(job, interestingTransactions)
-      } else {
-        this.networkMonitor.blockJobHandler(job.network, job)
-      }
-    } else {
-      this.networkMonitor.structuredLog(job.network, `${job.network} ${color.red('Dropped block!')} ${job.block}`)
-      this.networkMonitor.blockJobs[job.network].unshift(job)
-      this.networkMonitor.blockJobHandler(job.network)
-    }
+  async filterBuilder(): Promise<void> {
+    this.networkMonitor.filters = [
+      {
+        type: FilterType.from,
+        match: this.networkMonitor.LAYERZERO_RECEIVERS,
+        networkDependant: true,
+      },
+      {
+        type: FilterType.to,
+        match: this.networkMonitor.factoryAddress,
+        networkDependant: false,
+      },
+      {
+        type: FilterType.to,
+        match: this.networkMonitor.operatorAddress,
+        networkDependant: false,
+      },
+    ]
+    Promise.resolve()
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.Transaction[]): Promise<void> {
@@ -183,8 +142,6 @@ export default class Indexer extends Command {
         }
       }
     }
-
-    this.networkMonitor.blockJobHandler(job.network, job)
   }
 
   async handleContractDeployedEvents(
@@ -243,6 +200,20 @@ export default class Indexer extends Command {
         } catch (error: any) {
           this.networkMonitor.structuredLog(network, `Failed to update the Holograph database ${error.message}`)
           this.debug(error)
+        }
+
+        // Only update the database if this transaction happened in a later block than the last block we indexed
+        if (
+          res &&
+          res.data &&
+          res.data.transactions[0] !== undefined &&
+          this.networkMonitor.latestBlockHeight > res.data.transaction[0]
+        ) {
+          this.networkMonitor.structuredLog(
+            network,
+            `Latest transaction in the database is more recent than this transaction. Skipping update.`,
+          )
+          return
         }
 
         // Compose request to API server to update the collection
@@ -379,6 +350,20 @@ export default class Indexer extends Command {
         this.debug(error)
       }
 
+      // Only update the database if this transaction happened in a later block than the last block we indexed
+      if (
+        res &&
+        res.data &&
+        res.data.transactions[0] !== undefined &&
+        this.networkMonitor.latestBlockHeight > res.data.transaction[0]
+      ) {
+        this.networkMonitor.structuredLog(
+          network,
+          `Latest transaction in the database is more recent than this transaction. Skipping update.`,
+        )
+        return
+      }
+
       // Compose request to API server to update the collection
       const data = JSON.stringify({
         chainId: networks[network].chain,
@@ -457,6 +442,20 @@ export default class Indexer extends Command {
       } catch (error: any) {
         this.networkMonitor.structuredLog(network, error.message)
         this.debug(error)
+      }
+
+      // Only update the database if this transaction happened in a later block than the last block we indexed
+      if (
+        res &&
+        res.data &&
+        res.data.transactions[0] !== undefined &&
+        this.networkMonitor.latestBlockHeight > res.data.transaction[0]
+      ) {
+        this.networkMonitor.structuredLog(
+          network,
+          `Latest transaction in the database is more recent than this transaction. Skipping update.`,
+        )
+        return
       }
 
       // Compose request to API server to update the nft

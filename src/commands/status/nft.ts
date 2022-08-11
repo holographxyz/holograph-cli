@@ -1,11 +1,10 @@
 import * as fs from 'fs-extra'
-import * as path from 'node:path'
 import * as inquirer from 'inquirer'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {addressValidator, tokenValidator} from '../../utils/validation'
 
@@ -122,8 +121,7 @@ export default class Nft extends Command {
 
   async run(): Promise<void> {
     this.log('Loading user configurations...')
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {configFile} = await ensureConfigFileIsValid(configPath, undefined, false)
+    const {configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
     this.log('User configurations loaded.')
 
     const {flags} = await this.parse(Nft)

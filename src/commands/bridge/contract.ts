@@ -1,9 +1,8 @@
 import {CliUx, Command, Flags} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
-import * as path from 'node:path'
 import {ethers} from 'ethers'
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
+import {ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-deployment'
 
@@ -22,12 +21,7 @@ export default class Contract extends Command {
 
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, undefined, true)
-
-    if (userWallet === undefined) {
-      throw new Error('Wallet could not be unlocked')
-    }
+    const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
 
     const {flags} = await this.parse(Contract)
     this.log('User configurations loaded.')
@@ -70,8 +64,8 @@ export default class Contract extends Command {
         throw new Error('Unsupported RPC URL protocol -> ' + sourceProtocol)
     }
 
-    const sourceWallet = userWallet.connect(sourceProvider)
-    this.debug('Source network', await sourceWallet.provider.getNetwork())
+    const sourceWallet = userWallet?.connect(sourceProvider)
+    this.debug('Source network', await sourceWallet?.provider.getNetwork())
 
     const destinationProviderUrl: string = (
       configFile.networks[destinationNetwork as keyof ConfigNetworks] as ConfigNetwork
@@ -89,8 +83,8 @@ export default class Contract extends Command {
         throw new Error('Unsupported RPC URL protocol -> ' + destinationProtocol)
     }
 
-    const destinationWallet = userWallet.connect(destinationProvider)
-    this.debug('Destination network', await destinationWallet.provider.getNetwork())
+    const destinationWallet = userWallet?.connect(destinationProvider)
+    this.debug('Destination network', await destinationWallet?.provider.getNetwork())
     CliUx.ux.action.stop()
 
     const supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
@@ -102,7 +96,7 @@ export default class Contract extends Command {
 
     const deploymentConfig = await prepareDeploymentConfig(
       configFile,
-      userWallet,
+      userWallet!,
       flags as Record<string, string | undefined>,
       remainingNetworks,
     )
@@ -174,11 +168,11 @@ export default class Contract extends Command {
       this.error('Could not identify messaging costs')
     }
 
-    const gasPrice = await sourceWallet.provider.getGasPrice()
+    const gasPrice = (await sourceWallet!.provider.getGasPrice()).mul(ethers.BigNumber.from('1.25'))
     CliUx.ux.action.stop()
     this.log(
       'Transaction is estimated to cost a total of',
-      ethers.utils.formatUnits(gasLimit.mul(gasPrice), 'ether'),
+      ethers.utils.formatUnits(gasLimit.mul(gasPrice!), 'ether'),
       'native gas tokens (in ether).',
       'And you will send a value of',
       ethers.utils.formatEther(startingPayment),
