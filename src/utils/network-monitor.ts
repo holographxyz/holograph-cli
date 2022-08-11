@@ -107,6 +107,7 @@ export class NetworkMonitor {
   filters: TransactionFilter[] = []
   processTransactions: (job: BlockJob, transactions: ethers.Transaction[]) => Promise<void>
   log: (message: string, ...args: any[]) => void
+  warn: (message: string, ...args: any[]) => void
   debug: (...args: any[]) => void
   networks: string[] = []
   runningProcesses = 0
@@ -154,6 +155,7 @@ export class NetworkMonitor {
     this.configFile = options.configFile
     this.LAST_BLOCKS_FILE_NAME = options.lastBlockFilename || 'blocks.json'
     this.log = this.parent.log.bind(this.parent)
+    this.warn = this.parent.warn.bind(this.parent)
     this.debug = options.debug.bind(this.parent)
     if (options.filters !== undefined) {
       this.filters = options.filters
@@ -528,6 +530,26 @@ export class NetworkMonitor {
       `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
         capitalize(network),
       )}] -> ${msg}`,
+    )
+  }
+
+  structuredLogError(network: string, error: any, hashId: string): void {
+    let errorMessage = `unknown error message found for ${hashId}`
+    if(error.message) {
+      errorMessage = `${error.message} + ${hashId}`
+    } else if (error.reason) {
+      errorMessage = `${error.reason} + ${hashId}`
+    } else if (error.error.reason) {
+      errorMessage = `${error.error.reason} + ${hashId}`
+    }
+
+    const timestamp = new Date(Date.now()).toISOString()
+    const timestampColor = color.keyword('green')
+
+    this.warn(
+      `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
+        capitalize(network),
+      )}] [error] -> ${errorMessage}`,
     )
   }
 }
