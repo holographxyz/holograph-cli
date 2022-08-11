@@ -64,8 +64,8 @@ export default class Contract extends Command {
         throw new Error('Unsupported RPC URL protocol -> ' + sourceProtocol)
     }
 
-    const sourceWallet = userWallet.connect(sourceProvider)
-    this.debug('Source network', await sourceWallet.provider.getNetwork())
+    const sourceWallet = userWallet?.connect(sourceProvider)
+    this.debug('Source network', await sourceWallet?.provider.getNetwork())
 
     const destinationProviderUrl: string = (
       configFile.networks[destinationNetwork as keyof ConfigNetworks] as ConfigNetwork
@@ -83,8 +83,8 @@ export default class Contract extends Command {
         throw new Error('Unsupported RPC URL protocol -> ' + destinationProtocol)
     }
 
-    const destinationWallet = userWallet.connect(destinationProvider)
-    this.debug('Destination network', await destinationWallet.provider.getNetwork())
+    const destinationWallet = userWallet?.connect(destinationProvider)
+    this.debug('Destination network', await destinationWallet?.provider.getNetwork())
     CliUx.ux.action.stop()
 
     const supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
@@ -96,7 +96,7 @@ export default class Contract extends Command {
 
     const deploymentConfig = await prepareDeploymentConfig(
       configFile,
-      userWallet,
+      userWallet!,
       flags as Record<string, string | undefined>,
       remainingNetworks,
     )
@@ -168,11 +168,11 @@ export default class Contract extends Command {
       this.error('Could not identify messaging costs')
     }
 
-    const gasPrice = await sourceWallet.provider.getGasPrice()
+    const gasPrice = await sourceWallet?.provider.getGasPrice()
     CliUx.ux.action.stop()
     this.log(
       'Transaction is estimated to cost a total of',
-      ethers.utils.formatUnits(gasLimit.mul(gasPrice), 'ether'),
+      ethers.utils.formatUnits(gasLimit.mul(gasPrice!), 'ether'),
       'native gas tokens (in ether).',
       'And you will send a value of',
       ethers.utils.formatEther(startingPayment),

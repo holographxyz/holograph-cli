@@ -57,12 +57,12 @@ export default class Contract extends Command {
         throw new Error('Unsupported RPC URL protocol -> ' + destinationNetworkProtocol)
     }
 
-    const destinationWallet = userWallet.connect(destinationNetworkProvider)
+    const destinationWallet = userWallet?.connect(destinationNetworkProvider)
     CliUx.ux.action.stop()
 
     const deploymentConfig = await prepareDeploymentConfig(
       configFile,
-      userWallet,
+      userWallet!,
       flags as Record<string, string | undefined>,
       remainingNetworks,
     )
