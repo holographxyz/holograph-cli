@@ -265,7 +265,7 @@ export default class Contract extends Command {
       this.error('Could not identify messaging costs')
     }
 
-    const gasPrice = await sourceWallet.provider.getGasPrice()
+    const gasPrice = (await sourceWallet.provider.getGasPrice()).mul(ethers.BigNumber.from('1.25'))
     CliUx.ux.action.stop()
     this.log(
       'Transaction is estimated to cost a total of',

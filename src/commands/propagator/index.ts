@@ -1,7 +1,7 @@
 import * as inquirer from 'inquirer'
 
 import {CliUx, Command, Flags} from '@oclif/core'
-import {BigNumber, ethers} from 'ethers'
+import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
@@ -222,10 +222,7 @@ export default class Propagator extends Command {
         this.error(error.reason)
       }
 
-      const gasPrice =
-        network === 'mumbai'
-          ? BigNumber.from('55000000000')
-          : await this.networkMonitor.providers[network].getGasPrice()
+      const gasPrice = (await this.networkMonitor.providers[network].getGasPrice()).mul(ethers.BigNumber.from('1.25'))
 
       this.networkMonitor.structuredLog(
         network,
