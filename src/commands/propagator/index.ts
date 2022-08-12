@@ -224,7 +224,7 @@ export default class Propagator extends Command {
       }
 
       const gasPriceBase = await this.networkMonitor.providers[network].getGasPrice()
-      const gasPrice = gasPriceBase.add (gasPriceBase.div(ethers.BigNumber.from("4"))) // gasPrice = gasPriceBase * 1.25
+      const gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from("4"))) // gasPrice = gasPriceBase * 1.25
 
       this.networkMonitor.structuredLog(
         network,
