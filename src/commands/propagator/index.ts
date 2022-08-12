@@ -81,6 +81,7 @@ export default class Propagator extends Command {
       processTransactions: this.processTransactions,
       userWallet,
       lastBlockFilename: 'propagator-blocks.json',
+      warp: flags.warp,
     })
 
     this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
@@ -109,7 +110,7 @@ export default class Propagator extends Command {
     }
 
     CliUx.ux.action.start(`Starting propagator in mode: ${OperatorMode[this.operatorMode]}`)
-    await this.networkMonitor.run(true, undefined, this.filterBuilder)
+    await this.networkMonitor.run(!(flags.warp > 0), undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
     // Start server
