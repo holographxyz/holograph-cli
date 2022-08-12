@@ -218,8 +218,8 @@ export default class Propagator extends Command {
         )
       } catch (error: any) {
         this.networkMonitor.structuredLog(network, `Calculating Gas has failed for collection ${deploymentAddress}`)
-        this.log(error)
-        this.error(error.reason)
+        this.networkMonitor.structuredLogError(network, error, deploymentAddress)
+        return
       }
 
       const gasPrice = (await this.networkMonitor.providers[network].getGasPrice()).mul(ethers.BigNumber.from('1.25'))
@@ -276,8 +276,7 @@ export default class Propagator extends Command {
         return
       } catch (error: any) {
         this.networkMonitor.structuredLog(network, `Submitting tx for collection ${deploymentAddress} failed`)
-        this.log(error)
-        this.error(error.error.reason)
+        this.networkMonitor.structuredLogError(network, error, deploymentAddress)
       }
     } else {
       this.networkMonitor.structuredLog(network, `collection ${deploymentAddress} already deployed`)

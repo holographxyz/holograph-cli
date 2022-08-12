@@ -302,7 +302,8 @@ export default class Operator extends Command {
       try {
         gasLimit = await contract.estimateGas.executeJob(payload)
       } catch (error: any) {
-        this.error(error.reason)
+        this.networkMonitor.structuredLogError(network, error, contract.address)
+        return
       }
 
       const gasPrice = await contract.provider.getGasPrice()
