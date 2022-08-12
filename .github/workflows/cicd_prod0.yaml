@@ -20,14 +20,14 @@ env:
   AWS_ACCESS_KEY : ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
   #
   #TODO - create new gh secret for prod. should be different from staging????
-  PROD_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
+  PROD_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO <-------
   # TODO -> HOLO_INDEXER_HOST <----- replace with k8s service endpoint [angello,alex should make code changes]
   PROD_HOLO_INDEXER_HOST: https://api.holograph.xyz
   #
-  # TODO -> set the password as github secret var
-  PROD_HOLO_INDEXER_PASSWORD   : ${{ secrets.HOLO_INDEXER_PASSWORD }}
-  PROD_HOLO_OPERATOR_PASSWORD  : ${{ secrets.HOLO_OPERATOR_PASSWORD }}
-  PROD_HOLO_PROPAGATOR_PASSWORD: ${{ secrets.HOLO_PROPAGATOR_PASSWORD }}
+  # TODO -> replce them with the PROD specific password <---------------------------
+  PROD_HOLO_INDEXER_PASSWORD   : ${{ secrets.STG_HOLO_INDEXER_PASSWORD }} #TODO <-------
+  PROD_HOLO_OPERATOR_PASSWORD  : ${{ secrets.STG_HOLO_OPERATOR_PASSWORD }} #TODO <-------
+  PROD_HOLO_PROPAGATOR_PASSWORD: ${{ secrets.STG_HOLO_PROPAGATOR_PASSWORD }} #TODO <-------
   #
   # switching between the keys in the config map
   HOLO_CONFIG_FILE_DATA: prod-config-file # [stg-config-file/prod-config-file] #TODO - a different config file for prod?
