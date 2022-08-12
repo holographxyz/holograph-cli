@@ -32,8 +32,7 @@ env:
   # switching between the keys in the config map
   HOLO_CONFIG_FILE_DATA: stg-config-file # [stg-config-file/prod-config-file]
   #
-#  STG_COMMON_NAMESPACE: holocli
-  STG_COMMON_NAMESPACE: testholo #deleteme
+  STG_COMMON_NAMESPACE: holocli
   STG_DOMAIN: "cxipchain.xyz"
 
 on:
