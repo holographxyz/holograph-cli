@@ -223,7 +223,8 @@ export default class Propagator extends Command {
         return
       }
 
-      const gasPrice = (await this.networkMonitor.providers[network].getGasPrice()).mul(ethers.BigNumber.from('1.25'))
+      const gasPriceBase = await this.networkMonitor.providers[network].getGasPrice()
+      const gasPrice = gasPriceBase.add (gasPriceBase.div(ethers.BigNumber.from("4"))) // gasPrice = gasPriceBase * 1.25
 
       this.networkMonitor.structuredLog(
         network,
