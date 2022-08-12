@@ -39,7 +39,7 @@ env:
 on:
   push:
     branches:
-      - 'holocli' #deleteme
+      - 'dsdsdsdsdsdsdsds' #deleteme
 #      - 'develop' # notice: the actual staging branch -> [the deployment is happening into the holocli namespace!]
       #
       - '!main'     # EXCLUDES this branch
