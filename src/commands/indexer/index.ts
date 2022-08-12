@@ -6,7 +6,7 @@ import {ethers} from 'ethers'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import networks from '../../utils/networks'
 
-import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize} from '../../utils/utils'
+import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, sleep} from '../../utils/utils'
 import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
@@ -38,6 +38,7 @@ export default class Indexer extends Command {
   // API Params
   baseUrl!: string
   JWT!: string
+  DELAY = 10_000
 
   operatorMode: OperatorMode = OperatorMode.listen
 
@@ -181,7 +182,9 @@ export default class Indexer extends Command {
             `The transaction hash is: ${transaction.hash}\n`,
         )
 
-        // First get the collection by the address
+        // First get the collection by the address (sleep for a bit to make sure the collection is indexed)
+        this.networkMonitor.structuredLog(network, `Waiting ${this.DELAY} seconds before trying to index collection`)
+        await sleep(this.DELAY)
         this.networkMonitor.structuredLog(
           network,
           `API: Requesting to get Collection with address ${deploymentAddress} with Operator token ${this.JWT}`,
@@ -315,7 +318,9 @@ export default class Indexer extends Command {
           `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
       )
 
-      // First get the collection by the address
+      // First get the collection by the address (sleep for a bit to make sure the collection is indexed)
+      this.networkMonitor.structuredLog(network, `Waiting ${this.DELAY} seconds before trying to index`)
+      await sleep(this.DELAY)
       this.networkMonitor.structuredLog(
         network,
         `API: Requesting to get Collection with address ${deploymentAddress} with Operator token ${this.JWT}`,
@@ -395,6 +400,9 @@ export default class Indexer extends Command {
       const tokenId = Number.parseInt(event[3], 16)
       const contractAddress = '0x' + deploymentInput.slice(98, 138)
 
+      // Index NFT
+      this.networkMonitor.structuredLog(network, `Waiting ${this.DELAY} seconds before trying to index NFT`)
+      await sleep(this.DELAY)
       this.networkMonitor.structuredLog(
         network,
         `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress} with Operator token ${this.JWT}`,
