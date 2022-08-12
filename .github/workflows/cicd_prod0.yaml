@@ -104,7 +104,7 @@ jobs:
         run : |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-      - name: -> Deploy INDEXER cli in prod [namespace -> ${{ steps.PROD_COMMON_NAMESPACE }}]
+      - name: -> Deploy INDEXER cli in prod [namespace -> ${{ env.PROD_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer #notice
