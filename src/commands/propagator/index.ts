@@ -81,6 +81,7 @@ export default class Propagator extends Command {
       processTransactions: this.processTransactions,
       userWallet,
       lastBlockFilename: 'propagator-blocks.json',
+      warp: flags.warp,
     })
 
     this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
@@ -109,7 +110,7 @@ export default class Propagator extends Command {
     }
 
     CliUx.ux.action.start(`Starting propagator in mode: ${OperatorMode[this.operatorMode]}`)
-    await this.networkMonitor.run(true, undefined, this.filterBuilder)
+    await this.networkMonitor.run(!(flags.warp > 0), undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
     // Start server
@@ -241,7 +242,7 @@ export default class Propagator extends Command {
           deploymentConfig.config,
           deploymentConfig.signature,
           deploymentConfig.signer,
-          {gasPrice, gasLimit}
+          {gasPrice, gasLimit},
         )
         this.debug(JSON.stringify(deployTx, null, 2))
 
@@ -279,7 +280,7 @@ export default class Propagator extends Command {
         this.networkMonitor.structuredLogError(network, error, deploymentAddress)
       }
     } else {
-      this.networkMonitor.structuredLog(network, `collection ${deploymentAddress} already deployed`)
+      this.networkMonitor.structuredLog(network, `Collection ${deploymentAddress} already deployed`)
     }
   }
 
