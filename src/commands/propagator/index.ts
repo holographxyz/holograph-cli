@@ -241,7 +241,7 @@ export default class Propagator extends Command {
           deploymentConfig.config,
           deploymentConfig.signature,
           deploymentConfig.signer,
-          {gasPrice, gasLimit}
+          {gasPrice, gasLimit},
         )
         this.debug(JSON.stringify(deployTx, null, 2))
 
@@ -279,7 +279,7 @@ export default class Propagator extends Command {
         this.networkMonitor.structuredLogError(network, error, deploymentAddress)
       }
     } else {
-      this.networkMonitor.structuredLog(network, `collection ${deploymentAddress} already deployed`)
+      this.networkMonitor.structuredLog(network, `Collection ${deploymentAddress} already deployed`)
     }
   }
 
