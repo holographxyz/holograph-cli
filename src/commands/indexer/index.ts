@@ -38,7 +38,7 @@ export default class Indexer extends Command {
   // API Params
   baseUrl!: string
   JWT!: string
-  DELAY = 10000
+  DELAY = 10_000
 
   operatorMode: OperatorMode = OperatorMode.listen
 
