@@ -56,7 +56,7 @@ export default class Indexer extends Command {
       res = await axios.post(`${this.baseUrl}/v1/auth/operator`, {
         hash: process.env.OPERATOR_API_KEY,
       })
-      this.debug(res.data)
+      this.debug(JSON.stringify(res.data))
     } catch (error: any) {
       this.error(error.message)
     }
@@ -182,7 +182,7 @@ export default class Indexer extends Command {
         )
 
         // First get the collection by the address (sleep for a bit to make sure the collection is indexed)
-        this.networkMonitor.structuredLog(network, `Waiting ${this.DELAY} seconds before trying to index collection`)
+        this.networkMonitor.structuredLog(network, `Waiting ${this.DELAY} seconds before trying to index collection ${deploymentAddress}`)
         await sleep(this.DELAY)
         this.networkMonitor.structuredLog(
           network,
@@ -394,7 +394,6 @@ export default class Indexer extends Command {
 
     // Compose request to API server to update the NFT
     if (event) {
-      // this.debug(event)
       const deploymentInput = this.networkMonitor.abiCoder.decode(['bytes'], '0x' + transaction.data.slice(10))[0]
       const tokenId = Number.parseInt(event[3], 16)
       const contractAddress = '0x' + deploymentInput.slice(98, 138)
@@ -420,7 +419,8 @@ export default class Indexer extends Command {
         )
       } catch (error: any) {
         this.networkMonitor.structuredLog(network, error.message)
-        this.debug(error)
+        this.networkMonitor.structuredLogError(network, error, contractAddress)
+        return
       }
 
       // Only update the database if this transaction happened in a later block than the last block we indexed
@@ -467,7 +467,6 @@ export default class Indexer extends Command {
       } catch (error: any) {
         this.networkMonitor.structuredLog(network, `Failed to update the database for collection ${contractAddress} and tokeId ${tokenId}`)
         this.networkMonitor.structuredLogError(network, error, `collection ${contractAddress} and tokeId ${tokenId}`)
-        // this.debug(error)
       }
     }
   }
