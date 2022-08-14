@@ -60,41 +60,6 @@ export default class Analyze extends Command {
     }),
   }
 
-  static iface: ethers.utils.Interface = new ethers.utils.Interface([])
-  static packetEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from('Packet(uint16 chainId, bytes payload)')
-  static availableJobEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from('AvailableJob(bytes payload)')
-
-  decodePacketEvent(receipt: ethers.ContractReceipt): string | undefined {
-    const toFind = this.networkMonitor.operatorAddress.slice(2, 42)
-    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        const log = receipt.logs[i]
-        if (log.topics[0] === this.networkMonitor.targetEvents.Packet) {
-          const packetPayload = Analyze.iface.decodeEventLog(Analyze.packetEventFragment, log.data, log.topics)[1] as string
-          if (packetPayload.indexOf(toFind) > 0) {
-            const payload = '0x' + packetPayload.split(this.networkMonitor.operatorAddress.slice(2, 42).repeat(2))[1]
-            return ethers.utils.keccak256(payload)
-          }
-        }
-      }
-    }
-
-    return undefined
-  }
-
-  decodeAvailableJobEvent(receipt: ethers.ContractReceipt): string | undefined {
-    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        const log = receipt.logs[i]
-        if (log.address.toLowerCase() === this.networkMonitor.operatorAddress && log.topics[0] === this.networkMonitor.targetEvents.AvailableJob) {
-          return Analyze.iface.decodeEventLog(Analyze.availableJobEventFragment, log.data, log.topics)[0] as string
-        }
-      }
-    }
-
-    return undefined
-  }
-
   outputFile!: string
   collectionMap: {[key: string]: boolean} = {}
   operatorJobIndexMap: {[key: string]: number} = {}
@@ -290,7 +255,8 @@ export default class Analyze extends Command {
 
     // make sure the transaction has succeeded before trying to process it
     if (receipt.status === 1) {
-      const operatorJobHash = this.decodePacketEvent(receipt)
+      const operatorJobPayload = this.networkMonitor.decodePacketEvent(receipt)
+      const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract cross-chain packet for ${transaction.hash}`)
       } else {
@@ -405,7 +371,7 @@ export default class Analyze extends Command {
 
     // make sure the transaction has succeeded before trying to process it
     if (receipt.status === 1) {
-      const operatorJobPayload = this.decodeAvailableJobEvent(receipt)
+      const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(receipt)
       const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract relayer available job for ${transaction.hash}`)
