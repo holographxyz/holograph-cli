@@ -121,18 +121,8 @@ export default class Propagator extends Command {
   async filterBuilder(): Promise<void> {
     this.networkMonitor.filters = [
       {
-        type: FilterType.from,
-        match: this.networkMonitor.LAYERZERO_RECEIVERS,
-        networkDependant: true,
-      },
-      {
         type: FilterType.to,
         match: this.networkMonitor.factoryAddress,
-        networkDependant: false,
-      },
-      {
-        type: FilterType.to,
-        match: this.networkMonitor.operatorAddress,
         networkDependant: false,
       },
     ]

@@ -167,7 +167,8 @@ export default class Recover extends Command {
         this.error(error.reason)
       }
 
-      const gasPrice = (await this.operatorContract.provider.getGasPrice()).mul(ethers.BigNumber.from('1.25'))
+      let gasPrice = await this.operatorContract.provider.getGasPrice()
+      gasPrice = gasPrice.add(gasPrice.div(ethers.BigNumber.from('4')))
       this.debug(`gas price is ${gasPrice}`)
       CliUx.ux.action.stop()
       this.log(
