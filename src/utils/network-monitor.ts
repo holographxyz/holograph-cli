@@ -199,7 +199,11 @@ export class NetworkMonitor {
     }
   }
 
-  async run(continuous: boolean, blockJobs?: {[key: string]: BlockJob[]}, ethersInitializedCallback?: () => Promise<void>): Promise<void> {
+  async run(
+    continuous: boolean,
+    blockJobs?: {[key: string]: BlockJob[]},
+    ethersInitializedCallback?: () => Promise<void>,
+  ): Promise<void> {
     await this.initializeEthers()
     if (ethersInitializedCallback !== undefined) {
       await ethersInitializedCallback.bind(this.parent)()
@@ -446,7 +450,7 @@ export class NetworkMonitor {
       clearInterval(this.blockJobMonitorProcess[network])
       this.runningProcesses -= 1
       if (this.runningProcesses === 0) {
-        this.log('Finished the last job', 'need to output data and exit')
+        this.log('Finished the last job. Exiting...')
         this.exitRouter({exit: true}, 'SIGINT')
       }
     }
@@ -455,8 +459,10 @@ export class NetworkMonitor {
   filterTransaction(job: BlockJob, transaction: ethers.providers.TransactionResponse, interestingTransactions: ethers.providers.TransactionResponse[]): void {
     const to: string = transaction.to?.toLowerCase() || ''
     const from: string = transaction.from?.toLowerCase() || ''
-    for(const filter of this.filters) {
-      const match: string = (filter.networkDependant ? ((filter.match as {[key: string]: string})[job.network]) : (filter.match as string))
+    for (const filter of this.filters) {
+      const match: string = filter.networkDependant
+        ? (filter.match as {[key: string]: string})[job.network]
+        : (filter.match as string)
       switch (filter.type) {
         case FilterType.to:
           if (to === match) {
@@ -544,7 +550,7 @@ export class NetworkMonitor {
 
   structuredLogError(network: string, error: any, hashId: string): void {
     let errorMessage = `unknown error message found for ${hashId}`
-    if(error.message) {
+    if (error.message) {
       errorMessage = `${error.message} + ${hashId}`
     } else if (error.reason) {
       errorMessage = `${error.reason} + ${hashId}`

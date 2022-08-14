@@ -11,6 +11,9 @@ function capitalize(input: string): string {
   return input.charAt(0).toUpperCase() + input.slice(1)
 }
 
+// eslint-disable-next-line no-promise-executor-return
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
 const webSocketConfig = {
   reconnect: {
     auto: false,
@@ -146,6 +149,7 @@ const rgbToHex = (rgb: number): string => {
 }
 
 export {
+  sleep,
   capitalize,
   rgbToHex,
   randomNumber,

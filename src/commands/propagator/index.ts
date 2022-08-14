@@ -81,6 +81,7 @@ export default class Propagator extends Command {
       processTransactions: this.processTransactions,
       userWallet,
       lastBlockFilename: 'propagator-blocks.json',
+      warp: flags.warp,
     })
 
     this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
@@ -109,7 +110,7 @@ export default class Propagator extends Command {
     }
 
     CliUx.ux.action.start(`Starting propagator in mode: ${OperatorMode[this.operatorMode]}`)
-    await this.networkMonitor.run(true, undefined, this.filterBuilder)
+    await this.networkMonitor.run(!(flags.warp > 0), undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
     // Start server
@@ -212,7 +213,21 @@ export default class Propagator extends Command {
         return
       }
 
-      const gasPrice = (await this.networkMonitor.providers[network].getGasPrice()).mul(ethers.BigNumber.from('1.25'))
+      // setting default gas price in case network is unknown
+      let gasPrice = ethers.utils.parseUnits('10', 'gwei')
+      try {
+        // Hack for Mumbai because a variable gas price is causing the deployment to take a long time to process
+        if (network === 'mumbai') {
+          gasPrice = ethers.utils.parseUnits('150', 'gwei')
+        } else {
+          const gasPriceBase = await this.networkMonitor.providers[network].getGasPrice()
+          gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
+        }
+      } catch (error: any) {
+        this.networkMonitor.structuredLog(network, `Failed to compute gas price for collection = ${deploymentAddress}`)
+        this.networkMonitor.structuredLogError(network, error, deploymentAddress)
+        return
+      }
 
       this.networkMonitor.structuredLog(
         network,
@@ -231,7 +246,7 @@ export default class Propagator extends Command {
           deploymentConfig.config,
           deploymentConfig.signature,
           deploymentConfig.signer,
-          {gasPrice, gasLimit}
+          {gasPrice, gasLimit},
         )
         this.debug(JSON.stringify(deployTx, null, 2))
 
@@ -269,7 +284,7 @@ export default class Propagator extends Command {
         this.networkMonitor.structuredLogError(network, error, deploymentAddress)
       }
     } else {
-      this.networkMonitor.structuredLog(network, `collection ${deploymentAddress} already deployed`)
+      this.networkMonitor.structuredLog(network, `Collection ${deploymentAddress} already deployed`)
     }
   }
 
