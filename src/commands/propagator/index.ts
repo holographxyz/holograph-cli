@@ -223,7 +223,21 @@ export default class Propagator extends Command {
         return
       }
 
-      const gasPrice = (await this.networkMonitor.providers[network].getGasPrice()).mul(ethers.BigNumber.from('1.25'))
+      // setting default gas price in case network is unknown
+      let gasPrice = ethers.utils.parseUnits('10', 'gwei')
+      try {
+        // Hack for Mumbai because a variable gas price is causing the deployment to take a long time to process
+        if (network === 'mumbai') {
+          gasPrice = ethers.utils.parseUnits('150', 'gwei')
+        } else {
+          const gasPriceBase = await this.networkMonitor.providers[network].getGasPrice()
+          gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
+        }
+      } catch (error: any) {
+        this.networkMonitor.structuredLog(network, `Failed to compute gas price for collection = ${deploymentAddress}`)
+        this.networkMonitor.structuredLogError(network, error, deploymentAddress)
+        return
+      }
 
       this.networkMonitor.structuredLog(
         network,

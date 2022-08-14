@@ -6,7 +6,7 @@ import {ethers} from 'ethers'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import networks from '../../utils/networks'
 
-import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize} from '../../utils/utils'
+import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, sleep} from '../../utils/utils'
 import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
@@ -38,6 +38,7 @@ export default class Indexer extends Command {
   // API Params
   baseUrl!: string
   JWT!: string
+  DELAY = 20_000
 
   operatorMode: OperatorMode = OperatorMode.listen
 
@@ -55,20 +56,19 @@ export default class Indexer extends Command {
       res = await axios.post(`${this.baseUrl}/v1/auth/operator`, {
         hash: process.env.OPERATOR_API_KEY,
       })
-      this.debug(res)
+      this.debug(JSON.stringify(res.data))
     } catch (error: any) {
       this.error(error.message)
     }
 
     this.JWT = res!.data.accessToken
-    this.log(res.data)
 
     if (typeof this.JWT === 'undefined') {
       this.error('Failed to authorize as an operator')
     }
 
-    this.log(`process.env.OPERATOR_API_KEY = ${process.env.OPERATOR_API_KEY}`)
-    this.log(`this.JWT = ${this.JWT}`)
+    this.debug(`process.env.OPERATOR_API_KEY = ${process.env.OPERATOR_API_KEY}`)
+    this.debug(`this.JWT = ${this.JWT}`)
 
     // Indexer always runs in listen mode
     this.log(`Indexer mode: ${this.operatorMode}`)
@@ -132,7 +132,10 @@ export default class Indexer extends Command {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
 
-        this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${receipt.blockNumber}`)
+        this.networkMonitor.structuredLog(
+          job.network,
+          `Processing transaction ${transaction.hash} at block ${receipt.blockNumber}`,
+        )
         if (transaction.to?.toLowerCase() === this.networkMonitor.factoryAddress) {
           this.handleContractDeployedEvents(transaction, receipt, job.network)
         } else if (transaction.to?.toLowerCase() === this.networkMonitor.operatorAddress) {
@@ -181,25 +184,33 @@ export default class Indexer extends Command {
             `The transaction hash is: ${transaction.hash}\n`,
         )
 
-        // First get the collection by the address
+        // First get the collection by the address (sleep for a bit to make sure the collection is indexed)
         this.networkMonitor.structuredLog(
           network,
-          `API: Requesting to get Collection with address ${deploymentAddress} with Operator token ${this.JWT}`,
+          `Waiting ${this.DELAY / 1000} seconds before trying to index collection ${deploymentAddress}`,
+        )
+        await sleep(this.DELAY)
+        this.networkMonitor.structuredLog(
+          network,
+          `API: Requesting to get Collection with address ${deploymentAddress}`,
         )
         let res
         try {
-          this.log(`About to make a request for a collection with "Bearer ${this.JWT}"`)
           res = await axios.get(`${this.baseUrl}/v1/collections/contract/${deploymentAddress}`, {
             headers: {
               Authorization: `Bearer ${this.JWT}`,
               'Content-Type': 'application/json',
             },
           })
-          this.debug(JSON.stringify(res.data))
+          this.networkMonitor.structuredLog(
+            network,
+            `GET collection ${deploymentAddress} response ${JSON.stringify(res.data)}`,
+          )
           this.networkMonitor.structuredLog(network, `Successfully found collection at ${deploymentAddress}`)
         } catch (error: any) {
-          this.networkMonitor.structuredLog(network, `Failed to update the Holograph database ${error.message}`)
-          this.debug(error)
+          this.networkMonitor.structuredLog(network, `Failed to update the Holograph database for ${deploymentAddress}`)
+          this.networkMonitor.structuredLogError(network, error, deploymentAddress)
+          return
         }
 
         // Compose request to API server to update the collection
@@ -220,18 +231,18 @@ export default class Indexer extends Command {
 
         this.networkMonitor.structuredLog(
           network,
-          `API: Requesting to update Collection with id ${res?.data.id} with Operator token ${this.JWT}`,
+          `API: Requesting to update Collection ${deploymentAddress} with id ${res?.data.id}`,
         )
         try {
           const patchRes = await axios.patch(`${this.baseUrl}/v1/collections/${res?.data.id}`, data, params)
-          this.debug(patchRes.data)
+          this.networkMonitor.structuredLog(network, `PATCH response ${JSON.stringify(patchRes.data)}`)
           this.networkMonitor.structuredLog(
             network,
-            `Successfully updated collection chainId to ${networks[network].chain}`,
+            `Successfully updated collection ${deploymentAddress} chainId to ${networks[network].chain}`,
           )
         } catch (error: any) {
-          this.networkMonitor.structuredLog(network, `Failed to update the Holograph database ${error.message}`)
-          this.debug(error)
+          this.networkMonitor.structuredLog(network, `Failed to update the Holograph database ${deploymentAddress}`)
+          this.networkMonitor.structuredLogError(network, error, deploymentAddress)
         }
       }
     }
@@ -315,25 +326,29 @@ export default class Indexer extends Command {
           `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
       )
 
-      // First get the collection by the address
+      // First get the collection by the address (sleep for a bit to make sure the collection is indexed)
       this.networkMonitor.structuredLog(
         network,
-        `API: Requesting to get Collection with address ${deploymentAddress} with Operator token ${this.JWT}`,
+        `Waiting ${this.DELAY / 1000} seconds before trying to index ${deploymentAddress}`,
       )
+      await sleep(this.DELAY)
+      this.networkMonitor.structuredLog(network, `API: Requesting to get Collection with address ${deploymentAddress}`)
       let res
       try {
-        this.log(`About to make a request for a collection with "Bearer ${this.JWT}"`)
         res = await axios.get(`${this.baseUrl}/v1/collections/contract/${deploymentAddress}`, {
           headers: {
             Authorization: `Bearer ${this.JWT}`,
             'Content-Type': 'application/json',
           },
         })
-        this.debug(JSON.stringify(res.data))
+        this.networkMonitor.structuredLog(
+          network,
+          `GET collection ${deploymentAddress} response ${JSON.stringify(res.data)}`,
+        )
         this.networkMonitor.structuredLog(network, `Successfully found collection at ${deploymentAddress}`)
       } catch (error: any) {
-        this.networkMonitor.structuredLog(network, `Failed to update the Holograph database ${error.message}`)
-        this.debug(error)
+        this.networkMonitor.structuredLogError(network, error, deploymentAddress)
+        return
       }
 
       // Compose request to API server to update the collection
@@ -354,18 +369,22 @@ export default class Indexer extends Command {
 
       this.networkMonitor.structuredLog(
         network,
-        `API: Requesting to update Collection with id ${res?.data.id} with Operator token ${this.JWT}`,
+        `API: Requesting to update Collection ${deploymentAddress} with id ${res?.data.id}`,
       )
       try {
         const patchRes = await axios.patch(`${this.baseUrl}/v1/collections/${res?.data.id}`, data, params)
-        this.debug(patchRes.data)
         this.networkMonitor.structuredLog(
           network,
-          `Successfully updated collection chainId to ${networks[network].chain}`,
+          `PATCH collection ${deploymentAddress} response ${JSON.stringify(patchRes.data)}`,
+        )
+        this.networkMonitor.structuredLog(
+          network,
+          `Successfully updated collection ${deploymentAddress} and id ${res?.data.id}`,
         )
       } catch (error: any) {
-        this.networkMonitor.structuredLog(network, `Failed to update the Holograph database ${error.message}`)
-        this.debug(error)
+        this.networkMonitor.structuredLog(network, `Failed to update the Holograph database ${deploymentAddress}`)
+        this.networkMonitor.structuredLogError(network, error, deploymentAddress)
+        return
       }
     }
 
@@ -390,14 +409,16 @@ export default class Indexer extends Command {
 
     // Compose request to API server to update the NFT
     if (event) {
-      this.debug(event)
       const deploymentInput = this.networkMonitor.abiCoder.decode(['bytes'], '0x' + transaction.data.slice(10))[0]
       const tokenId = Number.parseInt(event[3], 16)
       const contractAddress = '0x' + deploymentInput.slice(98, 138)
 
+      // Index NFT
+      this.networkMonitor.structuredLog(network, `Waiting ${this.DELAY / 1000} seconds before trying to index NFT`)
+      await sleep(this.DELAY)
       this.networkMonitor.structuredLog(
         network,
-        `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress} with Operator token ${this.JWT}`,
+        `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
       )
       let res
       try {
@@ -409,11 +430,12 @@ export default class Indexer extends Command {
         })
         this.networkMonitor.structuredLog(
           network,
-          `Successfully found NFT with tokenId ${tokenId} from ${contractAddress} with Operator token ${this.JWT}`,
+          `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`,
         )
       } catch (error: any) {
         this.networkMonitor.structuredLog(network, error.message)
-        this.debug(error)
+        this.networkMonitor.structuredLogError(network, error, contractAddress)
+        return
       }
 
       // Only update the database if this transaction happened in a later block than the last block we indexed
@@ -429,7 +451,7 @@ export default class Indexer extends Command {
       ) {
         this.networkMonitor.structuredLog(
           network,
-          `Latest transaction in the database is more recent than this transaction. Skipping update.`,
+          `Latest transaction in the database is more recent than this transaction. Skipping update for collection ${contractAddress} and tokeId ${tokenId}`,
         )
         return
       }
@@ -451,15 +473,26 @@ export default class Indexer extends Command {
 
       this.networkMonitor.structuredLog(
         network,
-        `API: Requesting to update NFT with id ${res?.data.id} with Operator token ${this.JWT}`,
+        `API: Requesting to update NFT with collection ${contractAddress} and tokeId ${tokenId} and id ${res?.data.id}`,
       )
       try {
         const patchRes = await axios.patch(`${this.baseUrl}/v1/nfts/${res?.data.id}`, data, params)
-        this.networkMonitor.structuredLog(network, JSON.stringify(patchRes.data))
-        this.networkMonitor.structuredLog(network, `Successfully updated NFT chainId to ${networks[network].chain}`)
+        this.networkMonitor.structuredLog(
+          network,
+          `PATCH collection ${contractAddress} tokeId ${tokenId} and id ${res?.data.id} response ${JSON.stringify(
+            patchRes.data,
+          )}`,
+        )
+        this.networkMonitor.structuredLog(
+          network,
+          `Successfully updated NFT collection ${contractAddress} and tokeId ${tokenId}`,
+        )
       } catch (error: any) {
-        this.networkMonitor.structuredLog(network, `Failed to update the database ${error.message}`)
-        this.debug(error)
+        this.networkMonitor.structuredLog(
+          network,
+          `Failed to update the database for collection ${contractAddress} and tokeId ${tokenId}`,
+        )
+        this.networkMonitor.structuredLogError(network, error, `collection ${contractAddress} and tokeId ${tokenId}`)
       }
     }
   }
