@@ -38,7 +38,7 @@ export default class Indexer extends Command {
   // API Params
   baseUrl!: string
   JWT!: string
-  DELAY = 10_000
+  DELAY = 20_000
 
   operatorMode: OperatorMode = OperatorMode.listen
 
@@ -132,7 +132,10 @@ export default class Indexer extends Command {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
 
-        this.networkMonitor.structuredLog(job.network, `Processing transaction ${transaction.hash} at block ${receipt.blockNumber}`)
+        this.networkMonitor.structuredLog(
+          job.network,
+          `Processing transaction ${transaction.hash} at block ${receipt.blockNumber}`,
+        )
         if (transaction.to?.toLowerCase() === this.networkMonitor.factoryAddress) {
           this.handleContractDeployedEvents(transaction, receipt, job.network)
         } else if (transaction.to?.toLowerCase() === this.networkMonitor.operatorAddress) {
@@ -182,7 +185,10 @@ export default class Indexer extends Command {
         )
 
         // First get the collection by the address (sleep for a bit to make sure the collection is indexed)
-        this.networkMonitor.structuredLog(network, `Waiting ${this.DELAY} seconds before trying to index collection ${deploymentAddress}`)
+        this.networkMonitor.structuredLog(
+          network,
+          `Waiting ${this.DELAY / 1000} seconds before trying to index collection ${deploymentAddress}`,
+        )
         await sleep(this.DELAY)
         this.networkMonitor.structuredLog(
           network,
@@ -196,7 +202,10 @@ export default class Indexer extends Command {
               'Content-Type': 'application/json',
             },
           })
-          this.networkMonitor.structuredLog(network, `GET collection ${deploymentAddress} response ${JSON.stringify(res.data)}`)
+          this.networkMonitor.structuredLog(
+            network,
+            `GET collection ${deploymentAddress} response ${JSON.stringify(res.data)}`,
+          )
           this.networkMonitor.structuredLog(network, `Successfully found collection at ${deploymentAddress}`)
         } catch (error: any) {
           this.networkMonitor.structuredLog(network, `Failed to update the Holograph database for ${deploymentAddress}`)
@@ -318,12 +327,12 @@ export default class Indexer extends Command {
       )
 
       // First get the collection by the address (sleep for a bit to make sure the collection is indexed)
-      this.networkMonitor.structuredLog(network, `Waiting ${this.DELAY} seconds before trying to index ${deploymentAddress}`)
-      await sleep(this.DELAY)
       this.networkMonitor.structuredLog(
         network,
-        `API: Requesting to get Collection with address ${deploymentAddress}`,
+        `Waiting ${this.DELAY / 1000} seconds before trying to index ${deploymentAddress}`,
       )
+      await sleep(this.DELAY)
+      this.networkMonitor.structuredLog(network, `API: Requesting to get Collection with address ${deploymentAddress}`)
       let res
       try {
         res = await axios.get(`${this.baseUrl}/v1/collections/contract/${deploymentAddress}`, {
@@ -332,7 +341,10 @@ export default class Indexer extends Command {
             'Content-Type': 'application/json',
           },
         })
-        this.networkMonitor.structuredLog(network, `GET collection ${deploymentAddress} response ${JSON.stringify(res.data)}`)
+        this.networkMonitor.structuredLog(
+          network,
+          `GET collection ${deploymentAddress} response ${JSON.stringify(res.data)}`,
+        )
         this.networkMonitor.structuredLog(network, `Successfully found collection at ${deploymentAddress}`)
       } catch (error: any) {
         this.networkMonitor.structuredLogError(network, error, deploymentAddress)
@@ -361,7 +373,10 @@ export default class Indexer extends Command {
       )
       try {
         const patchRes = await axios.patch(`${this.baseUrl}/v1/collections/${res?.data.id}`, data, params)
-        this.networkMonitor.structuredLog(network, `PATCH collection ${deploymentAddress} response ${JSON.stringify(patchRes.data)}`)
+        this.networkMonitor.structuredLog(
+          network,
+          `PATCH collection ${deploymentAddress} response ${JSON.stringify(patchRes.data)}`,
+        )
         this.networkMonitor.structuredLog(
           network,
           `Successfully updated collection ${deploymentAddress} and id ${res?.data.id}`,
@@ -399,7 +414,7 @@ export default class Indexer extends Command {
       const contractAddress = '0x' + deploymentInput.slice(98, 138)
 
       // Index NFT
-      this.networkMonitor.structuredLog(network, `Waiting ${this.DELAY} seconds before trying to index NFT`)
+      this.networkMonitor.structuredLog(network, `Waiting ${this.DELAY / 1000} seconds before trying to index NFT`)
       await sleep(this.DELAY)
       this.networkMonitor.structuredLog(
         network,
@@ -462,10 +477,21 @@ export default class Indexer extends Command {
       )
       try {
         const patchRes = await axios.patch(`${this.baseUrl}/v1/nfts/${res?.data.id}`, data, params)
-        this.networkMonitor.structuredLog(network, `PATCH collection ${contractAddress} tokeId ${tokenId} and id ${res?.data.id} response ${JSON.stringify(patchRes.data)}`)
-        this.networkMonitor.structuredLog(network, `Successfully updated NFT collection ${contractAddress} and tokeId ${tokenId}`)
+        this.networkMonitor.structuredLog(
+          network,
+          `PATCH collection ${contractAddress} tokeId ${tokenId} and id ${res?.data.id} response ${JSON.stringify(
+            patchRes.data,
+          )}`,
+        )
+        this.networkMonitor.structuredLog(
+          network,
+          `Successfully updated NFT collection ${contractAddress} and tokeId ${tokenId}`,
+        )
       } catch (error: any) {
-        this.networkMonitor.structuredLog(network, `Failed to update the database for collection ${contractAddress} and tokeId ${tokenId}`)
+        this.networkMonitor.structuredLog(
+          network,
+          `Failed to update the database for collection ${contractAddress} and tokeId ${tokenId}`,
+        )
         this.networkMonitor.structuredLogError(network, error, `collection ${contractAddress} and tokeId ${tokenId}`)
       }
     }

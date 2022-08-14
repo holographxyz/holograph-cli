@@ -228,7 +228,7 @@ export default class Propagator extends Command {
       try {
         // Hack for Mumbai because a variable gas price is causing the deployment to take a long time to process
         if (network === 'mumbai') {
-          gasPrice = ethers.utils.parseUnits('100', 'gwei')
+          gasPrice = ethers.utils.parseUnits('150', 'gwei')
         } else {
           const gasPriceBase = await this.networkMonitor.providers[network].getGasPrice()
           gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
