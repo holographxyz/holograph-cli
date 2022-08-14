@@ -11,7 +11,7 @@ env:
   #
   DEV_IMAGE_TAG : dev-${{ github.sha }} #NOTICE
   #
-  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.13 # NOTICE
+  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.14 # NOTICE
   STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.9  # NOTICE
   STG_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.9  # NOTICE
   #
@@ -39,8 +39,7 @@ env:
 on:
   push:
     branches:
-      - 'holocli' #deleteme
-#      - 'develop' # notice: the actual staging branch -> [the deployment is happening into the holocli namespace!]
+      - 'develop' # notice: the actual staging branch -> [the deployment is happening into the holocli namespace!]
       #
       - '!main'     # EXCLUDES this branch
       - '!master'   # EXCLUDES this branch

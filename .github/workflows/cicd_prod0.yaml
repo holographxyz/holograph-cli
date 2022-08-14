@@ -11,7 +11,7 @@ env:
   #
   PROD_IMAGE_TAG : main-${{ github.sha }} #NOTICE
   #
-  PROD_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.13 # NOTICE
+  PROD_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.14 # NOTICE
   PROD_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.9  # NOTICE
   PROD_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.9  # NOTICE
   #
@@ -40,13 +40,12 @@ env:
 on:
   push:
     branches:
-      - 'holocli' #deleteme
+      - 'develop' #deleteme
 ## notice: the trigger
 #on:
 #  pull_request:
 #    branches:
-#      - kabamaru # TODO - delete it to make the PR
-##      - main
+#      - main
 #    types: [closed]
 
 jobs:
