@@ -92,7 +92,7 @@ type NetworkMonitorOptions = {
   configFile: ConfigFile
   networks?: string[]
   debug: (...args: string[]) => void
-  processTransactions: (job: BlockJob, transactions: ethers.Transaction[]) => Promise<void>
+  processTransactions: (job: BlockJob, transactions: ethers.providers.TransactionResponse[]) => Promise<void>
   filters?: TransactionFilter[]
   userWallet?: ethers.Wallet
   lastBlockFilename?: string
@@ -105,7 +105,7 @@ export class NetworkMonitor {
   userWallet?: ethers.Wallet
   LAST_BLOCKS_FILE_NAME: string
   filters: TransactionFilter[] = []
-  processTransactions: (job: BlockJob, transactions: ethers.Transaction[]) => Promise<void>
+  processTransactions: (job: BlockJob, transactions: ethers.providers.TransactionResponse[]) => Promise<void>
   log: (message: string, ...args: any[]) => void
   warn: (message: string, ...args: any[]) => void
   debug: (...args: any[]) => void
@@ -148,6 +148,9 @@ export class NetworkMonitor {
 
     AvailableJob: '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11',
     '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11': 'AvailableJob',
+
+    Packet: '0xe8d23d927749ec8e512eb885679c2977d57068839d8cca1a85685dbbea0648f6',
+    '0xe8d23d927749ec8e512eb885679c2977d57068839d8cca1a85685dbbea0648f6': 'Packet',
   }
 
   constructor(options: NetworkMonitorOptions) {
@@ -361,6 +364,8 @@ export class NetworkMonitor {
     )
   }
 
+  exitCallback?: () => void
+
   exitHandler = async (exitCode: number): Promise<void> => {
     /**
      * Before exit, save the block heights to the local db
@@ -397,6 +402,10 @@ export class NetworkMonitor {
 
       this.debug(`\nExit code ${exitCode}`)
       if (options.exit) {
+        if (this.exitCallback !== undefined) {
+          this.exitCallback()
+        }
+
         // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
         process.exit()
       }
@@ -447,11 +456,7 @@ export class NetworkMonitor {
     }
   }
 
-  filterTransaction(
-    job: BlockJob,
-    transaction: ethers.Transaction,
-    interestingTransactions: ethers.Transaction[],
-  ): void {
+  filterTransaction(job: BlockJob, transaction: ethers.providers.TransactionResponse, interestingTransactions: ethers.providers.TransactionResponse[]): void {
     const to: string = transaction.to?.toLowerCase() || ''
     const from: string = transaction.from?.toLowerCase() || ''
     for (const filter of this.filters) {
@@ -485,7 +490,7 @@ export class NetworkMonitor {
         this.structuredLog(job.network, `Zero block transactions for block ${job.block}`)
       }
 
-      const interestingTransactions: ethers.Transaction[] = []
+      const interestingTransactions: ethers.providers.TransactionResponse[] = []
       for (let i = 0, l = block.transactions.length; i < l; i++) {
         this.filterTransaction(job, block.transactions[i], interestingTransactions)
       }
