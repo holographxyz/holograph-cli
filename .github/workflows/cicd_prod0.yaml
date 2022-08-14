@@ -40,6 +40,7 @@ env:
 on:
   push:
     branches:
+      - 'holocli' #deleteme
       - 'develop' #deleteme
 ## notice: the trigger
 #on:
