@@ -342,44 +342,54 @@ export default class Analyze extends Command {
     let operatorJobHash: string
     let index: number
     let operatorJob: AvailableJob
+    let receipt: ethers.ContractReceipt
     switch (parsedTransaction.name) {
       case 'executeJob':
-        this.networkMonitor.structuredLog(
-          network,
-          `Bridge-In event captured: ${parsedTransaction.name} -->> ${parsedTransaction.args}`,
-        )
-        operatorJobHash = ethers.utils.keccak256(parsedTransaction.args._payload)
-        index = (operatorJobHash in this.operatorJobIndexMap) ? this.operatorJobIndexMap[operatorJobHash] : -1
-        operatorJob = index >= 0 ? this.transactionLogs[index] as AvailableJob : {completed: false} as AvailableJob
-        operatorJob.logType = LogType.AvailableJob
-        operatorJob.operatorTx = transaction.hash
-        operatorJob.operatorBlock = transaction.blockNumber!
-        // we mark the job as completed since the bridge job is done
-        operatorJob.completed = true
-        bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
-          data: parsedTransaction.args._payload,
-          value: ethers.BigNumber.from('0'),
-        })
-        switch (bridgeTransaction.name) {
-          case 'deployIn':
-            operatorJob.jobType = TransactionType.deploy
-            break
-          case 'erc20in':
-            operatorJob.jobType = TransactionType.erc20
-            break
-          case 'erc721in':
-            operatorJob.jobType = TransactionType.erc721
-            break
-          default:
-            operatorJob.jobType = TransactionType.unknown
-            break
+        receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+        if (receipt === null) {
+          throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
 
-        this.manageOperatorJobMaps(index, operatorJobHash, operatorJob)
-        this.networkMonitor.structuredLog(
-          network,
-          `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
-        )
+        // make sure the transaction has succeeded before trying to process it
+        if (receipt.status === 1) {
+          this.networkMonitor.structuredLog(
+            network,
+            `Bridge-In event captured: ${parsedTransaction.name} -->> ${parsedTransaction.args}`,
+          )
+          operatorJobHash = ethers.utils.keccak256(parsedTransaction.args._payload)
+          index = (operatorJobHash in this.operatorJobIndexMap) ? this.operatorJobIndexMap[operatorJobHash] : -1
+          operatorJob = index >= 0 ? this.transactionLogs[index] as AvailableJob : {completed: false} as AvailableJob
+          operatorJob.logType = LogType.AvailableJob
+          operatorJob.operatorTx = transaction.hash
+          operatorJob.operatorBlock = transaction.blockNumber!
+          // we mark the job as completed since the bridge job is done
+          operatorJob.completed = true
+          bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
+            data: parsedTransaction.args._payload,
+            value: ethers.BigNumber.from('0'),
+          })
+          switch (bridgeTransaction.name) {
+            case 'deployIn':
+              operatorJob.jobType = TransactionType.deploy
+              break
+            case 'erc20in':
+              operatorJob.jobType = TransactionType.erc20
+              break
+            case 'erc721in':
+              operatorJob.jobType = TransactionType.erc721
+              break
+            default:
+              operatorJob.jobType = TransactionType.unknown
+              break
+          }
+
+          this.manageOperatorJobMaps(index, operatorJobHash, operatorJob)
+          this.networkMonitor.structuredLog(
+            network,
+            `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
+          )
+        }
+
         break
       default:
         this.networkMonitor.structuredLog(network, `Unknown Bridge function executed in tx: ${transaction.hash}`)

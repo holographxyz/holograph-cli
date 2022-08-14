@@ -130,66 +130,69 @@ export default class Propagator extends Command {
     Promise.resolve()
   }
 
-  async processTransactions(job: BlockJob, transactions: ethers.Transaction[]): Promise<void> {
+  async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
-        const receipt = await this.networkMonitor.providers[job.network].getTransactionReceipt(
-          transaction.hash as string,
-        )
-        if (receipt === null) {
-          throw new Error(`Could not get receipt for ${transaction.hash}`)
-        }
-
-        this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${receipt.blockNumber}`)
-        if (transaction.to?.toLowerCase() === this.networkMonitor.factoryAddress) {
-          this.handleContractDeployedEvents(transaction, receipt, job.network)
+        this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${transaction.blockNumber}`)
+        const to: string | undefined = transaction.to?.toLowerCase()
+        if (to === this.networkMonitor.factoryAddress) {
+          await this.handleContractDeployedEvents(transaction, job.network)
+        } else {
+          this.networkMonitor.structuredLog(
+            job.network,
+            `Function processTransactions stumbled on an unknown transaction ${transaction.hash}`,
+          )
         }
       }
     }
   }
 
-  async handleContractDeployedEvents(
-    transaction: ethers.Transaction,
-    receipt: ethers.ContractReceipt,
-    network: string,
-  ): Promise<void> {
-    this.networkMonitor.structuredLog(
-      network,
-      `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`,
-    )
-    const config: DeploymentConfig = decodeDeploymentConfigInput(transaction.data)
-    let event = null
-    if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        if (event === null) {
-          const log = receipt.logs[i]
-          if (log.topics.length > 0 && log.topics[0] === this.networkMonitor.targetEvents.BridgeableContractDeployed) {
-            event = log.topics
-            break
-          } else {
-            this.networkMonitor.structuredLog(
-              network,
-              `BridgeableContractDeployed event not found in ${transaction.hash}`,
-            )
+  async handleContractDeployedEvents(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
+    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    if (receipt === null) {
+      throw new Error(`Could not get receipt for ${transaction.hash}`)
+    }
+
+    // make sure the transaction has succeeded before trying to process it
+    if (receipt.status === 1) {
+      this.networkMonitor.structuredLog(
+        network,
+        `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`,
+      )
+      const config: DeploymentConfig = decodeDeploymentConfigInput(transaction.data)
+      let event = null
+      if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
+        for (let i = 0, l = receipt.logs.length; i < l; i++) {
+          if (event === null) {
+            const log = receipt.logs[i]
+            if (log.topics.length > 0 && log.topics[0] === this.networkMonitor.targetEvents.BridgeableContractDeployed) {
+              event = log.topics
+              break
+            } else {
+              this.networkMonitor.structuredLog(
+                network,
+                `BridgeableContractDeployed event not found in ${transaction.hash}`,
+              )
+            }
           }
         }
-      }
 
-      if (event) {
-        const deploymentAddress = '0x' + event[1].slice(26)
-        this.networkMonitor.structuredLog(
-          network,
-          `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-            `Wallet that deployed the collection is ${transaction.from}\n` +
-            `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
-            `The transaction hash is: ${transaction.hash}\n`,
-        )
-        if (
-          this.operatorMode !== OperatorMode.listen &&
-          !this.crossDeployments.includes(deploymentAddress.toLowerCase())
-        ) {
-          await this.executePayload(network, config, deploymentAddress)
+        if (event) {
+          const deploymentAddress = '0x' + event[1].slice(26)
+          this.networkMonitor.structuredLog(
+            network,
+            `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
+              `Wallet that deployed the collection is ${transaction.from}\n` +
+              `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
+              `The transaction hash is: ${transaction.hash}\n`,
+          )
+          if (
+            this.operatorMode !== OperatorMode.listen &&
+            !this.crossDeployments.includes(deploymentAddress.toLowerCase())
+          ) {
+            await this.executePayload(network, config, deploymentAddress)
+          }
         }
       }
     }
