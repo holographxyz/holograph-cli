@@ -137,32 +137,33 @@ export default class Indexer extends Command {
         const to: string | undefined = transaction.to?.toLowerCase()
         const from: string | undefined = transaction.from?.toLowerCase()
         switch (to) {
-        case this.networkMonitor.factoryAddress: {
-          await this.handleContractDeployedEvent(transaction, job.network)
+          case this.networkMonitor.factoryAddress: {
+            await this.handleContractDeployedEvent(transaction, job.network)
 
-        break;
-        }
+            break
+          }
 
-        case this.networkMonitor.bridgeAddress: {
-          await this.handleBridgeOutEvent(transaction, job.network)
+          case this.networkMonitor.bridgeAddress: {
+            await this.handleBridgeOutEvent(transaction, job.network)
 
-        break;
-        }
+            break
+          }
 
-        case this.networkMonitor.operatorAddress: {
-          await this.handleBridgeInEvent(transaction, job.network)
+          case this.networkMonitor.operatorAddress: {
+            await this.handleBridgeInEvent(transaction, job.network)
 
-        break;
-        }
+            break
+          }
 
-        default: if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
-          await this.handleAvailableOperatorJobEvent(transaction, job.network)
-        } else {
-          this.networkMonitor.structuredLog(
-            job.network,
-            `Function processTransactions stumbled on an unknown transaction ${transaction.hash}`,
-          )
-        }
+          default:
+            if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
+              await this.handleAvailableOperatorJobEvent(transaction, job.network)
+            } else {
+              this.networkMonitor.structuredLog(
+                job.network,
+                `Function processTransactions stumbled on an unknown transaction ${transaction.hash}`,
+              )
+            }
         }
       }
     }
@@ -193,16 +194,14 @@ export default class Indexer extends Command {
     }
 
     if (receipt.status === 1) {
-      this.networkMonitor.structuredLog(
-        network,
-        `Checking if a bridge request was made at tx: ${transaction.hash}`,
-      )
+      this.networkMonitor.structuredLog(network, `Checking if a bridge request was made at tx: ${transaction.hash}`)
       const operatorJobPayload = this.networkMonitor.decodePacketEvent(receipt)
       const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract cross-chain packet for ${transaction.hash}`)
       } else {
-        const bridgeTransaction: ethers.utils.TransactionDescription = this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
+        const bridgeTransaction: ethers.utils.TransactionDescription =
+          this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
         switch (bridgeTransaction.name) {
           case 'deployOut':
             // cross-chain contract deployment
@@ -227,7 +226,8 @@ export default class Indexer extends Command {
   }
 
   async handleBridgeInEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const parsedTransaction: ethers.utils.TransactionDescription = this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
+    const parsedTransaction: ethers.utils.TransactionDescription =
+      this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
     let bridgeTransaction: ethers.utils.TransactionDescription
     let operatorJobPayload: string
     let operatorJobHash: string
@@ -291,7 +291,10 @@ export default class Indexer extends Command {
     }
   }
 
-  async handleAvailableOperatorJobEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
+  async handleAvailableOperatorJobEvent(
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+  ): Promise<void> {
     const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
@@ -310,13 +313,19 @@ export default class Indexer extends Command {
       } else {
         this.networkMonitor.structuredLog(
           network,
-          `HolographOperator received a new bridge job on ${capitalize(network)}\nThe job payload hash is ${operatorJobHash}\nThe job payload is ${operatorJobPayload}\n`,
+          `HolographOperator received a new bridge job on ${capitalize(
+            network,
+          )}\nThe job payload hash is ${operatorJobHash}\nThe job payload is ${operatorJobPayload}\n`,
         )
       }
     }
   }
 
-  async updateContractDB(transaction: ethers.providers.TransactionResponse, network: string, deploymentInfo: string[]): Promise<void> {
+  async updateContractDB(
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+    deploymentInfo: string[],
+  ): Promise<void> {
     const config = decodeDeploymentConfigInput(transaction.data)
     const deploymentAddress = deploymentInfo[0]
     this.networkMonitor.structuredLog(
@@ -333,10 +342,7 @@ export default class Indexer extends Command {
       `Waiting ${this.DELAY / 1000} seconds before trying to index collection ${deploymentAddress}`,
     )
     await sleep(this.DELAY)
-    this.networkMonitor.structuredLog(
-      network,
-      `API: Requesting to get Collection with address ${deploymentAddress}`,
-    )
+    this.networkMonitor.structuredLog(network, `API: Requesting to get Collection with address ${deploymentAddress}`)
     let res
     try {
       res = await axios.get(`${this.baseUrl}/v1/collections/contract/${deploymentAddress}`, {
@@ -389,7 +395,11 @@ export default class Indexer extends Command {
     }
   }
 
-  async updateContractBridgeDB(transaction: ethers.providers.TransactionResponse, network: string, deploymentInfo: string[]): Promise<void> {
+  async updateContractBridgeDB(
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+    deploymentInfo: string[],
+  ): Promise<void> {
     const config = decodeDeploymentConfig(transaction.data)
     const deploymentAddress = deploymentInfo[0]
     this.networkMonitor.structuredLog(
@@ -458,11 +468,14 @@ export default class Indexer extends Command {
     } catch (error: any) {
       this.networkMonitor.structuredLog(network, `Failed to update the Holograph database ${deploymentAddress}`)
       this.networkMonitor.structuredLogError(network, error, deploymentAddress)
-
     }
   }
 
-  async updateNFTBridgeDB(transaction: ethers.providers.TransactionResponse, network: string, transferInfo: string[]): Promise<void> {
+  async updateNFTBridgeDB(
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+    transferInfo: string[],
+  ): Promise<void> {
     const tokenId = transferInfo[2]
     const contractAddress = transferInfo[3]
 

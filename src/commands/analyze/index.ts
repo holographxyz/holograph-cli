@@ -126,7 +126,7 @@ export default class Analyze extends Command {
 
     this.outputFile = flags.output as string
     if (await fs.pathExists(this.outputFile)) {
-      this.transactionLogs = await fs.readJson(this.outputFile) as (ContractDeployment | AvailableJob)[]
+      this.transactionLogs = (await fs.readJson(this.outputFile)) as (ContractDeployment | AvailableJob)[]
       let i = 0
       for (const logRaw of this.transactionLogs) {
         if (logRaw.logType === LogType.AvailableJob) {
@@ -260,14 +260,17 @@ export default class Analyze extends Command {
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract cross-chain packet for ${transaction.hash}`)
       } else {
-        const index: number = (operatorJobHash in this.operatorJobIndexMap) ? this.operatorJobIndexMap[operatorJobHash] : -1
-        const operatorJob: AvailableJob = index >= 0 ? this.transactionLogs[index] as AvailableJob : {completed: false} as AvailableJob
+        const index: number =
+          operatorJobHash in this.operatorJobIndexMap ? this.operatorJobIndexMap[operatorJobHash] : -1
+        const operatorJob: AvailableJob =
+          index >= 0 ? (this.transactionLogs[index] as AvailableJob) : ({completed: false} as AvailableJob)
         operatorJob.logType = LogType.AvailableJob
         operatorJob.jobHash = operatorJobHash
         operatorJob.originTx = transaction.hash
         operatorJob.originNetwork = network
         operatorJob.originBlock = transaction.blockNumber!
-        const parsedTransaction: ethers.utils.TransactionDescription = this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
+        const parsedTransaction: ethers.utils.TransactionDescription =
+          this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
         switch (parsedTransaction.name) {
           case 'deployOut':
             operatorJob.jobType = TransactionType.deploy
@@ -303,7 +306,8 @@ export default class Analyze extends Command {
   }
 
   async handleBridgeInEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const parsedTransaction: ethers.utils.TransactionDescription = this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
+    const parsedTransaction: ethers.utils.TransactionDescription =
+      this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
     let bridgeTransaction: ethers.utils.TransactionDescription
     let operatorJobHash: string
     let index: number
@@ -323,8 +327,9 @@ export default class Analyze extends Command {
             `Bridge-In event captured: ${parsedTransaction.name} -->> ${parsedTransaction.args}`,
           )
           operatorJobHash = ethers.utils.keccak256(parsedTransaction.args._payload)
-          index = (operatorJobHash in this.operatorJobIndexMap) ? this.operatorJobIndexMap[operatorJobHash] : -1
-          operatorJob = index >= 0 ? this.transactionLogs[index] as AvailableJob : {completed: false} as AvailableJob
+          index = operatorJobHash in this.operatorJobIndexMap ? this.operatorJobIndexMap[operatorJobHash] : -1
+          operatorJob =
+            index >= 0 ? (this.transactionLogs[index] as AvailableJob) : ({completed: false} as AvailableJob)
           operatorJob.logType = LogType.AvailableJob
           operatorJob.operatorTx = transaction.hash
           operatorJob.operatorBlock = transaction.blockNumber!
@@ -363,7 +368,10 @@ export default class Analyze extends Command {
     }
   }
 
-  async handleAvailableOperatorJobEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
+  async handleAvailableOperatorJobEvent(
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+  ): Promise<void> {
     const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
@@ -376,8 +384,10 @@ export default class Analyze extends Command {
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract relayer available job for ${transaction.hash}`)
       } else {
-        const index: number = (operatorJobHash in this.operatorJobIndexMap) ? this.operatorJobIndexMap[operatorJobHash] : -1
-        const operatorJob: AvailableJob = index >= 0 ? this.transactionLogs[index] as AvailableJob : {} as AvailableJob
+        const index: number =
+          operatorJobHash in this.operatorJobIndexMap ? this.operatorJobIndexMap[operatorJobHash] : -1
+        const operatorJob: AvailableJob =
+          index >= 0 ? (this.transactionLogs[index] as AvailableJob) : ({} as AvailableJob)
         operatorJob.logType = LogType.AvailableJob
         operatorJob.jobHash = operatorJobHash
         operatorJob.tx = transaction.hash
@@ -411,8 +421,7 @@ export default class Analyze extends Command {
       return true
     }
 
-      this.networkMonitor.structuredLog(network, `Transaction: ${transactionHash} job needs to be done`)
-      return false
-
+    this.networkMonitor.structuredLog(network, `Transaction: ${transactionHash} job needs to be done`)
+    return false
   }
 }
