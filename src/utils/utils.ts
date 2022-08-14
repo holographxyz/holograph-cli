@@ -12,7 +12,7 @@ function capitalize(input: string): string {
 }
 
 // eslint-disable-next-line no-promise-executor-return
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const sleep = (ms: number): Promise<unknown> => new Promise(resolve => setTimeout(resolve, ms))
 
 const webSocketConfig = {
   reconnect: {

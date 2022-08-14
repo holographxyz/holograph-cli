@@ -456,7 +456,11 @@ export class NetworkMonitor {
     }
   }
 
-  filterTransaction(job: BlockJob, transaction: ethers.providers.TransactionResponse, interestingTransactions: ethers.providers.TransactionResponse[]): void {
+  filterTransaction(
+    job: BlockJob,
+    transaction: ethers.providers.TransactionResponse,
+    interestingTransactions: ethers.providers.TransactionResponse[],
+  ): void {
     const to: string = transaction.to?.toLowerCase() || ''
     const from: string = transaction.from?.toLowerCase() || ''
     for (const filter of this.filters) {
@@ -566,5 +570,98 @@ export class NetworkMonitor {
         capitalize(network),
       )}] [error] -> ${errorMessage}`,
     )
+  }
+
+  static iface: ethers.utils.Interface = new ethers.utils.Interface([])
+  static packetEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
+    'Packet(uint16 chainId, bytes payload)',
+  )
+
+  static transferEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
+    'Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId)',
+  )
+
+  static availableJobEventFragment: ethers.utils.EventFragment =
+    ethers.utils.EventFragment.from('AvailableJob(bytes payload)')
+
+  static bridgeableContractDeployedEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
+    'BridgeableContractDeployed(address indexed contractAddress, bytes32 indexed hash)',
+  )
+
+  decodePacketEvent(receipt: ethers.ContractReceipt): string | undefined {
+    const toFind = this.operatorAddress.slice(2, 42)
+    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+      for (let i = 0, l = receipt.logs.length; i < l; i++) {
+        const log = receipt.logs[i]
+        if (log.topics[0] === this.targetEvents.Packet) {
+          const packetPayload = NetworkMonitor.iface.decodeEventLog(
+            NetworkMonitor.packetEventFragment,
+            log.data,
+            log.topics,
+          )[1] as string
+          if (packetPayload.indexOf(toFind) > 0) {
+            return '0x' + packetPayload.split(this.operatorAddress.slice(2, 42).repeat(2))[1]
+          }
+        }
+      }
+    }
+
+    return undefined
+  }
+
+  decodeTransferEvent(receipt: ethers.ContractReceipt): string[] | undefined {
+    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+      for (let i = 0, l = receipt.logs.length; i < l; i++) {
+        const log = receipt.logs[i]
+        if (log.topics[0] === this.targetEvents.Transfer) {
+          const event: string[] = NetworkMonitor.iface.decodeEventLog(
+            NetworkMonitor.transferEventFragment,
+            log.data,
+            log.topics,
+          ) as string[]
+          event.push(log.address.toLowerCase())
+          return event
+        }
+      }
+    }
+
+    return undefined
+  }
+
+  decodeAvailableJobEvent(receipt: ethers.ContractReceipt): string | undefined {
+    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+      for (let i = 0, l = receipt.logs.length; i < l; i++) {
+        const log = receipt.logs[i]
+        if (log.address.toLowerCase() === this.operatorAddress && log.topics[0] === this.targetEvents.AvailableJob) {
+          return NetworkMonitor.iface.decodeEventLog(
+            NetworkMonitor.availableJobEventFragment,
+            log.data,
+            log.topics,
+          )[0] as string
+        }
+      }
+    }
+
+    return undefined
+  }
+
+  decodeBridgeableContractDeployedEvent(receipt: ethers.ContractReceipt): string[] | undefined {
+    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+      for (let i = 0, l = receipt.logs.length; i < l; i++) {
+        const log = receipt.logs[i]
+        if (
+          log.address.toLowerCase() === this.factoryAddress &&
+          log.topics[0] === this.targetEvents.BridgeableContractDeployed
+        ) {
+          return NetworkMonitor.iface.decodeEventLog(
+            NetworkMonitor.bridgeableContractDeployedEventFragment,
+            log.data,
+            log.topics,
+          ) as string[]
+        }
+      }
+    }
+
+    return undefined
   }
 }

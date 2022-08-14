@@ -60,41 +60,6 @@ export default class Analyze extends Command {
     }),
   }
 
-  static iface: ethers.utils.Interface = new ethers.utils.Interface([])
-  static packetEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from('Packet(uint16 chainId, bytes payload)')
-  static availableJobEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from('AvailableJob(bytes payload)')
-
-  decodePacketEvent(receipt: ethers.ContractReceipt): string | undefined {
-    const toFind = this.networkMonitor.operatorAddress.slice(2, 42)
-    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        const log = receipt.logs[i]
-        if (log.topics[0] === this.networkMonitor.targetEvents.Packet) {
-          const packetPayload = Analyze.iface.decodeEventLog(Analyze.packetEventFragment, log.data, log.topics)[1] as string
-          if (packetPayload.indexOf(toFind) > 0) {
-            const payload = '0x' + packetPayload.split(this.networkMonitor.operatorAddress.slice(2, 42).repeat(2))[1]
-            return ethers.utils.keccak256(payload)
-          }
-        }
-      }
-    }
-
-    return undefined
-  }
-
-  decodeAvailableJobEvent(receipt: ethers.ContractReceipt): string | undefined {
-    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        const log = receipt.logs[i]
-        if (log.address.toLowerCase() === this.networkMonitor.operatorAddress && log.topics[0] === this.networkMonitor.targetEvents.AvailableJob) {
-          return Analyze.iface.decodeEventLog(Analyze.availableJobEventFragment, log.data, log.topics)[0] as string
-        }
-      }
-    }
-
-    return undefined
-  }
-
   outputFile!: string
   collectionMap: {[key: string]: boolean} = {}
   operatorJobIndexMap: {[key: string]: number} = {}
@@ -161,7 +126,7 @@ export default class Analyze extends Command {
 
     this.outputFile = flags.output as string
     if (await fs.pathExists(this.outputFile)) {
-      this.transactionLogs = await fs.readJson(this.outputFile) as (ContractDeployment | AvailableJob)[]
+      this.transactionLogs = (await fs.readJson(this.outputFile)) as (ContractDeployment | AvailableJob)[]
       let i = 0
       for (const logRaw of this.transactionLogs) {
         if (logRaw.logType === LogType.AvailableJob) {
@@ -290,18 +255,22 @@ export default class Analyze extends Command {
 
     // make sure the transaction has succeeded before trying to process it
     if (receipt.status === 1) {
-      const operatorJobHash = this.decodePacketEvent(receipt)
+      const operatorJobPayload = this.networkMonitor.decodePacketEvent(receipt)
+      const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract cross-chain packet for ${transaction.hash}`)
       } else {
-        const index: number = (operatorJobHash in this.operatorJobIndexMap) ? this.operatorJobIndexMap[operatorJobHash] : -1
-        const operatorJob: AvailableJob = index >= 0 ? this.transactionLogs[index] as AvailableJob : {completed: false} as AvailableJob
+        const index: number =
+          operatorJobHash in this.operatorJobIndexMap ? this.operatorJobIndexMap[operatorJobHash] : -1
+        const operatorJob: AvailableJob =
+          index >= 0 ? (this.transactionLogs[index] as AvailableJob) : ({completed: false} as AvailableJob)
         operatorJob.logType = LogType.AvailableJob
         operatorJob.jobHash = operatorJobHash
         operatorJob.originTx = transaction.hash
         operatorJob.originNetwork = network
         operatorJob.originBlock = transaction.blockNumber!
-        const parsedTransaction: ethers.utils.TransactionDescription = this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
+        const parsedTransaction: ethers.utils.TransactionDescription =
+          this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
         switch (parsedTransaction.name) {
           case 'deployOut':
             operatorJob.jobType = TransactionType.deploy
@@ -337,49 +306,61 @@ export default class Analyze extends Command {
   }
 
   async handleBridgeInEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const parsedTransaction: ethers.utils.TransactionDescription = this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
+    const parsedTransaction: ethers.utils.TransactionDescription =
+      this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
     let bridgeTransaction: ethers.utils.TransactionDescription
     let operatorJobHash: string
     let index: number
     let operatorJob: AvailableJob
+    let receipt: ethers.ContractReceipt
     switch (parsedTransaction.name) {
       case 'executeJob':
-        this.networkMonitor.structuredLog(
-          network,
-          `Bridge-In event captured: ${parsedTransaction.name} -->> ${parsedTransaction.args}`,
-        )
-        operatorJobHash = ethers.utils.keccak256(parsedTransaction.args._payload)
-        index = (operatorJobHash in this.operatorJobIndexMap) ? this.operatorJobIndexMap[operatorJobHash] : -1
-        operatorJob = index >= 0 ? this.transactionLogs[index] as AvailableJob : {completed: false} as AvailableJob
-        operatorJob.logType = LogType.AvailableJob
-        operatorJob.operatorTx = transaction.hash
-        operatorJob.operatorBlock = transaction.blockNumber!
-        // we mark the job as completed since the bridge job is done
-        operatorJob.completed = true
-        bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
-          data: parsedTransaction.args._payload,
-          value: ethers.BigNumber.from('0'),
-        })
-        switch (bridgeTransaction.name) {
-          case 'deployIn':
-            operatorJob.jobType = TransactionType.deploy
-            break
-          case 'erc20in':
-            operatorJob.jobType = TransactionType.erc20
-            break
-          case 'erc721in':
-            operatorJob.jobType = TransactionType.erc721
-            break
-          default:
-            operatorJob.jobType = TransactionType.unknown
-            break
+        receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+        if (receipt === null) {
+          throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
 
-        this.manageOperatorJobMaps(index, operatorJobHash, operatorJob)
-        this.networkMonitor.structuredLog(
-          network,
-          `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
-        )
+        // make sure the transaction has succeeded before trying to process it
+        if (receipt.status === 1) {
+          this.networkMonitor.structuredLog(
+            network,
+            `Bridge-In event captured: ${parsedTransaction.name} -->> ${parsedTransaction.args}`,
+          )
+          operatorJobHash = ethers.utils.keccak256(parsedTransaction.args._payload)
+          index = operatorJobHash in this.operatorJobIndexMap ? this.operatorJobIndexMap[operatorJobHash] : -1
+          operatorJob =
+            index >= 0 ? (this.transactionLogs[index] as AvailableJob) : ({completed: false} as AvailableJob)
+          operatorJob.logType = LogType.AvailableJob
+          operatorJob.operatorTx = transaction.hash
+          operatorJob.operatorBlock = transaction.blockNumber!
+          // we mark the job as completed since the bridge job is done
+          operatorJob.completed = true
+          bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
+            data: parsedTransaction.args._payload,
+            value: ethers.BigNumber.from('0'),
+          })
+          switch (bridgeTransaction.name) {
+            case 'deployIn':
+              operatorJob.jobType = TransactionType.deploy
+              break
+            case 'erc20in':
+              operatorJob.jobType = TransactionType.erc20
+              break
+            case 'erc721in':
+              operatorJob.jobType = TransactionType.erc721
+              break
+            default:
+              operatorJob.jobType = TransactionType.unknown
+              break
+          }
+
+          this.manageOperatorJobMaps(index, operatorJobHash, operatorJob)
+          this.networkMonitor.structuredLog(
+            network,
+            `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
+          )
+        }
+
         break
       default:
         this.networkMonitor.structuredLog(network, `Unknown Bridge function executed in tx: ${transaction.hash}`)
@@ -387,7 +368,10 @@ export default class Analyze extends Command {
     }
   }
 
-  async handleAvailableOperatorJobEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
+  async handleAvailableOperatorJobEvent(
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+  ): Promise<void> {
     const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
@@ -395,13 +379,15 @@ export default class Analyze extends Command {
 
     // make sure the transaction has succeeded before trying to process it
     if (receipt.status === 1) {
-      const operatorJobPayload = this.decodeAvailableJobEvent(receipt)
+      const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(receipt)
       const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract relayer available job for ${transaction.hash}`)
       } else {
-        const index: number = (operatorJobHash in this.operatorJobIndexMap) ? this.operatorJobIndexMap[operatorJobHash] : -1
-        const operatorJob: AvailableJob = index >= 0 ? this.transactionLogs[index] as AvailableJob : {} as AvailableJob
+        const index: number =
+          operatorJobHash in this.operatorJobIndexMap ? this.operatorJobIndexMap[operatorJobHash] : -1
+        const operatorJob: AvailableJob =
+          index >= 0 ? (this.transactionLogs[index] as AvailableJob) : ({} as AvailableJob)
         operatorJob.logType = LogType.AvailableJob
         operatorJob.jobHash = operatorJobHash
         operatorJob.tx = transaction.hash
@@ -435,8 +421,7 @@ export default class Analyze extends Command {
       return true
     }
 
-      this.networkMonitor.structuredLog(network, `Transaction: ${transactionHash} job needs to be done`)
-      return false
-
+    this.networkMonitor.structuredLog(network, `Transaction: ${transactionHash} job needs to be done`)
+    return false
   }
 }
