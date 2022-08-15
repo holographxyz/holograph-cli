@@ -13,7 +13,7 @@ env:
   #
   PROD_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.14 # NOTICE
   PROD_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.9  # NOTICE
-  PROD_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.9  # NOTICE
+  PROD_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.10  # NOTICE
   #
   CLUSTER_NAME   : prod0 # NOTICE
   AWS_KEY_ID     : ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
@@ -46,7 +46,6 @@ on:
 #on:
 #  pull_request:
 #    branches:
-#      - kabamaru # TODO - delete it to make the PR
 ##      - main
 #    types: [closed]
 
