@@ -520,7 +520,7 @@ export default class Indexer extends Command {
     network: string,
     transferInfo: string[],
   ): Promise<void> {
-    const tokenId = transferInfo[2]
+    const tokenId = ethers.BigNumber.from(transferInfo[2]).toString()
     const contractAddress = transferInfo[3]
 
     this.networkMonitor.structuredLog(
