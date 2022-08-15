@@ -619,7 +619,7 @@ export class NetworkMonitor {
             log.data,
             log.topics,
           ) as string[]
-          return this.lowerCaseAllStrings([...event, log.address])
+          return this.lowerCaseAllStrings(event, log.address)
         }
       }
     }
@@ -668,8 +668,11 @@ export class NetworkMonitor {
     return undefined
   }
 
-  lowerCaseAllStrings(input: string[]): string[] {
-    const output = [...input]
+  lowerCaseAllStrings(input: string[], add?: string): string[] {
+    let output = [...input]
+    if (add !== undefined) {
+      output.push(add)
+    }
     for (let i = 0, l = input.length; i < l; i++) {
       output[i] = input[i].toLowerCase()
     }
