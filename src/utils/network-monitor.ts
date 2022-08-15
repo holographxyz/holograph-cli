@@ -669,7 +669,7 @@ export class NetworkMonitor {
   }
 
   lowerCaseAllStrings(input: string[]): string[] {
-    let output = [...input]
+    const output = [...input]
     for (let i = 0, l = input.length; i < l; i++) {
       if (typeof input[i] === 'string') {
         output[i] = input[i].toLowerCase()
