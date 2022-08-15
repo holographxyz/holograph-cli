@@ -619,8 +619,7 @@ export class NetworkMonitor {
             log.data,
             log.topics,
           ) as string[]
-          event.push(log.address)
-          return this.lowerCaseAllStrings(event)
+          return this.lowerCaseAllStrings([...event, log.address])
         }
       }
     }

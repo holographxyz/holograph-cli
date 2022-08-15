@@ -514,7 +514,7 @@ export default class Indexer extends Command {
       'transactions' in res.data &&
       res.data.transactions.length > 0 &&
       res.data.transactions[0] !== undefined &&
-      res.data.transaction[0] < transaction.blockNumber
+      transaction.blockNumber > res.data.transaction[0] 
     */
     if (transaction.blockNumber! > res?.data?.transaction[0]) {
       this.networkMonitor.structuredLog(
