@@ -600,7 +600,7 @@ export class NetworkMonitor {
             log.topics,
           )[1] as string
           if (packetPayload.indexOf(toFind) > 0) {
-            return '0x' + packetPayload.split(this.operatorAddress.slice(2, 42).repeat(2))[1]
+            return ('0x' + packetPayload.split(this.operatorAddress.slice(2, 42).repeat(2))[1]).toLowerCase()
           }
         }
       }
@@ -619,8 +619,8 @@ export class NetworkMonitor {
             log.data,
             log.topics,
           ) as string[]
-          event.push(log.address.toLowerCase())
-          return event
+          event.push(log.address)
+          return this.lowerCaseAllStrings(event)
         }
       }
     }
@@ -633,11 +633,11 @@ export class NetworkMonitor {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
         if (log.address.toLowerCase() === this.operatorAddress && log.topics[0] === this.targetEvents.AvailableJob) {
-          return NetworkMonitor.iface.decodeEventLog(
+          return (NetworkMonitor.iface.decodeEventLog(
             NetworkMonitor.availableJobEventFragment,
             log.data,
             log.topics,
-          )[0] as string
+          )[0] as string).toLowerCase()
         }
       }
     }
@@ -653,15 +653,24 @@ export class NetworkMonitor {
           log.address.toLowerCase() === this.factoryAddress &&
           log.topics[0] === this.targetEvents.BridgeableContractDeployed
         ) {
-          return NetworkMonitor.iface.decodeEventLog(
+          return this.lowerCaseAllStrings(NetworkMonitor.iface.decodeEventLog(
             NetworkMonitor.bridgeableContractDeployedEventFragment,
             log.data,
             log.topics,
-          ) as string[]
+          ) as string[])
         }
       }
     }
 
     return undefined
+  }
+
+  lowerCaseAllStrings(input: string[]): string[] {
+    const output = [...input]
+    for (let i = 0, l: number = output.length; i < l; i++) {
+      output[i] = output[i].toLowerCase()
+    }
+
+    return output
   }
 }

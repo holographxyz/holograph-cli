@@ -1,10 +1,10 @@
 import axios from 'axios'
+import {AxiosResponse} from 'axios'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
-import networks from '../../utils/networks'
 
 import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, sleep} from '../../utils/utils'
 import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
@@ -12,6 +12,26 @@ import {startHealthcheckServer} from '../../utils/health-check-server'
 
 import dotenv from 'dotenv'
 dotenv.config()
+
+type DBJob = {
+  timestamp: number
+  network: string
+  query: string
+  message: string
+  callback: (res: AxiosResponse) => Promise<void>
+}
+
+type DBJobMap = {
+  [key: number]: DBJob[]
+}
+
+type PatchOptions = {
+  res: AxiosResponse<any>
+  network: string
+  query: string
+  data: any
+  messages: string[]
+}
 
 export default class Indexer extends Command {
   static LAST_BLOCKS_FILE_NAME = 'indexer-blocks.json'
@@ -43,6 +63,17 @@ export default class Indexer extends Command {
   operatorMode: OperatorMode = OperatorMode.listen
 
   networkMonitor!: NetworkMonitor
+  dbJobMap: DBJobMap = {}
+
+  numericSort(a: number, b: number): number {
+    return a - b;
+  }
+
+  numberfy(arr: string[]): number[] {
+    return arr.map((element: string): number => {
+      return Number.parseInt(element, 10)
+    })
+  }
 
   async run(): Promise<void> {
     this.log(`Operator command has begun!!!`)
@@ -98,6 +129,8 @@ export default class Indexer extends Command {
     if (enableHealthCheckServer) {
       startHealthcheckServer()
     }
+
+    this.processDBJobs()
   }
 
   async filterBuilder(): Promise<void> {
@@ -124,6 +157,48 @@ export default class Indexer extends Command {
       },
     ]
     Promise.resolve()
+  }
+
+  async processDBJob(timestamp: number, job: DBJob): Promise<void> {
+    this.networkMonitor.structuredLog(job.network, job.message)
+    let res: any
+    try {
+      res = await axios.get(job.query, {
+        headers: {
+          Authorization: `Bearer ${this.JWT}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      this.networkMonitor.structuredLog(job.network, `GET response ${JSON.stringify(res.data)}`)
+      await job.callback.bind(this)(res)
+      this.processDBJobs()
+    } catch (error: any) {
+      this.networkMonitor.structuredLogError(job.network, error, `Failed to GET ${job.query}`)
+      // one second interval
+      await sleep(1000)
+      this.processDBJobs(timestamp, job)
+    }
+  }
+
+  processDBJobs(timestamp?: number, job?: DBJob): void {
+    if (timestamp !== undefined && job !== undefined) {
+      this.dbJobMap[timestamp].unshift(job)
+    }
+
+    const timestamps: number[] = this.numberfy(Object.keys(this.dbJobMap))
+    if (timestamps.length > 0) {
+      timestamps.sort(this.numericSort)
+      const timestamp: number = timestamps[0]
+      if (this.dbJobMap[timestamp].length > 0) {
+        const job: DBJob = this.dbJobMap[timestamp].shift()!
+        this.processDBJob(timestamp, job)
+      } else {
+        delete this.dbJobMap[timestamp]
+        setInterval(this.processDBJobs.bind(this), 100)
+      }
+    } else {
+      setInterval(this.processDBJobs.bind(this), 100)
+    }
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
@@ -335,64 +410,49 @@ export default class Indexer extends Command {
         `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
         `The transaction hash is: ${transaction.hash}\n`,
     )
+    this.networkMonitor.structuredLog(network, 'Sending it to DBJobManager')
 
-    // First get the collection by the address (sleep for a bit to make sure the collection is indexed)
-    this.networkMonitor.structuredLog(
+    const callback = (transaction: ethers.providers.TransactionResponse, network: string, deploymentAddress: string): (res: AxiosResponse<any>) => Promise<void> => {
+      return async (res: AxiosResponse<any>): Promise<void> => {
+        const data = JSON.stringify({
+          chainId: transaction.chainId,
+          status: 'DEPLOYED',
+          salt: '0x',
+          tx: transaction.hash,
+        })
+        this.networkMonitor.structuredLog(network, `Successfully found Collection with address ${deploymentAddress}`)
+        this.networkMonitor.structuredLog(
+          network,
+          `API: Requesting to update Collection ${deploymentAddress} with id ${res?.data.id}`,
+        )
+        await this.makeDBPatch({
+          res,
+          network,
+          query: `${this.baseUrl}/v1/collections/${res?.data.id}`,
+          data,
+          messages: [
+            `PATCH response for collection ${deploymentAddress}`,
+            `Successfully updated collection ${deploymentAddress} chainId to ${transaction.chainId}`,
+            `Failed to update the Holograph database ${deploymentAddress}`,
+            deploymentAddress
+          ]
+        })
+        Promise.resolve()
+      }
+    }
+
+    const job: DBJob = {
       network,
-      `Waiting ${this.DELAY / 1000} seconds before trying to index collection ${deploymentAddress}`,
-    )
-    await sleep(this.DELAY)
-    this.networkMonitor.structuredLog(network, `API: Requesting to get Collection with address ${deploymentAddress}`)
-    let res
-    try {
-      res = await axios.get(`${this.baseUrl}/v1/collections/contract/${deploymentAddress}`, {
-        headers: {
-          Authorization: `Bearer ${this.JWT}`,
-          'Content-Type': 'application/json',
-        },
-      })
-      this.networkMonitor.structuredLog(
-        network,
-        `GET collection ${deploymentAddress} response ${JSON.stringify(res.data)}`,
-      )
-      this.networkMonitor.structuredLog(network, `Successfully found collection at ${deploymentAddress}`)
-    } catch (error: any) {
-      this.networkMonitor.structuredLog(network, `Failed to update the Holograph database for ${deploymentAddress}`)
-      this.networkMonitor.structuredLogError(network, error, deploymentAddress)
-      return
+      timestamp: transaction.timestamp!,
+      message: `API: Requesting to get Collection with address ${deploymentAddress}`,
+      query: `${this.baseUrl}/v1/collections/contract/${deploymentAddress}`,
+      callback: callback.bind(this)(transaction, network, deploymentAddress)
+    }
+    if (!(job.timestamp in this.dbJobMap)) {
+      this.dbJobMap[job.timestamp] = []
     }
 
-    // Compose request to API server to update the collection
-    const data = JSON.stringify({
-      chainId: networks[network].chain,
-      status: 'DEPLOYED',
-      salt: '0x',
-      tx: transaction.hash,
-    })
-
-    const params = {
-      headers: {
-        Authorization: `Bearer ${this.JWT}`,
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    }
-
-    this.networkMonitor.structuredLog(
-      network,
-      `API: Requesting to update Collection ${deploymentAddress} with id ${res?.data.id}`,
-    )
-    try {
-      const patchRes = await axios.patch(`${this.baseUrl}/v1/collections/${res?.data.id}`, data, params)
-      this.networkMonitor.structuredLog(network, `PATCH response ${JSON.stringify(patchRes.data)}`)
-      this.networkMonitor.structuredLog(
-        network,
-        `Successfully updated collection ${deploymentAddress} chainId to ${networks[network].chain}`,
-      )
-    } catch (error: any) {
-      this.networkMonitor.structuredLog(network, `Failed to update the Holograph database ${deploymentAddress}`)
-      this.networkMonitor.structuredLogError(network, error, deploymentAddress)
-    }
+    this.dbJobMap[job.timestamp].push(job)
   }
 
   async updateContractBridgeDB(
@@ -409,66 +469,50 @@ export default class Indexer extends Command {
         `Operator that deployed the collection is ${transaction.from}` +
         `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
     )
+    this.networkMonitor.structuredLog(network, 'Sending it to DBJobManager')
 
-    // First get the collection by the address (sleep for a bit to make sure the collection is indexed)
-    this.networkMonitor.structuredLog(
+    const callback = (transaction: ethers.providers.TransactionResponse, network: string, deploymentAddress: string): (res: AxiosResponse<any>) => Promise<void> => {
+      return async (res: AxiosResponse<any>): Promise<void> => {
+        const data = JSON.stringify({
+          chainId: transaction.chainId,
+          status: 'DEPLOYED',
+          salt: '0x',
+          tx: transaction.hash,
+        })
+        this.networkMonitor.structuredLog(network, `Successfully found Collection with address ${deploymentAddress}`)
+        this.networkMonitor.structuredLog(
+          network,
+          `API: Requesting to update Collection ${deploymentAddress} with id ${res?.data.id}`,
+        )
+
+        await this.makeDBPatch({
+          res,
+          network,
+          query: `${this.baseUrl}/v1/collections/${res?.data.id}`,
+          data,
+          messages: [
+            `PATCH response for collection ${deploymentAddress}`,
+            `Successfully updated collection ${deploymentAddress} chainId to ${transaction.chainId}`,
+            `Failed to update the Holograph database ${deploymentAddress}`,
+            deploymentAddress
+          ]
+        })
+        Promise.resolve()
+      }
+    }
+
+    const job: DBJob = {
       network,
-      `Waiting ${this.DELAY / 1000} seconds before trying to index ${deploymentAddress}`,
-    )
-    await sleep(this.DELAY)
-    this.networkMonitor.structuredLog(network, `API: Requesting to get Collection with address ${deploymentAddress}`)
-    let res
-    try {
-      res = await axios.get(`${this.baseUrl}/v1/collections/contract/${deploymentAddress}`, {
-        headers: {
-          Authorization: `Bearer ${this.JWT}`,
-          'Content-Type': 'application/json',
-        },
-      })
-      this.networkMonitor.structuredLog(
-        network,
-        `GET collection ${deploymentAddress} response ${JSON.stringify(res.data)}`,
-      )
-      this.networkMonitor.structuredLog(network, `Successfully found collection at ${deploymentAddress}`)
-    } catch (error: any) {
-      this.networkMonitor.structuredLogError(network, error, deploymentAddress)
-      return
+      timestamp: transaction.timestamp!,
+      query: `${this.baseUrl}/v1/collections/contract/${deploymentAddress}`,
+      message: `API: Requesting to get Collection with address ${deploymentAddress}`,
+      callback: callback.bind(this)(transaction, network, deploymentAddress)
+    }
+    if (!(job.timestamp in this.dbJobMap)) {
+      this.dbJobMap[job.timestamp] = []
     }
 
-    // Compose request to API server to update the collection
-    const data = JSON.stringify({
-      chainId: networks[network].chain,
-      status: 'DEPLOYED',
-      salt: '0x',
-      tx: transaction.hash,
-    })
-
-    const params = {
-      headers: {
-        Authorization: `Bearer ${this.JWT}`,
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    }
-
-    this.networkMonitor.structuredLog(
-      network,
-      `API: Requesting to update Collection ${deploymentAddress} with id ${res?.data.id}`,
-    )
-    try {
-      const patchRes = await axios.patch(`${this.baseUrl}/v1/collections/${res?.data.id}`, data, params)
-      this.networkMonitor.structuredLog(
-        network,
-        `PATCH collection ${deploymentAddress} response ${JSON.stringify(patchRes.data)}`,
-      )
-      this.networkMonitor.structuredLog(
-        network,
-        `Successfully updated collection ${deploymentAddress} and id ${res?.data.id}`,
-      )
-    } catch (error: any) {
-      this.networkMonitor.structuredLog(network, `Failed to update the Holograph database ${deploymentAddress}`)
-      this.networkMonitor.structuredLogError(network, error, deploymentAddress)
-    }
+    this.dbJobMap[job.timestamp].push(job)
   }
 
   async updateNFTBridgeDB(
@@ -479,58 +523,76 @@ export default class Indexer extends Command {
     const tokenId = transferInfo[2]
     const contractAddress = transferInfo[3]
 
-    // Index NFT
-    this.networkMonitor.structuredLog(network, `Waiting ${this.DELAY / 1000} seconds before trying to index NFT`)
-    await sleep(this.DELAY)
     this.networkMonitor.structuredLog(
       network,
-      `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
+      '\nHolographOperator executed a job which minted an ERC721 NFT\n' +
+        `Holographer minted a new NFT on ${capitalize(network)} at address ${contractAddress}\n` +
+        `The ID of the NFT is ${tokenId}\n` +
+        `Operator that minted the nft is ${transaction.from}\n`
     )
-    let res
-    try {
-      res = await axios.get(`${this.baseUrl}/v1/nfts/${contractAddress}/${tokenId}`, {
-        headers: {
-          Authorization: `Bearer ${this.JWT}`,
-          'Content-Type': 'application/json',
-        },
-      })
-      this.networkMonitor.structuredLog(
-        network,
-        `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`,
-      )
-    } catch (error: any) {
-      this.networkMonitor.structuredLog(network, error.message)
-      this.networkMonitor.structuredLogError(network, error, contractAddress)
-      return
+    this.networkMonitor.structuredLog(network, 'Sending it to DBJobManager')
+
+    const callback = (transaction: ethers.providers.TransactionResponse, network: string, contractAddress: string, tokenId: string): (res: AxiosResponse<any>) => Promise<void> => {
+      return async (res: AxiosResponse<any>): Promise<void> => {
+        const data = JSON.stringify({
+          chainId: transaction.chainId,
+          status: 'MINTED',
+          tx: transaction.hash,
+        })
+        this.networkMonitor.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
+        // Only update the database if this transaction happened in a later block than the last block we indexed
+        // NOTE: This should only be necessary for NFTs because they can only exist on one network at a time so we don't
+        //       want to update change update the database to the wrong network while the warp cron is running
+        //       if a more recent bridge event happened on chain that moved the NFT to a different network
+        if (transaction.blockNumber! > res?.data?.transaction[0]) {
+          this.networkMonitor.structuredLog(
+            network,
+            `Latest transaction in the database is more recent than this transaction. Skipping update for collection ${contractAddress} and tokeId ${tokenId}`,
+          )
+          return
+        }
+
+        this.networkMonitor.structuredLog(
+          network,
+          `API: Requesting to update NFT with collection ${contractAddress} and tokeId ${tokenId} and id ${res?.data.id}`,
+        )
+
+        await this.makeDBPatch({
+          res,
+          network,
+          query: `${this.baseUrl}/v1/nfts/${res?.data.id}`,
+          data,
+          messages: [
+            `PATCH collection ${contractAddress} tokeId ${tokenId}`,
+            `Successfully updated NFT collection ${contractAddress} and tokeId ${tokenId}`,
+            `Failed to update the database for collection ${contractAddress} and tokeId ${tokenId}`,
+            `collection ${contractAddress} and tokeId ${tokenId}`
+          ]
+        })
+        Promise.resolve()
+      }
     }
 
-    // Only update the database if this transaction happened in a later block than the last block we indexed
-    // NOTE: This should only be necessary for NFTs because they can only exist on one network at a time so we don't
-    //       want to update change update the database to the wrong network while the warp cron is running
-    //       if a more recent bridge event happened on chain that moved the NFT to a different network
-    /*
-      res !== undefined &&
-      'data' in res &&
-      'transactions' in res.data &&
-      res.data.transactions.length > 0 &&
-      res.data.transactions[0] !== undefined &&
-      res.data.transaction[0] < transaction.blockNumber
-    */
-    if (transaction.blockNumber! > res?.data?.transaction[0]) {
-      this.networkMonitor.structuredLog(
-        network,
-        `Latest transaction in the database is more recent than this transaction. Skipping update for collection ${contractAddress} and tokeId ${tokenId}`,
-      )
-      return
+    const job: DBJob = {
+      network,
+      timestamp: transaction.timestamp!,
+      query: `${this.baseUrl}/v1/nfts/${contractAddress}/${tokenId}`,
+      message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
+      callback: callback.bind(this)(transaction, network, contractAddress, tokenId)
+    }
+    if (!(job.timestamp in this.dbJobMap)) {
+      this.dbJobMap[job.timestamp] = []
     }
 
-    // Compose request to API server to update the nft
-    const data = JSON.stringify({
-      chainId: networks[network].chain,
-      status: 'MINTED',
-      tx: transaction.hash,
-    })
+    this.dbJobMap[job.timestamp].push(job)
+  }
 
+  async makeDBPatch(options: PatchOptions): Promise<void> {
+    const res = options.res
+    const network = options.network
+    const query = options.query
+    const data = options.data
+    const messages = options.messages
     const params = {
       headers: {
         Authorization: `Bearer ${this.JWT}`,
@@ -538,29 +600,18 @@ export default class Indexer extends Command {
       },
       data: data,
     }
-
-    this.networkMonitor.structuredLog(
-      network,
-      `API: Requesting to update NFT with collection ${contractAddress} and tokeId ${tokenId} and id ${res?.data.id}`,
-    )
     try {
-      const patchRes = await axios.patch(`${this.baseUrl}/v1/nfts/${res?.data.id}`, data, params)
+      const patchRes = await axios.patch(query, data, params)
       this.networkMonitor.structuredLog(
         network,
-        `PATCH collection ${contractAddress} tokeId ${tokenId} and id ${res?.data.id} response ${JSON.stringify(
+        `${messages[0]} and id ${res?.data.id} response ${JSON.stringify(
           patchRes.data,
         )}`,
       )
-      this.networkMonitor.structuredLog(
-        network,
-        `Successfully updated NFT collection ${contractAddress} and tokeId ${tokenId}`,
-      )
+      this.networkMonitor.structuredLog(network, messages[1])
     } catch (error: any) {
-      this.networkMonitor.structuredLog(
-        network,
-        `Failed to update the database for collection ${contractAddress} and tokeId ${tokenId}`,
-      )
-      this.networkMonitor.structuredLogError(network, error, `collection ${contractAddress} and tokeId ${tokenId}`)
+      this.networkMonitor.structuredLog(network, messages[2])
+      this.networkMonitor.structuredLogError(network, error, messages[3])
     }
   }
 }
