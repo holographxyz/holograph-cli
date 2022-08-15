@@ -40,7 +40,7 @@ export default class Indexer extends Command {
   BASE_URL!: string
   JWT!: string
   DELAY = 20_000
-  API_COLOR = color.keyword('orange')
+  apiColor = color.keyword('orange')
 
   operatorMode: OperatorMode = OperatorMode.listen
 
@@ -52,7 +52,7 @@ export default class Indexer extends Command {
     this.BASE_URL = flags.host
     const enableHealthCheckServer = flags.healthCheck
 
-    this.log(this.API_COLOR(`API: Authenticating with ${this.BASE_URL}`))
+    this.log(this.apiColor(`API: Authenticating with ${this.BASE_URL}`))
     let res
     try {
       res = await axios.post(`${this.BASE_URL}/v1/auth/operator`, {
@@ -387,7 +387,7 @@ export default class Indexer extends Command {
     )
     try {
       const patchRes = await axios.patch(`${this.BASE_URL}/v1/collections/${res?.data.id}`, data, params)
-      this.networkMonitor.structuredLog(network, this.API_COLOR(`API: PATCH response ${JSON.stringify(patchRes.data)}`))
+      this.networkMonitor.structuredLog(network, this.apiColor(`API: PATCH response ${JSON.stringify(patchRes.data)}`))
       this.networkMonitor.structuredLog(
         network,
         `Successfully updated collection ${deploymentAddress} chainId to ${networks[network].chain}`,
@@ -457,13 +457,13 @@ export default class Indexer extends Command {
 
     this.networkMonitor.structuredLog(
       network,
-      this.API_COLOR(`API: Requesting to update Collection ${deploymentAddress} with id ${res?.data.id}`),
+      this.apiColor(`API: Requesting to update Collection ${deploymentAddress} with id ${res?.data.id}`),
     )
     try {
       const patchRes = await axios.patch(`${this.BASE_URL}/v1/collections/${res?.data.id}`, data, params)
       this.networkMonitor.structuredLog(
         network,
-        this.API_COLOR(`API: PATCH collection ${deploymentAddress} response ${JSON.stringify(patchRes.data)}`),
+        this.apiColor(`API: PATCH collection ${deploymentAddress} response ${JSON.stringify(patchRes.data)}`),
       )
       this.networkMonitor.structuredLog(
         network,
@@ -545,7 +545,7 @@ export default class Indexer extends Command {
 
     this.networkMonitor.structuredLog(
       network,
-      this.API_COLOR(
+      this.apiColor(
         `API: Requesting to update NFT with collection ${contractAddress} and tokeId ${tokenId} and id ${res?.data.id}`,
       ),
     )
@@ -553,7 +553,7 @@ export default class Indexer extends Command {
       const patchRes = await axios.patch(`${this.BASE_URL}/v1/nfts/${res?.data.id}`, data, params)
       this.networkMonitor.structuredLog(
         network,
-        this.API_COLOR(
+        this.apiColor(
           `API: PATCH collection ${contractAddress} tokeId ${tokenId} and id ${res?.data.id} response ${JSON.stringify(
             patchRes.data,
           )}`,
