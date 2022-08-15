@@ -5,8 +5,6 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize} from '../../utils/utils'
-
 import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
@@ -122,16 +120,6 @@ export default class Operator extends Command {
         match: this.networkMonitor.LAYERZERO_RECEIVERS,
         networkDependant: true,
       },
-      {
-        type: FilterType.to,
-        match: this.networkMonitor.factoryAddress,
-        networkDependant: false,
-      },
-      {
-        type: FilterType.to,
-        match: this.networkMonitor.operatorAddress,
-        networkDependant: false,
-      },
     ]
     Promise.resolve()
   }
@@ -141,13 +129,8 @@ export default class Operator extends Command {
     if (transactions.length > 0) {
       for (const transaction of transactions) {
         this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${transaction.blockNumber}`)
-        const to: string | undefined = transaction.to?.toLowerCase()
         const from: string | undefined = transaction.from?.toLowerCase()
-        if (to === this.networkMonitor.factoryAddress) {
-          await this.handleContractDeployedEvent(transaction, job.network)
-        } else if (to === this.networkMonitor.operatorAddress) {
-          await this.handleOperatorBridgeEvent(transaction, job.network)
-        } else if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
+        if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
           await this.handleOperatorRequestEvent(transaction, job.network)
         } else {
           this.networkMonitor.structuredLog(
@@ -155,62 +138,6 @@ export default class Operator extends Command {
             `Function processTransactions stumbled on an unknown transaction ${transaction.hash}`,
           )
         }
-      }
-    }
-  }
-
-  async handleContractDeployedEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
-    if (receipt === null) {
-      throw new Error(`Could not get receipt for ${transaction.hash}`)
-    }
-
-    if (receipt.status === 1) {
-      this.networkMonitor.structuredLog(
-        network,
-        `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`,
-      )
-      const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
-      if (deploymentInfo === undefined) {
-        this.networkMonitor.structuredLog(network, `BridgeableContractDeployed event not found in ${transaction.hash}`)
-      } else {
-        const deploymentAddress = deploymentInfo[0] as string
-        const config = decodeDeploymentConfig(transaction.data)
-        this.networkMonitor.structuredLog(
-          network,
-          `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-            `Wallet that deployed the collection is ${transaction.from}\n` +
-            `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
-            `The transaction hash is: ${transaction.hash}\n`,
-        )
-      }
-    }
-  }
-
-  async handleOperatorBridgeEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
-    if (receipt === null) {
-      throw new Error(`Could not get receipt for ${transaction.hash}`)
-    }
-
-    if (receipt.status === 1) {
-      this.networkMonitor.structuredLog(
-        network,
-        `Checking if an operator executed a job to bridge a contract / collection at tx: ${transaction.hash}`,
-      )
-      const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
-      if (deploymentInfo === undefined) {
-        this.networkMonitor.structuredLog(network, 'Failed to find BridgeableContractDeployed event from operator job')
-      } else {
-        const config = decodeDeploymentConfigInput(transaction.data)
-        const deploymentAddress = deploymentInfo[0] as string
-        this.networkMonitor.structuredLog(
-          network,
-          '\nHolographOperator executed a job which bridged a collection\n' +
-            `HolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-            `Operator that deployed the collection is ${transaction.from}` +
-            `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
-        )
       }
     }
   }
