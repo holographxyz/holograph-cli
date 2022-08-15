@@ -154,7 +154,6 @@ export default class Propagator extends Command {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
 
-    // make sure the transaction has succeeded before trying to process it
     if (receipt.status === 1) {
       this.networkMonitor.structuredLog(
         network,
