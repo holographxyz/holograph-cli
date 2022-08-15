@@ -5,7 +5,7 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {decodeDeploymentConfigInput, capitalize, DeploymentConfig} from '../../utils/utils'
+import {decodeDeploymentConfig, capitalize, DeploymentConfig} from '../../utils/utils'
 
 import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
@@ -160,39 +160,24 @@ export default class Propagator extends Command {
         network,
         `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`,
       )
-      const config: DeploymentConfig = decodeDeploymentConfigInput(transaction.data)
-      let event = null
-      if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
-        for (let i = 0, l = receipt.logs.length; i < l; i++) {
-          if (event === null) {
-            const log = receipt.logs[i]
-            if (log.topics.length > 0 && log.topics[0] === this.networkMonitor.targetEvents.BridgeableContractDeployed) {
-              event = log.topics
-              break
-            } else {
-              this.networkMonitor.structuredLog(
-                network,
-                `BridgeableContractDeployed event not found in ${transaction.hash}`,
-              )
-            }
-          }
-        }
-
-        if (event) {
-          const deploymentAddress = '0x' + event[1].slice(26)
-          this.networkMonitor.structuredLog(
-            network,
-            `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-              `Wallet that deployed the collection is ${transaction.from}\n` +
-              `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
-              `The transaction hash is: ${transaction.hash}\n`,
-          )
-          if (
-            this.operatorMode !== OperatorMode.listen &&
-            !this.crossDeployments.includes(deploymentAddress.toLowerCase())
-          ) {
-            await this.executePayload(network, config, deploymentAddress)
-          }
+      const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
+      if (deploymentInfo === undefined) {
+        this.networkMonitor.structuredLog(network, `BridgeableContractDeployed event not found in ${transaction.hash}`)
+      } else {
+        const deploymentAddress = deploymentInfo[0] as string
+        const config = decodeDeploymentConfig(transaction.data)
+        this.networkMonitor.structuredLog(
+          network,
+          `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
+            `Wallet that deployed the collection is ${transaction.from}\n` +
+            `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
+            `The transaction hash is: ${transaction.hash}\n`,
+        )
+        if (
+          this.operatorMode !== OperatorMode.listen &&
+          !this.crossDeployments.includes(deploymentAddress.toLowerCase())
+        ) {
+          await this.executePayload(network, config, deploymentAddress)
         }
       }
     }
