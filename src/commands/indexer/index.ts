@@ -257,7 +257,7 @@ export default class Indexer extends Command {
       )
       const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
       if (deploymentInfo !== undefined) {
-        await this.updateContractDB(transaction, network, deploymentInfo as string[])
+        await this.updateContractDB(transaction, network, deploymentInfo as any[])
       }
     }
   }
@@ -307,8 +307,8 @@ export default class Indexer extends Command {
     let operatorJobPayload: string
     let operatorJobHash: string
     let receipt: ethers.ContractReceipt
-    let deploymentInfo: string[] | undefined
-    let transferInfo: string[] | undefined
+    let deploymentInfo: any[] | undefined
+    let transferInfo: any[] | undefined
     switch (parsedTransaction.name) {
       case 'executeJob':
         receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
@@ -332,7 +332,7 @@ export default class Indexer extends Command {
             case 'deployIn':
               deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
               if (deploymentInfo !== undefined) {
-                await this.updateContractBridgeDB(transaction, network, deploymentInfo as string[])
+                await this.updateContractBridgeDB(transaction, network, deploymentInfo as any[])
               }
 
               // cross-chain contract deployment completed
@@ -344,7 +344,7 @@ export default class Indexer extends Command {
               // erc721 token being bridged in
               transferInfo = this.networkMonitor.decodeTransferEvent(receipt)
               if (transferInfo !== undefined) {
-                await this.updateNFTBridgeDB(transaction, network, transferInfo as string[])
+                await this.updateNFTBridgeDB(transaction, network, transferInfo as any[])
               }
 
               break
@@ -399,10 +399,10 @@ export default class Indexer extends Command {
   async updateContractDB(
     transaction: ethers.providers.TransactionResponse,
     network: string,
-    deploymentInfo: string[],
+    deploymentInfo: any[],
   ): Promise<void> {
     const config = decodeDeploymentConfigInput(transaction.data)
-    const deploymentAddress = deploymentInfo[0]
+    const deploymentAddress = deploymentInfo[0] as string
     this.networkMonitor.structuredLog(
       network,
       `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
@@ -458,10 +458,10 @@ export default class Indexer extends Command {
   async updateContractBridgeDB(
     transaction: ethers.providers.TransactionResponse,
     network: string,
-    deploymentInfo: string[],
+    deploymentInfo: any[],
   ): Promise<void> {
     const config = decodeDeploymentConfig(transaction.data)
-    const deploymentAddress = deploymentInfo[0]
+    const deploymentAddress = deploymentInfo[0] as string
     this.networkMonitor.structuredLog(
       network,
       '\nHolographOperator executed a job which bridged a collection\n' +
@@ -518,10 +518,10 @@ export default class Indexer extends Command {
   async updateNFTBridgeDB(
     transaction: ethers.providers.TransactionResponse,
     network: string,
-    transferInfo: string[],
+    transferInfo: any[],
   ): Promise<void> {
-    const tokenId = ethers.BigNumber.from(transferInfo[2]).toString()
-    const contractAddress = transferInfo[3]
+    const tokenId = (transferInfo[2] as ethers.BigNumber).toString()
+    const contractAddress = transferInfo[3] as string
 
     this.networkMonitor.structuredLog(
       network,
