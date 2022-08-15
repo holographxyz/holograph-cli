@@ -618,8 +618,8 @@ export class NetworkMonitor {
             NetworkMonitor.transferEventFragment,
             log.data,
             log.topics,
-          ) as any[]
-          return this.lowerCaseAllStrings(event, log.address)
+          ) as string[]
+          return this.lowerCaseAllStrings([...event, log.address])
         }
       }
     }
@@ -659,7 +659,7 @@ export class NetworkMonitor {
               NetworkMonitor.bridgeableContractDeployedEventFragment,
               log.data,
               log.topics,
-            ) as any[],
+            ) as string[],
           )
         }
       }
@@ -668,15 +668,11 @@ export class NetworkMonitor {
     return undefined
   }
 
-  lowerCaseAllStrings(input: any[], add?: string): any[] {
-    const output = [...input]
-    if (add !== undefined) {
-      output.push(add)
-    }
-
+  lowerCaseAllStrings(input: string[]): string[] {
+    let output = [...input]
     for (let i = 0, l = input.length; i < l; i++) {
-      if (typeof(input[i]) === 'string') {
-        output[i] = (input[i] as string).toLowerCase()
+      if (typeof input[i] === 'string') {
+        output[i] = input[i].toLowerCase()
       }
     }
 
