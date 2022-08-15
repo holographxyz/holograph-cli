@@ -609,7 +609,7 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeTransferEvent(receipt: ethers.ContractReceipt): string[] | undefined {
+  decodeTransferEvent(receipt: ethers.ContractReceipt): any[] | undefined {
     if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
@@ -619,8 +619,7 @@ export class NetworkMonitor {
             log.data,
             log.topics,
           ) as string[]
-          event.push(log.address)
-          return this.lowerCaseAllStrings(event)
+          return this.lowerCaseAllStrings([...event, log.address])
         }
       }
     }
@@ -647,7 +646,7 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeBridgeableContractDeployedEvent(receipt: ethers.ContractReceipt): string[] | undefined {
+  decodeBridgeableContractDeployedEvent(receipt: ethers.ContractReceipt): any[] | undefined {
     if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
@@ -672,7 +671,9 @@ export class NetworkMonitor {
   lowerCaseAllStrings(input: string[]): string[] {
     const output = [...input]
     for (let i = 0, l = input.length; i < l; i++) {
-      output[i] = input[i].toLowerCase()
+      if (typeof input[i] === 'string') {
+        output[i] = input[i].toLowerCase()
+      }
     }
 
     return output
