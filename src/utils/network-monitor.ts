@@ -555,9 +555,9 @@ export class NetworkMonitor {
   structuredLogError(network: string, error: any, hashId: string): void {
     let errorMessage = `unknown error message found for ${hashId}`
     if (error.message) {
-      errorMessage = `${error.message} + ${hashId}`
+      errorMessage = `${error.message}: ${hashId}`
     } else if (error.reason) {
-      errorMessage = `${error.reason} + ${hashId}`
+      errorMessage = `${error.reason}: ${hashId}`
     } else if (error.error.reason) {
       errorMessage = `${error.error.reason} + ${hashId}`
     }
@@ -632,11 +632,13 @@ export class NetworkMonitor {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
         if (log.address.toLowerCase() === this.operatorAddress && log.topics[0] === this.targetEvents.AvailableJob) {
-          return (NetworkMonitor.iface.decodeEventLog(
-            NetworkMonitor.availableJobEventFragment,
-            log.data,
-            log.topics,
-          )[0] as string).toLowerCase()
+          return (
+            NetworkMonitor.iface.decodeEventLog(
+              NetworkMonitor.availableJobEventFragment,
+              log.data,
+              log.topics,
+            )[0] as string
+          ).toLowerCase()
         }
       }
     }
@@ -652,11 +654,13 @@ export class NetworkMonitor {
           log.address.toLowerCase() === this.factoryAddress &&
           log.topics[0] === this.targetEvents.BridgeableContractDeployed
         ) {
-          return this.lowerCaseAllStrings(NetworkMonitor.iface.decodeEventLog(
-            NetworkMonitor.bridgeableContractDeployedEventFragment,
-            log.data,
-            log.topics,
-          ) as string[])
+          return this.lowerCaseAllStrings(
+            NetworkMonitor.iface.decodeEventLog(
+              NetworkMonitor.bridgeableContractDeployedEventFragment,
+              log.data,
+              log.topics,
+            ) as string[],
+          )
         }
       }
     }
@@ -666,8 +670,8 @@ export class NetworkMonitor {
 
   lowerCaseAllStrings(input: string[]): string[] {
     const output = [...input]
-    for (let i = 0, l: number = output.length; i < l; i++) {
-      output[i] = output[i].toLowerCase()
+    for (let i = 0, l = input.length; i < l; i++) {
+      output[i] = input[i].toLowerCase()
     }
 
     return output
