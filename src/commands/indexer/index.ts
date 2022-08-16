@@ -11,6 +11,7 @@ import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonito
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
 import dotenv from 'dotenv'
+import color from '@oclif/color'
 dotenv.config()
 
 export default class Indexer extends Command {
@@ -36,9 +37,10 @@ export default class Indexer extends Command {
    * Indexer class variables
    */
   // API Params
-  baseUrl!: string
+  BASE_URL!: string
   JWT!: string
   DELAY = 20_000
+  apiColor = color.keyword('orange')
 
   operatorMode: OperatorMode = OperatorMode.listen
 
@@ -47,13 +49,13 @@ export default class Indexer extends Command {
   async run(): Promise<void> {
     this.log(`Operator command has begun!!!`)
     const {flags} = await this.parse(Indexer)
-    this.baseUrl = flags.host
+    this.BASE_URL = flags.host
     const enableHealthCheckServer = flags.healthCheck
 
-    this.log(`API: Authenticating with ${this.baseUrl}`)
+    this.log(this.apiColor(`API: Authenticating with ${this.BASE_URL}`))
     let res
     try {
-      res = await axios.post(`${this.baseUrl}/v1/auth/operator`, {
+      res = await axios.post(`${this.BASE_URL}/v1/auth/operator`, {
         hash: process.env.OPERATOR_API_KEY,
       })
       this.debug(JSON.stringify(res.data))
@@ -345,7 +347,7 @@ export default class Indexer extends Command {
     this.networkMonitor.structuredLog(network, `API: Requesting to get Collection with address ${deploymentAddress}`)
     let res
     try {
-      res = await axios.get(`${this.baseUrl}/v1/collections/contract/${deploymentAddress}`, {
+      res = await axios.get(`${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`, {
         headers: {
           Authorization: `Bearer ${this.JWT}`,
           'Content-Type': 'application/json',
@@ -368,6 +370,7 @@ export default class Indexer extends Command {
       status: 'DEPLOYED',
       salt: '0x',
       tx: transaction.hash,
+      blockNumber: transaction.blockNumber!,
     })
 
     const params = {
@@ -383,8 +386,8 @@ export default class Indexer extends Command {
       `API: Requesting to update Collection ${deploymentAddress} with id ${res?.data.id}`,
     )
     try {
-      const patchRes = await axios.patch(`${this.baseUrl}/v1/collections/${res?.data.id}`, data, params)
-      this.networkMonitor.structuredLog(network, `PATCH response ${JSON.stringify(patchRes.data)}`)
+      const patchRes = await axios.patch(`${this.BASE_URL}/v1/collections/${res?.data.id}`, data, params)
+      this.networkMonitor.structuredLog(network, this.apiColor(`API: PATCH response ${JSON.stringify(patchRes.data)}`))
       this.networkMonitor.structuredLog(
         network,
         `Successfully updated collection ${deploymentAddress} chainId to ${networks[network].chain}`,
@@ -419,7 +422,7 @@ export default class Indexer extends Command {
     this.networkMonitor.structuredLog(network, `API: Requesting to get Collection with address ${deploymentAddress}`)
     let res
     try {
-      res = await axios.get(`${this.baseUrl}/v1/collections/contract/${deploymentAddress}`, {
+      res = await axios.get(`${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`, {
         headers: {
           Authorization: `Bearer ${this.JWT}`,
           'Content-Type': 'application/json',
@@ -441,6 +444,7 @@ export default class Indexer extends Command {
       status: 'DEPLOYED',
       salt: '0x',
       tx: transaction.hash,
+      blockNumber: transaction.blockNumber!,
     })
 
     const params = {
@@ -453,13 +457,13 @@ export default class Indexer extends Command {
 
     this.networkMonitor.structuredLog(
       network,
-      `API: Requesting to update Collection ${deploymentAddress} with id ${res?.data.id}`,
+      this.apiColor(`API: Requesting to update Collection ${deploymentAddress} with id ${res?.data.id}`),
     )
     try {
-      const patchRes = await axios.patch(`${this.baseUrl}/v1/collections/${res?.data.id}`, data, params)
+      const patchRes = await axios.patch(`${this.BASE_URL}/v1/collections/${res?.data.id}`, data, params)
       this.networkMonitor.structuredLog(
         network,
-        `PATCH collection ${deploymentAddress} response ${JSON.stringify(patchRes.data)}`,
+        this.apiColor(`API: PATCH collection ${deploymentAddress} response ${JSON.stringify(patchRes.data)}`),
       )
       this.networkMonitor.structuredLog(
         network,
@@ -476,7 +480,7 @@ export default class Indexer extends Command {
     network: string,
     transferInfo: string[],
   ): Promise<void> {
-    const tokenId = transferInfo[2]
+    const tokenId = ethers.BigNumber.from(transferInfo[2]).toString()
     const contractAddress = transferInfo[3]
 
     // Index NFT
@@ -488,7 +492,7 @@ export default class Indexer extends Command {
     )
     let res
     try {
-      res = await axios.get(`${this.baseUrl}/v1/nfts/${contractAddress}/${tokenId}`, {
+      res = await axios.get(`${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`, {
         headers: {
           Authorization: `Bearer ${this.JWT}`,
           'Content-Type': 'application/json',
@@ -508,15 +512,14 @@ export default class Indexer extends Command {
     // NOTE: This should only be necessary for NFTs because they can only exist on one network at a time so we don't
     //       want to update change update the database to the wrong network while the warp cron is running
     //       if a more recent bridge event happened on chain that moved the NFT to a different network
-    /*
+    if (
       res !== undefined &&
-      'data' in res &&
-      'transactions' in res.data &&
+      res.data !== undefined &&
+      res.data.transactions !== undefined &&
       res.data.transactions.length > 0 &&
       res.data.transactions[0] !== undefined &&
-      res.data.transaction[0] < transaction.blockNumber
-    */
-    if (transaction.blockNumber! > res?.data?.transaction[0]) {
+      transaction.blockNumber! > res.data.transaction[0]
+    ) {
       this.networkMonitor.structuredLog(
         network,
         `Latest transaction in the database is more recent than this transaction. Skipping update for collection ${contractAddress} and tokeId ${tokenId}`,
@@ -529,6 +532,7 @@ export default class Indexer extends Command {
       chainId: networks[network].chain,
       status: 'MINTED',
       tx: transaction.hash,
+      blockNumber: transaction.blockNumber!,
     })
 
     const params = {
@@ -541,15 +545,19 @@ export default class Indexer extends Command {
 
     this.networkMonitor.structuredLog(
       network,
-      `API: Requesting to update NFT with collection ${contractAddress} and tokeId ${tokenId} and id ${res?.data.id}`,
+      this.apiColor(
+        `API: Requesting to update NFT with collection ${contractAddress} and tokeId ${tokenId} and id ${res?.data.id}`,
+      ),
     )
     try {
-      const patchRes = await axios.patch(`${this.baseUrl}/v1/nfts/${res?.data.id}`, data, params)
+      const patchRes = await axios.patch(`${this.BASE_URL}/v1/nfts/${res?.data.id}`, data, params)
       this.networkMonitor.structuredLog(
         network,
-        `PATCH collection ${contractAddress} tokeId ${tokenId} and id ${res?.data.id} response ${JSON.stringify(
-          patchRes.data,
-        )}`,
+        this.apiColor(
+          `API: PATCH collection ${contractAddress} tokeId ${tokenId} and id ${res?.data.id} response ${JSON.stringify(
+            patchRes.data,
+          )}`,
+        ),
       )
       this.networkMonitor.structuredLog(
         network,
