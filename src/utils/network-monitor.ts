@@ -266,7 +266,6 @@ export class NetworkMonitor {
   disconnectBuilder(network: string, rpcEndpoint: string, subscribe: boolean): (err: any) => void {
     return (err: any) => {
       ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
-        this.debug('onDisconnect')
         this.structuredLog(network, `WS connection was closed ${JSON.stringify(err, null, 2)}`)
         this.providers[network] = this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
         if (this.userWallet !== undefined) {
@@ -424,7 +423,7 @@ export class NetworkMonitor {
 
   blockJobMonitor = (network: string): void => {
     if (Date.now() - this.lastBlockJobDone[network] > this.blockJobThreshold) {
-      this.debug('Block Job Handler has been inactive longer than threshold time. Restarting.')
+      this.structuredLog(network, 'Block Job Handler has been inactive longer than threshold time. Restarting.')
       this.blockJobHandler(network)
     }
   }
@@ -535,7 +534,7 @@ export class NetworkMonitor {
     this.providers[network].on('block', (blockNumber: string) => {
       const block = Number.parseInt(blockNumber, 10)
       if (this.currentBlockHeight[network] !== 0 && block - this.currentBlockHeight[network] > 1) {
-        this.debug(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
+        this.structuredLog(network, `Dropped websocket connection, gotta do some catching up`)
         let latest = this.currentBlockHeight[network]
         while (block - latest > 0) {
           this.structuredLog(network, `Block ${latest} (Syncing)`)
