@@ -6,7 +6,7 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {decodeDeploymentConfigInput, capitalize, sleep} from '../../utils/utils'
+import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, sleep} from '../../utils/utils'
 import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
@@ -332,17 +332,22 @@ export default class Indexer extends Command {
             case 'deployIn':
               deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
               if (deploymentInfo !== undefined) {
-                await this.updateContractBridgeDB(transaction, network, deploymentInfo as any[], operatorJobPayload)
+                await this.updateContractBridgeDB(transaction, network, deploymentInfo as any[], bridgeTransaction.args.data)
               }
 
               // cross-chain contract deployment completed
               break
             case 'erc20in':
               // erc20 token being bridged in
+              transferInfo = this.networkMonitor.decodeErc20TransferEvent(receipt)
+              if (transferInfo !== undefined) {
+                await this.updateFTBridgeDB(transaction, network, transferInfo as any[])
+              }
+
               break
             case 'erc721in':
               // erc721 token being bridged in
-              transferInfo = this.networkMonitor.decodeTransferEvent(receipt)
+              transferInfo = this.networkMonitor.decodeErc721TransferEvent(receipt)
               if (transferInfo !== undefined) {
                 await this.updateNFTBridgeDB(transaction, network, transferInfo as any[])
               }
@@ -401,6 +406,9 @@ export default class Indexer extends Command {
     deploymentInfo: any[],
   ): Promise<void> {
     const config = decodeDeploymentConfigInput(transaction.data)
+    // here we need to extract origin chain from config
+    // to know if this is the main deployment chain for the contract or not
+    // this would allow us to update the db contract deployment tx and to set chain column
     const deploymentAddress = deploymentInfo[0] as string
     this.networkMonitor.structuredLog(
       network,
@@ -460,7 +468,10 @@ export default class Indexer extends Command {
     deploymentInfo: any[],
     payload: string,
   ): Promise<void> {
-    const config = decodeDeploymentConfigInput(payload)
+    const config = decodeDeploymentConfig(payload)
+    // here we need to extract origin chain from config
+    // to know if this is the main deployment chain for the contract or not
+    // this would allow us to update the db contract deployment tx and to set chain column
     const deploymentAddress = deploymentInfo[0] as string
     this.networkMonitor.structuredLog(
       network,
@@ -513,6 +524,14 @@ export default class Indexer extends Command {
     }
 
     this.dbJobMap[job.timestamp].push(job)
+  }
+
+  async updateFTBridgeDB(
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+    transferInfo: any[],
+  ): Promise<void> {
+    this.networkMonitor.structuredLog(network, `${transaction.hash} for ERC20 not yet managed ${JSON.stringify(transferInfo, undefined, 2)}`)
   }
 
   async updateNFTBridgeDB(

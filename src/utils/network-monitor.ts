@@ -591,7 +591,11 @@ export class NetworkMonitor {
     'Packet(uint16 chainId, bytes payload)',
   )
 
-  static transferEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
+  static erc20TransferEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
+    'Transfer(address indexed _from, address indexed _to, uint256 _value)',
+  )
+
+  static erc721TransferEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
     'Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId)',
   )
 
@@ -623,13 +627,31 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeTransferEvent(receipt: ethers.ContractReceipt): any[] | undefined {
+  decodeErc20TransferEvent(receipt: ethers.ContractReceipt): any[] | undefined {
     if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
         if (log.topics[0] === this.targetEvents.Transfer) {
           const event: string[] = NetworkMonitor.iface.decodeEventLog(
-            NetworkMonitor.transferEventFragment,
+            NetworkMonitor.erc20TransferEventFragment,
+            log.data,
+            log.topics,
+          ) as any[]
+          return this.lowerCaseAllStrings(event, log.address)
+        }
+      }
+    }
+
+    return undefined
+  }
+
+  decodeErc721TransferEvent(receipt: ethers.ContractReceipt): any[] | undefined {
+    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+      for (let i = 0, l = receipt.logs.length; i < l; i++) {
+        const log = receipt.logs[i]
+        if (log.topics[0] === this.targetEvents.Transfer) {
+          const event: string[] = NetworkMonitor.iface.decodeEventLog(
+            NetworkMonitor.erc721TransferEventFragment,
             log.data,
             log.topics,
           ) as any[]
