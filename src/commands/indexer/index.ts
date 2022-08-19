@@ -6,7 +6,7 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, sleep} from '../../utils/utils'
+import {decodeDeploymentConfigInput, capitalize, sleep} from '../../utils/utils'
 import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
@@ -332,7 +332,7 @@ export default class Indexer extends Command {
             case 'deployIn':
               deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
               if (deploymentInfo !== undefined) {
-                await this.updateContractBridgeDB(transaction, network, deploymentInfo as any[])
+                await this.updateContractBridgeDB(transaction, network, deploymentInfo as any[], operatorJobPayload)
               }
 
               // cross-chain contract deployment completed
@@ -458,8 +458,9 @@ export default class Indexer extends Command {
     transaction: ethers.providers.TransactionResponse,
     network: string,
     deploymentInfo: any[],
+    payload: string,
   ): Promise<void> {
-    const config = decodeDeploymentConfig(transaction.data)
+    const config = decodeDeploymentConfigInput(payload)
     const deploymentAddress = deploymentInfo[0] as string
     this.networkMonitor.structuredLog(
       network,

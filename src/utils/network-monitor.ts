@@ -2,6 +2,7 @@ import * as fs from 'fs-extra'
 import * as path from 'node:path'
 
 import {ethers} from 'ethers'
+import {BlockWithTransactions} from '@ethersproject/abstract-provider'
 import {Command, Flags} from '@oclif/core'
 
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
@@ -488,7 +489,21 @@ export class NetworkMonitor {
 
   async processBlock(job: BlockJob): Promise<void> {
     this.structuredLog(job.network, `Processing Block ${job.block}`)
-    const block = await this.providers[job.network].getBlockWithTransactions(job.block)
+    let block!: BlockWithTransactions
+    try {
+      block = await this.providers[job.network].getBlockWithTransactions(job.block)
+    } catch (error: any) {
+      if (error.message === 'cannot query unfinalized data') {
+        this.structuredLog(job.network, `${job.network} ${color.red('Unfinalized Data!')} ${job.block}`)
+        this.blockJobs[job.network].unshift(job)
+        this.blockJobHandler(job.network)
+        return
+      }
+
+        throw new Error(`processBlock error ${JSON.stringify(job)} ${JSON.stringify(error, undefined, 2)}`)
+
+    }
+
     if (block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
         this.structuredLog(job.network, `Zero block transactions for block ${job.block}`)

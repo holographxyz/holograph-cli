@@ -5,7 +5,7 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {decodeDeploymentConfig, capitalize, DeploymentConfig} from '../../utils/utils'
+import {decodeDeploymentConfigInput, capitalize, DeploymentConfig} from '../../utils/utils'
 
 import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
@@ -164,7 +164,7 @@ export default class Propagator extends Command {
         this.networkMonitor.structuredLog(network, `BridgeableContractDeployed event not found in ${transaction.hash}`)
       } else {
         const deploymentAddress = deploymentInfo[0] as string
-        const config = decodeDeploymentConfig(transaction.data)
+        const config = decodeDeploymentConfigInput(transaction.data)
         this.networkMonitor.structuredLog(
           network,
           `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
@@ -184,7 +184,7 @@ export default class Propagator extends Command {
 
   async deployContract(network: string, deploymentConfig: DeploymentConfig, deploymentAddress: string): Promise<void> {
     const contractCode = await this.networkMonitor.providers[network].getCode(deploymentAddress)
-    if (contractCode === '0x') {
+    if (contractCode === '0x' || contractCode === '' || contractCode === undefined) {
       const factory: ethers.Contract = this.networkMonitor.factoryContract.connect(this.networkMonitor.wallets[network])
       this.networkMonitor.structuredLog(network, `Calculating gas price for collection ${deploymentAddress}`)
       let gasLimit
