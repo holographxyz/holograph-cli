@@ -11,6 +11,7 @@ import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonito
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
 import dotenv from 'dotenv'
+import color from '@oclif/color'
 dotenv.config()
 
 type DBJob = {
@@ -56,9 +57,10 @@ export default class Indexer extends Command {
    * Indexer class variables
    */
   // API Params
-  baseUrl!: string
+  BASE_URL!: string
   JWT!: string
   DELAY = 20_000
+  apiColor = color.keyword('orange')
 
   operatorMode: OperatorMode = OperatorMode.listen
 
@@ -78,13 +80,13 @@ export default class Indexer extends Command {
   async run(): Promise<void> {
     this.log(`Operator command has begun!!!`)
     const {flags} = await this.parse(Indexer)
-    this.baseUrl = flags.host
+    this.BASE_URL = flags.host
     const enableHealthCheckServer = flags.healthCheck
 
-    this.log(`API: Authenticating with ${this.baseUrl}`)
+    this.log(this.apiColor(`API: Authenticating with ${this.BASE_URL}`))
     let res
     try {
-      res = await axios.post(`${this.baseUrl}/v1/auth/operator`, {
+      res = await axios.post(`${this.BASE_URL}/v1/auth/operator`, {
         hash: process.env.OPERATOR_API_KEY,
       })
       this.debug(JSON.stringify(res.data))
