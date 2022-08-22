@@ -115,6 +115,7 @@ export class NetworkMonitor {
   bridgeAddress!: string
   factoryAddress!: string
   operatorAddress!: string
+  registryAddress!: string
   wallets: {[key: string]: ethers.Wallet} = {}
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   abiCoder = ethers.utils.defaultAbiCoder
@@ -130,6 +131,7 @@ export class NetworkMonitor {
   bridgeContract!: ethers.Contract
   factoryContract!: ethers.Contract
   operatorContract!: ethers.Contract
+  registryContract!: ethers.Contract
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
   LAYERZERO_RECEIVERS: {[key: string]: string} = {
     rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
@@ -214,6 +216,7 @@ export class NetworkMonitor {
     this.log(`Bridge address: ${this.bridgeAddress}`)
     this.log(`Factory address: ${this.factoryAddress}`)
     this.log(`Operator address: ${this.operatorAddress}`)
+    this.log(`Registry address: ${this.registryAddress}`)
 
     if (blockJobs !== undefined) {
       this.blockJobs = blockJobs
@@ -345,6 +348,7 @@ export class NetworkMonitor {
     this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
     this.factoryAddress = (await this.holograph.getFactory()).toLowerCase()
     this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
+    this.registryAddress = (await this.holograph.getRegistry()).toLowerCase()
 
     const holographBridgeABI = await fs.readJson('./src/abi/HolographBridge.json')
     this.bridgeContract = new ethers.Contract(this.bridgeAddress, holographBridgeABI, this.providers[this.networks[0]])
@@ -360,6 +364,13 @@ export class NetworkMonitor {
     this.operatorContract = new ethers.Contract(
       this.operatorAddress,
       holographOperatorABI,
+      this.providers[this.networks[0]],
+    )
+
+    const holographRegistryABI = await fs.readJson('./src/abi/HolographRegistry.json')
+    this.registryContract = new ethers.Contract(
+      this.registryAddress,
+      holographRegistryABI,
       this.providers[this.networks[0]],
     )
   }
@@ -499,11 +510,10 @@ export class NetworkMonitor {
         return
       }
 
-        throw new Error(`processBlock error ${JSON.stringify(job)} ${JSON.stringify(error, undefined, 2)}`)
-
+      this.structuredLog(job.network, `${color.red('Errored block!')} ${job.block}`)
     }
 
-    if (block !== null && 'transactions' in block) {
+    if (block !== undefined && block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
         this.structuredLog(job.network, `Zero block transactions for block ${job.block}`)
       }
@@ -524,7 +534,7 @@ export class NetworkMonitor {
         this.blockJobHandler(job.network, job)
       }
     } else {
-      this.structuredLog(job.network, `${job.network} ${color.red('Dropped block!')} ${job.block}`)
+      this.structuredLog(job.network, `${color.red('Dropped block!')} ${job.block}`)
       this.blockJobs[job.network].unshift(job)
       this.blockJobHandler(job.network)
     }

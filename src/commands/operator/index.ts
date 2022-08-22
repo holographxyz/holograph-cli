@@ -202,6 +202,7 @@ export default class Operator extends Command {
       this.debug(jobTx)
       this.networkMonitor.structuredLog(network, `Transaction hash is ${jobTx.hash}`)
 
+      // TODO: need to run a manual confirmation script that checks for transaction to be submitted manually rather than rely on provider
       const jobReceipt = await jobTx.wait()
       this.debug(jobReceipt)
       this.networkMonitor.structuredLog(network, `Transaction ${jobTx.hash} mined and confirmed`)
