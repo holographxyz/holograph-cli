@@ -52,6 +52,7 @@
     "husky": "^8.0.1",
     "inquirer": "^8.0.0",
     "joi": "^17.6.0",
+    "node-fetch": "^3.2.10",
     "supports-color": "^9.2.2",
     "web3": "^1.7.4",
     "web3-core-helpers": "^1.7.4",

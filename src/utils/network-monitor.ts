@@ -720,9 +720,9 @@ export class NetworkMonitor {
       output.push(add)
     }
 
-    for (let i = 0, l = input.length; i < l; i++) {
-      if (typeof(input[i]) === 'string') {
-        output[i] = (input[i] as string).toLowerCase()
+    for (let i = 0, l = output.length; i < l; i++) {
+      if (typeof(output[i]) === 'string') {
+        output[i] = (output[i] as string).toLowerCase()
       }
     }
 
