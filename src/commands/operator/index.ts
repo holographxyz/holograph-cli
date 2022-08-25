@@ -5,8 +5,6 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize} from '../../utils/utils'
-
 import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
@@ -122,16 +120,6 @@ export default class Operator extends Command {
         match: this.networkMonitor.LAYERZERO_RECEIVERS,
         networkDependant: true,
       },
-      {
-        type: FilterType.to,
-        match: this.networkMonitor.factoryAddress,
-        networkDependant: false,
-      },
-      {
-        type: FilterType.to,
-        match: this.networkMonitor.operatorAddress,
-        networkDependant: false,
-      },
     ]
     Promise.resolve()
   }
@@ -141,14 +129,9 @@ export default class Operator extends Command {
     if (transactions.length > 0) {
       for (const transaction of transactions) {
         this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${transaction.blockNumber}`)
-        const to: string | undefined = transaction.to?.toLowerCase()
         const from: string | undefined = transaction.from?.toLowerCase()
-        if (to === this.networkMonitor.factoryAddress) {
-          await this.handleContractDeployedEvents(transaction, job.network)
-        } else if (to === this.networkMonitor.operatorAddress) {
-          await this.handleOperatorBridgeEvents(transaction, job.network)
-        } else if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
-          await this.handleOperatorRequestEvents(transaction, job.network)
+        if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
+          await this.handleOperatorRequestEvent(transaction, job.network)
         } else {
           this.networkMonitor.structuredLog(
             job.network,
@@ -159,137 +142,29 @@ export default class Operator extends Command {
     }
   }
 
-  async handleContractDeployedEvents(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
+  async handleOperatorRequestEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
     const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
 
-    // make sure the transaction has succeeded before trying to process it
-    if (receipt.status === 1) {
-      this.networkMonitor.structuredLog(
-        network,
-        `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`,
-      )
-      const config = decodeDeploymentConfigInput(transaction.data)
-      let event = null
-      if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
-        for (let i = 0, l = receipt.logs.length; i < l; i++) {
-          if (event === null) {
-            const log = receipt.logs[i]
-            if (log.topics.length > 0 && log.topics[0] === this.networkMonitor.targetEvents.BridgeableContractDeployed) {
-              event = log.topics
-              break
-            } else {
-              this.networkMonitor.structuredLog(
-                network,
-                `BridgeableContractDeployed event not found in ${transaction.hash}`,
-              )
-            }
-          }
-        }
-
-        if (event) {
-          const deploymentAddress = '0x' + event[1].slice(26)
-          this.networkMonitor.structuredLog(
-            network,
-            `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-              `Wallet that deployed the collection is ${transaction.from}\n` +
-              `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
-              `The transaction hash is: ${transaction.hash}\n`,
-          )
-        }
-      }
-    }
-  }
-
-  async handleOperatorBridgeEvents(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
-    if (receipt === null) {
-      throw new Error(`Could not get receipt for ${transaction.hash}`)
-    }
-
-    // make sure the transaction has succeeded before trying to process it
-    if (receipt.status === 1) {
-      this.networkMonitor.structuredLog(
-        network,
-        `Checking if an operator executed a job to bridge a contract / collection at tx: ${transaction.hash}`,
-      )
-      let event = null
-      if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
-        for (let i = 0, l = receipt.logs.length; i < l; i++) {
-          if (event === null) {
-            const log = receipt.logs[i]
-            if (log.topics.length > 0 && log.topics[0] === this.networkMonitor.targetEvents.BridgeableContractDeployed) {
-              event = log.topics
-            }
-          }
-        }
-      } else {
-        this.networkMonitor.structuredLog(network, 'Failed to find BridgeableContractDeployed event from operator job')
-      }
-
-      if (event) {
-        const deploymentInput = this.networkMonitor.abiCoder.decode(['bytes'], '0x' + transaction.data.slice(10))[0]
-        const config = decodeDeploymentConfig(
-          this.networkMonitor.abiCoder.decode(['bytes'], '0x' + deploymentInput.slice(10))[0],
-        )
-        const deploymentAddress = '0x' + event[1].slice(26)
-        this.networkMonitor.structuredLog(
-          network,
-          '\nHolographOperator executed a job which bridged a collection\n' +
-            `HolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-            `Operator that deployed the collection is ${transaction.from}` +
-            `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
-        )
-      }
-    }
-  }
-
-  async handleOperatorRequestEvents(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
-    if (receipt === null) {
-      throw new Error(`Could not get receipt for ${transaction.hash}`)
-    }
-
-    // make sure the transaction has succeeded before trying to process it
     if (receipt.status === 1) {
       this.networkMonitor.structuredLog(
         network,
         `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
       )
-      let event = null
-      if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
-        for (let i = 0, l = receipt.logs.length; i < l; i++) {
-          if (event === null) {
-            const log = receipt.logs[i]
-            if (
-              log.address.toLowerCase() === this.networkMonitor.operatorAddress &&
-              log.topics.length > 0 &&
-              log.topics[0] === this.networkMonitor.targetEvents.AvailableJob
-            ) {
-              event = log.data
-            } else {
-              this.networkMonitor.structuredLog(
-                network,
-                `LayerZero transaction is not relevant to AvailableJob event. ` +
-                  `Transaction was relayed to ${log.address} instead of ` +
-                  `The Operator at ${this.networkMonitor.operatorAddress}`,
-              )
-            }
-          }
-        }
+      const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(receipt)
+      const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
+      if (operatorJobHash === undefined) {
+        this.networkMonitor.structuredLog(network, `LayerZero Relayer sent an irrelevant job for ${transaction.hash}`)
+      } else {
+        this.networkMonitor.structuredLog(
+          network,
+          `HolographOperator received a new bridge job on ${network} with job hash: ${operatorJobHash}\n`,
+        )
 
-        if (event) {
-          const payload = this.networkMonitor.abiCoder.decode(['bytes'], event)[0]
-          this.networkMonitor.structuredLog(
-            network,
-            `HolographOperator received a new bridge job on ${network} with job payload: ${payload}\n`,
-          )
-
-          if (this.operatorMode !== OperatorMode.listen) {
-            await this.executePayload(network, payload)
-          }
+        if (this.operatorMode !== OperatorMode.listen) {
+          await this.executePayload(network, operatorJobPayload!)
         }
       }
     }
@@ -327,6 +202,7 @@ export default class Operator extends Command {
       this.debug(jobTx)
       this.networkMonitor.structuredLog(network, `Transaction hash is ${jobTx.hash}`)
 
+      // TODO: need to run a manual confirmation script that checks for transaction to be submitted manually rather than rely on provider
       const jobReceipt = await jobTx.wait()
       this.debug(jobReceipt)
       this.networkMonitor.structuredLog(network, `Transaction ${jobTx.hash} mined and confirmed`)
