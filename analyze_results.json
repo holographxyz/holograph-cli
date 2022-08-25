@@ -1,0 +1,11 @@
+[
+  {
+    "completed": false,
+    "logType": "AvailableJob",
+    "jobHash": "0x9ed0c1b35a94d172e7fcee08c62753026ea78ca4cc99c659035b3db2acd95efa",
+    "originTx": "0x4ec2f7befcb5718c975a69dcba93ec9fbd2e37a0e12a5b261357fc6628b4a2e3",
+    "originNetwork": "rinkeby",
+    "originBlock": 11248556,
+    "jobType": "erc721"
+  }
+]

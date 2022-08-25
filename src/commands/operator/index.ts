@@ -9,6 +9,7 @@ import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '.
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
 export default class Operator extends Command {
+
   static description = 'Listen for EVM events for jobs and process them'
   static examples = ['$ holo operator --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
@@ -193,19 +194,45 @@ export default class Operator extends Command {
       try {
         gasLimit = await contract.estimateGas.executeJob(payload)
       } catch (error: any) {
-        this.networkMonitor.structuredLogError(network, error, contract.address)
+        switch (error.reason) {
+        case 'execution reverted: HOLOGRAPH: already deployed': {
+          this.networkMonitor.structuredLog(network, 'HOLOGRAPH: already deployed')
+        
+        break;
+        }
+
+        case 'execution reverted: HOLOGRAPH: invalid job': {
+          this.networkMonitor.structuredLog(network, 'HOLOGRAPH: invalid job')
+        
+        break;
+        }
+
+        case 'execution reverted: HOLOGRAPH: not holographed': {
+          this.networkMonitor.structuredLog(network, 'HOLOGRAPH: not holographed')
+        
+        break;
+        }
+
+        default: {
+          this.networkMonitor.structuredLogError(network, error, contract.address)
+        }
+        }
+
+        // TODO: figure out how to display this data to front-end???
         return
       }
 
       const gasPrice = await contract.provider.getGasPrice()
-      const jobTx = await contract.executeJob(payload, {gasPrice, gasLimit})
+      const jobRawTx = await contract.populateTransaction.executeJob(payload, {gasPrice, gasLimit})
+      jobRawTx.nonce = this.networkMonitor.walletNonces[network]
+      const jobTx = await this.networkMonitor.wallets[network].sendTransaction(jobRawTx)
       this.debug(jobTx)
       this.networkMonitor.structuredLog(network, `Transaction hash is ${jobTx.hash}`)
-
-      // TODO: need to run a manual confirmation script that checks for transaction to be submitted manually rather than rely on provider
-      const jobReceipt = await jobTx.wait()
-      this.debug(jobReceipt)
-      this.networkMonitor.structuredLog(network, `Transaction ${jobTx.hash} mined and confirmed`)
+      this.networkMonitor.walletNonces[network]++
+      jobTx.wait().then((jobReceipt: ethers.providers.TransactionReceipt) => {
+        this.debug(jobReceipt)
+        this.networkMonitor.structuredLog(network, `Transaction ${jobReceipt.transactionHash} mined and confirmed`)
+      })
     } else {
       this.networkMonitor.structuredLog(network, 'Dropped potential payload to execute')
     }
