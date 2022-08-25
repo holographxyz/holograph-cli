@@ -165,6 +165,7 @@ export default class Recover extends Command {
         gasLimit = await this.operatorContract.estimateGas.executeJob(payload)
       } catch (error: any) {
         this.error(error.reason)
+        this.exit()
       }
 
       const gasPriceBase = await this.operatorContract.provider.getGasPrice()

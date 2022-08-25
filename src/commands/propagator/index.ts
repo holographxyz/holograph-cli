@@ -134,10 +134,27 @@ export default class Propagator extends Command {
       for (const data of recoveryData) {
         const network = data.chain_id === 4 ? 'rinkeby' : (data.chain_id === 43_113 ? 'mumbai' : 'fuji')
         // eslint-disable-next-line no-await-in-loop
-        const tx = await this.networkMonitor.providers[network].getTransaction(data.tx)
+        let tx = await this.networkMonitor.providers[network].getTransaction(data.tx)
         if (tx === null) {
           // we need to try alternatives
           this.networkMonitor.structuredLog(network, `${data.tx} is on wrong network`)
+          const checkNetworks: string [] = network === 'rinkeby' ? ['fuji', 'mumbai'] : (network === 'fuji' ? ['rinkeby', 'mumbai'] : ['rinkeby', 'fuji'])
+          // eslint-disable-next-line no-await-in-loop
+          tx = await this.networkMonitor.providers[checkNetworks[0]].getTransaction(data.tx)
+          if (tx === null) {
+            this.networkMonitor.structuredLog(checkNetworks[0], `${data.tx} is on wrong network`)
+            // eslint-disable-next-line no-await-in-loop
+            tx = await this.networkMonitor.providers[checkNetworks[1]].getTransaction(data.tx)
+            if (tx === null) {
+              this.networkMonitor.structuredLog(checkNetworks[1], `${data.tx} is on wrong network`)
+            } else {
+              // eslint-disable-next-line no-await-in-loop
+              await this.handleContractDeployedEvents(tx, checkNetworks[1])
+            }
+          } else {
+            // eslint-disable-next-line no-await-in-loop
+            await this.handleContractDeployedEvents(tx, checkNetworks[0])
+          }
         } else {
           // eslint-disable-next-line no-await-in-loop
           await this.handleContractDeployedEvents(tx, network)
@@ -264,43 +281,38 @@ export default class Propagator extends Command {
       )
 
       try {
-        const deployTx = await factory.deployHolographableContract(
+        const deployRawTx = await factory.populateTransaction.deployHolographableContract(
           deploymentConfig.config,
           deploymentConfig.signature,
           deploymentConfig.signer,
           {gasPrice, gasLimit},
         )
-        this.debug(JSON.stringify(deployTx, null, 2))
-
-        this.networkMonitor.structuredLog(
-          network,
-          `Transaction created with hash ${deployTx.hash} for collection ${deploymentAddress}`,
-        )
-
-        // TODO: need to run a manual confirmation script that checks for transaction to be submitted manually rather than rely on provider
-        const deployReceipt = await deployTx.wait()
-
-        this.networkMonitor.structuredLog(
-          network,
-          `Transaction minted with hash ${deployTx.hash} for collection ${deploymentAddress}`,
-        )
-        this.debug(JSON.stringify(deployReceipt, null, 2))
-        let collectionAddress
-        for (let i = 0, l = deployReceipt.logs.length; i < l; i++) {
-          const log = deployReceipt.logs[i]
-          if (
-            log.topics.length === 3 &&
-            log.topics[0] === '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b'
-          ) {
-            collectionAddress = '0x' + log.topics[1].slice(26)
-            break
+        deployRawTx.nonce = this.networkMonitor.walletNonces[network]
+        const deployTx = await this.networkMonitor.wallets[network].sendTransaction(deployRawTx)
+        this.debug(deployTx)
+        this.networkMonitor.structuredLog(network, `Transaction created with hash ${deployTx.hash} for collection ${deploymentAddress}`)
+        this.networkMonitor.walletNonces[network]++
+        deployTx.wait().then((deployReceipt: ethers.providers.TransactionReceipt) => {
+          this.debug(deployReceipt)
+          this.networkMonitor.structuredLog(network, `Transaction minted with hash ${deployReceipt.transactionHash} for collection ${deploymentAddress}`)
+          let collectionAddress
+          for (let i = 0, l = deployReceipt.logs.length; i < l; i++) {
+            const log = deployReceipt.logs[i]
+            if (
+              log.topics.length === 3 &&
+              log.topics[0] === '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b'
+            ) {
+              collectionAddress = '0x' + log.topics[1].slice(26)
+              break
+            }
           }
-        }
 
-        this.networkMonitor.structuredLog(
-          network,
-          `Successfully deployed collection ${collectionAddress} = ${deploymentAddress}`,
-        )
+          this.networkMonitor.structuredLog(
+            network,
+            `Successfully deployed collection ${collectionAddress} = ${deploymentAddress}`,
+          )
+
+        })
         return
       } catch (error: any) {
         this.networkMonitor.structuredLog(network, `Submitting tx for collection ${deploymentAddress} failed`)

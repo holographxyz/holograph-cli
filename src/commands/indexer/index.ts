@@ -14,6 +14,7 @@ import color from '@oclif/color'
 dotenv.config()
 
 type DBJob = {
+  attempts: number
   timestamp: number
   network: string
   query: string
@@ -193,7 +194,16 @@ export default class Indexer extends Command {
         this.dbJobMap[timestamp] = []
       }
 
-      this.dbJobMap[timestamp].unshift(job)
+      job.attempts += 1
+      if (job.attempts === 9) {
+        // push to end of array as a final attempt
+        this.dbJobMap[timestamp].push(job)
+      } else if (job.attempts === 10) {
+        // we have exhausted attempts, need to drop it entirely
+        this.networkMonitor.structuredLog(job.network, `Failed to execute API query ${job.query}. Arguments were ${JSON.stringify(job.arguments,undefined,2)}`)
+      } else {
+        this.dbJobMap[timestamp].unshift(job)
+      }
     }
 
     const timestamps: number[] = this.numberfy(Object.keys(this.dbJobMap))
@@ -458,6 +468,7 @@ export default class Indexer extends Command {
     this.networkMonitor.structuredLog(network, 'Sending it to DBJobManager')
 
     const job: DBJob = {
+      attempts: 0,
       network,
       timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
@@ -493,6 +504,7 @@ export default class Indexer extends Command {
     this.networkMonitor.structuredLog(network, 'Sending it to DBJobManager')
 
     const job: DBJob = {
+      attempts: 0,
       network,
       timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
@@ -572,6 +584,7 @@ export default class Indexer extends Command {
     this.networkMonitor.structuredLog(network, 'Sending it to DBJobManager')
 
     const job: DBJob = {
+      attempts: 0,
       network,
       timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,

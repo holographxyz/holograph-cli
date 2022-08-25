@@ -117,6 +117,7 @@ export class NetworkMonitor {
   operatorAddress!: string
   registryAddress!: string
   wallets: {[key: string]: ethers.Wallet} = {}
+  walletNonces: {[key: string]: number} = {}
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   abiCoder = ethers.utils.defaultAbiCoder
   networkColors: any = {}
@@ -273,6 +274,9 @@ export class NetworkMonitor {
         this.providers[network] = this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
         if (this.userWallet !== undefined) {
           this.wallets[network] = this.userWallet.connect(this.providers[network] as ethers.providers.WebSocketProvider)
+          this.wallets[network].getTransactionCount().then((nonce: number) => {
+            this.walletNonces[network] = nonce
+          })
         }
       })
     }
@@ -316,6 +320,8 @@ export class NetworkMonitor {
 
       if (this.userWallet !== undefined) {
         this.wallets[network] = this.userWallet.connect(this.providers[network])
+        // eslint-disable-next-line no-await-in-loop
+        this.walletNonces[network] = await this.wallets[network].getTransactionCount()
       }
 
       if (this.warp > 0) {
