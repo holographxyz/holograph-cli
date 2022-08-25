@@ -10,18 +10,7 @@ import {decodeDeploymentConfigInput, capitalize, DeploymentConfig} from '../../u
 import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
-type RecoveryData = {
-  // eslint-disable-next-line camelcase
-  chain_id: number
-  // eslint-disable-next-line camelcase
-  chain_ids: string
-  tx: string
-  // eslint-disable-next-line camelcase
-  contract_address: string
-}
-
 export default class Propagator extends Command {
-
   static description = 'Listen for EVM events deploys collections to ther supported networks'
   static examples = ['$ holo propagator --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
@@ -43,10 +32,6 @@ export default class Propagator extends Command {
     }),
     ...warpFlag,
     ...networkFlag,
-    recover: Flags.string({
-      description: 'Provide a JSON array of RecoveryData objects to manually ensure propagation',
-      default: '[]',
-    }),
   }
 
   crossDeployments: string[] = []
@@ -128,25 +113,6 @@ export default class Propagator extends Command {
     await this.networkMonitor.run(!(flags.warp > 0), undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
-    const recoveryData = JSON.parse(flags.recover as string) as RecoveryData[]
-    if (recoveryData.length > 0) {
-      this.log(`Manually running ${recoveryData.length} recovery jobs`)
-      for (const data of recoveryData) {
-        const network = data.chain_id === 4 ? 'rinkeby' : (data.chain_id === 43_113 ? 'mumbai' : 'fuji')
-        // eslint-disable-next-line no-await-in-loop
-        const tx = await this.networkMonitor.providers[network].getTransaction(data.tx)
-        if (tx === null) {
-          // we need to try alternatives
-          this.networkMonitor.structuredLog(network, `${data.tx} is on wrong network`)
-        } else {
-          // eslint-disable-next-line no-await-in-loop
-          await this.handleContractDeployedEvents(tx, network)
-        }
-      }
-
-      this.log('Done running recovery jobs')
-    }
-
     // Start server
     if (enableHealthCheckServer) {
       startHealthcheckServer()
@@ -188,38 +154,53 @@ export default class Propagator extends Command {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
 
+    // make sure the transaction has succeeded before trying to process it
     if (receipt.status === 1) {
       this.networkMonitor.structuredLog(
         network,
         `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`,
       )
-      const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
-      if (deploymentInfo === undefined) {
-        this.networkMonitor.structuredLog(network, `BridgeableContractDeployed event not found in ${transaction.hash}`)
-      } else {
-        const deploymentAddress = deploymentInfo[0] as string
-        const config = decodeDeploymentConfigInput(transaction.data)
-        this.networkMonitor.structuredLog(
-          network,
-          `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-            `Wallet that deployed the collection is ${transaction.from}\n` +
-            `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
-            `The transaction hash is: ${transaction.hash}\n`,
-        )
-        if (
-          this.operatorMode !== OperatorMode.listen &&
-          !this.crossDeployments.includes(deploymentAddress.toLowerCase())
-        ) {
-          await this.executePayload(network, config, deploymentAddress)
+      const config: DeploymentConfig = decodeDeploymentConfigInput(transaction.data)
+      let event = null
+      if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
+        for (let i = 0, l = receipt.logs.length; i < l; i++) {
+          if (event === null) {
+            const log = receipt.logs[i]
+            if (log.topics.length > 0 && log.topics[0] === this.networkMonitor.targetEvents.BridgeableContractDeployed) {
+              event = log.topics
+              break
+            } else {
+              this.networkMonitor.structuredLog(
+                network,
+                `BridgeableContractDeployed event not found in ${transaction.hash}`,
+              )
+            }
+          }
+        }
+
+        if (event) {
+          const deploymentAddress = '0x' + event[1].slice(26)
+          this.networkMonitor.structuredLog(
+            network,
+            `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
+              `Wallet that deployed the collection is ${transaction.from}\n` +
+              `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
+              `The transaction hash is: ${transaction.hash}\n`,
+          )
+          if (
+            this.operatorMode !== OperatorMode.listen &&
+            !this.crossDeployments.includes(deploymentAddress.toLowerCase())
+          ) {
+            await this.executePayload(network, config, deploymentAddress)
+          }
         }
       }
     }
   }
 
   async deployContract(network: string, deploymentConfig: DeploymentConfig, deploymentAddress: string): Promise<void> {
-    const contractCode = await this.networkMonitor.providers[network].getCode(deploymentAddress, 'latest')
-    const registry: ethers.Contract = this.networkMonitor.registryContract.connect(this.networkMonitor.providers[network])
-    if ((contractCode === '0x' || contractCode === '' || contractCode === undefined) && !(await registry.callStatic.isHolographedContract(deploymentAddress, { blockTag: 'latest' }))) {
+    const contractCode = await this.networkMonitor.providers[network].getCode(deploymentAddress)
+    if (contractCode === '0x') {
       const factory: ethers.Contract = this.networkMonitor.factoryContract.connect(this.networkMonitor.wallets[network])
       this.networkMonitor.structuredLog(network, `Calculating gas price for collection ${deploymentAddress}`)
       let gasLimit
@@ -277,7 +258,6 @@ export default class Propagator extends Command {
           `Transaction created with hash ${deployTx.hash} for collection ${deploymentAddress}`,
         )
 
-        // TODO: need to run a manual confirmation script that checks for transaction to be submitted manually rather than rely on provider
         const deployReceipt = await deployTx.wait()
 
         this.networkMonitor.structuredLog(

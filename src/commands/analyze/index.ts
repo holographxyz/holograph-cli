@@ -253,6 +253,7 @@ export default class Analyze extends Command {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
 
+    // make sure the transaction has succeeded before trying to process it
     if (receipt.status === 1) {
       const operatorJobPayload = this.networkMonitor.decodePacketEvent(receipt)
       const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
@@ -319,6 +320,7 @@ export default class Analyze extends Command {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
 
+        // make sure the transaction has succeeded before trying to process it
         if (receipt.status === 1) {
           this.networkMonitor.structuredLog(
             network,
@@ -331,6 +333,7 @@ export default class Analyze extends Command {
           operatorJob.logType = LogType.AvailableJob
           operatorJob.operatorTx = transaction.hash
           operatorJob.operatorBlock = transaction.blockNumber!
+          // we mark the job as completed since the bridge job is done
           operatorJob.completed = true
           bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
             data: parsedTransaction.args._payload,
@@ -374,6 +377,7 @@ export default class Analyze extends Command {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
 
+    // make sure the transaction has succeeded before trying to process it
     if (receipt.status === 1) {
       const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(receipt)
       const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
