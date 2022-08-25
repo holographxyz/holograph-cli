@@ -41,7 +41,11 @@ export interface ConfigFile {
   user: ConfigUser
 }
 
-async function tryToUnlockWallet(configFile: ConfigFile, unlockWallet: boolean, unsafePassword: string | undefined): Promise<ethers.Wallet> {
+async function tryToUnlockWallet(
+  configFile: ConfigFile,
+  unlockWallet: boolean,
+  unsafePassword: string | undefined,
+): Promise<ethers.Wallet> {
   let userWallet: ethers.Wallet | undefined
   if (unlockWallet) {
     // eslint-disable-next-line no-negated-condition
@@ -64,8 +68,7 @@ async function tryToUnlockWallet(configFile: ConfigFile, unlockWallet: boolean, 
         await inquirer.prompt([
           {
             name: 'encryptionPassword',
-            message:
-              'Please enter the password to decrypt the private key for ' + configFile.user.credentials.address,
+            message: 'Please enter the password to decrypt the private key for ' + configFile.user.credentials.address,
             type: 'password',
             validate: async (input: string) => {
               try {
@@ -98,10 +101,10 @@ export async function ensureConfigFileIsValid(
   unsafePassword: string | undefined,
   unlockWallet = false,
 ): Promise<{userWallet: ethers.Wallet; configFile: ConfigFile}> {
-  console.log ('CONFIG_FILE_NAME', CONFIG_FILE_NAME)
+  console.log('CONFIG_FILE_NAME', CONFIG_FILE_NAME)
   let configPath = configDir
-  console.log ('configDir', configDir)
-  console.log ('configPath', configPath)
+  console.log('configDir', configDir)
+  console.log('configPath', configPath)
   try {
     await fs.pathExists(configDir)
     const stats = await fs.stat(configDir)
@@ -110,7 +113,7 @@ export async function ensureConfigFileIsValid(
     }
   } catch {
     configPath = path.join(configDir, CONFIG_FILE_NAME)
-    console.log ('configPath', configPath)
+    console.log('configPath', configPath)
   }
 
   const exists = await fs.pathExists(configPath)

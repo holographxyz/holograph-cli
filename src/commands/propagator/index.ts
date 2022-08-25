@@ -21,7 +21,6 @@ type RecoveryData = {
 }
 
 export default class Propagator extends Command {
-
   static description = 'Listen for EVM events deploys collections to ther supported networks'
   static examples = ['$ holo propagator --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
@@ -132,13 +131,18 @@ export default class Propagator extends Command {
     if (recoveryData.length > 0) {
       this.log(`Manually running ${recoveryData.length} recovery jobs`)
       for (const data of recoveryData) {
-        const network = data.chain_id === 4 ? 'rinkeby' : (data.chain_id === 43_113 ? 'mumbai' : 'fuji')
+        const network = data.chain_id === 4 ? 'rinkeby' : data.chain_id === 43_113 ? 'mumbai' : 'fuji'
         // eslint-disable-next-line no-await-in-loop
         let tx = await this.networkMonitor.providers[network].getTransaction(data.tx)
         if (tx === null) {
           // we need to try alternatives
           this.networkMonitor.structuredLog(network, `${data.tx} is on wrong network`)
-          const checkNetworks: string [] = network === 'rinkeby' ? ['fuji', 'mumbai'] : (network === 'fuji' ? ['rinkeby', 'mumbai'] : ['rinkeby', 'fuji'])
+          const checkNetworks: string[] =
+            network === 'rinkeby'
+              ? ['fuji', 'mumbai']
+              : network === 'fuji'
+              ? ['rinkeby', 'mumbai']
+              : ['rinkeby', 'fuji']
           // eslint-disable-next-line no-await-in-loop
           tx = await this.networkMonitor.providers[checkNetworks[0]].getTransaction(data.tx)
           if (tx === null) {
@@ -199,7 +203,10 @@ export default class Propagator extends Command {
     }
   }
 
-  async handleContractDeployedEvents(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
+  async handleContractDeployedEvents(
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+  ): Promise<void> {
     const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
@@ -235,8 +242,13 @@ export default class Propagator extends Command {
 
   async deployContract(network: string, deploymentConfig: DeploymentConfig, deploymentAddress: string): Promise<void> {
     const contractCode = await this.networkMonitor.providers[network].getCode(deploymentAddress, 'latest')
-    const registry: ethers.Contract = this.networkMonitor.registryContract.connect(this.networkMonitor.providers[network])
-    if ((contractCode === '0x' || contractCode === '' || contractCode === undefined) && !(await registry.callStatic.isHolographedContract(deploymentAddress, { blockTag: 'latest' }))) {
+    const registry: ethers.Contract = this.networkMonitor.registryContract.connect(
+      this.networkMonitor.providers[network],
+    )
+    if (
+      (contractCode === '0x' || contractCode === '' || contractCode === undefined) &&
+      !(await registry.callStatic.isHolographedContract(deploymentAddress, {blockTag: 'latest'}))
+    ) {
       const factory: ethers.Contract = this.networkMonitor.factoryContract.connect(this.networkMonitor.wallets[network])
       this.networkMonitor.structuredLog(network, `Calculating gas price for collection ${deploymentAddress}`)
       let gasLimit
@@ -290,11 +302,17 @@ export default class Propagator extends Command {
         deployRawTx.nonce = this.networkMonitor.walletNonces[network]
         const deployTx = await this.networkMonitor.wallets[network].sendTransaction(deployRawTx)
         this.debug(deployTx)
-        this.networkMonitor.structuredLog(network, `Transaction created with hash ${deployTx.hash} for collection ${deploymentAddress}`)
+        this.networkMonitor.structuredLog(
+          network,
+          `Transaction created with hash ${deployTx.hash} for collection ${deploymentAddress}`,
+        )
         this.networkMonitor.walletNonces[network]++
         deployTx.wait().then((deployReceipt: ethers.providers.TransactionReceipt) => {
           this.debug(deployReceipt)
-          this.networkMonitor.structuredLog(network, `Transaction minted with hash ${deployReceipt.transactionHash} for collection ${deploymentAddress}`)
+          this.networkMonitor.structuredLog(
+            network,
+            `Transaction minted with hash ${deployReceipt.transactionHash} for collection ${deploymentAddress}`,
+          )
           let collectionAddress
           for (let i = 0, l = deployReceipt.logs.length; i < l; i++) {
             const log = deployReceipt.logs[i]
@@ -311,7 +329,6 @@ export default class Propagator extends Command {
             network,
             `Successfully deployed collection ${collectionAddress} = ${deploymentAddress}`,
           )
-
         })
         return
       } catch (error: any) {

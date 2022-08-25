@@ -70,7 +70,7 @@ export default class Indexer extends Command {
   dbJobMap: DBJobMap = {}
 
   numericSort(a: number, b: number): number {
-    return a - b;
+    return a - b
   }
 
   numberfy(arr: string[]): number[] {
@@ -200,7 +200,10 @@ export default class Indexer extends Command {
         this.dbJobMap[timestamp].push(job)
       } else if (job.attempts === 10) {
         // we have exhausted attempts, need to drop it entirely
-        this.networkMonitor.structuredLog(job.network, `Failed to execute API query ${job.query}. Arguments were ${JSON.stringify(job.arguments,undefined,2)}`)
+        this.networkMonitor.structuredLog(
+          job.network,
+          `Failed to execute API query ${job.query}. Arguments were ${JSON.stringify(job.arguments, undefined, 2)}`,
+        )
       } else {
         this.dbJobMap[timestamp].unshift(job)
       }
@@ -353,7 +356,12 @@ export default class Indexer extends Command {
             case 'deployIn':
               deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
               if (deploymentInfo !== undefined) {
-                await this.updateContractBridgeDB(transaction, network, deploymentInfo as any[], bridgeTransaction.args.data)
+                await this.updateContractBridgeDB(
+                  transaction,
+                  network,
+                  deploymentInfo as any[],
+                  bridgeTransaction.args.data,
+                )
               }
 
               // cross-chain contract deployment completed
@@ -421,7 +429,12 @@ export default class Indexer extends Command {
     }
   }
 
-  async updateContractDBCallback(responseData: any, transaction: ethers.providers.TransactionResponse, network: string, deploymentAddress: string): Promise<void> {
+  async updateContractDBCallback(
+    responseData: any,
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+    deploymentAddress: string,
+  ): Promise<void> {
     const data = JSON.stringify({
       chainId: transaction.chainId,
       status: 'DEPLOYED',
@@ -442,8 +455,8 @@ export default class Indexer extends Command {
         `PATCH response for collection ${deploymentAddress}`,
         `Successfully updated collection ${deploymentAddress} chainId to ${transaction.chainId}`,
         `Failed to update the Holograph database ${deploymentAddress}`,
-        deploymentAddress
-      ]
+        deploymentAddress,
+      ],
     })
     Promise.resolve()
   }
@@ -524,10 +537,19 @@ export default class Indexer extends Command {
     network: string,
     transferInfo: any[],
   ): Promise<void> {
-    this.networkMonitor.structuredLog(network, `${transaction.hash} for ERC20 not yet managed ${JSON.stringify(transferInfo, undefined, 2)}`)
+    this.networkMonitor.structuredLog(
+      network,
+      `${transaction.hash} for ERC20 not yet managed ${JSON.stringify(transferInfo, undefined, 2)}`,
+    )
   }
 
-  async updateNFTBridgeDBCallback(responseData: any, transaction: ethers.providers.TransactionResponse, network: string, contractAddress: string, tokenId: string): Promise<void> {
+  async updateNFTBridgeDBCallback(
+    responseData: any,
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+    contractAddress: string,
+    tokenId: string,
+  ): Promise<void> {
     const data = JSON.stringify({
       chainId: transaction.chainId,
       status: 'MINTED',
@@ -560,8 +582,8 @@ export default class Indexer extends Command {
         `PATCH collection ${contractAddress} tokeId ${tokenId}`,
         `Successfully updated NFT collection ${contractAddress} and tokeId ${tokenId}`,
         `Failed to update the database for collection ${contractAddress} and tokeId ${tokenId}`,
-        `collection ${contractAddress} and tokeId ${tokenId}`
-      ]
+        `collection ${contractAddress} and tokeId ${tokenId}`,
+      ],
     })
     Promise.resolve()
   }
@@ -579,7 +601,7 @@ export default class Indexer extends Command {
       '\nHolographOperator executed a job which minted an ERC721 NFT\n' +
         `Holographer minted a new NFT on ${capitalize(network)} at address ${contractAddress}\n` +
         `The ID of the NFT is ${tokenId}\n` +
-        `Operator that minted the nft is ${transaction.from}\n`
+        `Operator that minted the nft is ${transaction.from}\n`,
     )
     this.networkMonitor.structuredLog(network, 'Sending it to DBJobManager')
 
@@ -617,14 +639,12 @@ export default class Indexer extends Command {
       const patchRes = await axios.patch(query, data, params)
       this.networkMonitor.structuredLog(
         network,
-        `${messages[0]} and id ${responseData.id} response ${JSON.stringify(
-          patchRes.data,
-        )}`,
+        `${messages[0]} and id ${responseData.id} response ${JSON.stringify(patchRes.data)}`,
       )
       this.networkMonitor.structuredLog(network, messages[1])
     } catch {
-//      this.networkMonitor.structuredLog(network, messages[2])
-//      this.networkMonitor.structuredLogError(network, error, messages[3])
+      // this.networkMonitor.structuredLog(network, messages[2])
+      // this.networkMonitor.structuredLogError(network, error, messages[3])
     }
   }
 }

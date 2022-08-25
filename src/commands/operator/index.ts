@@ -9,7 +9,6 @@ import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '.
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
 export default class Operator extends Command {
-
   static description = 'Listen for EVM events for jobs and process them'
   static examples = ['$ holo operator --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
@@ -195,27 +194,27 @@ export default class Operator extends Command {
         gasLimit = await contract.estimateGas.executeJob(payload)
       } catch (error: any) {
         switch (error.reason) {
-        case 'execution reverted: HOLOGRAPH: already deployed': {
-          this.networkMonitor.structuredLog(network, 'HOLOGRAPH: already deployed')
-        
-        break;
-        }
+          case 'execution reverted: HOLOGRAPH: already deployed': {
+            this.networkMonitor.structuredLog(network, 'HOLOGRAPH: already deployed')
 
-        case 'execution reverted: HOLOGRAPH: invalid job': {
-          this.networkMonitor.structuredLog(network, 'HOLOGRAPH: invalid job')
-        
-        break;
-        }
+            break
+          }
 
-        case 'execution reverted: HOLOGRAPH: not holographed': {
-          this.networkMonitor.structuredLog(network, 'HOLOGRAPH: not holographed')
-        
-        break;
-        }
+          case 'execution reverted: HOLOGRAPH: invalid job': {
+            this.networkMonitor.structuredLog(network, 'HOLOGRAPH: invalid job')
 
-        default: {
-          this.networkMonitor.structuredLogError(network, error, contract.address)
-        }
+            break
+          }
+
+          case 'execution reverted: HOLOGRAPH: not holographed': {
+            this.networkMonitor.structuredLog(network, 'HOLOGRAPH: not holographed')
+
+            break
+          }
+
+          default: {
+            this.networkMonitor.structuredLogError(network, error, contract.address)
+          }
         }
 
         // TODO: figure out how to display this data to front-end???
