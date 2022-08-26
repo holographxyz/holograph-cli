@@ -2,6 +2,7 @@ import * as fs from 'fs-extra'
 import * as path from 'node:path'
 
 import {ethers} from 'ethers'
+import {BlockWithTransactions} from '@ethersproject/abstract-provider'
 import {Command, Flags} from '@oclif/core'
 
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
@@ -114,7 +115,9 @@ export class NetworkMonitor {
   bridgeAddress!: string
   factoryAddress!: string
   operatorAddress!: string
+  registryAddress!: string
   wallets: {[key: string]: ethers.Wallet} = {}
+  walletNonces: {[key: string]: number} = {}
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   abiCoder = ethers.utils.defaultAbiCoder
   networkColors: any = {}
@@ -129,6 +132,7 @@ export class NetworkMonitor {
   bridgeContract!: ethers.Contract
   factoryContract!: ethers.Contract
   operatorContract!: ethers.Contract
+  registryContract!: ethers.Contract
   HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
   LAYERZERO_RECEIVERS: {[key: string]: string} = {
     rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
@@ -213,6 +217,7 @@ export class NetworkMonitor {
     this.log(`Bridge address: ${this.bridgeAddress}`)
     this.log(`Factory address: ${this.factoryAddress}`)
     this.log(`Operator address: ${this.operatorAddress}`)
+    this.log(`Registry address: ${this.registryAddress}`)
 
     if (blockJobs !== undefined) {
       this.blockJobs = blockJobs
@@ -265,11 +270,13 @@ export class NetworkMonitor {
   disconnectBuilder(network: string, rpcEndpoint: string, subscribe: boolean): (err: any) => void {
     return (err: any) => {
       ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
-        this.debug('onDisconnect')
         this.structuredLog(network, `WS connection was closed ${JSON.stringify(err, null, 2)}`)
         this.providers[network] = this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
         if (this.userWallet !== undefined) {
           this.wallets[network] = this.userWallet.connect(this.providers[network] as ethers.providers.WebSocketProvider)
+          this.wallets[network].getTransactionCount().then((nonce: number) => {
+            this.walletNonces[network] = nonce
+          })
         }
       })
     }
@@ -313,6 +320,8 @@ export class NetworkMonitor {
 
       if (this.userWallet !== undefined) {
         this.wallets[network] = this.userWallet.connect(this.providers[network])
+        // eslint-disable-next-line no-await-in-loop
+        this.walletNonces[network] = await this.wallets[network].getTransactionCount()
       }
 
       if (this.warp > 0) {
@@ -345,6 +354,7 @@ export class NetworkMonitor {
     this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
     this.factoryAddress = (await this.holograph.getFactory()).toLowerCase()
     this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
+    this.registryAddress = (await this.holograph.getRegistry()).toLowerCase()
 
     const holographBridgeABI = await fs.readJson('./src/abi/HolographBridge.json')
     this.bridgeContract = new ethers.Contract(this.bridgeAddress, holographBridgeABI, this.providers[this.networks[0]])
@@ -360,6 +370,13 @@ export class NetworkMonitor {
     this.operatorContract = new ethers.Contract(
       this.operatorAddress,
       holographOperatorABI,
+      this.providers[this.networks[0]],
+    )
+
+    const holographRegistryABI = await fs.readJson('./src/abi/HolographRegistry.json')
+    this.registryContract = new ethers.Contract(
+      this.registryAddress,
+      holographRegistryABI,
       this.providers[this.networks[0]],
     )
   }
@@ -423,7 +440,7 @@ export class NetworkMonitor {
 
   blockJobMonitor = (network: string): void => {
     if (Date.now() - this.lastBlockJobDone[network] > this.blockJobThreshold) {
-      this.debug('Block Job Handler has been inactive longer than threshold time. Restarting.')
+      this.structuredLog(network, 'Block Job Handler has been inactive longer than threshold time. Restarting.')
       this.blockJobHandler(network)
     }
   }
@@ -488,8 +505,21 @@ export class NetworkMonitor {
 
   async processBlock(job: BlockJob): Promise<void> {
     this.structuredLog(job.network, `Processing Block ${job.block}`)
-    const block = await this.providers[job.network].getBlockWithTransactions(job.block)
-    if (block !== null && 'transactions' in block) {
+    let block!: BlockWithTransactions
+    try {
+      block = await this.providers[job.network].getBlockWithTransactions(job.block)
+    } catch (error: any) {
+      if (error.message === 'cannot query unfinalized data') {
+        this.structuredLog(job.network, `${job.network} ${color.red('Unfinalized Data!')} ${job.block}`)
+        this.blockJobs[job.network].unshift(job)
+        this.blockJobHandler(job.network)
+        return
+      }
+
+      this.structuredLog(job.network, `${color.red('Errored block!')} ${job.block}`)
+    }
+
+    if (block !== undefined && block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
         this.structuredLog(job.network, `Zero block transactions for block ${job.block}`)
       }
@@ -510,7 +540,7 @@ export class NetworkMonitor {
         this.blockJobHandler(job.network, job)
       }
     } else {
-      this.structuredLog(job.network, `${job.network} ${color.red('Dropped block!')} ${job.block}`)
+      this.structuredLog(job.network, `${color.red('Dropped block!')} ${job.block}`)
       this.blockJobs[job.network].unshift(job)
       this.blockJobHandler(job.network)
     }
@@ -520,7 +550,7 @@ export class NetworkMonitor {
     this.providers[network].on('block', (blockNumber: string) => {
       const block = Number.parseInt(blockNumber, 10)
       if (this.currentBlockHeight[network] !== 0 && block - this.currentBlockHeight[network] > 1) {
-        this.debug(`Dropped ${capitalize(network)} websocket connection, gotta do some catching up`)
+        this.structuredLog(network, `Dropped websocket connection, gotta do some catching up`)
         let latest = this.currentBlockHeight[network]
         while (block - latest > 0) {
           this.structuredLog(network, `Block ${latest} (Syncing)`)
@@ -577,7 +607,11 @@ export class NetworkMonitor {
     'Packet(uint16 chainId, bytes payload)',
   )
 
-  static transferEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
+  static erc20TransferEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
+    'Transfer(address indexed _from, address indexed _to, uint256 _value)',
+  )
+
+  static erc721TransferEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
     'Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId)',
   )
 
@@ -609,17 +643,35 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeTransferEvent(receipt: ethers.ContractReceipt): any[] | undefined {
+  decodeErc20TransferEvent(receipt: ethers.ContractReceipt): any[] | undefined {
     if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
         if (log.topics[0] === this.targetEvents.Transfer) {
           const event: string[] = NetworkMonitor.iface.decodeEventLog(
-            NetworkMonitor.transferEventFragment,
+            NetworkMonitor.erc20TransferEventFragment,
             log.data,
             log.topics,
-          ) as string[]
-          return this.lowerCaseAllStrings([...event, log.address])
+          ) as any[]
+          return this.lowerCaseAllStrings(event, log.address)
+        }
+      }
+    }
+
+    return undefined
+  }
+
+  decodeErc721TransferEvent(receipt: ethers.ContractReceipt): any[] | undefined {
+    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+      for (let i = 0, l = receipt.logs.length; i < l; i++) {
+        const log = receipt.logs[i]
+        if (log.topics[0] === this.targetEvents.Transfer) {
+          const event: string[] = NetworkMonitor.iface.decodeEventLog(
+            NetworkMonitor.erc721TransferEventFragment,
+            log.data,
+            log.topics,
+          ) as any[]
+          return this.lowerCaseAllStrings(event, log.address)
         }
       }
     }
@@ -659,7 +711,7 @@ export class NetworkMonitor {
               NetworkMonitor.bridgeableContractDeployedEventFragment,
               log.data,
               log.topics,
-            ) as string[],
+            ) as any[],
           )
         }
       }
@@ -668,11 +720,15 @@ export class NetworkMonitor {
     return undefined
   }
 
-  lowerCaseAllStrings(input: string[]): string[] {
+  lowerCaseAllStrings(input: any[], add?: string): any[] {
     const output = [...input]
-    for (let i = 0, l = input.length; i < l; i++) {
-      if (typeof input[i] === 'string') {
-        output[i] = input[i].toLowerCase()
+    if (add !== undefined) {
+      output.push(add)
+    }
+
+    for (let i = 0, l = output.length; i < l; i++) {
+      if (typeof output[i] === 'string') {
+        output[i] = (output[i] as string).toLowerCase()
       }
     }
 
