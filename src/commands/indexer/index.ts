@@ -588,7 +588,7 @@ export default class Indexer extends Command {
     bridgeTransaction: ethers.utils.TransactionDescription,
     operatorJobPayload: string | undefined,
     operatorJobHash: string,
-    jobType: string,
+    // jobType: string, TODO: Add this back when we have a job type mapping
   ): Promise<void> {
     const jobHash = operatorJobHash
     console.log('+++++++++++++++')
