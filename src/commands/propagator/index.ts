@@ -170,7 +170,7 @@ export default class Propagator extends Command {
 
     // Start server
     if (enableHealthCheckServer) {
-      startHealthcheckServer()
+      startHealthcheckServer({networkMonitor: this.networkMonitor})
     }
   }
 

@@ -157,6 +157,27 @@ export class NetworkMonitor {
     '0xe8d23d927749ec8e512eb885679c2977d57068839d8cca1a85685dbbea0648f6': 'Packet',
   }
 
+  getProviderStatus() {
+    const outputNetworks = ['rinkeby', 'mumbai', 'fuji']
+    const output = {} as any
+
+    // eslint-disable-next-line guard-for-in
+    for (const n of outputNetworks) {
+      if(this.providers[n]) {
+        const current = this.providers[n] as ethers.providers.WebSocketProvider
+        if ( current._wsReady && current._websocket._socket.readyState === 'open'){
+          output[n] = 'CONNECTED'
+        }
+      } else {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        output[n] = this.configFile.networks[n].providerUrl ? 'DISCONNECTED' : 'NOT_CONFIGURED'
+      }
+    }
+
+    return output
+  }
+
   constructor(options: NetworkMonitorOptions) {
     this.parent = options.parent
     this.configFile = options.configFile
@@ -735,3 +756,4 @@ export class NetworkMonitor {
     return output
   }
 }
+
