@@ -184,7 +184,7 @@ export default class Indexer extends Command {
       )
       const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
       if (deploymentInfo !== undefined) {
-        await this.updateContractDB(transaction, network, deploymentInfo as string[])
+        await this.updateDeployedCollectionInDB(transaction, network, deploymentInfo as string[])
       }
     }
   }
@@ -204,6 +204,7 @@ export default class Indexer extends Command {
       } else {
         const bridgeTransaction: ethers.utils.TransactionDescription =
           this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
+
         switch (bridgeTransaction.name) {
           case 'deployOut':
             // cross-chain contract deployment
@@ -213,6 +214,15 @@ export default class Indexer extends Command {
             break
           case 'erc721out':
             // erc721 token being bridged out
+            await this.updateBridgeOutCrossChainTransactionInDB(
+              network,
+              transaction,
+              bridgeTransaction,
+              operatorJobPayload,
+              operatorJobHash,
+              'erc721out',
+            )
+
             break
           default:
             // we have no idea what is going on
@@ -259,7 +269,7 @@ export default class Indexer extends Command {
             case 'deployIn':
               deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
               if (deploymentInfo !== undefined) {
-                await this.updateContractBridgeDB(transaction, network, deploymentInfo as string[])
+                await this.updateBridgedCollectionInDB(transaction, network, deploymentInfo as string[])
               }
 
               // cross-chain contract deployment completed
@@ -271,7 +281,7 @@ export default class Indexer extends Command {
               // erc721 token being bridged in
               transferInfo = this.networkMonitor.decodeTransferEvent(receipt)
               if (transferInfo !== undefined) {
-                await this.updateNFTBridgeDB(transaction, network, transferInfo as string[])
+                await this.updateBridgedNFTInDB(transaction, network, transferInfo as string[])
               }
 
               break
@@ -323,7 +333,7 @@ export default class Indexer extends Command {
     }
   }
 
-  async updateContractDB(
+  async updateDeployedCollectionInDB(
     transaction: ethers.providers.TransactionResponse,
     network: string,
     deploymentInfo: string[],
@@ -398,7 +408,7 @@ export default class Indexer extends Command {
     }
   }
 
-  async updateContractBridgeDB(
+  async updateBridgedCollectionInDB(
     transaction: ethers.providers.TransactionResponse,
     network: string,
     deploymentInfo: string[],
@@ -475,7 +485,7 @@ export default class Indexer extends Command {
     }
   }
 
-  async updateNFTBridgeDB(
+  async updateBridgedNFTInDB(
     transaction: ethers.providers.TransactionResponse,
     network: string,
     transferInfo: string[],
@@ -569,6 +579,83 @@ export default class Indexer extends Command {
         `Failed to update the database for collection ${contractAddress} and tokeId ${tokenId}`,
       )
       this.networkMonitor.structuredLogError(network, error, `collection ${contractAddress} and tokeId ${tokenId}`)
+    }
+  }
+
+  async updateBridgeOutCrossChainTransactionInDB(
+    network: string,
+    transaction: ethers.providers.TransactionResponse,
+    bridgeTransaction: ethers.utils.TransactionDescription,
+    operatorJobPayload: string | undefined,
+    operatorJobHash: string,
+    jobType: string,
+  ): Promise<void> {
+    const jobHash = operatorJobHash
+    console.log('+++++++++++++++')
+    console.log(transaction)
+    console.log(bridgeTransaction.args.tokenId)
+    console.log(bridgeTransaction.args.collection)
+    console.log('+++++++++++++++')
+
+    // ===================================
+    // Example bridgeTransaction.args
+    // ===================================
+    // [
+    //   4000000004,
+    //   '0x02BefFD8839f4191352B12e5DC41B0251E317D06',
+    //   '0x04CA5B4fFc26C8c554c83DaDfe7A8d2eF9bf5560',
+    //   '0x04CA5B4fFc26C8c554c83DaDfe7A8d2eF9bf5560',
+    //   BigNumber { _hex: '0x04', _isBigNumber: true },
+    //   toChain: 4000000004,
+    //   collection: '0x02BefFD8839f4191352B12e5DC41B0251E317D06',
+    //   from: '0x04CA5B4fFc26C8c554c83DaDfe7A8d2eF9bf5560',
+    //   to: '0x04CA5B4fFc26C8c554c83DaDfe7A8d2eF9bf5560',
+    //   tokenId: BigNumber { _hex: '0x04', _isBigNumber: true }
+    // ]
+
+    // Compose request to API server to update the nft
+    const data = JSON.stringify({
+      jobType: 'ERC721', // TODO: Create mapping from jobType to API enum JobType
+      jobHash,
+      sourceTx: transaction.hash,
+      sourceBlockNumber: transaction.blockNumber,
+      sourceChainId: transaction.chainId,
+      sourceStatus: 'COMPLETED',
+      sourceAddress: bridgeTransaction.args.from,
+
+      // TODO: We can remove these status fields once the API is updated with latest migration
+      messageStatus: 'UNKNOWN',
+      operatorStatus: 'UNKNOWN',
+      // TODO: We don't need these at the moment
+      // sourceTokenId: bridgeTransaction.args.tokenId.toString(),
+      // sourceCollectionAddress: bridgeTransaction.args.collection,
+    })
+
+    const params = {
+      headers: {
+        Authorization: `Bearer ${this.JWT}`,
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    }
+
+    this.networkMonitor.structuredLog(
+      network,
+      this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash}`),
+    )
+    try {
+      const req = await axios.post(`${this.BASE_URL}/v1/cross-chain-transactions`, data, params)
+      this.networkMonitor.structuredLog(
+        network,
+        this.apiColor(`API: POST CrossChainTransaction ${jobHash} response ${JSON.stringify(req.data)}`),
+      )
+      this.networkMonitor.structuredLog(
+        network,
+        `Successfully updated CrossChainTransaction ${jobHash} ID ${req.data.id}`,
+      )
+    } catch (error: any) {
+      this.networkMonitor.structuredLog(network, `Failed to update the database for CrossChainTransaction ${jobHash}`)
+      this.networkMonitor.structuredLogError(network, error, `CrossChainTransaction ${jobHash}`)
     }
   }
 }
