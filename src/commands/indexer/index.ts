@@ -611,7 +611,7 @@ export default class Indexer extends Command {
       timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
-      callback: this.updateContractDBCallback,
+      callback: this.updateNFTBridgeDBCallback,
       arguments: [transaction, network, contractAddress, tokenId],
     }
     if (!(job.timestamp in this.dbJobMap)) {
