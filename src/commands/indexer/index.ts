@@ -281,7 +281,7 @@ export default class Indexer extends Command {
       )
       const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
       if (deploymentInfo !== undefined) {
-        await this.updateDeployedCollectionInDB(transaction, network, deploymentInfo as any[])
+        await this.updateDeployedCollection(transaction, network, deploymentInfo as any[])
       }
     }
   }
@@ -311,7 +311,7 @@ export default class Indexer extends Command {
             break
           case 'erc721out':
             // erc721 token being bridged out
-            await this.updateBridgeOutCrossChainTransactionInDB(
+            await this.updateBridgeOutCrossChainTransaction(
               network,
               transaction,
               bridgeTransaction,
@@ -365,7 +365,7 @@ export default class Indexer extends Command {
             case 'deployIn':
               deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
               if (deploymentInfo !== undefined) {
-                await this.updateBridgedCollectionInDB(
+                await this.updateBridgedCollection(
                   transaction,
                   network,
                   deploymentInfo as any[],
@@ -379,7 +379,7 @@ export default class Indexer extends Command {
               // erc20 token being bridged in
               transferInfo = this.networkMonitor.decodeErc20TransferEvent(receipt)
               if (transferInfo !== undefined) {
-                await this.updateNFTBridgeDB(transaction, network, transferInfo as any[])
+                await this.updateBridgedERC20(transaction, network, transferInfo as any[])
               }
 
               break
@@ -387,10 +387,10 @@ export default class Indexer extends Command {
               // erc721 token being bridged in
               transferInfo = this.networkMonitor.decodeErc721TransferEvent(receipt)
               if (transferInfo !== undefined) {
-                await this.updateBridgedNFTInDB(transaction, network, transferInfo as any[])
+                await this.updateBridgedNFT(transaction, network, transferInfo as any[])
               }
 
-              await this.updateBridgeInCrossChainTransactionInDB(
+              await this.updateBridgeInCrossChainTransaction(
                 network,
                 transaction,
                 bridgeTransaction,
@@ -446,7 +446,7 @@ export default class Indexer extends Command {
     }
   }
 
-  async updateContractDBCallback(
+  async updateCollectionCallback(
     responseData: any,
     transaction: ethers.providers.TransactionResponse,
     network: string,
@@ -463,7 +463,7 @@ export default class Indexer extends Command {
       network,
       `API: Requesting to update Collection ${deploymentAddress} with id ${responseData.id}`,
     )
-    await this.makeDBPatch({
+    await this.sendPatchRequest({
       responseData,
       network,
       query: `${this.BASE_URL}/v1/collections/${responseData.id}`,
@@ -478,7 +478,7 @@ export default class Indexer extends Command {
     Promise.resolve()
   }
 
-  async updateDeployedCollectionInDB(
+  async updateDeployedCollection(
     transaction: ethers.providers.TransactionResponse,
     network: string,
     deploymentInfo: any[],
@@ -503,7 +503,7 @@ export default class Indexer extends Command {
       timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
-      callback: this.updateContractDBCallback,
+      callback: this.updateCollectionCallback,
       arguments: [transaction, network, deploymentAddress],
     }
     if (!(job.timestamp in this.dbJobMap)) {
@@ -513,7 +513,7 @@ export default class Indexer extends Command {
     this.dbJobMap[job.timestamp].push(job)
   }
 
-  async updateBridgedCollectionInDB(
+  async updateBridgedCollection(
     transaction: ethers.providers.TransactionResponse,
     network: string,
     deploymentInfo: any[],
@@ -539,7 +539,7 @@ export default class Indexer extends Command {
       timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
-      callback: this.updateContractDBCallback,
+      callback: this.updateCollectionCallback,
       arguments: [transaction, network, deploymentAddress],
     }
     if (!(job.timestamp in this.dbJobMap)) {
@@ -549,7 +549,7 @@ export default class Indexer extends Command {
     this.dbJobMap[job.timestamp].push(job)
   }
 
-  async updateBridgedNFTInDB(
+  async updateBridgedERC20(
     transaction: ethers.providers.TransactionResponse,
     network: string,
     transferInfo: any[],
@@ -560,7 +560,7 @@ export default class Indexer extends Command {
     )
   }
 
-  async updateNFTBridgeDBCallback(
+  async updateBridgedNFTCallback(
     responseData: any,
     transaction: ethers.providers.TransactionResponse,
     network: string,
@@ -590,7 +590,7 @@ export default class Indexer extends Command {
       `API: Requesting to update NFT with collection ${contractAddress} and tokeId ${tokenId} and id ${responseData.id}`,
     )
 
-    await this.makeDBPatch({
+    await this.sendPatchRequest({
       responseData,
       network,
       query: `${this.BASE_URL}/v1/nfts/${responseData.id}`,
@@ -605,7 +605,7 @@ export default class Indexer extends Command {
     Promise.resolve()
   }
 
-  async updateNFTBridgeDB(
+  async updateBridgedNFT(
     transaction: ethers.providers.TransactionResponse,
     network: string,
     transferInfo: any[],
@@ -628,7 +628,7 @@ export default class Indexer extends Command {
       timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
-      callback: this.updateContractDBCallback,
+      callback: this.updateBridgedNFTCallback,
       arguments: [transaction, network, contractAddress, tokenId],
     }
     if (!(job.timestamp in this.dbJobMap)) {
@@ -638,7 +638,7 @@ export default class Indexer extends Command {
     this.dbJobMap[job.timestamp].push(job)
   }
 
-  async makeDBPatch(options: PatchOptions): Promise<void> {
+  async sendPatchRequest(options: PatchOptions): Promise<void> {
     const responseData = options.responseData
     const network = options.network
     const query = options.query
@@ -659,13 +659,13 @@ export default class Indexer extends Command {
         `${messages[0]} and id ${responseData.id} response ${JSON.stringify(patchRes.data)}`,
       )
       this.networkMonitor.structuredLog(network, messages[1])
-    } catch {
-      // this.networkMonitor.structuredLog(network, messages[2])
-      // this.networkMonitor.structuredLogError(network, error, messages[3])
+    } catch (error) {
+      this.networkMonitor.structuredLog(network, messages[2])
+      this.networkMonitor.structuredLogError(network, error, messages[3])
     }
   }
 
-  async updateBridgeOutCrossChainTransactionInDB(
+  async updateBridgeOutCrossChainTransaction(
     network: string,
     transaction: ethers.providers.TransactionResponse,
     bridgeTransaction: ethers.utils.TransactionDescription,
@@ -742,7 +742,7 @@ export default class Indexer extends Command {
     }
   }
 
-  async updateBridgeInCrossChainTransactionInDB(
+  async updateBridgeInCrossChainTransaction(
     network: string,
     transaction: ethers.providers.TransactionResponse,
     bridgeTransaction: ethers.utils.TransactionDescription,
