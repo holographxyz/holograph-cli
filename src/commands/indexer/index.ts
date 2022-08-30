@@ -365,7 +365,12 @@ export default class Indexer extends Command {
             case 'deployIn':
               deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
               if (deploymentInfo !== undefined) {
-                await this.updateBridgedCollectionInDB(transaction, network, deploymentInfo as any[], bridgeTransaction.args.data,)
+                await this.updateBridgedCollectionInDB(
+                  transaction,
+                  network,
+                  deploymentInfo as any[],
+                  bridgeTransaction.args.data,
+                )
               }
 
               // cross-chain contract deployment completed
@@ -374,7 +379,7 @@ export default class Indexer extends Command {
               // erc20 token being bridged in
               transferInfo = this.networkMonitor.decodeErc20TransferEvent(receipt)
               if (transferInfo !== undefined) {
-                await this.updateFTBridgeDB(transaction, network, transferInfo as any[])
+                await this.updateNFTBridgeDB(transaction, network, transferInfo as any[])
               }
 
               break
