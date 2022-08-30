@@ -735,7 +735,10 @@ export default class Indexer extends Command {
     const contractAddress = bridgeTransaction.args.collection
 
     // First get the collection and nft ids from the database
-    this.networkMonitor.structuredLog(network, `Waiting ${this.DELAY} seconds before trying to index NFT`)
+    this.networkMonitor.structuredLog(
+      network,
+      `Waiting ${this.DELAY} seconds before trying to index CrossChainTransaction ${jobHash}`,
+    )
     await sleep(this.DELAY)
     this.networkMonitor.structuredLog(
       network,
@@ -754,7 +757,7 @@ export default class Indexer extends Command {
         `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`,
       )
     } catch (error: any) {
-      this.networkMonitor.structuredLog(network, error.message)
+      this.networkMonitor.structuredLog(network, `Error indexing CrossChainTransaction ${error.message}`)
       this.networkMonitor.structuredLogError(network, error, contractAddress)
       return
     }
