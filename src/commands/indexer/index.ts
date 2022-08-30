@@ -311,7 +311,8 @@ export default class Indexer extends Command {
             break
           case 'erc721out':
             // erc721 token being bridged out
-            await this.updateBridgeOutCrossChainTransaction(
+            await this.updateCrossChainTransaction(
+              'bridgeOut',
               network,
               transaction,
               bridgeTransaction,
@@ -390,7 +391,8 @@ export default class Indexer extends Command {
                 await this.updateBridgedNFT(transaction, network, transferInfo as any[])
               }
 
-              await this.updateBridgeInCrossChainTransaction(
+              await this.updateCrossChainTransaction(
+                'bridgeIn',
                 network,
                 transaction,
                 bridgeTransaction,
@@ -462,7 +464,8 @@ export default class Indexer extends Command {
             break
           case 'erc721in':
             // erc721 token being bridged in
-            await this.updateMessageRelayedCrossChainTransaction(
+            await this.updateCrossChainTransaction(
+              'relayMessage',
               network,
               transaction,
               bridgeTransaction,
@@ -703,7 +706,8 @@ export default class Indexer extends Command {
     }
   }
 
-  async updateBridgeOutCrossChainTransaction(
+  async updateCrossChainTransaction(
+    crossChainTxtype: string,
     network: string,
     transaction: ethers.providers.TransactionResponse,
     bridgeTransaction: ethers.utils.TransactionDescription,
@@ -711,13 +715,6 @@ export default class Indexer extends Command {
     operatorJobHash: string,
     // jobType: string, TODO: Add this back when we have a job type mapping
   ): Promise<void> {
-    const jobHash = operatorJobHash
-    console.log('+++++++++++++++')
-    console.log(transaction)
-    console.log(bridgeTransaction.args.tokenId)
-    console.log(bridgeTransaction.args.collection)
-    console.log('+++++++++++++++')
-
     // ===================================
     // Example bridgeTransaction.args
     // ===================================
@@ -734,169 +731,65 @@ export default class Indexer extends Command {
     //   tokenId: BigNumber { _hex: '0x04', _isBigNumber: true }
     // ]
 
-    // Compose request to API server to update the nft
-    const data = JSON.stringify({
-      jobType: 'ERC721', // TODO: Create mapping from jobType to API enum JobType
-      jobHash,
-      sourceTx: transaction.hash,
-      sourceBlockNumber: transaction.blockNumber,
-      sourceChainId: transaction.chainId,
-      sourceStatus: 'COMPLETED',
-      sourceAddress: bridgeTransaction.args.from,
-
-      // TODO: We can remove these status fields once the API is updated with latest migration
-      messageStatus: 'UNKNOWN',
-      operatorStatus: 'UNKNOWN',
-      // TODO: We don't need these at the moment
-      // sourceTokenId: bridgeTransaction.args.tokenId.toString(),
-      // sourceCollectionAddress: bridgeTransaction.args.collection,
-    })
-
-    const params = {
-      headers: {
-        Authorization: `Bearer ${this.JWT}`,
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    }
-
-    this.networkMonitor.structuredLog(
-      network,
-      this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash}`),
-    )
-    try {
-      const req = await axios.post(`${this.BASE_URL}/v1/cross-chain-transactions`, data, params)
-      this.networkMonitor.structuredLog(
-        network,
-        this.apiColor(`API: POST CrossChainTransaction ${jobHash} response ${JSON.stringify(req.data)}`),
-      )
-      this.networkMonitor.structuredLog(
-        network,
-        `Successfully updated CrossChainTransaction ${jobHash} ID ${req.data.id}`,
-      )
-    } catch (error: any) {
-      this.networkMonitor.structuredLog(network, `Failed to update the database for CrossChainTransaction ${jobHash}`)
-      this.networkMonitor.structuredLogError(network, error, `CrossChainTransaction ${jobHash}`)
-    }
-  }
-
-  async updateMessageRelayedCrossChainTransaction(
-    network: string,
-    transaction: ethers.providers.TransactionResponse,
-    bridgeTransaction: ethers.utils.TransactionDescription,
-    operatorJobPayload: string | undefined,
-    operatorJobHash: string,
-    // jobType: string, TODO: Add this back when we have a job type mapping
-  ): Promise<void> {
-    const jobHash = operatorJobHash
     console.log('+++++++++++++++')
     console.log(transaction)
-    console.log(bridgeTransaction.args.tokenId)
-    console.log(bridgeTransaction.args.collection)
+    console.log(bridgeTransaction)
     console.log('+++++++++++++++')
-
-    // ===================================
-    // Example bridgeTransaction.args
-    // ===================================
-    // [
-    //   4000000004,
-    //   '0x02BefFD8839f4191352B12e5DC41B0251E317D06',
-    //   '0x04CA5B4fFc26C8c554c83DaDfe7A8d2eF9bf5560',
-    //   '0x04CA5B4fFc26C8c554c83DaDfe7A8d2eF9bf5560',
-    //   BigNumber { _hex: '0x04', _isBigNumber: true },
-    //   toChain: 4000000004,
-    //   collection: '0x02BefFD8839f4191352B12e5DC41B0251E317D06',
-    //   from: '0x04CA5B4fFc26C8c554c83DaDfe7A8d2eF9bf5560',
-    //   to: '0x04CA5B4fFc26C8c554c83DaDfe7A8d2eF9bf5560',
-    //   tokenId: BigNumber { _hex: '0x04', _isBigNumber: true }
-    // ]
-
-    // Compose request to API server to update the cross chain transaction
-    const data = JSON.stringify({
-      jobType: 'ERC721', // TODO: Create mapping from jobType to API enum JobType
-      jobHash,
-      messageTx: transaction.hash,
-      messageBlockNumber: transaction.blockNumber,
-      messageChainId: transaction.chainId,
-      messageStatus: 'COMPLETED',
-      messageAddress: bridgeTransaction.args.from,
-      // TODO: We don't need these at the moment
-      // sourceTokenId: bridgeTransaction.args.tokenId.toString(),
-      // sourceCollectionAddress: bridgeTransaction.args.collection,
-    })
-
-    const params = {
-      headers: {
-        Authorization: `Bearer ${this.JWT}`,
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    }
-
-    this.networkMonitor.structuredLog(
-      network,
-      this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash}`),
-    )
-    try {
-      const req = await axios.post(`${this.BASE_URL}/v1/cross-chain-transactions`, data, params)
-      this.networkMonitor.structuredLog(
-        network,
-        this.apiColor(`API: POST CrossChainTransaction ${jobHash} response ${JSON.stringify(req.data)}`),
-      )
-      this.networkMonitor.structuredLog(
-        network,
-        `Successfully updated CrossChainTransaction ${jobHash} ID ${req.data.id}`,
-      )
-    } catch (error: any) {
-      this.networkMonitor.structuredLog(network, `Failed to update the database for CrossChainTransaction ${jobHash}`)
-      this.networkMonitor.structuredLogError(network, error, `CrossChainTransaction ${jobHash}`)
-    }
-  }
-
-  async updateBridgeInCrossChainTransaction(
-    network: string,
-    transaction: ethers.providers.TransactionResponse,
-    bridgeTransaction: ethers.utils.TransactionDescription,
-    operatorJobPayload: string | undefined,
-    operatorJobHash: string,
-    // jobType: string, TODO: Add this back when we have a job type mapping
-  ): Promise<void> {
     const jobHash = operatorJobHash
-    console.log('+++++++++++++++')
-    console.log(transaction)
-    console.log(bridgeTransaction.args.tokenId)
-    console.log(bridgeTransaction.args.collection)
-    console.log('+++++++++++++++')
 
-    // ===================================
-    // Example bridgeTransaction.args
-    // ===================================
-    // [
-    //   4000000004,
-    //   '0x02BefFD8839f4191352B12e5DC41B0251E317D06',
-    //   '0x04CA5B4fFc26C8c554c83DaDfe7A8d2eF9bf5560',
-    //   '0x04CA5B4fFc26C8c554c83DaDfe7A8d2eF9bf5560',
-    //   BigNumber { _hex: '0x04', _isBigNumber: true },
-    //   toChain: 4000000004,
-    //   collection: '0x02BefFD8839f4191352B12e5DC41B0251E317D06',
-    //   from: '0x04CA5B4fFc26C8c554c83DaDfe7A8d2eF9bf5560',
-    //   to: '0x04CA5B4fFc26C8c554c83DaDfe7A8d2eF9bf5560',
-    //   tokenId: BigNumber { _hex: '0x04', _isBigNumber: true }
-    // ]
+    let data
 
-    // Compose request to API server to update the nft
-    const data = JSON.stringify({
-      jobType: 'ERC721', // TODO: Create mapping from jobType to API enum JobType
-      jobHash,
-      operatorTx: transaction.hash,
-      operatorBlockNumber: transaction.blockNumber,
-      operatorChainId: transaction.chainId,
-      operatorStatus: 'COMPLETED',
-      operatorAddress: bridgeTransaction.args.from,
-      // TODO: We don't need these at the moment
-      // sourceTokenId: bridgeTransaction.args.tokenId.toString(),
-      // sourceCollectionAddress: bridgeTransaction.args.collection,
-    })
+    // Set the columns to update based on the type of cross-chain transaction
+    switch (crossChainTxtype) {
+      case 'bridgeOut':
+        data = JSON.stringify({
+          jobHash,
+          jobType: 'ERC721', // TODO: Create mapping from jobType to API enum JobType
+          sourceTx: transaction.hash,
+          sourceBlockNumber: transaction.blockNumber,
+          sourceChainId: transaction.chainId,
+          sourceStatus: 'COMPLETED',
+          sourceAddress: bridgeTransaction.args.from,
+          // TODO: Not sure if we need these yet
+          // sourceTokenId: bridgeTransaction.args.tokenId.toString(),
+          // sourceCollectionAddress: bridgeTransaction.args.collection,
+        })
+
+        break
+      case 'relayMessage':
+        data = JSON.stringify({
+          jobHash,
+          jobType: 'ERC721', // TODO: Create mapping from jobType to API enum JobType
+          messageTx: transaction.hash,
+          messageBlockNumber: transaction.blockNumber,
+          messageChainId: transaction.chainId,
+          messageStatus: 'COMPLETED',
+          messageAddress: bridgeTransaction.args.from,
+          // TODO: Not sure if we need these yet
+          // sourceTokenId: bridgeTransaction.args.tokenId.toString(),
+          // sourceCollectionAddress: bridgeTransaction.args.collection,
+        })
+
+        break
+      case 'bridgeIn':
+        data = JSON.stringify({
+          jobHash,
+          jobType: 'ERC721', // TODO: Create mapping from jobType to API enum JobType
+          operatorTx: transaction.hash,
+          operatorBlockNumber: transaction.blockNumber,
+          operatorChainId: transaction.chainId,
+          operatorStatus: 'COMPLETED',
+          operatorAddress: bridgeTransaction.args.from,
+          // TODO: Not sure if we need these yet
+          // sourceTokenId: bridgeTransaction.args.tokenId.toString(),
+          // sourceCollectionAddress: bridgeTransaction.args.collection,
+        })
+
+        break
+      default:
+        // Unknown cross-chain transaction type
+        return
+    }
 
     const params = {
       headers: {
