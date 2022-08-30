@@ -707,13 +707,12 @@ export default class Indexer extends Command {
   }
 
   async updateCrossChainTransaction(
-    crossChainTxtype: string,
+    crossChainTxType: string,
     network: string,
     transaction: ethers.providers.TransactionResponse,
     bridgeTransaction: ethers.utils.TransactionDescription,
     operatorJobPayload: string | undefined,
     operatorJobHash: string,
-    // jobType: string, TODO: Add this back when we have a job type mapping
   ): Promise<void> {
     // ===================================
     // Example bridgeTransaction.args
@@ -731,16 +730,38 @@ export default class Indexer extends Command {
     //   tokenId: BigNumber { _hex: '0x04', _isBigNumber: true }
     // ]
 
-    console.log('+++++++++++++++')
-    console.log(transaction)
-    console.log(bridgeTransaction)
-    console.log('+++++++++++++++')
     const jobHash = operatorJobHash
+    const tokenId = bridgeTransaction.args.tokenId.toString()
+    const contractAddress = bridgeTransaction.args.collection
+
+    // First get the collection and nft ids from the database
+    this.networkMonitor.structuredLog(network, `Waiting ${this.DELAY} seconds before trying to index NFT`)
+    await sleep(this.DELAY)
+    this.networkMonitor.structuredLog(
+      network,
+      `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
+    )
+    let res
+    try {
+      res = await axios.get(`${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`, {
+        headers: {
+          Authorization: `Bearer ${this.JWT}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      this.networkMonitor.structuredLog(
+        network,
+        `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`,
+      )
+    } catch (error: any) {
+      this.networkMonitor.structuredLog(network, error.message)
+      this.networkMonitor.structuredLogError(network, error, contractAddress)
+      return
+    }
 
     let data
-
     // Set the columns to update based on the type of cross-chain transaction
-    switch (crossChainTxtype) {
+    switch (crossChainTxType) {
       case 'bridgeOut':
         data = JSON.stringify({
           jobHash,
@@ -750,9 +771,8 @@ export default class Indexer extends Command {
           sourceChainId: transaction.chainId,
           sourceStatus: 'COMPLETED',
           sourceAddress: bridgeTransaction.args.from,
-          // TODO: Not sure if we need these yet
-          // sourceTokenId: bridgeTransaction.args.tokenId.toString(),
-          // sourceCollectionAddress: bridgeTransaction.args.collection,
+          nftId: res.data.id,
+          collectionId: res.data.collection.id,
         })
 
         break
@@ -765,9 +785,6 @@ export default class Indexer extends Command {
           messageChainId: transaction.chainId,
           messageStatus: 'COMPLETED',
           messageAddress: bridgeTransaction.args.from,
-          // TODO: Not sure if we need these yet
-          // sourceTokenId: bridgeTransaction.args.tokenId.toString(),
-          // sourceCollectionAddress: bridgeTransaction.args.collection,
         })
 
         break
@@ -780,9 +797,6 @@ export default class Indexer extends Command {
           operatorChainId: transaction.chainId,
           operatorStatus: 'COMPLETED',
           operatorAddress: bridgeTransaction.args.from,
-          // TODO: Not sure if we need these yet
-          // sourceTokenId: bridgeTransaction.args.tokenId.toString(),
-          // sourceCollectionAddress: bridgeTransaction.args.collection,
         })
 
         break
