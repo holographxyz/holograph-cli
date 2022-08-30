@@ -785,6 +785,8 @@ export default class Indexer extends Command {
           messageChainId: transaction.chainId,
           messageStatus: 'COMPLETED',
           messageAddress: bridgeTransaction.args.from,
+          nftId: res.data.id,
+          collectionId: res.data.collection.id,
         })
 
         break
@@ -797,6 +799,8 @@ export default class Indexer extends Command {
           operatorChainId: transaction.chainId,
           operatorStatus: 'COMPLETED',
           operatorAddress: bridgeTransaction.args.from,
+          nftId: res.data.id,
+          collectionId: res.data.collection.id,
         })
 
         break
