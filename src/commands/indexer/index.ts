@@ -421,6 +421,8 @@ export default class Indexer extends Command {
     transaction: ethers.providers.TransactionResponse,
     network: string,
   ): Promise<void> {
+    let deploymentInfo
+    let bridgeTransaction
     const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
@@ -442,17 +444,18 @@ export default class Indexer extends Command {
             network,
           )}\nThe job payload hash is ${operatorJobHash}\nThe job payload is ${operatorJobPayload}\n`,
         )
-        const bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
+        bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
           value: ethers.BigNumber.from('0'),
         })
 
         switch (bridgeTransaction.name) {
           case 'deployIn':
-            const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
+            deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
             if (deploymentInfo !== undefined) {
+              // cross-chain contract deployment completed
             }
-            // cross-chain contract deployment completed
+
             break
           case 'erc20in':
             // erc20 token being bridged in
