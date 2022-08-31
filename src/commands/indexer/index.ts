@@ -195,15 +195,16 @@ export default class Indexer extends Command {
       }
 
       job.attempts += 1
-      if (job.attempts === 9) {
-        // push to end of array as a final attempt
-        this.dbJobMap[timestamp].push(job)
-      } else if (job.attempts === 10) {
+      this.log(`JOB ${job.query} is being executed with attempt ${job.attempts}`)
+      if (job.attempts >= 10) {
         // we have exhausted attempts, need to drop it entirely
         this.networkMonitor.structuredLog(
           job.network,
           `Failed to execute API query ${job.query}. Arguments were ${JSON.stringify(job.arguments, undefined, 2)}`,
         )
+      } else if (job.attempts >= 9) {
+        // push to end of array as a final attempt
+        this.dbJobMap[timestamp].push(job)
       } else {
         this.dbJobMap[timestamp].unshift(job)
       }
