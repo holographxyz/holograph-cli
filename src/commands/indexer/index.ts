@@ -71,6 +71,7 @@ export default class Indexer extends Command {
   JWT!: string
   DELAY = 20_000
   apiColor = color.keyword('orange')
+  errorColor = color.keyword('red')
 
   operatorMode: OperatorMode = OperatorMode.listen
 
@@ -189,7 +190,11 @@ export default class Indexer extends Command {
       await job.callback.bind(this)(res.data, ...job.arguments)
       this.processDBJobs()
     } catch (error: any) {
-      this.networkMonitor.structuredLogError(job.network, error.response.data, `Failed to GET ${job.query}`)
+      this.networkMonitor.structuredLogError(
+        job.network,
+        error.response.data,
+        this.errorColor(`Failed to GET ${job.query}`),
+      )
       // one second interval
       await sleep(1000)
       this.processDBJobs(timestamp, job)
@@ -709,7 +714,7 @@ export default class Indexer extends Command {
       this.networkMonitor.structuredLog(network, messages[1])
     } catch (error: any) {
       this.networkMonitor.structuredLog(network, messages[2])
-      this.networkMonitor.structuredLogError(network, error.response.data, messages[3])
+      this.networkMonitor.structuredLogError(network, error.response.data, this.errorColor(messages[3]))
     }
   }
 
@@ -754,18 +759,21 @@ export default class Indexer extends Command {
     jobHash: string,
   ): Promise<void> {
     this.networkMonitor.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
-    this.networkMonitor.structuredLog(
-      network,
-      this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash}`),
-    )
 
     let data
+    let params = {
+      headers: {
+        Authorization: `Bearer ${this.JWT}`,
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    }
     // Set the columns to update based on the type of cross-chain transaction
     switch (crossChainTxType) {
       case 'bridgeOut':
         data = JSON.stringify({
           jobHash,
-          jobType: 'ERC721', // TODO: Create mapping from jobType to API enum JobType
+          jobType: 'ERC721',
           sourceTx: transaction.hash,
           sourceBlockNumber: transaction.blockNumber,
           sourceChainId: transaction.chainId,
@@ -775,11 +783,38 @@ export default class Indexer extends Command {
           collectionId: responseData.collectionId,
         })
 
+        this.networkMonitor.structuredLog(
+          network,
+          this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash}`),
+        )
+
+        try {
+          const req = await axios.post(`${this.BASE_URL}/v1/cross-chain-transactions`, data, params)
+          this.networkMonitor.structuredLog(
+            network,
+            this.apiColor(`API: POST CrossChainTransaction ${jobHash} response ${JSON.stringify(req.data)}`),
+          )
+          this.networkMonitor.structuredLog(
+            network,
+            `Successfully updated CrossChainTransaction ${jobHash} ID ${req.data.id}`,
+          )
+        } catch (error: any) {
+          this.networkMonitor.structuredLog(
+            network,
+            `Failed to update the database for CrossChainTransaction ${jobHash}`,
+          )
+          this.networkMonitor.structuredLogError(
+            network,
+            error.response.data,
+            this.errorColor(`CrossChainTransaction ${jobHash}`),
+          )
+        }
+
         break
       case 'relayMessage':
         data = JSON.stringify({
           jobHash,
-          jobType: 'ERC721', // TODO: Create mapping from jobType to API enum JobType
+          jobType: 'ERC721',
           messageTx: transaction.hash,
           messageBlockNumber: transaction.blockNumber,
           messageChainId: transaction.chainId,
@@ -789,51 +824,76 @@ export default class Indexer extends Command {
           collectionId: responseData.collectionId,
         })
 
+        this.networkMonitor.structuredLog(
+          network,
+          this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash}`),
+        )
+        try {
+          const req = await axios.post(`${this.BASE_URL}/v1/cross-chain-transactions`, data, params)
+          this.networkMonitor.structuredLog(
+            network,
+            this.apiColor(`API: POST CrossChainTransaction ${jobHash} response ${JSON.stringify(req.data)}`),
+          )
+          this.networkMonitor.structuredLog(
+            network,
+            `Successfully updated CrossChainTransaction ${jobHash} ID ${req.data.id}`,
+          )
+        } catch (error: any) {
+          this.networkMonitor.structuredLog(
+            network,
+            `Failed to update the database for CrossChainTransaction ${jobHash}`,
+          )
+          this.networkMonitor.structuredLogError(
+            network,
+            error.response.data,
+            this.errorColor(`CrossChainTransaction ${jobHash}`),
+          )
+        }
+
         break
       case 'bridgeIn':
         data = JSON.stringify({
           jobHash,
-          jobType: 'ERC721', // TODO: Create mapping from jobType to API enum JobType
+          jobType: 'ERC721',
           operatorTx: transaction.hash,
           operatorBlockNumber: transaction.blockNumber,
           operatorChainId: transaction.chainId,
           operatorStatus: 'COMPLETED',
           operatorAddress: bridgeTransaction.args.from,
           nftId: responseData.id,
-          collectionId: responseData.ccollectionId,
+          collectionId: responseData.collectionId,
         })
+
+        this.networkMonitor.structuredLog(
+          network,
+          this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash}`),
+        )
+        try {
+          const req = await axios.post(`${this.BASE_URL}/v1/cross-chain-transactions`, data, params)
+          this.networkMonitor.structuredLog(
+            network,
+            this.apiColor(`API: POST CrossChainTransaction ${jobHash} response ${JSON.stringify(req.data)}`),
+          )
+          this.networkMonitor.structuredLog(
+            network,
+            `Successfully updated CrossChainTransaction ${jobHash} ID ${req.data.id}`,
+          )
+        } catch (error: any) {
+          this.networkMonitor.structuredLog(
+            network,
+            `Failed to update the database for CrossChainTransaction ${jobHash}`,
+          )
+          this.networkMonitor.structuredLogError(
+            network,
+            error.response.data,
+            this.errorColor(`CrossChainTransaction ${jobHash}`),
+          )
+        }
 
         break
       default:
         // Unknown cross-chain transaction type
         return
-    }
-
-    const params = {
-      headers: {
-        Authorization: `Bearer ${this.JWT}`,
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    }
-
-    this.networkMonitor.structuredLog(
-      network,
-      this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash}`),
-    )
-    try {
-      const req = await axios.post(`${this.BASE_URL}/v1/cross-chain-transactions`, data, params)
-      this.networkMonitor.structuredLog(
-        network,
-        this.apiColor(`API: POST CrossChainTransaction ${jobHash} response ${JSON.stringify(req.data)}`),
-      )
-      this.networkMonitor.structuredLog(
-        network,
-        `Successfully updated CrossChainTransaction ${jobHash} ID ${req.data.id}`,
-      )
-    } catch (error: any) {
-      this.networkMonitor.structuredLog(network, `Failed to update the database for CrossChainTransaction ${jobHash}`)
-      this.networkMonitor.structuredLogError(network, error.response.data, `CrossChainTransaction ${jobHash}`)
     }
 
     Promise.resolve()
