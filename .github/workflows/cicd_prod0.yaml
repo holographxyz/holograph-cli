@@ -2,20 +2,21 @@ name: Deploy holoclis to prod
 
 permissions:
   id-token: write
-  contents: read   # This is required for actions/checkout@v2
+  contents: read # This is required for actions/checkout@v2
 
 env:
   AWS_REGION    : us-west-2
   IAM_ROLE      : arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli # notice: the same for all 3 cli apps
   #
-  PROD_IMAGE_TAG : main-${{ github.sha }} #NOTICE
+  PROD_IMAGE_TAG : main-${{ github.sha }}
+  ########################################
+  PROD_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.15
+  PROD_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.10
+  PROD_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.11
+  ########################################
+  CLUSTER_NAME   : prod0
   #
-  PROD_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.14 # NOTICE
-  PROD_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.9  # NOTICE
-  PROD_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.9  # NOTICE
-  #
-  CLUSTER_NAME   : prod0 # NOTICE
   AWS_KEY_ID     : ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY : ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
   #
@@ -46,7 +47,6 @@ on:
 #on:
 #  pull_request:
 #    branches:
-#      - kabamaru # TODO - delete it to make the PR
 ##      - main
 #    types: [closed]
 
