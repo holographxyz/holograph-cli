@@ -36,6 +36,14 @@ type PatchOptions = {
   messages: string[]
 }
 
+interface BridgeTransactionArgs {
+  toChain: number
+  tokenId: ethers.BigNumber
+  collection: string
+  from: string
+  to: string
+}
+
 export default class Indexer extends Command {
   static LAST_BLOCKS_FILE_NAME = 'indexer-blocks.json'
   static description = 'Listen for EVM events and update database network status'
@@ -181,7 +189,7 @@ export default class Indexer extends Command {
       await job.callback.bind(this)(res.data, ...job.arguments)
       this.processDBJobs()
     } catch (error: any) {
-      this.networkMonitor.structuredLogError(job.network, error, `Failed to GET ${job.query}`)
+      this.networkMonitor.structuredLogError(job.network, error.response.data, `Failed to GET ${job.query}`)
       // one second interval
       await sleep(1000)
       this.processDBJobs(timestamp, job)
@@ -534,7 +542,7 @@ export default class Indexer extends Command {
         `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
         `The transaction hash is: ${transaction.hash}\n`,
     )
-    this.networkMonitor.structuredLog(network, 'Sending it to DBJobManager')
+    this.networkMonitor.structuredLog(network, `Sending deployed collection job to DBJobManager ${deploymentAddress}`)
 
     const job: DBJob = {
       attempts: 0,
@@ -570,7 +578,7 @@ export default class Indexer extends Command {
         `Operator that deployed the collection is ${transaction.from}` +
         `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
     )
-    this.networkMonitor.structuredLog(network, 'Sending it to DBJobManager')
+    this.networkMonitor.structuredLog(network, `Sending bridged collection job to DBJobManager ${deploymentAddress}`)
 
     const job: DBJob = {
       attempts: 0,
@@ -660,7 +668,7 @@ export default class Indexer extends Command {
         `The ID of the NFT is ${tokenId}\n` +
         `Operator that minted the nft is ${transaction.from}\n`,
     )
-    this.networkMonitor.structuredLog(network, 'Sending it to DBJobManager')
+    this.networkMonitor.structuredLog(network, `Sending bridged nft job to DBJobManager ${contractAddress}`)
 
     const job: DBJob = {
       attempts: 0,
@@ -699,9 +707,9 @@ export default class Indexer extends Command {
         `${messages} and id ${responseData.id} response ${JSON.stringify(patchRes.data)}`,
       )
       this.networkMonitor.structuredLog(network, messages[1])
-    } catch (error) {
+    } catch (error: any) {
       this.networkMonitor.structuredLog(network, messages[2])
-      this.networkMonitor.structuredLogError(network, error, messages[3])
+      this.networkMonitor.structuredLogError(network, error.response.data, messages[3])
     }
   }
 
@@ -712,27 +720,13 @@ export default class Indexer extends Command {
     bridgeTransaction: ethers.utils.TransactionDescription,
     operatorJobHash: string,
   ): Promise<void> {
-    // ===================================
-    // Example bridgeTransaction.args
-    // ===================================
-    // [
-    //   4000000004,
-    //   '0x02BefFD8839f4191352B12e5DC41B0251E317D06',
-    //   '0x04CA5B4fFc26C8c554c83DaDfe7A8d2eF9bf5560',
-    //   '0x04CA5B4fFc26C8c554c83DaDfe7A8d2eF9bf5560',
-    //   BigNumber { _hex: '0x04', _isBigNumber: true },
-    //   toChain: 4000000004,
-    //   collection: '0x02BefFD8839f4191352B12e5DC41B0251E317D06',
-    //   from: '0x04CA5B4fFc26C8c554c83DaDfe7A8d2eF9bf5560',
-    //   to: '0x04CA5B4fFc26C8c554c83DaDfe7A8d2eF9bf5560',
-    //   tokenId: BigNumber { _hex: '0x04', _isBigNumber: true }
-    // ]
-
     const jobHash = operatorJobHash
-    const tokenId = bridgeTransaction.args.tokenId.toString()
-    const contractAddress = bridgeTransaction.args.collection
 
-    this.networkMonitor.structuredLog(network, 'Sending it to DBJobManager')
+    const args: BridgeTransactionArgs = bridgeTransaction.args as unknown as BridgeTransactionArgs
+    const tokenId = args.tokenId.toString()
+    const contractAddress = bridgeTransaction.args.collection.toLowerCase()
+
+    this.networkMonitor.structuredLog(network, `Sending cross chain transaction job to DBJobManager ${contractAddress}`)
     const job: DBJob = {
       attempts: 0,
       network,
@@ -740,7 +734,7 @@ export default class Indexer extends Command {
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
       callback: this.updateCrossChainTransactionCallback,
-      arguments: [transaction, network, contractAddress, crossChainTxType, bridgeTransaction, jobHash],
+      arguments: [transaction, network, contractAddress, tokenId, crossChainTxType, bridgeTransaction, jobHash],
     }
     if (!(job.timestamp in this.dbJobMap)) {
       this.dbJobMap[job.timestamp] = []
@@ -777,8 +771,8 @@ export default class Indexer extends Command {
           sourceChainId: transaction.chainId,
           sourceStatus: 'COMPLETED',
           sourceAddress: bridgeTransaction.args.from,
-          nftId: responseData.data.id,
-          collectionId: responseData.data.collection.id,
+          nftId: responseData.id,
+          collectionId: responseData.collectionId,
         })
 
         break
@@ -791,8 +785,8 @@ export default class Indexer extends Command {
           messageChainId: transaction.chainId,
           messageStatus: 'COMPLETED',
           messageAddress: bridgeTransaction.args.from,
-          nftId: responseData.data.id,
-          collectionId: responseData.data.collection.id,
+          nftId: responseData.id,
+          collectionId: responseData.collectionId,
         })
 
         break
@@ -805,8 +799,8 @@ export default class Indexer extends Command {
           operatorChainId: transaction.chainId,
           operatorStatus: 'COMPLETED',
           operatorAddress: bridgeTransaction.args.from,
-          nftId: responseData.data.id,
-          collectionId: responseData.data.collection.id,
+          nftId: responseData.id,
+          collectionId: responseData.ccollectionId,
         })
 
         break
@@ -839,7 +833,7 @@ export default class Indexer extends Command {
       )
     } catch (error: any) {
       this.networkMonitor.structuredLog(network, `Failed to update the database for CrossChainTransaction ${jobHash}`)
-      this.networkMonitor.structuredLogError(network, error, `CrossChainTransaction ${jobHash}`)
+      this.networkMonitor.structuredLogError(network, error.response.data, `CrossChainTransaction ${jobHash}`)
     }
 
     Promise.resolve()
