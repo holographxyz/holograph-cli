@@ -10,15 +10,15 @@ holo config --fromFile $CONFIG_FILE
 
 if [ $HOLO_CLI_MODE == "operator" ]
 then
-  $HOLO_CLI_MODE --mode auto --sync --healthCheck --unsafePassword $PASSWORD
+  holo $HOLO_CLI_MODE --mode auto --sync --healthCheck --unsafePassword $PASSWORD
 
 elif [ $HOLO_CLI_MODE == "propagator" ]
 then
-  $HOLO_CLI_MODE --mode auto --sync --healthCheck --unsafePassword $PASSWORD
+  holo $HOLO_CLI_MODE --mode auto --sync --healthCheck --unsafePassword $PASSWORD
 
 elif [ $HOLO_CLI_MODE == "indexer" ]
 then
-  $HOLO_CLI_MODE --host=$HOLO_INDEXER_HOST --healthCheck
+  holo $HOLO_CLI_MODE --host=$HOLO_INDEXER_HOST --healthCheck
 
 else
   echo
