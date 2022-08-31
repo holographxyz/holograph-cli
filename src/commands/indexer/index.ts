@@ -456,7 +456,7 @@ export default class Indexer extends Command {
           network,
           `HolographOperator received a new bridge job on ${capitalize(
             network,
-          )}\nThe job payload hash is ${operatorJobHash}\nThe job payload is ${operatorJobPayload}\n`,
+          )}. The job payload hash is ${operatorJobHash}. The job payload is ${operatorJobPayload}`,
         )
         bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
@@ -542,10 +542,15 @@ export default class Indexer extends Command {
     const deploymentAddress = deploymentInfo[0] as string
     this.networkMonitor.structuredLog(
       network,
-      `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-        `Wallet that deployed the collection is ${transaction.from}\n` +
-        `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
-        `The transaction hash is: ${transaction.hash}\n`,
+      `HolographFactory deployed a new collection on ${capitalize(
+        network,
+      )} at address ${deploymentAddress}. Wallet that deployed the collection is ${
+        transaction.from
+      }. The config used for deployHolographableContract was ${JSON.stringify(
+        config,
+        null,
+        2,
+      )}. The transaction hash is: ${transaction.hash}`,
     )
     this.networkMonitor.structuredLog(network, `Sending deployed collection job to DBJobManager ${deploymentAddress}`)
 
@@ -578,10 +583,11 @@ export default class Indexer extends Command {
     const deploymentAddress = deploymentInfo[0] as string
     this.networkMonitor.structuredLog(
       network,
-      '\nHolographOperator executed a job which bridged a collection\n' +
-        `HolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-        `Operator that deployed the collection is ${transaction.from}` +
-        `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
+      `HolographOperator executed a job which bridged a collection. HolographFactory deployed a new collection on ${capitalize(
+        network,
+      )} at address ${deploymentAddress}. Operator that deployed the collection is ${
+        transaction.from
+      }. The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}`,
     )
     this.networkMonitor.structuredLog(network, `Sending bridged collection job to DBJobManager ${deploymentAddress}`)
 
@@ -626,17 +632,18 @@ export default class Indexer extends Command {
     })
     this.networkMonitor.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
     // TODO: This isn't working as expected, need to figure out why
-    // Only update the database if this transaction happened in a later block than the last block we indexed
+    // Only update the database if this transaction happened in a later block than the last transaction we indexed
     // NOTE: This should only be necessary for NFTs because they can only exist on one network at a time so we don't
     //       want to update change update the database to the wrong network while the warp cron is running
     //       if a more recent bridge event happened on chain that moved the NFT to a different network
-    // if (transaction.blockNumber! > responseData.transaction[0]) {
-    //   this.networkMonitor.structuredLog(
-    //     network,
-    //     `Latest transaction in the database is more recent than this transaction. Skipping update for collection ${contractAddress} and tokeId ${tokenId}`,
-    //   )
-    //   return
-    // }
+    const transactions = responseData.transactions
+    if (transaction.blockNumber! > transactions[transactions.length - 1].blockNumber) {
+      this.networkMonitor.structuredLog(
+        network,
+        `Latest transaction in the database is more recent than this transaction. Skipping update for collection ${contractAddress} and tokeId ${tokenId}`,
+      )
+      return
+    }
 
     this.networkMonitor.structuredLog(
       network,
@@ -668,10 +675,11 @@ export default class Indexer extends Command {
 
     this.networkMonitor.structuredLog(
       network,
-      '\nHolographOperator executed a job which minted an ERC721 NFT\n' +
-        `Holographer minted a new NFT on ${capitalize(network)} at address ${contractAddress}\n` +
-        `The ID of the NFT is ${tokenId}\n` +
-        `Operator that minted the nft is ${transaction.from}\n`,
+      `HolographOperator executed a job which minted an ERC721 NFT. Holographer minted a new NFT on ${capitalize(
+        network,
+      )} at address ${contractAddress}. The ID of the NFT is ${tokenId}. Operator that minted the nft is ${
+        transaction.from
+      }`,
     )
     this.networkMonitor.structuredLog(network, `Sending bridged nft job to DBJobManager ${contractAddress}`)
 
@@ -778,7 +786,7 @@ export default class Indexer extends Command {
           sourceBlockNumber: transaction.blockNumber,
           sourceChainId: transaction.chainId,
           sourceStatus: 'COMPLETED',
-          sourceAddress: bridgeTransaction.args.from,
+          sourceAddress: transaction.from,
           nftId: responseData.id,
           collectionId: responseData.collectionId,
         })
@@ -819,7 +827,7 @@ export default class Indexer extends Command {
           messageBlockNumber: transaction.blockNumber,
           messageChainId: transaction.chainId,
           messageStatus: 'COMPLETED',
-          messageAddress: bridgeTransaction.args.from,
+          messageAddress: transaction.from,
           nftId: responseData.id,
           collectionId: responseData.collectionId,
         })
@@ -859,7 +867,7 @@ export default class Indexer extends Command {
           operatorBlockNumber: transaction.blockNumber,
           operatorChainId: transaction.chainId,
           operatorStatus: 'COMPLETED',
-          operatorAddress: bridgeTransaction.args.from,
+          operatorAddress: transaction.from,
           nftId: responseData.id,
           collectionId: responseData.collectionId,
         })
