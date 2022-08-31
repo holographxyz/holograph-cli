@@ -9,13 +9,14 @@ env:
   IAM_ROLE      : arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli # notice: the same for all 3 cli apps
   #
-  PROD_IMAGE_TAG : main-${{ github.sha }} #NOTICE
-  #
-  PROD_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.14 # NOTICE
-  PROD_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.9  # NOTICE
-  PROD_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.10  # NOTICE
-  #
+  PROD_IMAGE_TAG : main-${{ github.sha }}
+  #######################################
+  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.14
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.10
+  STG_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.10
+  #######################################
   CLUSTER_NAME   : prod0 # NOTICE
+  #
   AWS_KEY_ID     : ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY : ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
   #
@@ -40,7 +41,7 @@ env:
 on:
   push:
     branches:
-      - 'holocli' #deleteme
+#      - 'holocli' #deleteme
       - 'develop' #deleteme
 ## notice: the trigger
 #on:

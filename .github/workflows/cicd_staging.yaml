@@ -2,20 +2,21 @@ name: Deploy holoclis to staging
 
 permissions:
   id-token: write
-  contents: read   # This is required for actions/checkout@v2
+  contents: read # This is required for actions/checkout@v2
 
 env:
   AWS_REGION    : us-west-2
   IAM_ROLE      : arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli-dev # notice: the same for all 3 cli apps
   #
-  DEV_IMAGE_TAG : dev-${{ github.sha }} #NOTICE
-  #
-  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.14 # NOTICE
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.10  # NOTICE
-  STG_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.9  # NOTICE   --> not 0.0.10 ????
-  #
+  DEV_IMAGE_TAG : dev-${{ github.sha }}
+  #######################################
+  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.14
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.10
+  STG_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.10
+  #######################################
   CLUSTER_NAME   : staging
+  #
   AWS_KEY_ID     : ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY : ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
   #
