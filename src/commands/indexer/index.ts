@@ -761,7 +761,7 @@ export default class Indexer extends Command {
     this.networkMonitor.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
 
     let data
-    let params = {
+    const params = {
       headers: {
         Authorization: `Bearer ${this.JWT}`,
         'Content-Type': 'application/json',
