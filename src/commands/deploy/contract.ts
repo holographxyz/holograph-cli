@@ -93,7 +93,7 @@ export default class Contract extends Command {
     }
 
     const gasPriceBase = await destinationWallet!.provider.getGasPrice()
-    const gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from("4"))) // gasPrice = gasPriceBase * 1.25
+    const gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
 
     CliUx.ux.action.stop()
     this.log(

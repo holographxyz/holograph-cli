@@ -165,10 +165,11 @@ export default class Recover extends Command {
         gasLimit = await this.operatorContract.estimateGas.executeJob(payload)
       } catch (error: any) {
         this.error(error.reason)
+        this.exit()
       }
 
       const gasPriceBase = await this.operatorContract.provider.getGasPrice()
-      const gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from("4"))) // gasPrice = gasPriceBase * 1.25
+      const gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
 
       this.debug(`gas price is ${gasPrice}`)
       CliUx.ux.action.stop()
