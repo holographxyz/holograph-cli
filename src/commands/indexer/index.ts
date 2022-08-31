@@ -317,7 +317,6 @@ export default class Indexer extends Command {
               network,
               transaction,
               bridgeTransaction,
-              operatorJobPayload,
               operatorJobHash,
             )
 
@@ -397,7 +396,6 @@ export default class Indexer extends Command {
                 network,
                 transaction,
                 bridgeTransaction,
-                operatorJobPayload,
                 operatorJobHash,
               )
 
@@ -470,7 +468,6 @@ export default class Indexer extends Command {
               network,
               transaction,
               bridgeTransaction,
-              operatorJobPayload,
               operatorJobHash,
             )
 
@@ -713,7 +710,6 @@ export default class Indexer extends Command {
     network: string,
     transaction: ethers.providers.TransactionResponse,
     bridgeTransaction: ethers.utils.TransactionDescription,
-    operatorJobPayload: string | undefined,
     operatorJobHash: string,
   ): Promise<void> {
     // ===================================
@@ -736,33 +732,38 @@ export default class Indexer extends Command {
     const tokenId = bridgeTransaction.args.tokenId.toString()
     const contractAddress = bridgeTransaction.args.collection
 
-    // First get the collection and nft ids from the database
-    this.networkMonitor.structuredLog(
+    this.networkMonitor.structuredLog(network, 'Sending it to DBJobManager')
+    const job: DBJob = {
+      attempts: 0,
       network,
-      `Waiting ${this.DELAY} seconds before trying to index CrossChainTransaction ${jobHash}`,
-    )
-    await sleep(this.DELAY)
-    this.networkMonitor.structuredLog(
-      network,
-      `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
-    )
-    let res
-    try {
-      res = await axios.get(`${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`, {
-        headers: {
-          Authorization: `Bearer ${this.JWT}`,
-          'Content-Type': 'application/json',
-        },
-      })
-      this.networkMonitor.structuredLog(
-        network,
-        `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`,
-      )
-    } catch (error: any) {
-      this.networkMonitor.structuredLog(network, `Error indexing CrossChainTransaction ${error.message}`)
-      this.networkMonitor.structuredLogError(network, error, contractAddress)
-      return
+      timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
+      query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
+      message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
+      callback: this.updateCrossChainTransactionCallback,
+      arguments: [transaction, network, contractAddress, crossChainTxType, bridgeTransaction, jobHash],
     }
+    if (!(job.timestamp in this.dbJobMap)) {
+      this.dbJobMap[job.timestamp] = []
+    }
+
+    this.dbJobMap[job.timestamp].push(job)
+  }
+
+  async updateCrossChainTransactionCallback(
+    responseData: any,
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+    contractAddress: string,
+    tokenId: string,
+    crossChainTxType: string,
+    bridgeTransaction: ethers.utils.TransactionDescription,
+    jobHash: string,
+  ): Promise<void> {
+    this.networkMonitor.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
+    this.networkMonitor.structuredLog(
+      network,
+      this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash}`),
+    )
 
     let data
     // Set the columns to update based on the type of cross-chain transaction
@@ -776,8 +777,8 @@ export default class Indexer extends Command {
           sourceChainId: transaction.chainId,
           sourceStatus: 'COMPLETED',
           sourceAddress: bridgeTransaction.args.from,
-          nftId: res.data.id,
-          collectionId: res.data.collection.id,
+          nftId: responseData.data.id,
+          collectionId: responseData.data.collection.id,
         })
 
         break
@@ -790,8 +791,8 @@ export default class Indexer extends Command {
           messageChainId: transaction.chainId,
           messageStatus: 'COMPLETED',
           messageAddress: bridgeTransaction.args.from,
-          nftId: res.data.id,
-          collectionId: res.data.collection.id,
+          nftId: responseData.data.id,
+          collectionId: responseData.data.collection.id,
         })
 
         break
@@ -804,8 +805,8 @@ export default class Indexer extends Command {
           operatorChainId: transaction.chainId,
           operatorStatus: 'COMPLETED',
           operatorAddress: bridgeTransaction.args.from,
-          nftId: res.data.id,
-          collectionId: res.data.collection.id,
+          nftId: responseData.data.id,
+          collectionId: responseData.data.collection.id,
         })
 
         break
@@ -840,5 +841,7 @@ export default class Indexer extends Command {
       this.networkMonitor.structuredLog(network, `Failed to update the database for CrossChainTransaction ${jobHash}`)
       this.networkMonitor.structuredLogError(network, error, `CrossChainTransaction ${jobHash}`)
     }
+
+    Promise.resolve()
   }
 }
