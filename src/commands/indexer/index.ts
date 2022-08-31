@@ -615,17 +615,18 @@ export default class Indexer extends Command {
       tx: transaction.hash,
     })
     this.networkMonitor.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
+    // TODO: This isn't working as expected, need to figure out why
     // Only update the database if this transaction happened in a later block than the last block we indexed
     // NOTE: This should only be necessary for NFTs because they can only exist on one network at a time so we don't
     //       want to update change update the database to the wrong network while the warp cron is running
     //       if a more recent bridge event happened on chain that moved the NFT to a different network
-    if (transaction.blockNumber! > responseData.transaction[0]) {
-      this.networkMonitor.structuredLog(
-        network,
-        `Latest transaction in the database is more recent than this transaction. Skipping update for collection ${contractAddress} and tokeId ${tokenId}`,
-      )
-      return
-    }
+    // if (transaction.blockNumber! > responseData.transaction[0]) {
+    //   this.networkMonitor.structuredLog(
+    //     network,
+    //     `Latest transaction in the database is more recent than this transaction. Skipping update for collection ${contractAddress} and tokeId ${tokenId}`,
+    //   )
+    //   return
+    // }
 
     this.networkMonitor.structuredLog(
       network,
@@ -698,7 +699,7 @@ export default class Indexer extends Command {
       const patchRes = await axios.patch(query, data, params)
       this.networkMonitor.structuredLog(
         network,
-        `${messages[0]} and id ${responseData.id} response ${JSON.stringify(patchRes.data)}`,
+        `${messages} and id ${responseData.id} response ${JSON.stringify(patchRes.data)}`,
       )
       this.networkMonitor.structuredLog(network, messages[1])
     } catch (error) {
