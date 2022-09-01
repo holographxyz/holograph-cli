@@ -58,20 +58,20 @@ jobs:
           role-to-assume: ${{ env.IAM_ROLE }}
           aws-region    : ${{ env.AWS_REGION }}
 
-#      - name: Login to ECR
-#        id: login-ecr
-#        uses: aws-actions/amazon-ecr-login@v1
-#
-#      - name: Checkout code
-#        uses: actions/checkout@v2
-#
-#      - name: Build and push image to ECR
-#        env:
-#          ECR_REGISTRY  : ${{ steps.login-ecr.outputs.registry }}
-#          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-#        run: |
-#          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG .
-#          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Build and push image to ECR
+        env:
+          ECR_REGISTRY  : ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG .
+          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG
 #
 #      - name: Configure AWS creds to access EKS
 #        # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -255,10 +255,10 @@ jobs:
       - name: Checkout tests repo
         uses: actions/checkout@v3
         with:
-          repository: cxip-labs/qa
+#          repository: cxip-labs/qa #deleteme
+          repository: holographxyz/qa
           ref  : main
           token: ${{ secrets.HOLOGRAPH_GITHUB_PERSONAL_ACCESS_TOKEN }}  # reminder -> created in my personal GH account
-#          token: ${{ secrets.CICD_BOT_PERSONAL_ACCESS_TOKEN }}
           path : './'
 
       - name: Setup python
@@ -293,26 +293,26 @@ jobs:
 #        run: |
 #          python python_api_tests/test_dd_logs_stack_errors.py
 
-      - name: Check Datadog monitor for -> Too Many Pod Restarts
-        env:
-          ENV: ${{ env.CLUSTER_NAME }}
-          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-          APP: "indexer"
-        run: |
-          python python_api_tests/test_dd_k8s_TooManyRestarts.py
-
-      - name: Check Datadog monitor for -> Too Many Pod Restarts
-        env:
-          ENV: ${{ env.CLUSTER_NAME }}
-          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-          APP: "operator"
-        run: |
-          python python_api_tests/test_dd_k8s_TooManyRestarts.py
-
-      - name: Check Datadog monitor for -> Too Many Pod Restarts
-        env:
-          ENV: ${{ env.CLUSTER_NAME }}
-          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-          APP: "propagator"
-        run: |
-          python python_api_tests/test_dd_k8s_TooManyRestarts.py
+#      - name: Check Datadog monitor for -> Too Many Pod Restarts [indexer]
+#        env:
+#          ENV: ${{ env.CLUSTER_NAME }}
+#          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+#          APP: "indexer"
+#        run: |
+#          python python_api_tests/test_dd_k8s_TooManyRestarts.py
+#
+#      - name: Check Datadog monitor for -> Too Many Pod Restarts [operator]
+#        env:
+#          ENV: ${{ env.CLUSTER_NAME }}
+#          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+#          APP: "operator"
+#        run: |
+#          python python_api_tests/test_dd_k8s_TooManyRestarts.py
+#
+#      - name: Check Datadog monitor for -> Too Many Pod Restarts [propagator]
+#        env:
+#          ENV: ${{ env.CLUSTER_NAME }}
+#          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+#          APP: "propagator"
+#        run: |
+#          python python_api_tests/test_dd_k8s_TooManyRestarts.py
