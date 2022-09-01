@@ -257,7 +257,8 @@ jobs:
         with:
           repository: cxip-labs/qa
           ref  : main
-          token: ${{ secrets.CICD_BOT_PERSONAL_ACCESS_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+#          token: ${{ secrets.HOLOGRAPH_GITHUB_PERSONAL_ACCESS_TOKEN }}
           path : './'
 
       - name: Setup python
