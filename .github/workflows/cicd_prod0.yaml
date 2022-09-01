@@ -38,17 +38,17 @@ env:
   PROD_DOMAIN: "holograph.xyz"
 
 # notice: the trigger
-on:
-  push:
-    branches:
-      - 'holocli' #deleteme
-      - 'develop' #deleteme
-## notice: the trigger
 #on:
-#  pull_request:
+#  push:
 #    branches:
-##      - main
-#    types: [closed]
+#      - 'holocli' #deleteme
+#      - 'develop' #deleteme
+# notice: the trigger
+on:
+  pull_request:
+    branches:
+#      - main
+    types: [closed]
 
 jobs:
   deploy-to-prod0:
