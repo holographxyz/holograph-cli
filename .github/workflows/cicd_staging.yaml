@@ -47,7 +47,7 @@ on:
       - '!master'   # EXCLUDES this branch
 
 jobs:
-  deploy-to-new-staging:
+  deploy-to-staging:
     name: deploy-to-staging
     runs-on: ubuntu-latest
 
