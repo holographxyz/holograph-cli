@@ -636,14 +636,14 @@ export default class Indexer extends Command {
     // NOTE: This should only be necessary for NFTs because they can only exist on one network at a time so we don't
     //       want to update change update the database to the wrong network while the warp cron is running
     //       if a more recent bridge event happened on chain that moved the NFT to a different network
-    const transactions = responseData.transactions
-    if (transaction.blockNumber! > transactions[transactions.length - 1].blockNumber) {
-      this.networkMonitor.structuredLog(
-        network,
-        `Latest transaction in the database is more recent than this transaction. Skipping update for collection ${contractAddress} and tokeId ${tokenId}`,
-      )
-      return
-    }
+    // const transactions = responseData.transactions
+    // if (transaction.blockNumber! > transactions[transactions.length - 1].blockNumber) {
+    //   this.networkMonitor.structuredLog(
+    //     network,
+    //     `Latest transaction in the database is more recent than this transaction. Skipping update for collection ${contractAddress} and tokeId ${tokenId}`,
+    //   )
+    //   return
+    // }
 
     this.networkMonitor.structuredLog(
       network,
