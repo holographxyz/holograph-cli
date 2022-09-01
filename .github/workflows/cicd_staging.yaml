@@ -41,7 +41,7 @@ on:
   push:
     branches:
       - 'holocli'
-      - 'develop' # notice: the actual staging branch -> [the deployment is happening into the holocli namespace!]
+#      - 'develop' # notice: the actual staging branch -> [the deployment is happening into the holocli namespace!]
       #
       - '!main'     # EXCLUDES this branch
       - '!master'   # EXCLUDES this branch
@@ -257,7 +257,8 @@ jobs:
         with:
           repository: cxip-labs/qa
           ref  : main
-          token: ${{ secrets.HOLOGRAPH_GITHUB_PERSONAL_ACCESS_TOKEN }}
+          token: ${{ secrets.HOLOGRAPH_GITHUB_PERSONAL_ACCESS_TOKEN }}  # reminder -> created in my personal GH account
+#          token: ${{ secrets.CICD_BOT_PERSONAL_ACCESS_TOKEN }}
           path : './'
 
       - name: Setup python
@@ -291,3 +292,27 @@ jobs:
 #          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
 #        run: |
 #          python python_api_tests/test_dd_logs_stack_errors.py
+
+      - name: Check Datadog monitor for -> Too Many Pod Restarts
+        env:
+          ENV: ${{ env.CLUSTER_NAME }}
+          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+          APP: "indexer"
+        run: |
+          python python_api_tests/test_dd_k8s_TooManyRestarts.py
+
+      - name: Check Datadog monitor for -> Too Many Pod Restarts
+        env:
+          ENV: ${{ env.CLUSTER_NAME }}
+          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+          APP: "operator"
+        run: |
+          python python_api_tests/test_dd_k8s_TooManyRestarts.py
+
+      - name: Check Datadog monitor for -> Too Many Pod Restarts
+        env:
+          ENV: ${{ env.CLUSTER_NAME }}
+          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+          APP: "propagator"
+        run: |
+          python python_api_tests/test_dd_k8s_TooManyRestarts.py
