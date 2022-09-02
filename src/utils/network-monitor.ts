@@ -10,6 +10,35 @@ import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {capitalize, NETWORK_COLORS} from './utils'
 import color from '@oclif/color'
 
+import dotenv from 'dotenv'
+dotenv.config()
+
+enum Environment {
+  develop = 'develop',
+  testnet = 'testnet',
+  mainnet = 'mainnet',
+}
+
+const getEnvironment = (): Environment => {
+  let environment = Environment.develop
+  const acceptableBranches: Set<string> = new Set<string>(['develop', 'testnet', 'mainnet'])
+  const head = './.git/HEAD'
+  const env: string = process.env.HOLOGRAPH_ENVIRONMENT || ''
+  if (env === '') {
+    if (fs.existsSync(head)) {
+      const contents = fs.readFileSync('./.git/HEAD', 'utf8')
+      const branch = contents.trim().split('ref: refs/heads/')[1]
+      if (acceptableBranches.has(branch)) {
+        environment = Environment[branch as keyof typeof Environment]
+      }
+    }
+  } else if (acceptableBranches.has(env)) {
+    environment = Environment[env as keyof typeof Environment]
+  }
+
+  return environment
+}
+
 export const warpFlag = {
   warp: Flags.integer({
     description: 'Start from the beginning of the chain',
@@ -101,6 +130,7 @@ type NetworkMonitorOptions = {
 }
 
 export class NetworkMonitor {
+  environment: Environment
   parent: ImplementsCommand
   configFile: ConfigFile
   userWallet?: ethers.Wallet
@@ -133,7 +163,12 @@ export class NetworkMonitor {
   factoryContract!: ethers.Contract
   operatorContract!: ethers.Contract
   registryContract!: ethers.Contract
-  HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
+  HOLOGRAPH_ADDRESSES: { [key in Environment]: string } = {
+    [Environment.develop]: '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase(),
+    [Environment.testnet]: '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase(),
+    [Environment.mainnet]: '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase(),
+  }
+
   LAYERZERO_RECEIVERS: {[key: string]: string} = {
     rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     mumbai: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
@@ -179,6 +214,7 @@ export class NetworkMonitor {
   }
 
   constructor(options: NetworkMonitorOptions) {
+    this.environment = getEnvironment()
     this.parent = options.parent
     this.configFile = options.configFile
     this.LAST_BLOCKS_FILE_NAME = options.lastBlockFilename || 'blocks.json'
@@ -234,7 +270,7 @@ export class NetworkMonitor {
       await ethersInitializedCallback.bind(this.parent)()
     }
 
-    this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESS}`)
+    this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESSES[this.environment]}`)
     this.log(`Bridge address: ${this.bridgeAddress}`)
     this.log(`Factory address: ${this.factoryAddress}`)
     this.log(`Operator address: ${this.operatorAddress}`)
@@ -368,7 +404,7 @@ export class NetworkMonitor {
 
     const holographABI = await fs.readJson('./src/abi/Holograph.json')
     this.holograph = new ethers.Contract(
-      this.HOLOGRAPH_ADDRESS.toLowerCase(),
+      this.HOLOGRAPH_ADDRESSES[this.environment],
       holographABI,
       this.providers[this.networks[0]],
     )
