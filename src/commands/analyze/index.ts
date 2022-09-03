@@ -121,7 +121,7 @@ export default class Analyze extends Command {
     const {configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
     this.log('User configurations loaded.')
 
-    const {networks, scopeJobs} = this.scopeItOut(configFile, flags.scope)
+    const {networks, scopeJobs} = this.scopeItOut(configFile, flags.scope as string[])
     this.log(`${JSON.stringify(scopeJobs, undefined, 2)}`)
 
     this.outputFile = flags.output as string
