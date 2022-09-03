@@ -129,6 +129,10 @@ type NetworkMonitorOptions = {
   warp?: number
 }
 
+const HOLOGRAPH_DEVELOP_ADDRESS: string = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
+const HOLOGRAPH_TESTNET_ADDRESS: string = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
+const HOLOGRAPH_MAINNET_ADDRESS: string = '0x0000000000000000000000000000000000000000'.toLowerCase()
+
 export class NetworkMonitor {
   environment: Environment
   parent: ImplementsCommand
@@ -164,9 +168,9 @@ export class NetworkMonitor {
   operatorContract!: ethers.Contract
   registryContract!: ethers.Contract
   HOLOGRAPH_ADDRESSES: { [key in Environment]: string } = {
-    [Environment.develop]: '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase(),
-    [Environment.testnet]: '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase(),
-    [Environment.mainnet]: '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase(),
+    [Environment.develop]: HOLOGRAPH_DEVELOP_ADDRESS,
+    [Environment.testnet]: HOLOGRAPH_TESTNET_ADDRESS,
+    [Environment.mainnet]: HOLOGRAPH_MAINNET_ADDRESS,
   }
 
   LAYERZERO_RECEIVERS: {[key: string]: string} = {
