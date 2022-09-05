@@ -269,49 +269,49 @@ jobs:
         run : |
           python -m pip install datadog_api_client
 
-#      - name: Check Datadog monitor for -> ImgPullBackoff
+      - name: Check Datadog monitor for -> ImgPullBackoff
+        env:
+          ENV: ${{ env.CLUSTER_NAME }}
+          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+          CHECK_TIMEFRAME: 5 # in minutes
+          RUN_FOR: 5 # in minutes
+        run: |
+          python python_api_tests/test_dd_k8s_ImgPullBackoff.py
+
+      - name: Check Datadog logs for -> 500s errors
+        env:
+          ENV: ${{ env.CLUSTER_NAME }}
+          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+        run: |
+          python python_api_tests/test_dd_logs_500s.py
+
+      - name: Check Datadog logs for -> stack errors
+        env:
+          ENV: ${{ env.CLUSTER_NAME }}
+          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+        run: |
+          python python_api_tests/test_dd_logs_stack_errors.py
+
+#      - name: Check Datadog monitor for -> Too Many Pod Restarts [indexer]
 #        env:
 #          ENV: ${{ env.CLUSTER_NAME }}
 #          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-#          CHECK_TIMEFRAME: 5 # in minutes
-#          RUN_FOR: 5 # in minutes
+#          APP: "indexer"
 #        run: |
-#          python python_api_tests/test_dd_k8s_ImgPullBackoff.py
+#          python python_api_tests/test_dd_k8s_TooManyRestarts.py
 #
-#      - name: Check Datadog logs for -> 500s errors
+#      - name: Check Datadog monitor for -> Too Many Pod Restarts [operator]
 #        env:
 #          ENV: ${{ env.CLUSTER_NAME }}
 #          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+#          APP: "operator"
 #        run: |
-#          python python_api_tests/test_dd_logs_500s.py
+#          python python_api_tests/test_dd_k8s_TooManyRestarts.py
 #
-#      - name: Check Datadog logs for -> stack errors
+#      - name: Check Datadog monitor for -> Too Many Pod Restarts [propagator]
 #        env:
 #          ENV: ${{ env.CLUSTER_NAME }}
 #          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+#          APP: "propagator"
 #        run: |
-#          python python_api_tests/test_dd_logs_stack_errors.py
-
-      - name: Check Datadog monitor for -> Too Many Pod Restarts [indexer]
-        env:
-          ENV: ${{ env.CLUSTER_NAME }}
-          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-          APP: "indexer"
-        run: |
-          python python_api_tests/test_dd_k8s_TooManyRestarts.py
-
-      - name: Check Datadog monitor for -> Too Many Pod Restarts [operator]
-        env:
-          ENV: ${{ env.CLUSTER_NAME }}
-          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-          APP: "operator"
-        run: |
-          python python_api_tests/test_dd_k8s_TooManyRestarts.py
-
-      - name: Check Datadog monitor for -> Too Many Pod Restarts [propagator]
-        env:
-          ENV: ${{ env.CLUSTER_NAME }}
-          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-          APP: "propagator"
-        run: |
-          python python_api_tests/test_dd_k8s_TooManyRestarts.py
+#          python python_api_tests/test_dd_k8s_TooManyRestarts.py
