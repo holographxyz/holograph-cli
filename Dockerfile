@@ -1,7 +1,7 @@
 # notice: use image from our own rgistry, cause Dockerhub imposes a pull limit and breaks the workflow
 ARG AWS_ECR_URL=177635894328.dkr.ecr.us-west-2.amazonaws.com
 ARG REPO_NAME=misc
-FROM $AWS_ECR_URL/$REPO_NAME:node-18.4.0-alpine
+FROM $AWS_ECR_URL/$REPO_NAME:node-18.8.0-alpine
 
 RUN apk update && apk add git curl
 
