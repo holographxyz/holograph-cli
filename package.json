@@ -1,6 +1,6 @@
 {
   "name": "holo-cli",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "holograph operator cli",
   "author": "sogoiii @sogoiii",
   "bin": {
