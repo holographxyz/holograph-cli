@@ -256,7 +256,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: holographxyz/qa
-          ref  : main  # or wip
+          ref  : wip  # notice: main/wip
           token: ${{ secrets.HOLOGRAPH_GITHUB_PERSONAL_ACCESS_TOKEN }}  # reminder -> created in my personal GH account
           path : './'
 
@@ -269,28 +269,28 @@ jobs:
         run : |
           python -m pip install datadog_api_client
 
-      - name: Check Datadog monitor for -> ImgPullBackoff
-        env:
-          ENV: ${{ env.CLUSTER_NAME }}
-          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-          CHECK_TIMEFRAME: 5 # in minutes
-          RUN_FOR: 5 # in minutes
-        run: |
-          python python_api_tests/test_dd_k8s_ImgPullBackoff.py
-
-      - name: Check Datadog logs for -> 500s errors
-        env:
-          ENV: ${{ env.CLUSTER_NAME }}
-          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-        run: |
-          python python_api_tests/test_dd_logs_500s.py
-
-      - name: Check Datadog logs for -> stack errors
-        env:
-          ENV: ${{ env.CLUSTER_NAME }}
-          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-        run: |
-          python python_api_tests/test_dd_logs_stack_errors.py
+#      - name: Check Datadog monitor for -> ImgPullBackoff
+#        env:
+#          ENV: ${{ env.CLUSTER_NAME }}
+#          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+#          CHECK_TIMEFRAME: 5 # in minutes
+#          RUN_FOR: 5 # in minutes
+#        run: |
+#          python python_api_tests/test_dd_k8s_ImgPullBackoff.py
+#
+#      - name: Check Datadog logs for -> 500s errors
+#        env:
+#          ENV: ${{ env.CLUSTER_NAME }}
+#          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+#        run: |
+#          python python_api_tests/test_dd_logs_500s.py
+#
+#      - name: Check Datadog logs for -> stack errors
+#        env:
+#          ENV: ${{ env.CLUSTER_NAME }}
+#          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+#        run: |
+#          python python_api_tests/test_dd_logs_stack_errors.py
 
       - name: Check Datadog monitor for -> Too Many Pod Restarts [indexer]
         env:
