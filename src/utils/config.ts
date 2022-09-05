@@ -101,10 +101,7 @@ export async function ensureConfigFileIsValid(
   unsafePassword: string | undefined,
   unlockWallet = false,
 ): Promise<{userWallet: ethers.Wallet; configFile: ConfigFile}> {
-  // console.log('CONFIG_FILE_NAME', CONFIG_FILE_NAME)
   let configPath = configDir
-  // console.log('configDir', configDir)
-  // console.log('configPath', configPath)
   try {
     await fs.pathExists(configDir)
     const stats = await fs.stat(configDir)
