@@ -5,7 +5,7 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, sleep} from '../../utils/utils'
+import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, sleep, getChainId} from '../../utils/utils'
 import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
@@ -768,6 +768,9 @@ export default class Indexer extends Command {
   ): Promise<void> {
     this.networkMonitor.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
 
+    // Get and convert the destination chain id from holograph id in the trasaction args
+    const destinationChainid = getChainId(bridgeTransaction.args[0])
+
     let data
     const params = {
       headers: {
@@ -789,6 +792,9 @@ export default class Indexer extends Command {
           sourceAddress: transaction.from,
           nftId: responseData.id,
           collectionId: responseData.collectionId,
+          // Include the destination chain id if the transaction is a bridge out
+          messageChainId: destinationChainid,
+          operatorChainId: destinationChainid,
         })
 
         this.networkMonitor.structuredLog(
