@@ -278,19 +278,19 @@ jobs:
         run: |
           python python_api_tests/test_dd_k8s_ImgPullBackoff.py
 
-      - name: Check Datadog logs for -> 500s errors
-        env:
-          ENV: ${{ env.CLUSTER_NAME }}
-          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-        run: |
-          python python_api_tests/test_dd_logs_500s.py
-
-      - name: Check Datadog logs for -> stack errors
-        env:
-          ENV: ${{ env.CLUSTER_NAME }}
-          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-        run: |
-          python python_api_tests/test_dd_logs_stack_errors.py
+#      - name: Check Datadog logs for -> 500s errors
+#        env:
+#          ENV: ${{ env.CLUSTER_NAME }}
+#          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+#        run: |
+#          python python_api_tests/test_dd_logs_500s.py
+#
+#      - name: Check Datadog logs for -> stack errors
+#        env:
+#          ENV: ${{ env.CLUSTER_NAME }}
+#          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+#        run: |
+#          python python_api_tests/test_dd_logs_stack_errors.py
 
 #      - name: Check Datadog monitor for -> Too Many Pod Restarts [indexer]
 #        env:
