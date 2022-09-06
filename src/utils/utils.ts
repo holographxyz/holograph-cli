@@ -169,13 +169,11 @@ function networkRestruct(networkMap: any) {
 }
 
 function getChainId(holographId: any) {
-  // TODO: Add logic or error if not found
   const dataMap = networkRestruct(networks)
   return dataMap.byHolographId[holographId]
 }
 
 function getHolographId(chainId: any) {
-  // TODO: Add logic or error if not found
   const dataMap = networkRestruct(networks)
   return dataMap.byChainId[chainId]
 }
