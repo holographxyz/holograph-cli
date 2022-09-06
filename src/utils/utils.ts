@@ -1,4 +1,5 @@
 import Web3 from 'web3'
+import networks from './networks'
 
 // Used for web3 utility functions
 const web3 = new Web3('ws://localhost:8545')
@@ -148,6 +149,35 @@ const rgbToHex = (rgb: number): string => {
   return hex.length === 1 ? `0${hex}` : hex
 }
 
+function networkRestruct(networkMap: any) {
+  const keys = Object.keys(networkMap)
+
+  // eslint-disable-next-line unicorn/no-array-reduce
+  const out = keys.reduce(
+    (prev: any, next: any) => {
+      const chainId = networkMap[next].chain
+      const holographId = networkMap[next].holographId
+
+      prev.byChainId[chainId] = holographId
+      prev.byHolographId[holographId] = chainId
+
+      return prev
+    },
+    {byChainId: {}, byHolographId: {}},
+  )
+  return out
+}
+
+function getChainId(holographId: any) {
+  const dataMap = networkRestruct(networks)
+  return dataMap.byHolographId[holographId]
+}
+
+function getHolographId(chainId: any) {
+  const dataMap = networkRestruct(networks)
+  return dataMap.byChainId[chainId]
+}
+
 export {
   sleep,
   capitalize,
@@ -155,6 +185,8 @@ export {
   randomNumber,
   decodeDeploymentConfig,
   decodeDeploymentConfigInput,
+  getChainId,
+  getHolographId,
   webSocketConfig,
   NETWORK_COLORS,
 }
