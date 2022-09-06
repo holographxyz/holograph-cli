@@ -9,7 +9,7 @@ env:
   IAM_ROLE      : arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli-dev # notice: the same for all 3 cli apps
   #
-  DEV_IMAGE_TAG : dev-ed4db2cbf7883ec835d46b35b338732b2d98bdf9 # dev-${{ github.sha }}
+  DEV_IMAGE_TAG : dev-${{ github.sha }}
   #######################################
   STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.15
   STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.10
@@ -58,12 +58,15 @@ jobs:
           role-to-assume: ${{ env.IAM_ROLE }}
           aws-region    : ${{ env.AWS_REGION }}
 
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - name: Login to ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Build image
+        run : docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
 
 #      - name: Build and push image to ECR
 #        env:
@@ -72,7 +75,10 @@ jobs:
 #        run: |
 #          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG .
 #          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG
-#
+
+      - name: Push image to ECR
+        run : docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
+
 #      - name: Configure AWS creds to access EKS
 #        # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
 #        uses: aws-actions/configure-aws-credentials@v1
@@ -232,87 +238,58 @@ jobs:
 #            echo "curl -k -H \"Host: $ENDPOINT\" https://$LB_URL/healthcheck"
 #            curl -k -H "Host: $ENDPOINT" https://$LB_URL/healthcheck | jq '.status'
 
-  datadog-log-checks:
-    #####
-    needs: [deploy-to-staging]
-    name: datadog-log-checks
-    runs-on: ubuntu-latest
-    #####
-    env:
-      DD_API_KEY: ${{ secrets.STAGING_DD_API_KEY }}
-      DD_APPLICATION_KEY: ${{ secrets.PYTHON_TESTS_DD_APPLICATION_KEY }}
-      #
-      CHECK_TIMEFRAME: 15 # in minutes
-      RUN_FOR: 1 # in minutes
-
-    steps:
-      - name: Sanitize the branch name to use with Helm
-        id: sanitized_branch
-        shell: bash
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF_NAME} | tr '/' '-' )"
-
-      #TODO -> customize for the custom headers for the green deployment
-      - name: Checkout tests repo
-        uses: actions/checkout@v3
-        with:
-          repository: holographxyz/qa
-          ref  : wip  # notice: main/wip
-          token: ${{ secrets.HOLOGRAPH_GITHUB_PERSONAL_ACCESS_TOKEN }}  # reminder -> created in my personal GH account
-          path : './'
-
-      - name: Setup python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-
-      - name: Install Python packages
-        run : |
-          python -m pip install datadog_api_client
-
-      - name: Check Datadog monitor for -> ImgPullBackoff
-        env:
-          ENV: ${{ env.CLUSTER_NAME }}
-          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-          CHECK_TIMEFRAME: 5 # in minutes
-          RUN_FOR: 5 # in minutes
-          APP: "indexer" #todo - for operator & propagator
-        run: |
-          python python_api_tests/test_dd_k8s_ImgPullBackoff.py
-
-#      - name: Check Datadog logs for -> 500s errors
-#        env:
-#          ENV: ${{ env.CLUSTER_NAME }}
-#          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-#        run: |
-#          python python_api_tests/test_dd_logs_500s.py
+#  datadog-log-checks:
+#    #####
+#    needs: [deploy-to-staging]
+#    name: datadog-log-checks
+#    runs-on: ubuntu-latest
+#    #####
+#    env:
+#      DD_API_KEY: ${{ secrets.STAGING_DD_API_KEY }}
+#      DD_APPLICATION_KEY: ${{ secrets.PYTHON_TESTS_DD_APPLICATION_KEY }}
+#      #
+#      CHECK_TIMEFRAME: 15 # in minutes
+#      RUN_FOR: 1 # in minutes
 #
-#      - name: Check Datadog logs for -> stack errors
+#    steps:
+#      - name: Sanitize the branch name to use with Helm
+#        id: sanitized_branch
+#        shell: bash
+#        # replaces '/' to '-' , '_' to '-' , uppercase to lowercase
+#        run: echo "##[set-output name=branch;]$( echo ${GITHUB_REF_NAME} | tr '/' '-' | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
+#
+#      #TODO -> customize for the custom headers for the green deployment
+#      - name: Checkout tests repo
+#        uses: actions/checkout@v3
+#        with:
+#          repository: holographxyz/qa
+#          ref  : wip  # notice: main/wip
+#          token: ${{ secrets.HOLOGRAPH_GITHUB_PERSONAL_ACCESS_TOKEN }}  # reminder -> created in my personal GH account
+#          path : './'
+#
+#      - name: Setup python
+#        uses: actions/setup-python@v2
+#        with:
+#          python-version: 3.8
+#
+#      - name: Install Python packages
+#        run : |
+#          python -m pip install datadog_api_client
+#
+#      - name: Check Datadog monitor for -> ImgPullBackoff
 #        env:
 #          ENV: ${{ env.CLUSTER_NAME }}
 #          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+#          CHECK_TIMEFRAME: 5 # in minutes
+#          RUN_FOR: 5 # in minutes
+#          APP: "indexer" # todo - for operator & propagator
 #        run: |
-#          python python_api_tests/test_dd_logs_stack_errors.py
-
+#          python python_api_tests/test_dd_k8s_ImgPullBackoff.py
+#
 #      - name: Check Datadog monitor for -> Too Many Pod Restarts [indexer]
 #        env:
 #          ENV: ${{ env.CLUSTER_NAME }}
 #          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-#          APP: "indexer"
-#        run: |
-#          python python_api_tests/test_dd_k8s_TooManyRestarts.py
-#
-#      - name: Check Datadog monitor for -> Too Many Pod Restarts [operator]
-#        env:
-#          ENV: ${{ env.CLUSTER_NAME }}
-#          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-#          APP: "operator"
-#        run: |
-#          python python_api_tests/test_dd_k8s_TooManyRestarts.py
-#
-#      - name: Check Datadog monitor for -> Too Many Pod Restarts [propagator]
-#        env:
-#          ENV: ${{ env.CLUSTER_NAME }}
-#          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-#          APP: "propagator"
+#          APP: "indexer" # todo - for operator & propagator
 #        run: |
 #          python python_api_tests/test_dd_k8s_TooManyRestarts.py
