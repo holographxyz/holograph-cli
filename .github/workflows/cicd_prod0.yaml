@@ -62,20 +62,18 @@ jobs:
           role-to-assume: ${{ env.IAM_ROLE }}
           aws-region    : ${{ env.AWS_REGION }}
 
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - name: Login to ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Build image
+        run : docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.PROD_IMAGE_TAG }} .
 
-      - name: Build and push image to ECR
-        env:
-          ECR_REGISTRY  : ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-        run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$PROD_IMAGE_TAG .
-          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$PROD_IMAGE_TAG
+      - name: Push image to ECR
+        run : docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.PROD_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
