@@ -294,6 +294,7 @@ export default class Indexer extends Command {
         `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`,
       )
       const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
+
       if (deploymentInfo !== undefined) {
         await this.updateDeployedCollection(transaction, network, deploymentInfo as any[])
       }
@@ -503,12 +504,16 @@ export default class Indexer extends Command {
     transaction: ethers.providers.TransactionResponse,
     network: string,
     deploymentAddress: string,
+    salt: string,
   ): Promise<void> {
     const data = JSON.stringify({
+      contractAddress: deploymentAddress,
       chainId: transaction.chainId,
       status: 'DEPLOYED',
-      salt: '0x',
+      salt: salt,
       tx: transaction.hash,
+      blockNumber: transaction.blockNumber,
+      isDeployed: true,
     })
     this.networkMonitor.structuredLog(network, `Successfully found Collection with address ${deploymentAddress}`)
     this.networkMonitor.structuredLog(
@@ -561,7 +566,7 @@ export default class Indexer extends Command {
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
       callback: this.updateCollectionCallback,
-      arguments: [transaction, network, deploymentAddress],
+      arguments: [transaction, network, deploymentAddress, config.config.salt],
     }
     if (!(job.timestamp in this.dbJobMap)) {
       this.dbJobMap[job.timestamp] = []
@@ -598,7 +603,7 @@ export default class Indexer extends Command {
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
       callback: this.updateCollectionCallback,
-      arguments: [transaction, network, deploymentAddress],
+      arguments: [transaction, network, deploymentAddress, config.config.salt],
     }
     if (!(job.timestamp in this.dbJobMap)) {
       this.dbJobMap[job.timestamp] = []
