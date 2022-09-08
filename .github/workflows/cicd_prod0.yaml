@@ -47,7 +47,7 @@ env:
 on:
   pull_request:
     branches:
-      - main
+      - mainnet
     types: [closed]
 
 jobs:
