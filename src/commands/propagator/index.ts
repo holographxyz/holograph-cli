@@ -225,10 +225,15 @@ export default class Propagator extends Command {
         const config = decodeDeploymentConfigInput(transaction.data)
         this.networkMonitor.structuredLog(
           network,
-          `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-            `Wallet that deployed the collection is ${transaction.from}\n` +
-            `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
-            `The transaction hash is: ${transaction.hash}\n`,
+          `HolographFactory deployed a new collection on ${capitalize(
+            network,
+          )} at address ${deploymentAddress}. Wallet that deployed the collection is ${
+            transaction.from
+          }. The config used for deployHolographableContract was ${JSON.stringify(
+            config,
+            null,
+            2,
+          )}. The transaction hash is: ${transaction.hash}`,
         )
         if (
           this.operatorMode !== OperatorMode.listen &&

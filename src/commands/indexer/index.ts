@@ -5,7 +5,7 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, sleep} from '../../utils/utils'
+import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, sleep, getChainId} from '../../utils/utils'
 import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
@@ -36,6 +36,14 @@ type PatchOptions = {
   messages: string[]
 }
 
+interface BridgeTransactionArgs {
+  toChain: number
+  tokenId: ethers.BigNumber
+  collection: string
+  from: string
+  to: string
+}
+
 export default class Indexer extends Command {
   static LAST_BLOCKS_FILE_NAME = 'indexer-blocks.json'
   static description = 'Listen for EVM events and update database network status'
@@ -63,6 +71,7 @@ export default class Indexer extends Command {
   JWT!: string
   DELAY = 20_000
   apiColor = color.keyword('orange')
+  errorColor = color.keyword('red')
 
   operatorMode: OperatorMode = OperatorMode.listen
 
@@ -181,7 +190,11 @@ export default class Indexer extends Command {
       await job.callback.bind(this)(res.data, ...job.arguments)
       this.processDBJobs()
     } catch (error: any) {
-      this.networkMonitor.structuredLogError(job.network, error, `Failed to GET ${job.query}`)
+      this.networkMonitor.structuredLogError(
+        job.network,
+        error.response.data,
+        this.errorColor(`Failed to GET ${job.query}`),
+      )
       // one second interval
       await sleep(1000)
       this.processDBJobs(timestamp, job)
@@ -195,12 +208,16 @@ export default class Indexer extends Command {
       }
 
       job.attempts += 1
-      if (job.attempts === 10) {
+      this.log(`JOB ${job.query} is being executed with attempt ${job.attempts}`)
+      if (job.attempts >= 10) {
         // we have exhausted attempts, need to drop it entirely
         this.networkMonitor.structuredLog(
           job.network,
           `Failed to execute API query ${job.query}. Arguments were ${JSON.stringify(job.arguments, undefined, 2)}`,
         )
+      } else if (job.attempts >= 9) {
+        // push to end of array as a final attempt
+        this.dbJobMap[timestamp].push(job)
       } else {
         this.dbJobMap[timestamp].unshift(job)
       }
@@ -278,7 +295,7 @@ export default class Indexer extends Command {
       )
       const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
       if (deploymentInfo !== undefined) {
-        await this.updateContractDB(transaction, network, deploymentInfo as any[])
+        await this.updateDeployedCollection(transaction, network, deploymentInfo as any[])
       }
     }
   }
@@ -298,6 +315,7 @@ export default class Indexer extends Command {
       } else {
         const bridgeTransaction: ethers.utils.TransactionDescription =
           this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
+
         switch (bridgeTransaction.name) {
           case 'deployOut':
             // cross-chain contract deployment
@@ -307,6 +325,14 @@ export default class Indexer extends Command {
             break
           case 'erc721out':
             // erc721 token being bridged out
+            await this.updateCrossChainTransaction(
+              'bridgeOut',
+              network,
+              transaction,
+              bridgeTransaction,
+              operatorJobHash,
+            )
+
             break
           default:
             // we have no idea what is going on
@@ -353,7 +379,7 @@ export default class Indexer extends Command {
             case 'deployIn':
               deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
               if (deploymentInfo !== undefined) {
-                await this.updateContractBridgeDB(
+                await this.updateBridgedCollection(
                   transaction,
                   network,
                   deploymentInfo as any[],
@@ -367,7 +393,7 @@ export default class Indexer extends Command {
               // erc20 token being bridged in
               transferInfo = this.networkMonitor.decodeErc20TransferEvent(receipt)
               if (transferInfo !== undefined) {
-                await this.updateFTBridgeDB(transaction, network, transferInfo as any[])
+                await this.updateBridgedERC20(transaction, network, transferInfo as any[])
               }
 
               break
@@ -375,8 +401,16 @@ export default class Indexer extends Command {
               // erc721 token being bridged in
               transferInfo = this.networkMonitor.decodeErc721TransferEvent(receipt)
               if (transferInfo !== undefined) {
-                await this.updateNFTBridgeDB(transaction, network, transferInfo as any[])
+                await this.updateBridgedNFT(transaction, network, transferInfo as any[])
               }
+
+              await this.updateCrossChainTransaction(
+                'bridgeIn',
+                network,
+                transaction,
+                bridgeTransaction,
+                operatorJobHash,
+              )
 
               break
             default:
@@ -401,6 +435,8 @@ export default class Indexer extends Command {
     transaction: ethers.providers.TransactionResponse,
     network: string,
   ): Promise<void> {
+    let deploymentInfo
+    let bridgeTransaction
     const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
@@ -420,13 +456,49 @@ export default class Indexer extends Command {
           network,
           `HolographOperator received a new bridge job on ${capitalize(
             network,
-          )}\nThe job payload hash is ${operatorJobHash}\nThe job payload is ${operatorJobPayload}\n`,
+          )}. The job payload hash is ${operatorJobHash}. The job payload is ${operatorJobPayload}`,
+        )
+        bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
+          data: operatorJobPayload!,
+          value: ethers.BigNumber.from('0'),
+        })
+
+        switch (bridgeTransaction.name) {
+          case 'deployIn':
+            deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
+            if (deploymentInfo !== undefined) {
+              // cross-chain contract deployment completed
+            }
+
+            break
+          case 'erc20in':
+            // erc20 token being bridged in
+            break
+          case 'erc721in':
+            // erc721 token being bridged in
+            await this.updateCrossChainTransaction(
+              'relayMessage',
+              network,
+              transaction,
+              bridgeTransaction,
+              operatorJobHash,
+            )
+
+            break
+          default:
+            // we have no idea what is going on
+            break
+        }
+
+        this.networkMonitor.structuredLog(
+          network,
+          `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
         )
       }
     }
   }
 
-  async updateContractDBCallback(
+  async updateCollectionCallback(
     responseData: any,
     transaction: ethers.providers.TransactionResponse,
     network: string,
@@ -443,7 +515,7 @@ export default class Indexer extends Command {
       network,
       `API: Requesting to update Collection ${deploymentAddress} with id ${responseData.id}`,
     )
-    await this.makeDBPatch({
+    await this.sendPatchRequest({
       responseData,
       network,
       query: `${this.BASE_URL}/v1/collections/${responseData.id}`,
@@ -458,7 +530,7 @@ export default class Indexer extends Command {
     Promise.resolve()
   }
 
-  async updateContractDB(
+  async updateDeployedCollection(
     transaction: ethers.providers.TransactionResponse,
     network: string,
     deploymentInfo: any[],
@@ -470,12 +542,17 @@ export default class Indexer extends Command {
     const deploymentAddress = deploymentInfo[0] as string
     this.networkMonitor.structuredLog(
       network,
-      `\nHolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-        `Wallet that deployed the collection is ${transaction.from}\n` +
-        `The config used for deployHolographableContract was ${JSON.stringify(config, null, 2)}\n` +
-        `The transaction hash is: ${transaction.hash}\n`,
+      `HolographFactory deployed a new collection on ${capitalize(
+        network,
+      )} at address ${deploymentAddress}. Wallet that deployed the collection is ${
+        transaction.from
+      }. The config used for deployHolographableContract was ${JSON.stringify(
+        config,
+        null,
+        2,
+      )}. The transaction hash is: ${transaction.hash}`,
     )
-    this.networkMonitor.structuredLog(network, 'Sending it to DBJobManager')
+    this.networkMonitor.structuredLog(network, `Sending deployed collection job to DBJobManager ${deploymentAddress}`)
 
     const job: DBJob = {
       attempts: 0,
@@ -483,7 +560,7 @@ export default class Indexer extends Command {
       timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
-      callback: this.updateContractDBCallback,
+      callback: this.updateCollectionCallback,
       arguments: [transaction, network, deploymentAddress],
     }
     if (!(job.timestamp in this.dbJobMap)) {
@@ -493,7 +570,7 @@ export default class Indexer extends Command {
     this.dbJobMap[job.timestamp].push(job)
   }
 
-  async updateContractBridgeDB(
+  async updateBridgedCollection(
     transaction: ethers.providers.TransactionResponse,
     network: string,
     deploymentInfo: any[],
@@ -506,12 +583,13 @@ export default class Indexer extends Command {
     const deploymentAddress = deploymentInfo[0] as string
     this.networkMonitor.structuredLog(
       network,
-      '\nHolographOperator executed a job which bridged a collection\n' +
-        `HolographFactory deployed a new collection on ${capitalize(network)} at address ${deploymentAddress}\n` +
-        `Operator that deployed the collection is ${transaction.from}` +
-        `The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}\n`,
+      `HolographOperator executed a job which bridged a collection. HolographFactory deployed a new collection on ${capitalize(
+        network,
+      )} at address ${deploymentAddress}. Operator that deployed the collection is ${
+        transaction.from
+      }. The config used for deployHolographableContract function was ${JSON.stringify(config, null, 2)}`,
     )
-    this.networkMonitor.structuredLog(network, 'Sending it to DBJobManager')
+    this.networkMonitor.structuredLog(network, `Sending bridged collection job to DBJobManager ${deploymentAddress}`)
 
     const job: DBJob = {
       attempts: 0,
@@ -519,7 +597,7 @@ export default class Indexer extends Command {
       timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
-      callback: this.updateContractDBCallback,
+      callback: this.updateCollectionCallback,
       arguments: [transaction, network, deploymentAddress],
     }
     if (!(job.timestamp in this.dbJobMap)) {
@@ -529,7 +607,7 @@ export default class Indexer extends Command {
     this.dbJobMap[job.timestamp].push(job)
   }
 
-  async updateFTBridgeDB(
+  async updateBridgedERC20(
     transaction: ethers.providers.TransactionResponse,
     network: string,
     transferInfo: any[],
@@ -540,7 +618,7 @@ export default class Indexer extends Command {
     )
   }
 
-  async updateNFTBridgeDBCallback(
+  async updateBridgedNFTCallback(
     responseData: any,
     transaction: ethers.providers.TransactionResponse,
     network: string,
@@ -554,11 +632,12 @@ export default class Indexer extends Command {
     })
     this.networkMonitor.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
     // TODO: This isn't working as expected, need to figure out why
-    // Only update the database if this transaction happened in a later block than the last block we indexed
+    // Only update the database if this transaction happened in a later block than the last transaction we indexed
     // NOTE: This should only be necessary for NFTs because they can only exist on one network at a time so we don't
     //       want to update change update the database to the wrong network while the warp cron is running
     //       if a more recent bridge event happened on chain that moved the NFT to a different network
-    // if (transaction.blockNumber! > responseData.transaction[0]) {
+    // const transactions = responseData.transactions
+    // if (transaction.blockNumber! > transactions[transactions.length - 1].blockNumber) {
     //   this.networkMonitor.structuredLog(
     //     network,
     //     `Latest transaction in the database is more recent than this transaction. Skipping update for collection ${contractAddress} and tokeId ${tokenId}`,
@@ -571,7 +650,7 @@ export default class Indexer extends Command {
       `API: Requesting to update NFT with collection ${contractAddress} and tokeId ${tokenId} and id ${responseData.id}`,
     )
 
-    await this.makeDBPatch({
+    await this.sendPatchRequest({
       responseData,
       network,
       query: `${this.BASE_URL}/v1/nfts/${responseData.id}`,
@@ -586,7 +665,7 @@ export default class Indexer extends Command {
     Promise.resolve()
   }
 
-  async updateNFTBridgeDB(
+  async updateBridgedNFT(
     transaction: ethers.providers.TransactionResponse,
     network: string,
     transferInfo: any[],
@@ -596,12 +675,13 @@ export default class Indexer extends Command {
 
     this.networkMonitor.structuredLog(
       network,
-      '\nHolographOperator executed a job which minted an ERC721 NFT\n' +
-        `Holographer minted a new NFT on ${capitalize(network)} at address ${contractAddress}\n` +
-        `The ID of the NFT is ${tokenId}\n` +
-        `Operator that minted the nft is ${transaction.from}\n`,
+      `HolographOperator executed a job which minted an ERC721 NFT. Holographer minted a new NFT on ${capitalize(
+        network,
+      )} at address ${contractAddress}. The ID of the NFT is ${tokenId}. Operator that minted the nft is ${
+        transaction.from
+      }`,
     )
-    this.networkMonitor.structuredLog(network, 'Sending it to DBJobManager')
+    this.networkMonitor.structuredLog(network, `Sending bridged nft job to DBJobManager ${contractAddress}`)
 
     const job: DBJob = {
       attempts: 0,
@@ -609,7 +689,7 @@ export default class Indexer extends Command {
       timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
-      callback: this.updateNFTBridgeDBCallback,
+      callback: this.updateBridgedNFTCallback,
       arguments: [transaction, network, contractAddress, tokenId],
     }
     if (!(job.timestamp in this.dbJobMap)) {
@@ -619,7 +699,7 @@ export default class Indexer extends Command {
     this.dbJobMap[job.timestamp].push(job)
   }
 
-  async makeDBPatch(options: PatchOptions): Promise<void> {
+  async sendPatchRequest(options: PatchOptions): Promise<void> {
     const responseData = options.responseData
     const network = options.network
     const query = options.query
@@ -640,9 +720,196 @@ export default class Indexer extends Command {
         `${messages} and id ${responseData.id} response ${JSON.stringify(patchRes.data)}`,
       )
       this.networkMonitor.structuredLog(network, messages[1])
-    } catch {
-      // this.networkMonitor.structuredLog(network, messages[2])
-      // this.networkMonitor.structuredLogError(network, error, messages[3])
+    } catch (error: any) {
+      this.networkMonitor.structuredLog(network, messages[2])
+      this.networkMonitor.structuredLogError(network, error.response.data, this.errorColor(messages[3]))
     }
+  }
+
+  async updateCrossChainTransaction(
+    crossChainTxType: string,
+    network: string,
+    transaction: ethers.providers.TransactionResponse,
+    bridgeTransaction: ethers.utils.TransactionDescription,
+    operatorJobHash: string,
+  ): Promise<void> {
+    const jobHash = operatorJobHash
+
+    const args: BridgeTransactionArgs = bridgeTransaction.args as unknown as BridgeTransactionArgs
+    const tokenId = args.tokenId.toString()
+    const contractAddress = bridgeTransaction.args.collection.toLowerCase()
+
+    this.networkMonitor.structuredLog(network, `Sending cross chain transaction job to DBJobManager ${contractAddress}`)
+    const job: DBJob = {
+      attempts: 0,
+      network,
+      timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
+      query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
+      message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
+      callback: this.updateCrossChainTransactionCallback,
+      arguments: [transaction, network, contractAddress, tokenId, crossChainTxType, bridgeTransaction, jobHash],
+    }
+    if (!(job.timestamp in this.dbJobMap)) {
+      this.dbJobMap[job.timestamp] = []
+    }
+
+    this.dbJobMap[job.timestamp].push(job)
+  }
+
+  async updateCrossChainTransactionCallback(
+    responseData: any,
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+    contractAddress: string,
+    tokenId: string,
+    crossChainTxType: string,
+    bridgeTransaction: ethers.utils.TransactionDescription,
+    jobHash: string,
+  ): Promise<void> {
+    this.networkMonitor.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
+
+    // Get and convert the destination chain id from holograph id in the trasaction args
+    const destinationChainid = getChainId(bridgeTransaction.args[0])
+
+    let data
+    const params = {
+      headers: {
+        Authorization: `Bearer ${this.JWT}`,
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    }
+    // Set the columns to update based on the type of cross-chain transaction
+    switch (crossChainTxType) {
+      case 'bridgeOut':
+        data = JSON.stringify({
+          jobHash,
+          jobType: 'ERC721',
+          sourceTx: transaction.hash,
+          sourceBlockNumber: transaction.blockNumber,
+          sourceChainId: transaction.chainId,
+          sourceStatus: 'COMPLETED',
+          sourceAddress: transaction.from,
+          nftId: responseData.id,
+          collectionId: responseData.collectionId,
+          // Include the destination chain id if the transaction is a bridge out
+          messageChainId: destinationChainid,
+          operatorChainId: destinationChainid,
+        })
+
+        this.networkMonitor.structuredLog(
+          network,
+          this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash}`),
+        )
+
+        try {
+          const req = await axios.post(`${this.BASE_URL}/v1/cross-chain-transactions`, data, params)
+          this.networkMonitor.structuredLog(
+            network,
+            this.apiColor(`API: POST CrossChainTransaction ${jobHash} response ${JSON.stringify(req.data)}`),
+          )
+          this.networkMonitor.structuredLog(
+            network,
+            `Successfully updated CrossChainTransaction ${jobHash} ID ${req.data.id}`,
+          )
+        } catch (error: any) {
+          this.networkMonitor.structuredLog(
+            network,
+            `Failed to update the database for CrossChainTransaction ${jobHash}`,
+          )
+          this.networkMonitor.structuredLogError(
+            network,
+            error.response.data,
+            this.errorColor(`CrossChainTransaction ${jobHash}`),
+          )
+        }
+
+        break
+      case 'relayMessage':
+        data = JSON.stringify({
+          jobHash,
+          jobType: 'ERC721',
+          messageTx: transaction.hash,
+          messageBlockNumber: transaction.blockNumber,
+          messageChainId: transaction.chainId,
+          messageStatus: 'COMPLETED',
+          messageAddress: transaction.from,
+          nftId: responseData.id,
+          collectionId: responseData.collectionId,
+        })
+
+        this.networkMonitor.structuredLog(
+          network,
+          this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash}`),
+        )
+        try {
+          const req = await axios.post(`${this.BASE_URL}/v1/cross-chain-transactions`, data, params)
+          this.networkMonitor.structuredLog(
+            network,
+            this.apiColor(`API: POST CrossChainTransaction ${jobHash} response ${JSON.stringify(req.data)}`),
+          )
+          this.networkMonitor.structuredLog(
+            network,
+            `Successfully updated CrossChainTransaction ${jobHash} ID ${req.data.id}`,
+          )
+        } catch (error: any) {
+          this.networkMonitor.structuredLog(
+            network,
+            `Failed to update the database for CrossChainTransaction ${jobHash}`,
+          )
+          this.networkMonitor.structuredLogError(
+            network,
+            error.response.data,
+            this.errorColor(`CrossChainTransaction ${jobHash}`),
+          )
+        }
+
+        break
+      case 'bridgeIn':
+        data = JSON.stringify({
+          jobHash,
+          jobType: 'ERC721',
+          operatorTx: transaction.hash,
+          operatorBlockNumber: transaction.blockNumber,
+          operatorChainId: transaction.chainId,
+          operatorStatus: 'COMPLETED',
+          operatorAddress: transaction.from,
+          nftId: responseData.id,
+          collectionId: responseData.collectionId,
+        })
+
+        this.networkMonitor.structuredLog(
+          network,
+          this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash}`),
+        )
+        try {
+          const req = await axios.post(`${this.BASE_URL}/v1/cross-chain-transactions`, data, params)
+          this.networkMonitor.structuredLog(
+            network,
+            this.apiColor(`API: POST CrossChainTransaction ${jobHash} response ${JSON.stringify(req.data)}`),
+          )
+          this.networkMonitor.structuredLog(
+            network,
+            `Successfully updated CrossChainTransaction ${jobHash} ID ${req.data.id}`,
+          )
+        } catch (error: any) {
+          this.networkMonitor.structuredLog(
+            network,
+            `Failed to update the database for CrossChainTransaction ${jobHash}`,
+          )
+          this.networkMonitor.structuredLogError(
+            network,
+            error.response.data,
+            this.errorColor(`CrossChainTransaction ${jobHash}`),
+          )
+        }
+
+        break
+      default:
+        // Unknown cross-chain transaction type
+        return
+    }
+
+    Promise.resolve()
   }
 }
