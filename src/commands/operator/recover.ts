@@ -201,49 +201,87 @@ export default class Recover extends Command {
     if (operate) {
       const contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.wallets[network])
       let gasLimit
-      try {
-        gasLimit = await contract.estimateGas.executeJob(payload)
-      } catch (error: any) {
-        switch (error.reason) {
-          case 'execution reverted: HOLOGRAPH: already deployed': {
-            this.networkMonitor.structuredLog(network, 'HOLOGRAPH: already deployed')
+      const tryGetGasLimit = async (): Promise<boolean> => {
+        return new Promise<boolean>((resolve, _reject) => {
+          const getGasLimit: NodeJS.Timeout = setInterval(async () => {
+            try {
+              gasLimit = await contract.estimateGas.executeJob(payload)
+              clearInterval(getGasLimit)
+              resolve(true)
+            } catch (error: any) {
+              switch (error.reason) {
+                case 'execution reverted: HOLOGRAPH: already deployed': {
+                  this.networkMonitor.structuredLog(network, 'HOLOGRAPH: already deployed')
 
-            break
-          }
+                  break
+                }
 
-          case 'execution reverted: HOLOGRAPH: invalid job': {
-            this.networkMonitor.structuredLog(network, 'HOLOGRAPH: invalid job')
+                case 'execution reverted: HOLOGRAPH: invalid job': {
+                  this.networkMonitor.structuredLog(network, 'HOLOGRAPH: invalid job')
 
-            break
-          }
+                  break
+                }
 
-          case 'execution reverted: HOLOGRAPH: not holographed': {
-            this.networkMonitor.structuredLog(network, 'HOLOGRAPH: not holographed')
+                case 'execution reverted: HOLOGRAPH: not holographed': {
+                  this.networkMonitor.structuredLog(network, 'HOLOGRAPH: not holographed')
 
-            break
-          }
+                  break
+                }
 
-          default: {
-            this.networkMonitor.structuredLogError(network, error, contract.address)
-          }
-        }
+                default: {
+                  this.networkMonitor.structuredLogError(network, error, contract.address)
+                }
+              }
 
-        return
+              clearInterval(getGasLimit)
+              resolve(false)
+            }
+          }, 1000) // every 1 second
+        })
       }
 
-      const gasPrice = await contract.provider.getGasPrice()
-      const jobRawTx = await contract.populateTransaction.executeJob(payload, {gasPrice, gasLimit})
-      jobRawTx.nonce = this.networkMonitor.walletNonces[network]
-      const jobTx = await this.networkMonitor.wallets[network].sendTransaction(jobRawTx)
-      this.debug(jobTx)
-      this.networkMonitor.structuredLog(network, `Transaction hash is ${jobTx.hash}`)
-      this.networkMonitor.walletNonces[network]++
-      jobTx.wait().then((jobReceipt: ethers.providers.TransactionReceipt) => {
-        this.debug(jobReceipt)
-        this.networkMonitor.structuredLog(network, `Transaction ${jobReceipt.transactionHash} mined and confirmed`)
-      })
+      if (await tryGetGasLimit()) {
+        const gasPrice = await contract.provider.getGasPrice()
+        const jobRawTx = await contract.populateTransaction.executeJob(payload, {gasPrice, gasLimit})
+        jobRawTx.nonce = this.networkMonitor.walletNonces[network]
+        let jobTx!: ethers.providers.TransactionResponse
+        const tryToSendTx = async (): Promise<boolean> => {
+          return new Promise<boolean>((resolve, _reject) => {
+            const getJobTx: NodeJS.Timeout = setInterval(async () => {
+              jobTx = await this.networkMonitor.wallets[network].sendTransaction(jobRawTx)
+              clearInterval(getJobTx)
+              resolve(true)
+            }, 1000) // every 1 second
+          })
+        }
+
+        if (await tryToSendTx()) {
+          this.debug(jobTx)
+          this.networkMonitor.structuredLog(network, `Transaction hash is ${jobTx.hash}`)
+          this.networkMonitor.walletNonces[network]++
+          let jobReceipt: ethers.ContractReceipt
+          const tryToGetTxReceipt = async (): Promise<void> => {
+            return new Promise<void>((resolve, _reject) => {
+              const getTxReceipt: NodeJS.Timeout = setInterval(async () => {
+                jobReceipt = await this.networkMonitor.providers[network].getTransactionReceipt(jobTx.hash)
+                if (jobReceipt !== null) {
+                  this.debug(jobReceipt)
+                  this.networkMonitor.structuredLog(network, `Transaction ${jobReceipt.transactionHash} mined and confirmed`)
+                  clearInterval(getTxReceipt)
+                  resolve()
+                }
+              }, 1000) // every 1 second
+            })
+          }
+
+          await tryToGetTxReceipt()
+        }
+      }
     } else {
       this.networkMonitor.structuredLog(network, 'Dropped potential payload to execute')
     }
+
+    // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+    process.exit()
   }
 }
