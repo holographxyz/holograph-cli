@@ -1,14 +1,12 @@
-import * as fs from 'fs-extra'
-import * as path from 'node:path'
 import * as inquirer from 'inquirer'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
-import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
-import {ConfigNetwork, ConfigNetworks} from '../../utils/config'
+import {ensureConfigFileIsValid} from '../../utils/config'
+import networks from '../../utils/networks'
 
-import color from '@oclif/color'
+import {BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 
 export default class Recover extends Command {
   static description = 'Attempt to re-run/recover a particular Operator Job'
@@ -22,61 +20,30 @@ export default class Recover extends Command {
    * Operator class variables
    */
   operatorAddress!: string
+  networkMonitor!: NetworkMonitor
 
-  abiCoder = ethers.utils.defaultAbiCoder
-  holograph!: ethers.Contract
-  operatorContract!: ethers.Contract
-  HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
-  targetEvents: Record<string, string> = {
-    AvailableJob: '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11',
-    '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11': 'AvailableJob',
+  async fakeProcessor(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
+    this.networkMonitor.structuredLog(job.network, `This should not trigger: ${JSON.stringify(transactions,undefined,2)}`)
+    Promise.resolve()
   }
 
   async run(): Promise<void> {
     this.log('Loading user configurations...')
-    const configPath = path.join(this.config.configDir, CONFIG_FILE_NAME)
-    const {userWallet, configFile} = await ensureConfigFileIsValid(configPath, undefined, true)
+    const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
     this.log('User configurations loaded.')
 
-    if (userWallet === undefined) {
-      throw new Error('Wallet could not be unlocked')
-    }
+    this.networkMonitor = new NetworkMonitor({
+      parent: this,
+      configFile,
+      debug: this.debug,
+      processTransactions: this.fakeProcessor,
+      userWallet
+    })
 
     const {flags} = await this.parse(Recover)
 
-    const supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
     let tx: string = flags.tx || ''
     let network: string = flags.network || ''
-
-    if (network === '' || !supportedNetworks.includes(network)) {
-      const txNetworkPrompt: any = await inquirer.prompt([
-        {
-          name: 'network',
-          message: 'select the network to extract transaction details from',
-          type: 'list',
-          choices: supportedNetworks,
-        },
-      ])
-      network = txNetworkPrompt.network
-    }
-
-    CliUx.ux.action.start('Loading transaction network RPC provider')
-    const providerUrl: string = (configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork).providerUrl
-    const txNetworkProtocol = new URL(providerUrl).protocol
-    let txNetworkProvider
-    switch (txNetworkProtocol) {
-      case 'https:':
-        txNetworkProvider = new ethers.providers.JsonRpcProvider(providerUrl)
-        break
-      case 'wss:':
-        txNetworkProvider = new ethers.providers.WebSocketProvider(providerUrl)
-        break
-      default:
-        throw new Error('Unsupported RPC URL protocol -> ' + txNetworkProtocol)
-    }
-
-    const txNetworkWallet: ethers.Wallet = userWallet.connect(txNetworkProvider)
-    CliUx.ux.action.stop()
 
     if (tx === '' || !/^0x[\da-f]{64}$/i.test(tx)) {
       const txPrompt: any = await inquirer.prompt([
@@ -92,66 +59,139 @@ export default class Recover extends Command {
       tx = txPrompt.tx
     }
 
-    const holographABI = await fs.readJson('./src/abi/Holograph.json')
-    this.holograph = new ethers.ContractFactory(holographABI, '0x', txNetworkWallet).attach(
-      this.HOLOGRAPH_ADDRESS.toLowerCase(),
-    )
+    if (network === '' || !this.networkMonitor.networks.includes(network)) {
+      const txNetworkPrompt: any = await inquirer.prompt([
+        {
+          name: 'network',
+          message: 'select the network to extract transaction details from',
+          type: 'list',
+          choices: this.networkMonitor.networks,
+        },
+      ])
+      network = txNetworkPrompt.network
+    }
 
-    this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
-
-    const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
-    this.operatorContract = new ethers.ContractFactory(holographOperatorABI, '0x', txNetworkWallet).attach(
-      this.operatorAddress,
-    )
-
-    CliUx.ux.action.start('Retrieving transaction details from ' + network + ' network')
-    const transaction = await txNetworkWallet.provider.getTransaction(tx)
-    const receipt = await txNetworkWallet.provider.getTransactionReceipt(transaction.hash as string)
+    CliUx.ux.action.start('Loading network RPC providers')
+    await this.networkMonitor.initializeEthers()
     CliUx.ux.action.stop()
 
-    this.handleOperatorRequestEvents(transaction, receipt)
+    CliUx.ux.action.start('Retrieving transaction details from ' + network + ' network')
+    const transaction = await this.networkMonitor.providers[network].getTransaction(tx)
+//    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash as string)
+    CliUx.ux.action.stop()
+
+    await this.processTransaction(network, transaction)
   }
 
-  async handleOperatorRequestEvents(transaction: ethers.Transaction, receipt: ethers.ContractReceipt): Promise<void> {
-    this.structuredLog(
-      `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
+  async processTransaction(network: string, transaction: ethers.providers.TransactionResponse): Promise<void> {
+    this.networkMonitor.structuredLog(
+      network,
+      `Processing transaction ${transaction.hash} at block ${transaction.blockNumber}`,
     )
-    let event = null
-    if ('logs' in receipt && typeof receipt.logs !== 'undefined' && receipt.logs !== null) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        if (event === null) {
-          const log = receipt.logs[i]
-          if (
-            log.address.toLowerCase() === this.operatorAddress &&
-            log.topics.length > 0 &&
-            log.topics[0] === this.targetEvents.AvailableJob
-          ) {
-            event = log.data
-          } else {
-            this.structuredLog(
-              `LayerZero transaction is not relevant to AvailableJob event. ` +
-                `Transaction was relayed to ${log.address} instead of ` +
-                `The Operator at ${this.operatorAddress}`,
-            )
-          }
-        }
+    const to: string | undefined = transaction.to?.toLowerCase()
+    const from: string | undefined = transaction.from?.toLowerCase()
+    switch (to) {
+      case this.networkMonitor.bridgeAddress: {
+        await this.handleBridgeOutEvent(transaction, network)
+
+        break
       }
 
-      if (event) {
-        const payload = this.abiCoder.decode(['bytes'], event)[0]
-        this.structuredLog(
-          `HolographOperator received a new bridge job on ${transaction.chainId} with job payload: ${payload}\n`,
+      default:
+        if (from === this.networkMonitor.LAYERZERO_RECEIVERS[network]) {
+          await this.handleAvailableOperatorJobEvent(transaction, network)
+        } else {
+          this.networkMonitor.structuredLog(
+            network,
+            `Function processTransaction stumbled on an unknown transaction ${transaction.hash}`,
+          )
+        }
+    }
+  }
+
+  async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
+    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    if (receipt === null) {
+      throw new Error(`Could not get receipt for ${transaction.hash}`)
+    }
+
+    if (receipt.status === 1) {
+      this.networkMonitor.structuredLog(network, `Checking if a bridge request was made at tx: ${transaction.hash}`)
+      const operatorJobPayload = this.networkMonitor.decodePacketEvent(receipt)
+      const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
+      if (operatorJobHash === undefined) {
+        this.networkMonitor.structuredLog(network, `Could not extract cross-chain packet for ${transaction.hash}`)
+      } else {
+        const bridgeTransaction: ethers.utils.TransactionDescription =
+          this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
+        const chainId: number = (await this.networkMonitor.interfacesContract.getChainId(2, ethers.BigNumber.from(bridgeTransaction.args.toChain), 1)).toNumber()
+        let destinationNetwork: string | undefined
+        const networkNames: string[] = Object.keys(networks)
+        for (let i = 0, l = networkNames.length; i < l; i++) {
+          const n = networks[networkNames[i]]
+          if (n.chain as number === chainId) {
+            destinationNetwork = networkNames[i]
+            break
+          }
+        }
+
+        if (destinationNetwork === undefined) {
+          throw new Error('Failed to identify destination network from the bridge-out request')
+        }
+
+        this.networkMonitor.structuredLog(
+          network,
+          `Bridge-Out trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
         )
-        await this.executePayload(payload)
+        await this.executePayload(destinationNetwork, operatorJobPayload!)
       }
     }
   }
 
-  async executePayload(payload: string): Promise<void> {
+  async handleAvailableOperatorJobEvent(
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+  ): Promise<void> {
+    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    if (receipt === null) {
+      throw new Error(`Could not get receipt for ${transaction.hash}`)
+    }
+
+    if (receipt.status === 1) {
+      this.networkMonitor.structuredLog(
+        network,
+        `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
+      )
+      const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(receipt)
+      const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
+      if (operatorJobHash === undefined) {
+        this.networkMonitor.structuredLog(network, `Could not extract relayer available job for ${transaction.hash}`)
+      } else {
+        this.networkMonitor.structuredLog(
+          network,
+          `HolographOperator received a new bridge job. The job payload hash is ${operatorJobHash}. The job payload is ${operatorJobPayload}`,
+        )
+        const bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
+          data: operatorJobPayload!,
+          value: ethers.BigNumber.from('0'),
+        })
+        this.networkMonitor.structuredLog(
+          network,
+          `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
+        )
+        await this.executePayload(network, operatorJobPayload!)
+      }
+    }
+  }
+
+  async executePayload(network: string, payload: string): Promise<void> {
+    // If the operator is in listen mode, payloads will not be executed
+    // If the operator is in manual mode, the payload must be manually executed
+    // If the operator is in auto mode, the payload will be executed automatically
     const operatorPrompt: any = await inquirer.prompt([
       {
         name: 'shouldContinue',
-        message: `A transaction is ready for execution, would you like to operate?\n`,
+        message: `Transaction on ${network} is ready for execution, would you like to recover it?\n`,
         type: 'confirm',
         default: false,
       },
@@ -159,73 +199,51 @@ export default class Recover extends Command {
     const operate: boolean = operatorPrompt.shouldContinue
 
     if (operate) {
-      CliUx.ux.action.start('Calculating gas amounts and prices')
+      const contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.wallets[network])
       let gasLimit
       try {
-        gasLimit = await this.operatorContract.estimateGas.executeJob(payload)
+        gasLimit = await contract.estimateGas.executeJob(payload)
       } catch (error: any) {
-        this.error(error.reason)
-        this.exit()
+        switch (error.reason) {
+          case 'execution reverted: HOLOGRAPH: already deployed': {
+            this.networkMonitor.structuredLog(network, 'HOLOGRAPH: already deployed')
+
+            break
+          }
+
+          case 'execution reverted: HOLOGRAPH: invalid job': {
+            this.networkMonitor.structuredLog(network, 'HOLOGRAPH: invalid job')
+
+            break
+          }
+
+          case 'execution reverted: HOLOGRAPH: not holographed': {
+            this.networkMonitor.structuredLog(network, 'HOLOGRAPH: not holographed')
+
+            break
+          }
+
+          default: {
+            this.networkMonitor.structuredLogError(network, error, contract.address)
+          }
+        }
+
+        return
       }
 
-      const gasPriceBase = await this.operatorContract.provider.getGasPrice()
-      const gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
-
-      this.debug(`gas price is ${gasPrice}`)
-      CliUx.ux.action.stop()
-      this.log(
-        'Transaction is estimated to cost a total of',
-        ethers.utils.formatUnits(gasLimit.mul(gasPrice), 'ether'),
-        'native gas tokens (in ether)',
-      )
-
-      const blockchainPrompt: any = await inquirer.prompt([
-        {
-          name: 'shouldContinue',
-          message: 'Next steps submit the transaction, would you like to proceed?',
-          type: 'confirm',
-          default: true,
-        },
-      ])
-
-      if (!blockchainPrompt.shouldContinue) {
-        this.structuredLog('Dropping command, no blockchain transactions executed')
-        this.structuredLog('No blockchain transactions executed')
-        this.exit()
-      }
-
-      try {
-        CliUx.ux.action.start('Sending transaction to mempool')
-        const jobTx = await this.operatorContract.executeJob(payload, {
-          gasPrice,
-          gasLimit,
-        })
-        this.debug(jobTx)
-        CliUx.ux.action.stop('Transaction hash is ' + jobTx.hash)
-
-        CliUx.ux.action.start('Waiting for transaction to be mined and confirmed')
-        const jobReceipt = await jobTx.wait()
+      const gasPrice = await contract.provider.getGasPrice()
+      const jobRawTx = await contract.populateTransaction.executeJob(payload, {gasPrice, gasLimit})
+      jobRawTx.nonce = this.networkMonitor.walletNonces[network]
+      const jobTx = await this.networkMonitor.wallets[network].sendTransaction(jobRawTx)
+      this.debug(jobTx)
+      this.networkMonitor.structuredLog(network, `Transaction hash is ${jobTx.hash}`)
+      this.networkMonitor.walletNonces[network]++
+      jobTx.wait().then((jobReceipt: ethers.providers.TransactionReceipt) => {
         this.debug(jobReceipt)
-        CliUx.ux.action.stop('Operator Job executed')
-        this.structuredLog(`Transaction ${jobTx.hash} mined and confirmed`)
-      } catch (error: any) {
-        this.structuredLog(`Transaction failed to execute: ${error.reason}`)
-        this.exit()
-      }
-
-      this.exit()
+        this.networkMonitor.structuredLog(network, `Transaction ${jobReceipt.transactionHash} mined and confirmed`)
+      })
     } else {
-      this.structuredLog('Dropped potential payload to execute')
+      this.networkMonitor.structuredLog(network, 'Dropped potential payload to execute')
     }
-
-    // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
-    process.exit()
-  }
-
-  structuredLog(msg: string): void {
-    const timestamp = new Date(Date.now()).toISOString()
-    const timestampColor = color.keyword('green')
-
-    this.log(`[${timestampColor(timestamp)}] ${msg}`)
   }
 }
