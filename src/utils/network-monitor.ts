@@ -148,6 +148,7 @@ export class NetworkMonitor {
   runningProcesses = 0
   bridgeAddress!: string
   factoryAddress!: string
+  interfacesAddress!: string
   operatorAddress!: string
   registryAddress!: string
   wallets: {[key: string]: ethers.Wallet} = {}
@@ -165,6 +166,7 @@ export class NetworkMonitor {
   holograph!: ethers.Contract
   bridgeContract!: ethers.Contract
   factoryContract!: ethers.Contract
+  interfacesContract!: ethers.Contract
   operatorContract!: ethers.Contract
   registryContract!: ethers.Contract
   HOLOGRAPH_ADDRESSES: { [key in Environment]: string } = {
@@ -277,6 +279,7 @@ export class NetworkMonitor {
     this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESSES[this.environment]}`)
     this.log(`Bridge address: ${this.bridgeAddress}`)
     this.log(`Factory address: ${this.factoryAddress}`)
+    this.log(`Interfaces address: ${this.interfacesAddress}`)
     this.log(`Operator address: ${this.operatorAddress}`)
     this.log(`Registry address: ${this.registryAddress}`)
 
@@ -414,6 +417,7 @@ export class NetworkMonitor {
     )
     this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
     this.factoryAddress = (await this.holograph.getFactory()).toLowerCase()
+    this.interfacesAddress = (await this.holograph.getInterfaces()).toLowerCase()
     this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
     this.registryAddress = (await this.holograph.getRegistry()).toLowerCase()
 
@@ -424,6 +428,13 @@ export class NetworkMonitor {
     this.factoryContract = new ethers.Contract(
       this.factoryAddress,
       holographFactoryABI,
+      this.providers[this.networks[0]],
+    )
+
+    const holographInterfacesABI = await fs.readJson('./src/abi/Interfaces.json')
+    this.interfacesContract = new ethers.Contract(
+      this.interfacesAddress,
+      holographInterfacesABI,
       this.providers[this.networks[0]],
     )
 
