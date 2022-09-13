@@ -78,6 +78,7 @@ export interface Scope {
 export enum FilterType {
   to,
   from,
+  functionSig,
 }
 
 export type TransactionFilter = {
@@ -167,7 +168,7 @@ export class NetworkMonitor {
   factoryContract!: ethers.Contract
   operatorContract!: ethers.Contract
   registryContract!: ethers.Contract
-  HOLOGRAPH_ADDRESSES: { [key in Environment]: string } = {
+  HOLOGRAPH_ADDRESSES: {[key in Environment]: string} = {
     [Environment.develop]: HOLOGRAPH_DEVELOP_ADDRESS,
     [Environment.testnet]: HOLOGRAPH_TESTNET_ADDRESS,
     [Environment.mainnet]: HOLOGRAPH_MAINNET_ADDRESS,
@@ -202,9 +203,9 @@ export class NetworkMonitor {
 
     // eslint-disable-next-line guard-for-in
     for (const n of outputNetworks) {
-      if(this.providers[n]) {
+      if (this.providers[n]) {
         const current = this.providers[n] as ethers.providers.WebSocketProvider
-        if ( current._wsReady && current._websocket._socket.readyState === 'open'){
+        if (current._wsReady && current._websocket._socket.readyState === 'open') {
           output[n] = 'CONNECTED'
         }
       } else {
@@ -541,6 +542,7 @@ export class NetworkMonitor {
   ): void {
     const to: string = transaction.to?.toLowerCase() || ''
     const from: string = transaction.from?.toLowerCase() || ''
+    let data: string
     for (const filter of this.filters) {
       const match: string = filter.networkDependant
         ? (filter.match as {[key: string]: string})[job.network]
@@ -558,6 +560,12 @@ export class NetworkMonitor {
           }
 
           break
+        case FilterType.functionSig:
+          data = transaction.data?.slice(0, 10) || ''
+          if (data.startsWith(match)) {
+            interestingTransactions.push(transaction)
+          }
+
         default:
           break
       }
@@ -796,4 +804,3 @@ export class NetworkMonitor {
     return output
   }
 }
-

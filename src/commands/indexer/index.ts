@@ -171,6 +171,11 @@ export default class Indexer extends Command {
         match: this.networkMonitor.operatorAddress,
         networkDependant: false,
       },
+      {
+        type: FilterType.functionSig,
+        match: '0xe003ba45', // cxipMint(uint224,uint8,string)
+        networkDependant: false,
+      },
     ]
     Promise.resolve()
   }
@@ -249,6 +254,7 @@ export default class Indexer extends Command {
         )
         const to: string | undefined = transaction.to?.toLowerCase()
         const from: string | undefined = transaction.from?.toLowerCase()
+        const functionSig: string | undefined = transaction.data?.slice(0, 10)
         switch (to) {
           case this.networkMonitor.factoryAddress: {
             await this.handleContractDeployedEvent(transaction, job.network)
@@ -271,6 +277,9 @@ export default class Indexer extends Command {
           default:
             if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
               await this.handleAvailableOperatorJobEvent(transaction, job.network)
+            } else if (functionSig === '0xe003ba45') {
+              // Capture cxipMint(uint224,uint8,string)
+              await this.handleMintEvent(transaction, job.network)
             } else {
               this.networkMonitor.structuredLog(
                 job.network,
@@ -299,6 +308,13 @@ export default class Indexer extends Command {
         await this.updateDeployedCollection(transaction, network, deploymentInfo as any[])
       }
     }
+  }
+
+  async handleMintEvent(transaction: ethers.providers.TransactionResponse, network: string) {
+    console.log('&&&&&&&&&&&&')
+    console.log('HANDLE MINT EVENT')
+    console.log('&&&&&&&&&&&&')
+    throw new Error('Method not implemented.')
   }
 
   async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
