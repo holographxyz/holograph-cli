@@ -279,6 +279,7 @@ export default class Indexer extends Command {
               await this.handleAvailableOperatorJobEvent(transaction, job.network)
             } else if (functionSig === '0xe003ba45') {
               // Capture cxipMint(uint224,uint8,string)
+              this.networkMonitor.structuredLog(job.network, `Handling event for cxipMint ${transaction.hash}`)
               await this.handleMintEvent(transaction, job.network)
             } else {
               this.networkMonitor.structuredLog(
@@ -311,9 +312,8 @@ export default class Indexer extends Command {
   }
 
   async handleMintEvent(transaction: ethers.providers.TransactionResponse, network: string) {
-    console.log('&&&&&&&&&&&&')
     console.log('HANDLE MINT EVENT')
-    console.log('&&&&&&&&&&&&')
+    console.log(transaction, network)
     throw new Error('Method not implemented.')
   }
 
