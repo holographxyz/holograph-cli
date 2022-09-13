@@ -211,19 +211,19 @@ export default class Recover extends Command {
             } catch (error: any) {
               switch (error.reason) {
                 case 'execution reverted: HOLOGRAPH: already deployed': {
-                  this.networkMonitor.structuredLog(network, 'HOLOGRAPH: already deployed')
+                  this.networkMonitor.structuredLog(network, 'web3 response -> "HOLOGRAPH: already deployed". -> The deploy request is invalid, since requested contract is already deployed.')
 
                   break
                 }
 
                 case 'execution reverted: HOLOGRAPH: invalid job': {
-                  this.networkMonitor.structuredLog(network, 'HOLOGRAPH: invalid job')
+                  this.networkMonitor.structuredLog(network, 'web3 response -> "HOLOGRAPH: invalid job". -> Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.')
 
                   break
                 }
 
                 case 'execution reverted: HOLOGRAPH: not holographed': {
-                  this.networkMonitor.structuredLog(network, 'HOLOGRAPH: not holographed')
+                  this.networkMonitor.structuredLog(network, 'web3 response -> "HOLOGRAPH: not holographed". -> Need to first deploy a holographable contract on destination chain.')
 
                   break
                 }
@@ -248,10 +248,23 @@ export default class Recover extends Command {
         const tryToSendTx = async (): Promise<boolean> => {
           return new Promise<boolean>((resolve, _reject) => {
             const getJobTx: NodeJS.Timeout = setInterval(async () => {
-              jobTx = await this.networkMonitor.wallets[network].sendTransaction(jobRawTx)
-              clearInterval(getJobTx)
-              resolve(true)
-            }, 1000) // every 1 second
+              try {
+                jobTx = await this.networkMonitor.wallets[network].sendTransaction(jobRawTx)
+                clearInterval(getJobTx)
+                resolve(true)
+              } catch (error: any) {
+                switch (error.message) {
+                  case 'already known': {
+                    // we are aware that more than one message has been sent, so avoid all errors echoed
+                    break
+                  }
+
+                  default: {
+                    this.networkMonitor.structuredLogError(network, error, 'sendTransaction error')
+                  }
+                }
+              }
+            }, 100) // every 1/10th of a second
           })
         }
 
