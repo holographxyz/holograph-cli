@@ -566,6 +566,7 @@ export class NetworkMonitor {
             interestingTransactions.push(transaction)
           }
 
+          break
         default:
           break
       }
