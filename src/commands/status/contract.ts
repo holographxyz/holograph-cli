@@ -70,7 +70,7 @@ export default class Contract extends Command {
       holographRegistryABI,
       this.providers[this.supportedNetworks[0]],
     )
-    const ownerABI = await fs.readJson(`./src/abi/${getEnvironment()}//Owner.json`)
+    const ownerABI = await fs.readJson(`./src/abi/${getEnvironment()}/Owner.json`)
     this.ownableContract = new ethers.Contract(
       this.contractAddress,
       ownerABI,
