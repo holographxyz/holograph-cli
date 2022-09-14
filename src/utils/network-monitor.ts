@@ -14,8 +14,6 @@ import dotenv from 'dotenv'
 import {Environment, getEnvironment} from './environment'
 dotenv.config()
 
-console.log(getEnvironment())
-
 export const warpFlag = {
   warp: Flags.integer({
     description: 'Start from the beginning of the chain',
@@ -411,7 +409,7 @@ export class NetworkMonitor {
       this.providers[this.networks[0]],
     )
 
-    const holographRegistryABI = await fs.readJson(`./src/abi${getEnvironment()}HolographRegistry.json`)
+    const holographRegistryABI = await fs.readJson(`./src/abi/${getEnvironment()}/HolographRegistry.json`)
     this.registryContract = new ethers.Contract(
       this.registryAddress,
       holographRegistryABI,
