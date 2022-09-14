@@ -695,6 +695,8 @@ export default class Indexer extends Command {
       tx: transaction.hash,
       blockNumber: transaction.blockNumber,
       isDeployed: true,
+      creatorAddress: transaction.from,
+      ownerAddress: transaction.from,
     })
     this.networkMonitor.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
     this.networkMonitor.structuredLog(
