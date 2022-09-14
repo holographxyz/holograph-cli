@@ -5,7 +5,11 @@ import {ethers} from 'ethers'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {addressValidator, tokenValidator} from '../../utils/validation'
-import {getEnvironment} from '../../utils/environment'
+
+import dotenv from 'dotenv'
+dotenv.config()
+
+const ABI_ENVIRONMENT = process.env.ABI_ENVIRONMENT || 'develop'
 
 export default class Contract extends Command {
   static description = 'Bridge a Holographable NFT from source chain to destination chain'
@@ -168,12 +172,12 @@ export default class Contract extends Command {
     CliUx.ux.action.stop()
 
     CliUx.ux.action.start('Retrieving HolographFactory contract')
-    const holographABI = await fs.readJson(`./src/abi/${getEnvironment()}/Holograph.json`)
+    const holographABI = await fs.readJson(`./src/abi/${ABI_ENVIRONMENT}/Holograph.json`)
     const holograph = new ethers.ContractFactory(holographABI, '0x', sourceWallet).attach(
       '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase(),
     )
 
-    const holographInterfacesABI = await fs.readJson(`./src/abi/${getEnvironment()}/Interfaces.json`)
+    const holographInterfacesABI = await fs.readJson(`./src/abi/${ABI_ENVIRONMENT}/Interfaces.json`)
     const holographInterfaces = new ethers.ContractFactory(holographInterfacesABI, '0x', sourceWallet).attach(
       await holograph.getInterfaces(),
     )
@@ -186,7 +190,7 @@ export default class Contract extends Command {
       2,
     )
 
-    const holographRegistryABI = await fs.readJson(`./src/abi${getEnvironment()}/HolographRegistry.json`)
+    const holographRegistryABI = await fs.readJson(`./src/abi${ABI_ENVIRONMENT}/HolographRegistry.json`)
     const holographRegistry = new ethers.ContractFactory(holographRegistryABI, '0x', sourceWallet).attach(
       await holograph.getRegistry(),
     )
@@ -198,7 +202,7 @@ export default class Contract extends Command {
       this.log('Holographed contract found 👍')
     }
 
-    const holographErc721ABI = await fs.readJson(`./src/abi/${getEnvironment()}/HolographERC721.json`)
+    const holographErc721ABI = await fs.readJson(`./src/abi/${ABI_ENVIRONMENT}/HolographERC721.json`)
     const holographErc721 = new ethers.ContractFactory(holographErc721ABI, '0x', sourceWallet).attach(
       this.collectionAddress,
     )
@@ -219,7 +223,7 @@ export default class Contract extends Command {
       throw new Error('Token is not owned by the user, or approved for user')
     }
 
-    const holographBridgeABI = await fs.readJson(`./src/abi/${getEnvironment()}/HolographBridge.json`)
+    const holographBridgeABI = await fs.readJson(`./src/abi/${ABI_ENVIRONMENT}/HolographBridge.json`)
     const holographBridge = new ethers.ContractFactory(holographBridgeABI, '0x', sourceWallet).attach(
       await holograph.getBridge(),
     )

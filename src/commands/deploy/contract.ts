@@ -5,7 +5,11 @@ import {ethers} from 'ethers'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-deployment'
-import {getEnvironment} from '../../utils/environment'
+
+import dotenv from 'dotenv'
+dotenv.config()
+
+const ABI_ENVIRONMENT = process.env.ABI_ENVIRONMENT || 'develop'
 
 export default class Contract extends Command {
   static description = 'Deploy a Holographable contract'
@@ -70,12 +74,12 @@ export default class Contract extends Command {
     this.debug(deploymentConfig)
 
     CliUx.ux.action.start('Retrieving HolographFactory contract')
-    const holographABI = await fs.readJson(`./src/abi/${getEnvironment()}/Holograph.json`)
+    const holographABI = await fs.readJson(`./src/abi/${ABI_ENVIRONMENT}/Holograph.json`)
     const holograph = new ethers.ContractFactory(holographABI, '0x', destinationWallet).attach(
       '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase(),
     )
 
-    const holographFactoryABI = await fs.readJson(`./src/abi/${getEnvironment()}/HolographFactory.json`)
+    const holographFactoryABI = await fs.readJson(`./src/abi/${ABI_ENVIRONMENT}/HolographFactory.json`)
     const holographFactory = new ethers.ContractFactory(holographFactoryABI, '0x', destinationWallet).attach(
       await holograph.getFactory(),
     )

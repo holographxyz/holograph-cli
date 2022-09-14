@@ -10,9 +10,11 @@ import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {capitalize, NETWORK_COLORS} from './utils'
 import color from '@oclif/color'
 
-import dotenv from 'dotenv'
 import {Environment, getEnvironment} from './environment'
+import dotenv from 'dotenv'
 dotenv.config()
+
+const ABI_ENVIRONMENT = process.env.ABI_ENVIRONMENT || 'develop'
 
 export const warpFlag = {
   warp: Flags.integer({
@@ -384,7 +386,7 @@ export class NetworkMonitor {
       }
     }
 
-    const holographABI = await fs.readJson(`./src/abi/${getEnvironment()}/Holograph.json`)
+    const holographABI = await fs.readJson(`./src/abi/${ABI_ENVIRONMENT}/Holograph.json`)
     this.holograph = new ethers.Contract(
       this.HOLOGRAPH_ADDRESSES[this.environment],
       holographABI,
@@ -396,31 +398,31 @@ export class NetworkMonitor {
     this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
     this.registryAddress = (await this.holograph.getRegistry()).toLowerCase()
 
-    const holographBridgeABI = await fs.readJson(`./src/abi/${getEnvironment()}/HolographBridge.json`)
+    const holographBridgeABI = await fs.readJson(`./src/abi/${ABI_ENVIRONMENT}/HolographBridge.json`)
     this.bridgeContract = new ethers.Contract(this.bridgeAddress, holographBridgeABI, this.providers[this.networks[0]])
 
-    const holographFactoryABI = await fs.readJson(`./src/abi/${getEnvironment()}/HolographFactory.json`)
+    const holographFactoryABI = await fs.readJson(`./src/abi/${ABI_ENVIRONMENT}/HolographFactory.json`)
     this.factoryContract = new ethers.Contract(
       this.factoryAddress,
       holographFactoryABI,
       this.providers[this.networks[0]],
     )
 
-    const holographInterfacesABI = await fs.readJson(`./src/abi/${getEnvironment()}/Interfaces.json`)
+    const holographInterfacesABI = await fs.readJson(`./src/abi/${ABI_ENVIRONMENT}/Interfaces.json`)
     this.interfacesContract = new ethers.Contract(
       this.interfacesAddress,
       holographInterfacesABI,
       this.providers[this.networks[0]],
     )
 
-    const holographOperatorABI = await fs.readJson(`./src/abi/${getEnvironment()}/HolographOperator.json`)
+    const holographOperatorABI = await fs.readJson(`./src/abi/${ABI_ENVIRONMENT}/HolographOperator.json`)
     this.operatorContract = new ethers.Contract(
       this.operatorAddress,
       holographOperatorABI,
       this.providers[this.networks[0]],
     )
 
-    const holographRegistryABI = await fs.readJson(`./src/abi/${getEnvironment()}/HolographRegistry.json`)
+    const holographRegistryABI = await fs.readJson(`./src/abi/${ABI_ENVIRONMENT}/HolographRegistry.json`)
     this.registryContract = new ethers.Contract(
       this.registryAddress,
       holographRegistryABI,
