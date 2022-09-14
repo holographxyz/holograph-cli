@@ -7,6 +7,7 @@ import {ethers} from 'ethers'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {addressValidator, tokenValidator} from '../../utils/validation'
+import {getEnvironment} from '../../utils/environment'
 
 export default class Nft extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
@@ -57,21 +58,21 @@ export default class Nft extends Command {
       }
     }
 
-    const holographABI = await fs.readJson('./src/abi/Holograph.json')
+    const holographABI = await fs.readJson(`./src/abi/${getEnvironment()}/Holograph.json`)
     this.holograph = new ethers.Contract(
       this.HOLOGRAPH_ADDRESS,
       holographABI,
       this.providers[this.supportedNetworks[0]],
     )
 
-    const holographRegistryABI = await fs.readJson('./src/abi/HolographRegistry.json')
+    const holographRegistryABI = await fs.readJson(`./src/abi/${getEnvironment()}/HolographRegistry.json`)
     this.registryAddress = await this.holograph.getRegistry()
     this.registryContract = new ethers.Contract(
       this.registryAddress,
       holographRegistryABI,
       this.providers[this.supportedNetworks[0]],
     )
-    const erc721ABI = await fs.readJson('./src/abi/ERC721Holograph.json')
+    const erc721ABI = await fs.readJson(`./src/abi/${getEnvironment()}/ERC721Holograph.json`)
     this.erc721Contract = new ethers.Contract(
       this.contractAddress,
       erc721ABI,

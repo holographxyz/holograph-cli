@@ -9,6 +9,7 @@ import {CONFIG_FILE_NAME, ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigNetwork, ConfigNetworks} from '../../utils/config'
 
 import color from '@oclif/color'
+import {getEnvironment} from '../../utils/environment'
 
 export default class Recover extends Command {
   static description = 'Attempt to re-run/recover a particular Operator Job'
@@ -92,14 +93,14 @@ export default class Recover extends Command {
       tx = txPrompt.tx
     }
 
-    const holographABI = await fs.readJson('./src/abi/Holograph.json')
+    const holographABI = await fs.readJson(`./src/abi/${getEnvironment()}/Holograph.json`)
     this.holograph = new ethers.ContractFactory(holographABI, '0x', txNetworkWallet).attach(
       this.HOLOGRAPH_ADDRESS.toLowerCase(),
     )
 
     this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
 
-    const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
+    const holographOperatorABI = await fs.readJson(`./src/abi/${getEnvironment()}/HolographOperator.json`)
     this.operatorContract = new ethers.ContractFactory(holographOperatorABI, '0x', txNetworkWallet).attach(
       this.operatorAddress,
     )

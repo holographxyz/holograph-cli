@@ -5,6 +5,7 @@ import {ethers} from 'ethers'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-deployment'
+import {getEnvironment} from '../../utils/environment'
 
 export default class Contract extends Command {
   static description = 'Bridge a Holographable contract from source chain to destination chain'
@@ -105,12 +106,12 @@ export default class Contract extends Command {
     CliUx.ux.action.stop()
 
     CliUx.ux.action.start('Retrieving HolographFactory contract')
-    const holographABI = await fs.readJson('./src/abi/Holograph.json')
+    const holographABI = await fs.readJson(`./src/abi/${getEnvironment()}/Holograph.json`)
     const holograph = new ethers.ContractFactory(holographABI, '0x', sourceWallet).attach(
       '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase(),
     )
 
-    const holographInterfacesABI = await fs.readJson('./src/abi/Interfaces.json')
+    const holographInterfacesABI = await fs.readJson(`./src/abi/${getEnvironment()}/Interfaces.json`)
     const holographInterfaces = new ethers.ContractFactory(holographInterfacesABI, '0x', sourceWallet).attach(
       await holograph.getInterfaces(),
     )
@@ -122,7 +123,7 @@ export default class Contract extends Command {
       ).chainId,
       2,
     )
-    const holographBridgeABI = await fs.readJson('./src/abi/HolographBridge.json')
+    const holographBridgeABI = await fs.readJson(`./src/abi/${getEnvironment()}/HolographBridge.json`)
     const holographBridge = new ethers.ContractFactory(holographBridgeABI, '0x', sourceWallet).attach(
       await holograph.getBridge(),
     )
@@ -169,7 +170,7 @@ export default class Contract extends Command {
     }
 
     const gasPriceBase = await sourceWallet!.provider.getGasPrice()
-    const gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from("4"))) // gasPrice = gasPriceBase * 1.25
+    const gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
     CliUx.ux.action.stop()
     this.log(
       'Transaction is estimated to cost a total of',
