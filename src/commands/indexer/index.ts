@@ -313,8 +313,16 @@ export default class Indexer extends Command {
 
   async handleMintEvent(transaction: ethers.providers.TransactionResponse, network: string) {
     console.log('HANDLE MINT EVENT')
-    console.log(transaction, network)
-    throw new Error('Method not implemented.')
+
+    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    if (receipt === null) {
+      throw new Error(`Could not get receipt for ${transaction.hash}`)
+    }
+
+    const transferInfo = this.networkMonitor.decodeErc721TransferEvent(receipt)
+
+    console.log(transaction, network, transferInfo)
+    await this.updateMintedNFT(transaction, network, transferInfo as any[])
   }
 
   async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
@@ -652,20 +660,6 @@ export default class Indexer extends Command {
       tx: transaction.hash,
     })
     this.networkMonitor.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
-    // TODO: This isn't working as expected, need to figure out why
-    // Only update the database if this transaction happened in a later block than the last transaction we indexed
-    // NOTE: This should only be necessary for NFTs because they can only exist on one network at a time so we don't
-    //       want to update change update the database to the wrong network while the warp cron is running
-    //       if a more recent bridge event happened on chain that moved the NFT to a different network
-    // const transactions = responseData.transactions
-    // if (transaction.blockNumber! > transactions[transactions.length - 1].blockNumber) {
-    //   this.networkMonitor.structuredLog(
-    //     network,
-    //     `Latest transaction in the database is more recent than this transaction. Skipping update for collection ${contractAddress} and tokeId ${tokenId}`,
-    //   )
-    //   return
-    // }
-
     this.networkMonitor.structuredLog(
       network,
       `API: Requesting to update NFT with collection ${contractAddress} and tokeId ${tokenId} and id ${responseData.id}`,
@@ -684,6 +678,77 @@ export default class Indexer extends Command {
       ],
     })
     Promise.resolve()
+  }
+
+  async updateMintedNFTCallback(
+    responseData: any,
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+    contractAddress: string,
+    tokenId: string,
+  ): Promise<void> {
+    const data = JSON.stringify({
+      contractAddress,
+      tokenId,
+      chainId: transaction.chainId,
+      status: 'MINTED',
+      tx: transaction.hash,
+      blockNumber: transaction.blockNumber,
+      isDeployed: true,
+    })
+    this.networkMonitor.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
+    this.networkMonitor.structuredLog(
+      network,
+      `API: Requesting to update minted NFT with collection ${contractAddress} and tokeId ${tokenId} and id ${responseData.id}`,
+    )
+
+    await this.sendPatchRequest({
+      responseData,
+      network,
+      query: `${this.BASE_URL}/v1/nfts/${responseData.id}`,
+      data,
+      messages: [
+        `PATCH collection ${contractAddress} tokeId ${tokenId}`,
+        `Successfully updated minted NFT collection ${contractAddress} and tokeId ${tokenId}`,
+        `Failed to update the database for collection ${contractAddress} and tokeId ${tokenId}`,
+        `collection ${contractAddress} and tokeId ${tokenId}`,
+      ],
+    })
+    Promise.resolve()
+  }
+
+  async updateMintedNFT(
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+    transferInfo: any[],
+  ): Promise<void> {
+    const tokenId = (transferInfo[2] as ethers.BigNumber).toString()
+    const contractAddress = transferInfo[3] as string
+
+    this.networkMonitor.structuredLog(
+      network,
+      `Indexer identified a minted an ERC721 NFT. Holographer minted a new NFT on ${capitalize(
+        network,
+      )} at address ${contractAddress}. The ID of the NFT is ${tokenId}. Account that minted the nft is ${
+        transaction.from
+      }`,
+    )
+    this.networkMonitor.structuredLog(network, `Sending minted nft job to DBJobManager ${contractAddress}`)
+
+    const job: DBJob = {
+      attempts: 0,
+      network,
+      timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
+      query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
+      message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
+      callback: this.updateMintedNFTCallback,
+      arguments: [transaction, network, contractAddress, tokenId],
+    }
+    if (!(job.timestamp in this.dbJobMap)) {
+      this.dbJobMap[job.timestamp] = []
+    }
+
+    this.dbJobMap[job.timestamp].push(job)
   }
 
   async updateBridgedNFT(
