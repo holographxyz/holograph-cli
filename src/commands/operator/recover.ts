@@ -6,7 +6,6 @@ import {ethers} from 'ethers'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import networks from '../../utils/networks'
 
-import {getEnvironment} from '../../utils/environment'
 import {BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 
 export default class Recover extends Command {
