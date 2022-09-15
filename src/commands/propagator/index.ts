@@ -254,91 +254,24 @@ export default class Propagator extends Command {
       (contractCode === '0x' || contractCode === '' || contractCode === undefined) &&
       !(await registry.callStatic.isHolographedContract(deploymentAddress, {blockTag: 'latest'}))
     ) {
-      const factory: ethers.Contract = this.networkMonitor.factoryContract.connect(this.networkMonitor.wallets[network])
-      this.networkMonitor.structuredLog(network, `Calculating gas price for collection ${deploymentAddress}`)
-      let gasLimit
-      try {
-        gasLimit = await factory.estimateGas.deployHolographableContract(
-          deploymentConfig.config,
-          deploymentConfig.signature,
-          deploymentConfig.signer,
-        )
-      } catch (error: any) {
-        this.networkMonitor.structuredLog(network, `Calculating Gas has failed for collection ${deploymentAddress}`)
-        this.networkMonitor.structuredLogError(network, error, deploymentAddress)
-        return
-      }
-
-      // setting default gas price in case network is unknown
-      let gasPrice = ethers.utils.parseUnits('10', 'gwei')
-      try {
-        // Hack for Mumbai because a variable gas price is causing the deployment to take a long time to process
-        if (network === 'mumbai') {
-          gasPrice = ethers.utils.parseUnits('150', 'gwei')
-        } else {
-          const gasPriceBase = await this.networkMonitor.providers[network].getGasPrice()
-          gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
-        }
-      } catch (error: any) {
-        this.networkMonitor.structuredLog(network, `Failed to compute gas price for collection = ${deploymentAddress}`)
-        this.networkMonitor.structuredLogError(network, error, deploymentAddress)
-        return
-      }
-
-      this.networkMonitor.structuredLog(
-        network,
-        `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, 'gwei')} for collection ${deploymentAddress}`,
-      )
-      this.networkMonitor.structuredLog(
-        network,
-        `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(
-          gasLimit.mul(gasPrice),
-          'ether',
-        )} native gas tokens (in ether) for collection ${deploymentAddress}`,
-      )
-
-      try {
-        const deployRawTx = await factory.populateTransaction.deployHolographableContract(
-          deploymentConfig.config,
-          deploymentConfig.signature,
-          deploymentConfig.signer,
-          {gasPrice, gasLimit},
-        )
-        deployRawTx.nonce = this.networkMonitor.walletNonces[network]
-        const deployTx = await this.networkMonitor.wallets[network].sendTransaction(deployRawTx)
-        this.debug(deployTx)
+      const deployReceipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.executeTransaction(network, this.networkMonitor.factoryContract, 'deployHolographableContract', deploymentConfig.config, deploymentConfig.signature, deploymentConfig.signer)
+      if (deployReceipt === null) {
+        this.networkMonitor.structuredLog(network, `Submitting tx for collection ${deploymentAddress} failed`)
+      } else {
         this.networkMonitor.structuredLog(
           network,
-          `Transaction created with hash ${deployTx.hash} for collection ${deploymentAddress}`,
+          `Transaction minted with hash ${deployReceipt.transactionHash} for collection ${deploymentAddress}`,
         )
-        this.networkMonitor.walletNonces[network]++
-        deployTx.wait().then((deployReceipt: ethers.providers.TransactionReceipt) => {
-          this.debug(deployReceipt)
-          this.networkMonitor.structuredLog(
-            network,
-            `Transaction minted with hash ${deployReceipt.transactionHash} for collection ${deploymentAddress}`,
-          )
-          let collectionAddress
-          for (let i = 0, l = deployReceipt.logs.length; i < l; i++) {
-            const log = deployReceipt.logs[i]
-            if (
-              log.topics.length === 3 &&
-              log.topics[0] === '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b'
-            ) {
-              collectionAddress = '0x' + log.topics[1].slice(26)
-              break
-            }
-          }
-
+        const deploymentInfo: any[] | undefined = this.networkMonitor.decodeBridgeableContractDeployedEvent(deployReceipt as ethers.providers.TransactionReceipt)
+        if (deploymentInfo === undefined) {
+          this.networkMonitor.structuredLog(network, `Failed extracting BridgeableContractDeployedEvent for collection ${deploymentAddress}`)
+        } else {
+          const collectionAddress = deploymentInfo[0] as string
           this.networkMonitor.structuredLog(
             network,
             `Successfully deployed collection ${collectionAddress} = ${deploymentAddress}`,
           )
-        })
-        return
-      } catch (error: any) {
-        this.networkMonitor.structuredLog(network, `Submitting tx for collection ${deploymentAddress} failed`)
-        this.networkMonitor.structuredLogError(network, error, deploymentAddress)
+        }
       }
     } else {
       this.networkMonitor.structuredLog(network, `Collection ${deploymentAddress} already deployed`)
