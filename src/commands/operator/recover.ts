@@ -23,7 +23,10 @@ export default class Recover extends Command {
   networkMonitor!: NetworkMonitor
 
   async fakeProcessor(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
-    this.networkMonitor.structuredLog(job.network, `This should not trigger: ${JSON.stringify(transactions,undefined,2)}`)
+    this.networkMonitor.structuredLog(
+      job.network,
+      `This should not trigger: ${JSON.stringify(transactions, undefined, 2)}`,
+    )
     Promise.resolve()
   }
 
@@ -37,7 +40,7 @@ export default class Recover extends Command {
       configFile,
       debug: this.debug,
       processTransactions: this.fakeProcessor,
-      userWallet
+      userWallet,
     })
 
     const {flags} = await this.parse(Recover)
@@ -77,7 +80,7 @@ export default class Recover extends Command {
 
     CliUx.ux.action.start('Retrieving transaction details from ' + network + ' network')
     const transaction = await this.networkMonitor.providers[network].getTransaction(tx)
-//    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash as string)
+    //    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash as string)
     CliUx.ux.action.stop()
 
     await this.processTransaction(network, transaction)
@@ -124,12 +127,18 @@ export default class Recover extends Command {
       } else {
         const bridgeTransaction: ethers.utils.TransactionDescription =
           this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
-        const chainId: number = (await this.networkMonitor.interfacesContract.getChainId(2, ethers.BigNumber.from(bridgeTransaction.args.toChain), 1)).toNumber()
+        const chainId: number = (
+          await this.networkMonitor.interfacesContract.getChainId(
+            2,
+            ethers.BigNumber.from(bridgeTransaction.args.toChain),
+            1,
+          )
+        ).toNumber()
         let destinationNetwork: string | undefined
         const networkNames: string[] = Object.keys(networks)
         for (let i = 0, l = networkNames.length; i < l; i++) {
           const n = networks[networkNames[i]]
-          if (n.chain as number === chainId) {
+          if ((n.chain as number) === chainId) {
             destinationNetwork = networkNames[i]
             break
           }
@@ -211,19 +220,28 @@ export default class Recover extends Command {
             } catch (error: any) {
               switch (error.reason) {
                 case 'execution reverted: HOLOGRAPH: already deployed': {
-                  this.networkMonitor.structuredLog(network, 'web3 response -> "HOLOGRAPH: already deployed". -> The deploy request is invalid, since requested contract is already deployed.')
+                  this.networkMonitor.structuredLog(
+                    network,
+                    'web3 response -> "HOLOGRAPH: already deployed". -> The deploy request is invalid, since requested contract is already deployed.',
+                  )
 
                   break
                 }
 
                 case 'execution reverted: HOLOGRAPH: invalid job': {
-                  this.networkMonitor.structuredLog(network, 'web3 response -> "HOLOGRAPH: invalid job". -> Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.')
+                  this.networkMonitor.structuredLog(
+                    network,
+                    'web3 response -> "HOLOGRAPH: invalid job". -> Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.',
+                  )
 
                   break
                 }
 
                 case 'execution reverted: HOLOGRAPH: not holographed': {
-                  this.networkMonitor.structuredLog(network, 'web3 response -> "HOLOGRAPH: not holographed". -> Need to first deploy a holographable contract on destination chain.')
+                  this.networkMonitor.structuredLog(
+                    network,
+                    'web3 response -> "HOLOGRAPH: not holographed". -> Need to first deploy a holographable contract on destination chain.',
+                  )
 
                   break
                 }
@@ -279,7 +297,10 @@ export default class Recover extends Command {
                 jobReceipt = await this.networkMonitor.providers[network].getTransactionReceipt(jobTx.hash)
                 if (jobReceipt !== null) {
                   this.debug(jobReceipt)
-                  this.networkMonitor.structuredLog(network, `Transaction ${jobReceipt.transactionHash} mined and confirmed`)
+                  this.networkMonitor.structuredLog(
+                    network,
+                    `Transaction ${jobReceipt.transactionHash} mined and confirmed`,
+                  )
                   clearInterval(getTxReceipt)
                   resolve()
                 }

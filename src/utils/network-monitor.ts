@@ -10,34 +10,8 @@ import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {capitalize, NETWORK_COLORS} from './utils'
 import color from '@oclif/color'
 
-import dotenv from 'dotenv'
-dotenv.config()
-
-enum Environment {
-  develop = 'develop',
-  testnet = 'testnet',
-  mainnet = 'mainnet',
-}
-
-const getEnvironment = (): Environment => {
-  let environment = Environment.develop
-  const acceptableBranches: Set<string> = new Set<string>(['develop', 'testnet', 'mainnet'])
-  const head = './.git/HEAD'
-  const env: string = process.env.HOLOGRAPH_ENVIRONMENT || ''
-  if (env === '') {
-    if (fs.existsSync(head)) {
-      const contents = fs.readFileSync('./.git/HEAD', 'utf8')
-      const branch = contents.trim().split('ref: refs/heads/')[1]
-      if (acceptableBranches.has(branch)) {
-        environment = Environment[branch as keyof typeof Environment]
-      }
-    }
-  } else if (acceptableBranches.has(env)) {
-    environment = Environment[env as keyof typeof Environment]
-  }
-
-  return environment
-}
+import {Environment, getEnvironment} from './environment'
+import {HOLOGRAPH_ADDRESSES} from './contracts'
 
 export const warpFlag = {
   warp: Flags.integer({
@@ -129,10 +103,6 @@ type NetworkMonitorOptions = {
   warp?: number
 }
 
-const HOLOGRAPH_DEVELOP_ADDRESS: string = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
-const HOLOGRAPH_TESTNET_ADDRESS: string = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
-const HOLOGRAPH_MAINNET_ADDRESS: string = '0x0000000000000000000000000000000000000000'.toLowerCase()
-
 export class NetworkMonitor {
   environment: Environment
   parent: ImplementsCommand
@@ -169,11 +139,7 @@ export class NetworkMonitor {
   interfacesContract!: ethers.Contract
   operatorContract!: ethers.Contract
   registryContract!: ethers.Contract
-  HOLOGRAPH_ADDRESSES: { [key in Environment]: string } = {
-    [Environment.develop]: HOLOGRAPH_DEVELOP_ADDRESS,
-    [Environment.testnet]: HOLOGRAPH_TESTNET_ADDRESS,
-    [Environment.mainnet]: HOLOGRAPH_MAINNET_ADDRESS,
-  }
+  HOLOGRAPH_ADDRESSES = HOLOGRAPH_ADDRESSES
 
   LAYERZERO_RECEIVERS: {[key: string]: string} = {
     rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
@@ -204,9 +170,9 @@ export class NetworkMonitor {
 
     // eslint-disable-next-line guard-for-in
     for (const n of outputNetworks) {
-      if(this.providers[n]) {
+      if (this.providers[n]) {
         const current = this.providers[n] as ethers.providers.WebSocketProvider
-        if ( current._wsReady && current._websocket._socket.readyState === 'open'){
+        if (current._wsReady && current._websocket._socket.readyState === 'open') {
           output[n] = 'CONNECTED'
         }
       } else {
@@ -271,6 +237,7 @@ export class NetworkMonitor {
     blockJobs?: {[key: string]: BlockJob[]},
     ethersInitializedCallback?: () => Promise<void>,
   ): Promise<void> {
+
     await this.initializeEthers()
     if (ethersInitializedCallback !== undefined) {
       await ethersInitializedCallback.bind(this.parent)()
@@ -409,7 +376,7 @@ export class NetworkMonitor {
       }
     }
 
-    const holographABI = await fs.readJson('./src/abi/Holograph.json')
+    const holographABI = await fs.readJson(`./src/abi/${this.environment}/Holograph.json`)
     this.holograph = new ethers.Contract(
       this.HOLOGRAPH_ADDRESSES[this.environment],
       holographABI,
@@ -421,31 +388,31 @@ export class NetworkMonitor {
     this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
     this.registryAddress = (await this.holograph.getRegistry()).toLowerCase()
 
-    const holographBridgeABI = await fs.readJson('./src/abi/HolographBridge.json')
+    const holographBridgeABI = await fs.readJson(`./src/abi/${this.environment}/HolographBridge.json`)
     this.bridgeContract = new ethers.Contract(this.bridgeAddress, holographBridgeABI, this.providers[this.networks[0]])
 
-    const holographFactoryABI = await fs.readJson('./src/abi/HolographFactory.json')
+    const holographFactoryABI = await fs.readJson(`./src/abi/${this.environment}/HolographFactory.json`)
     this.factoryContract = new ethers.Contract(
       this.factoryAddress,
       holographFactoryABI,
       this.providers[this.networks[0]],
     )
 
-    const holographInterfacesABI = await fs.readJson('./src/abi/Interfaces.json')
+    const holographInterfacesABI = await fs.readJson(`./src/abi/${this.environment}/Interfaces.json`)
     this.interfacesContract = new ethers.Contract(
       this.interfacesAddress,
       holographInterfacesABI,
       this.providers[this.networks[0]],
     )
 
-    const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
+    const holographOperatorABI = await fs.readJson(`./src/abi/${this.environment}/HolographOperator.json`)
     this.operatorContract = new ethers.Contract(
       this.operatorAddress,
       holographOperatorABI,
       this.providers[this.networks[0]],
     )
 
-    const holographRegistryABI = await fs.readJson('./src/abi/HolographRegistry.json')
+    const holographRegistryABI = await fs.readJson(`./src/abi/${this.environment}/HolographRegistry.json`)
     this.registryContract = new ethers.Contract(
       this.registryAddress,
       holographRegistryABI,
@@ -807,4 +774,3 @@ export class NetworkMonitor {
     return output
   }
 }
-
