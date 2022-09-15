@@ -5,7 +5,7 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, sleep, getChainId} from '../../utils/utils'
+import {DeploymentConfig, decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, sleep, getChainId} from '../../utils/utils'
 import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
@@ -528,15 +528,19 @@ export default class Indexer extends Command {
     transaction: ethers.providers.TransactionResponse,
     network: string,
     deploymentAddress: string,
-    salt: string,
+    config: DeploymentConfig,
   ): Promise<void> {
     const data = JSON.stringify({
       contractAddress: deploymentAddress,
+      // TODO: decide if this should be included in API call
+      // contractCreator: config.signer,
       chainId: transaction.chainId,
       status: 'DEPLOYED',
-      salt: salt,
+      salt: config.config.salt,
       tx: transaction.hash,
       blockNumber: transaction.blockNumber,
+      // TODO: decide if this should be included in API call
+      // blockTimestamp: transaction.timestamp,
       isDeployed: true,
     })
     this.networkMonitor.structuredLog(network, `Successfully found Collection with address ${deploymentAddress}`)
@@ -558,7 +562,6 @@ export default class Indexer extends Command {
     })
     Promise.resolve()
   }
-
   async updateDeployedCollection(
     transaction: ethers.providers.TransactionResponse,
     network: string,
@@ -590,7 +593,7 @@ export default class Indexer extends Command {
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
       callback: this.updateCollectionCallback,
-      arguments: [transaction, network, deploymentAddress, config.config.salt],
+      arguments: [transaction, network, deploymentAddress, config],
     }
     if (!(job.timestamp in this.dbJobMap)) {
       this.dbJobMap[job.timestamp] = []
@@ -627,7 +630,7 @@ export default class Indexer extends Command {
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
       callback: this.updateCollectionCallback,
-      arguments: [transaction, network, deploymentAddress, config.config.salt],
+      arguments: [transaction, network, deploymentAddress, config],
     }
     if (!(job.timestamp in this.dbJobMap)) {
       this.dbJobMap[job.timestamp] = []
