@@ -9,6 +9,7 @@ enum Environment {
 }
 
 // Description: Get environment by git branch name
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getEnvironmentByGitBranch = (): Environment => {
   let environment = Environment.develop
   const acceptableBranches: Set<string> = new Set<string>(['develop', 'testnet', 'mainnet'])
