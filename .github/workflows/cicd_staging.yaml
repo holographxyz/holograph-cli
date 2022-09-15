@@ -11,9 +11,9 @@ env:
   #
   DEV_IMAGE_TAG : dev-${{ github.sha }}
   #######################################
-  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.16
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.11
-  STG_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.12
+  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.17
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.12
+  STG_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.13
   #######################################
   CLUSTER_NAME   : staging
   #
@@ -33,6 +33,8 @@ env:
   # switching between the keys in the config map
   HOLO_CONFIG_FILE_DATA: stg-config-file # [stg-config-file/prod-config-file]
   #
+  ABI_ENVIRONMENT: testnet # same for all 3 [indexer,operator,propagator]
+  #
   STG_COMMON_NAMESPACE: holocli
   STG_DOMAIN: "cxipchain.xyz"
 
@@ -40,10 +42,11 @@ env:
 on:
   push:
     branches:
-      - 'develop' # notice: the actual staging branch -> [the deployment is happening into the holocli namespace!]
-      #
-      - '!main'     # EXCLUDES this branch
-      - '!master'   # EXCLUDES this branch
+      - 'testnet'
+      # Excluded branches
+      - '!develop'
+      - '!main'
+      - '!master'
 
 jobs:
   deploy-to-new-staging:
@@ -57,20 +60,18 @@ jobs:
           role-to-assume: ${{ env.IAM_ROLE }}
           aws-region    : ${{ env.AWS_REGION }}
 
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - name: Login to ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Build image
+        run : docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
 
-      - name: Build and push image to ECR
-        env:
-          ECR_REGISTRY  : ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-        run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG .
-          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$DEV_IMAGE_TAG
+      - name: Push image to ECR
+        run : docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -116,6 +117,7 @@ jobs:
             --set holo_indexer_password=${{ env.STG_HOLO_INDEXER_PASSWORD }} \
             --set HOLO_INDEXER_HOST=${{ env.STG_HOLO_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
+            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }} \
@@ -152,6 +154,7 @@ jobs:
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
+            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-operator \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }} \
@@ -188,6 +191,7 @@ jobs:
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.HOLO_CONFIG_FILE_DATA }} \
             --set holo_propagator_password=${{ env.STG_HOLO_PROPAGATOR_PASSWORD }} \
+            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-propagator \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_PROPAGATOR_HELM_CHART_VERSION }} \
