@@ -131,7 +131,7 @@ export default class Operator extends Command {
         this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${transaction.blockNumber}`)
         const from: string | undefined = transaction.from?.toLowerCase()
         if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
-          await this.handleOperatorRequestEvent(transaction, job.network)
+          await this.handleAvailableOperatorJobEvent(transaction, job.network)
         } else {
           this.networkMonitor.structuredLog(
             job.network,
@@ -142,7 +142,11 @@ export default class Operator extends Command {
     }
   }
 
-  async handleOperatorRequestEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
+  async handleAvailableOperatorJobEvent(
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+  ): Promise<void> {
+    let bridgeTransaction
     const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
@@ -156,13 +160,20 @@ export default class Operator extends Command {
       const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(receipt)
       const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
       if (operatorJobHash === undefined) {
-        this.networkMonitor.structuredLog(network, `LayerZero Relayer sent an irrelevant job for ${transaction.hash}`)
+        this.networkMonitor.structuredLog(network, `Could not extract relayer available job for ${transaction.hash}`)
       } else {
         this.networkMonitor.structuredLog(
           network,
-          `HolographOperator received a new bridge job on ${network} with job hash: ${operatorJobHash}\n`,
+          `HolographOperator received a new bridge job. The job payload hash is ${operatorJobHash}. The job payload is ${operatorJobPayload}`,
         )
-
+        bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
+          data: operatorJobPayload!,
+          value: ethers.BigNumber.from('0'),
+        })
+        this.networkMonitor.structuredLog(
+          network,
+          `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
+        )
         if (this.operatorMode !== OperatorMode.listen) {
           await this.executePayload(network, operatorJobPayload!)
         }
