@@ -1,3 +1,4 @@
+import * as fs from 'fs-extra'
 import * as inquirer from 'inquirer'
 
 import {CliUx, Command, Flags} from '@oclif/core'
@@ -45,6 +46,9 @@ export default class Propagator extends Command {
     recover: Flags.string({
       description: 'Provide a JSON array of RecoveryData objects to manually ensure propagation',
       default: '[]',
+    }),
+    recoverFile: Flags.string({
+      description: 'Filename reference to JSON array of RecoveryData objects to manually ensure propagation',
     }),
   }
 
@@ -127,7 +131,16 @@ export default class Propagator extends Command {
     await this.networkMonitor.run(!(flags.warp > 0), undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
-    const recoveryData = JSON.parse(flags.recover as string) as RecoveryData[]
+    let recoveryData: RecoveryData[] = JSON.parse(flags.recover as string) as RecoveryData[]
+    const recoverDataFileString: string | undefined = flags.recoverFile
+    if (recoverDataFileString !== undefined && recoverDataFileString !== '') {
+      if (fs.existsSync(recoverDataFileString)) {
+        recoveryData = (await fs.readJson(recoverDataFileString)) as RecoveryData[]
+      } else {
+        throw new Error('The recoverFile does not exist')
+      }
+    }
+
     if (recoveryData.length > 0) {
       this.log(`Manually running ${recoveryData.length} recovery jobs`)
       for (const data of recoveryData) {
