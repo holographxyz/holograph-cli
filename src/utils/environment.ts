@@ -1,4 +1,6 @@
 import * as fs from 'fs-extra'
+import dotenv from 'dotenv'
+dotenv.config()
 
 enum Environment {
   develop = 'develop',
@@ -6,7 +8,8 @@ enum Environment {
   mainnet = 'mainnet',
 }
 
-const getEnvironment = (): Environment => {
+// Description: Get environment by git branch name
+const getEnvironmentByGitBranch = (): Environment => {
   let environment = Environment.develop
   const acceptableBranches: Set<string> = new Set<string>(['develop', 'testnet', 'mainnet'])
   const head = './.git/HEAD'
@@ -21,6 +24,21 @@ const getEnvironment = (): Environment => {
     }
   } else if (acceptableBranches.has(env)) {
     environment = Environment[env as keyof typeof Environment]
+  }
+
+  return environment
+}
+
+// Description: Get environment by ABI_ENVIRONMENT
+const getEnvironment = (): Environment => {
+  let environment = Environment.develop
+  const acceptableBranches: Set<string> = new Set<string>(['develop', 'testnet', 'mainnet'])
+
+  const envVar = process.env.ABI_ENVIRONMENT ?? 'testnet'
+  if (acceptableBranches.has(envVar)) {
+    environment = Environment[envVar as keyof typeof Environment]
+  } else {
+    throw new Error(`Unknown value for ABI_ENVIRONMENT=${envVar}`)
   }
 
   return environment
