@@ -34,12 +34,14 @@ const getEnvironment = (): Environment => {
   let environment = Environment.develop
   const acceptableBranches: Set<string> = new Set<string>(['develop', 'testnet', 'mainnet'])
 
-  const envVar = process.env.ABI_ENVIRONMENT ?? 'testnet'
+  const envVar = process.env.ABI_ENVIRONMENT || 'testnet' // NOTE: after deployment, use ?? operator and set default 'develop'
   if (acceptableBranches.has(envVar)) {
     environment = Environment[envVar as keyof typeof Environment]
   } else {
     throw new Error(`Unknown value for ABI_ENVIRONMENT=${envVar}`)
   }
+
+  console.log(`ABI_ENVIRONMENT=${environment}`) // NOTE: remove after deployment
 
   return environment
 }
