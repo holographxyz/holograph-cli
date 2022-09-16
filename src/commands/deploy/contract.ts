@@ -5,6 +5,8 @@ import {ethers} from 'ethers'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-deployment'
+import {getEnvironment} from '../../utils/environment'
+import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
 
 export default class Contract extends Command {
   static description = 'Deploy a Holographable contract'
@@ -17,6 +19,7 @@ export default class Contract extends Command {
 
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
+    const environment = getEnvironment()
     const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
 
     const {flags} = await this.parse(Contract)
@@ -69,12 +72,12 @@ export default class Contract extends Command {
     this.debug(deploymentConfig)
 
     CliUx.ux.action.start('Retrieving HolographFactory contract')
-    const holographABI = await fs.readJson('./src/abi/Holograph.json')
+    const holographABI = await fs.readJson(`./src/abi/${environment}/Holograph.json`)
     const holograph = new ethers.ContractFactory(holographABI, '0x', destinationWallet).attach(
-      '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase(),
+      HOLOGRAPH_ADDRESSES[environment],
     )
 
-    const holographFactoryABI = await fs.readJson('./src/abi/HolographFactory.json')
+    const holographFactoryABI = await fs.readJson(`./src/abi/${environment}/HolographFactory.json`)
     const holographFactory = new ethers.ContractFactory(holographFactoryABI, '0x', destinationWallet).attach(
       await holograph.getFactory(),
     )
