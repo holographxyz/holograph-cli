@@ -26,8 +26,8 @@ env:
   STG_HOLO_INDEXER_HOST: http://dev-nest-api.develop.svc.cluster.local:443
   #
   # notice: all 3 have the same password
-  STG_HOLO_INDEXER_PASSWORD   : ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
-  STG_HOLO_OPERATOR_PASSWORD  : ${{ secrets.STG_HOLO_OPERATOR_PASSWORD }}
+  STG_HOLO_INDEXER_PASSWORD  : ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
+  STG_HOLO_OPERATOR_PASSWORD : ${{ secrets.STG_HOLO_OPERATOR_PASSWORD }}
   #
   # switching between the keys in the config map
   HOLO_CONFIG_FILE_DATA: stg-config-file # [stg-config-file/prod-config-file]
@@ -42,9 +42,10 @@ on:
   push:
     branches:
       - 'develop'
-      #
-      - '!main'     # EXCLUDES this branch
-      - '!master'   # EXCLUDES this branch
+      # Excluded branches
+      - '!testnet'
+      - '!main'
+      - '!master'
 
 jobs:
   deploy-to-new-staging:
@@ -79,7 +80,7 @@ jobs:
           aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
           aws-region           : ${{ env.AWS_REGION }}
 
-      - name: Create holocli dev ns
+      - name: Create holocli ns
         uses: tensor-hq/eksctl-helm-action@main
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
@@ -96,7 +97,7 @@ jobs:
           CHART_VERSION: ${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        run : |
+        run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
       - name: -> Deploy INDEXER cli in staging [namespace -> ${{ steps.STG_COMMON_NAMESPACE }}]
@@ -135,7 +136,7 @@ jobs:
           CHART_VERSION: ${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        run : |
+        run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
       - name: -> Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
@@ -165,26 +166,27 @@ jobs:
       - name: -> Info for the new deployments
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          INDEXER_RELEASE_NAME   : indexer-dev
-          OPERATOR_RELEASE_NAME  : operator-dev
-          LB_URL: staging-alb-1490082055.us-west-2.elb.amazonaws.com
+          INDEXER_RELEASE_NAME  : indexer-dev
+          OPERATOR_RELEASE_NAME : operator-dev
+          LB_URL: "https://staging-alb-1490082055.us-west-2.elb.amazonaws.com"
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             echo "------------------------- Last 5 Helm releases -------------------------"
             echo "--INDEXER--"
-            helm history $INDEXER_RELEASE_NAME    -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
             echo "--OPERATOR--"
-            helm history $OPERATOR_RELEASE_NAME   -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
 
             echo "------------------------ Newly deployed image [same for all apps] ------------------------"
             echo "$DEV_IMAGE_TAG"
+            sleep 40
 
             echo "------------------------ Healthchecks ------------------------"
             ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-            echo "curl -k -H \"Host: $ENDPOINT\" https://$LB_URL/healthcheck"
-            curl -k -H "Host: $ENDPOINT" https://$LB_URL/healthcheck | jq '.status'
+            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
 
             ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-            echo "curl -k -H \"Host: $ENDPOINT\" https://$LB_URL/healthcheck"
-            curl -k -H "Host: $ENDPOINT" https://$LB_URL/healthcheck | jq '.status'
+            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
