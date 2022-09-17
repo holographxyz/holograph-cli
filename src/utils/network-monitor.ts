@@ -852,7 +852,7 @@ export class NetworkMonitor {
 
         if (await tryGetBalance()) {
           if (balance!.lt(gasLimit.mul(gasPrice))) {
-            this.structuredLog(network, `Wallet balance is lower than the transaction required amount`)
+            this.structuredLog(network, `Wallet balance is lower than the transaction required amount. ${JSON.stringify({contract: await contract.resolvedAddress, method: methodName, args: [...args]}, undefined, 2)}`)
             topResolve(null)
           } else {
             this.structuredLog(network, `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, 'gwei')}`)
