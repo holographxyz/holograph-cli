@@ -835,58 +835,82 @@ export class NetworkMonitor {
 
       if (await tryGetGasLimit()) {
         const gasPrice = await contract.provider.getGasPrice()
-        this.structuredLog(network, `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, 'gwei')}`)
-        this.structuredLog(network, `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(gasLimit.mul(gasPrice), 'ether')} native gas tokens (in ether)`)
-        const rawTx = await contract.populateTransaction[methodName](...args, {gasPrice, gasLimit})
-        rawTx.nonce = this.walletNonces[network]
-        let tx!: ethers.providers.TransactionResponse
-        const tryToSendTx = async (): Promise<boolean> => {
-          return new Promise<boolean>((resolve, _reject) => {
-            const getJobTx: NodeJS.Timeout = setInterval(async () => {
-              try {
-                tx = await this.wallets[network].sendTransaction(rawTx)
-                clearInterval(getJobTx)
-                resolve(true)
-              } catch (error: any) {
-                switch (error.message) {
-                  case 'already known': {
-                    // we are aware that more than one message has been sent, so avoid all errors echoed
-                    break
-                  }
-
-                  default: {
-                    this.structuredLogError(network, error, 'sendTransaction error')
-                  }
-                }
+        let balance: BigNumber
+        const tryGetBalance = async (): Promise<BigNumber> => {
+          // eslint-disable-next-line no-async-promise-executor
+          return new Promise<BigNumber>(async (resolve, _reject) => {
+            const getBalance: NodeJS.Timeout = setInterval(async () => {
+              balance = await this.providers[network].getBalance(await this.wallets[network].getAddress(), 'latest')
+              if (balance !== null) {
+                this.structuredLog(network, `Wallet balance is ${balance.toString()}`)
+                clearInterval(getBalance)
+                resolve(balance)
               }
             }, 100) // every 1/10th of a second
           })
         }
 
-        if (await tryToSendTx()) {
-          this.debug(tx)
-          this.structuredLog(network, `Transaction hash is ${tx.hash}`)
-          this.walletNonces[network]++
-          let receipt: ethers.ContractReceipt
-          const tryToGetTxReceipt = async (): Promise<ethers.ContractReceipt | null> => {
-            // eslint-disable-next-line no-async-promise-executor
-            return new Promise<ethers.ContractReceipt | null>(async (resolve, _reject) => {
-              const getTxReceipt: NodeJS.Timeout = setInterval(async () => {
-                receipt = await this.providers[network].getTransactionReceipt(tx.hash)
-                if (receipt !== null) {
-                  this.debug(receipt)
-                  this.structuredLog(
-                    network,
-                    `Transaction ${receipt.transactionHash} mined and confirmed`,
-                  )
-                  clearInterval(getTxReceipt)
-                  resolve(receipt)
-                }
-              }, 1000) // every 1 second
-            })
-          }
+        if (await tryGetBalance()) {
+          if (balance!.lt(gasLimit.mul(gasPrice))) {
+            this.structuredLog(network, `Wallet balance is lower than the transaction required amount`)
+            topResolve(null)
+          } else {
+            this.structuredLog(network, `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, 'gwei')}`)
+            this.structuredLog(network, `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(gasLimit.mul(gasPrice), 'ether')} native gas tokens (in ether)`)
+            const rawTx = await contract.populateTransaction[methodName](...args, {gasPrice, gasLimit})
+            rawTx.nonce = this.walletNonces[network]
+            let tx!: ethers.providers.TransactionResponse
+            const tryToSendTx = async (): Promise<boolean> => {
+              return new Promise<boolean>((resolve, _reject) => {
+                const getJobTx: NodeJS.Timeout = setInterval(async () => {
+                  try {
+                    tx = await this.wallets[network].sendTransaction(rawTx)
+                    clearInterval(getJobTx)
+                    resolve(true)
+                  } catch (error: any) {
+                    switch (error.message) {
+                      case 'already known': {
+                        // we are aware that more than one message has been sent, so avoid all errors echoed
+                        break
+                      }
 
-          topResolve(await tryToGetTxReceipt())
+                      default: {
+                        this.structuredLogError(network, error, 'sendTransaction error')
+                      }
+                    }
+                  }
+                }, 100) // every 1/10th of a second
+              })
+            }
+
+            if (await tryToSendTx()) {
+              this.debug(tx)
+              this.structuredLog(network, `Transaction hash is ${tx.hash}`)
+              this.walletNonces[network]++
+              let receipt: ethers.ContractReceipt
+              const tryToGetTxReceipt = async (): Promise<ethers.ContractReceipt | null> => {
+                // eslint-disable-next-line no-async-promise-executor
+                return new Promise<ethers.ContractReceipt | null>(async (resolve, _reject) => {
+                  const getTxReceipt: NodeJS.Timeout = setInterval(async () => {
+                    receipt = await this.providers[network].getTransactionReceipt(tx.hash)
+                    if (receipt !== null) {
+                      this.debug(receipt)
+                      this.structuredLog(
+                        network,
+                        `Transaction ${receipt.transactionHash} mined and confirmed`,
+                      )
+                      clearInterval(getTxReceipt)
+                      resolve(receipt)
+                    }
+                  }, 1000) // every 1 second
+                })
+              }
+
+              topResolve(await tryToGetTxReceipt())
+            } else {
+              topResolve(null)
+            }
+          }
         } else {
           topResolve(null)
         }
