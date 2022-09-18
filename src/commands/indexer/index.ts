@@ -562,6 +562,7 @@ export default class Indexer extends Command {
     })
     Promise.resolve()
   }
+
   async updateDeployedCollection(
     transaction: ethers.providers.TransactionResponse,
     network: string,
