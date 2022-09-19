@@ -52,6 +52,7 @@ export interface Scope {
 export enum FilterType {
   to,
   from,
+  functionSig,
 }
 
 export type TransactionFilter = {
@@ -519,6 +520,7 @@ export class NetworkMonitor {
   ): void {
     const to: string = transaction.to?.toLowerCase() || ''
     const from: string = transaction.from?.toLowerCase() || ''
+    let data: string
     for (const filter of this.filters) {
       const match: string = filter.networkDependant
         ? (filter.match as {[key: string]: string})[job.network]
@@ -532,6 +534,13 @@ export class NetworkMonitor {
           break
         case FilterType.from:
           if (from === match) {
+            interestingTransactions.push(transaction)
+          }
+
+          break
+        case FilterType.functionSig:
+          data = transaction.data?.slice(0, 10) || ''
+          if (data.startsWith(match)) {
             interestingTransactions.push(transaction)
           }
 

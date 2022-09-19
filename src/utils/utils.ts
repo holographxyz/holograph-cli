@@ -131,7 +131,7 @@ const decodeDeploymentConfig = function (input: string): DeploymentConfig {
   }
 }
 
-const decodeDeploymentConfigInput = function (input: string): any {
+const decodeDeploymentConfigInput = function (input: string): DeploymentConfig {
   return decodeDeploymentConfig('0x' + input.slice(10))
 }
 
