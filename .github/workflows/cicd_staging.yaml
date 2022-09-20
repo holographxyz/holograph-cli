@@ -12,8 +12,7 @@ env:
   DEV_IMAGE_TAG : dev-${{ github.sha }}
   #######################################
   STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.17
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.12
-  STG_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.13
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.14
   #######################################
   CLUSTER_NAME   : staging
   #
@@ -155,7 +154,6 @@ jobs:
             --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-            --set datadog_tags.service=$RELEASE_NAME-holo-operator \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             --values .github/values_for_stg_alb_ingress.yaml \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
