@@ -147,7 +147,27 @@ export default class Operator extends Command {
     network: string,
   ): Promise<void> {
     let bridgeTransaction
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const tryToGetTxReceipt = async (): Promise<ethers.ContractReceipt> => {
+      // eslint-disable-next-line no-async-promise-executor
+      return new Promise<ethers.ContractReceipt>(async (resolve, _reject) => {
+        let receipt: ethers.ContractReceipt | null
+        const getTxReceipt: NodeJS.Timeout = setInterval(async () => {
+          receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+          if (receipt !== null) {
+            this.debug(receipt)
+            this.networkMonitor.structuredLog(
+              network,
+              `Transaction ${receipt.transactionHash} received`,
+            )
+            clearInterval(getTxReceipt)
+            resolve(receipt as ethers.ContractReceipt)
+          }
+        }, 1000) // every 1 second
+      })
+    }
+
+    const receipt: ethers.ContractReceipt = await tryToGetTxReceipt()
+
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
