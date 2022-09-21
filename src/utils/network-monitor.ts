@@ -1,7 +1,7 @@
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
 
-import {ethers} from 'ethers'
+import {ethers, BigNumber} from 'ethers'
 import {BlockWithTransactions} from '@ethersproject/abstract-provider'
 import {Command, Flags} from '@oclif/core'
 
@@ -10,34 +10,8 @@ import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {capitalize, NETWORK_COLORS} from './utils'
 import color from '@oclif/color'
 
-import dotenv from 'dotenv'
-dotenv.config()
-
-enum Environment {
-  develop = 'develop',
-  testnet = 'testnet',
-  mainnet = 'mainnet',
-}
-
-const getEnvironment = (): Environment => {
-  let environment = Environment.develop
-  const acceptableBranches: Set<string> = new Set<string>(['develop', 'testnet', 'mainnet'])
-  const head = './.git/HEAD'
-  const env: string = process.env.HOLOGRAPH_ENVIRONMENT || ''
-  if (env === '') {
-    if (fs.existsSync(head)) {
-      const contents = fs.readFileSync('./.git/HEAD', 'utf8')
-      const branch = contents.trim().split('ref: refs/heads/')[1]
-      if (acceptableBranches.has(branch)) {
-        environment = Environment[branch as keyof typeof Environment]
-      }
-    }
-  } else if (acceptableBranches.has(env)) {
-    environment = Environment[env as keyof typeof Environment]
-  }
-
-  return environment
-}
+import {Environment, getEnvironment} from './environment'
+import {HOLOGRAPH_ADDRESSES} from './contracts'
 
 export const warpFlag = {
   warp: Flags.integer({
@@ -78,6 +52,7 @@ export interface Scope {
 export enum FilterType {
   to,
   from,
+  functionSig,
 }
 
 export type TransactionFilter = {
@@ -129,10 +104,6 @@ type NetworkMonitorOptions = {
   warp?: number
 }
 
-const HOLOGRAPH_DEVELOP_ADDRESS: string = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
-const HOLOGRAPH_TESTNET_ADDRESS: string = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
-const HOLOGRAPH_MAINNET_ADDRESS: string = '0x0000000000000000000000000000000000000000'.toLowerCase()
-
 export class NetworkMonitor {
   environment: Environment
   parent: ImplementsCommand
@@ -148,6 +119,7 @@ export class NetworkMonitor {
   runningProcesses = 0
   bridgeAddress!: string
   factoryAddress!: string
+  interfacesAddress!: string
   operatorAddress!: string
   registryAddress!: string
   wallets: {[key: string]: ethers.Wallet} = {}
@@ -165,13 +137,10 @@ export class NetworkMonitor {
   holograph!: ethers.Contract
   bridgeContract!: ethers.Contract
   factoryContract!: ethers.Contract
+  interfacesContract!: ethers.Contract
   operatorContract!: ethers.Contract
   registryContract!: ethers.Contract
-  HOLOGRAPH_ADDRESSES: { [key in Environment]: string } = {
-    [Environment.develop]: HOLOGRAPH_DEVELOP_ADDRESS,
-    [Environment.testnet]: HOLOGRAPH_TESTNET_ADDRESS,
-    [Environment.mainnet]: HOLOGRAPH_MAINNET_ADDRESS,
-  }
+  HOLOGRAPH_ADDRESSES = HOLOGRAPH_ADDRESSES
 
   LAYERZERO_RECEIVERS: {[key: string]: string} = {
     rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
@@ -200,11 +169,10 @@ export class NetworkMonitor {
     const outputNetworks = ['rinkeby', 'mumbai', 'fuji']
     const output = {} as any
 
-    // eslint-disable-next-line guard-for-in
     for (const n of outputNetworks) {
-      if(this.providers[n]) {
+      if (this.providers[n]) {
         const current = this.providers[n] as ethers.providers.WebSocketProvider
-        if ( current._wsReady && current._websocket._socket.readyState === 'open'){
+        if (current._wsReady && current._websocket._socket.readyState === 'open') {
           output[n] = 'CONNECTED'
         }
       } else {
@@ -269,6 +237,7 @@ export class NetworkMonitor {
     blockJobs?: {[key: string]: BlockJob[]},
     ethersInitializedCallback?: () => Promise<void>,
   ): Promise<void> {
+
     await this.initializeEthers()
     if (ethersInitializedCallback !== undefined) {
       await ethersInitializedCallback.bind(this.parent)()
@@ -277,6 +246,7 @@ export class NetworkMonitor {
     this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESSES[this.environment]}`)
     this.log(`Bridge address: ${this.bridgeAddress}`)
     this.log(`Factory address: ${this.factoryAddress}`)
+    this.log(`Interfaces address: ${this.interfacesAddress}`)
     this.log(`Operator address: ${this.operatorAddress}`)
     this.log(`Registry address: ${this.registryAddress}`)
 
@@ -406,7 +376,7 @@ export class NetworkMonitor {
       }
     }
 
-    const holographABI = await fs.readJson('./src/abi/Holograph.json')
+    const holographABI = await fs.readJson(`./src/abi/${this.environment}/Holograph.json`)
     this.holograph = new ethers.Contract(
       this.HOLOGRAPH_ADDRESSES[this.environment],
       holographABI,
@@ -414,27 +384,35 @@ export class NetworkMonitor {
     )
     this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
     this.factoryAddress = (await this.holograph.getFactory()).toLowerCase()
+    this.interfacesAddress = (await this.holograph.getInterfaces()).toLowerCase()
     this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
     this.registryAddress = (await this.holograph.getRegistry()).toLowerCase()
 
-    const holographBridgeABI = await fs.readJson('./src/abi/HolographBridge.json')
+    const holographBridgeABI = await fs.readJson(`./src/abi/${this.environment}/HolographBridge.json`)
     this.bridgeContract = new ethers.Contract(this.bridgeAddress, holographBridgeABI, this.providers[this.networks[0]])
 
-    const holographFactoryABI = await fs.readJson('./src/abi/HolographFactory.json')
+    const holographFactoryABI = await fs.readJson(`./src/abi/${this.environment}/HolographFactory.json`)
     this.factoryContract = new ethers.Contract(
       this.factoryAddress,
       holographFactoryABI,
       this.providers[this.networks[0]],
     )
 
-    const holographOperatorABI = await fs.readJson('./src/abi/HolographOperator.json')
+    const holographInterfacesABI = await fs.readJson(`./src/abi/${this.environment}/Interfaces.json`)
+    this.interfacesContract = new ethers.Contract(
+      this.interfacesAddress,
+      holographInterfacesABI,
+      this.providers[this.networks[0]],
+    )
+
+    const holographOperatorABI = await fs.readJson(`./src/abi/${this.environment}/HolographOperator.json`)
     this.operatorContract = new ethers.Contract(
       this.operatorAddress,
       holographOperatorABI,
       this.providers[this.networks[0]],
     )
 
-    const holographRegistryABI = await fs.readJson('./src/abi/HolographRegistry.json')
+    const holographRegistryABI = await fs.readJson(`./src/abi/${this.environment}/HolographRegistry.json`)
     this.registryContract = new ethers.Contract(
       this.registryAddress,
       holographRegistryABI,
@@ -541,6 +519,7 @@ export class NetworkMonitor {
   ): void {
     const to: string = transaction.to?.toLowerCase() || ''
     const from: string = transaction.from?.toLowerCase() || ''
+    let data: string
     for (const filter of this.filters) {
       const match: string = filter.networkDependant
         ? (filter.match as {[key: string]: string})[job.network]
@@ -554,6 +533,13 @@ export class NetworkMonitor {
           break
         case FilterType.from:
           if (from === match) {
+            interestingTransactions.push(transaction)
+          }
+
+          break
+        case FilterType.functionSig:
+          data = transaction.data?.slice(0, 10) || ''
+          if (data.startsWith(match)) {
             interestingTransactions.push(transaction)
           }
 
@@ -795,5 +781,152 @@ export class NetworkMonitor {
 
     return output
   }
-}
 
+  async executeTransaction(network: string, contract: ethers.Contract, methodName: string, ...args: any[]): Promise<ethers.ContractReceipt | null> {
+    // eslint-disable-next-line no-async-promise-executor
+    return new Promise<ethers.ContractReceipt | null>(async (topResolve, _topReject) => {
+      contract = contract.connect(this.wallets[network])
+      let gasLimit!: BigNumber
+      const tryGetGasLimit = async (): Promise<boolean> => {
+        return new Promise<boolean>((resolve, _reject) => {
+          const getGasLimit: NodeJS.Timeout = setInterval(async () => {
+            try {
+              gasLimit = await contract.estimateGas[methodName](...args)
+              clearInterval(getGasLimit)
+              resolve(true)
+            } catch (error: any) {
+              if ('reason' in error) {
+                if (error.reason.startsWith('execution reverted:')) {
+                  // transaction reverted, we got a `revert` error from web3 call
+                  const revertReason: string = error.reason.split('execution reverted: ')[1]
+                  let revertExplanation = 'unknown reason'
+                  let knownReason = true
+                  switch (revertReason) {
+                    case 'HOLOGRAPH: already deployed': {
+                      revertExplanation = 'The deploy request is invalid, since requested contract is already deployed.'
+                      break
+                    }
+
+                    case 'HOLOGRAPH: invalid job': {
+                      revertExplanation = 'Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.'
+                      break
+                    }
+
+                    case 'HOLOGRAPH: not holographed': {
+                      revertExplanation = 'Need to first deploy a holographable contract on destination chain.'
+                      break
+                    }
+
+                    default: {
+                      knownReason = false
+                      this.structuredLogError(network, error, contract.address)
+                      break
+                    }
+                  }
+
+                  if (knownReason) {
+                    this.structuredLog(
+                      network,
+                      'web3 response -> "' + revertReason + '" -> ' + revertExplanation,
+                    )
+                  }
+                }
+              } else {
+                this.structuredLogError(network, error, contract.address)
+              }
+
+              clearInterval(getGasLimit)
+              resolve(false)
+            }
+          }, 1000) // every 1 second
+        })
+      }
+
+      if (await tryGetGasLimit()) {
+        const gasPrice = await contract.provider.getGasPrice()
+        let balance: BigNumber
+        const tryGetBalance = async (): Promise<BigNumber> => {
+          // eslint-disable-next-line no-async-promise-executor
+          return new Promise<BigNumber>(async (resolve, _reject) => {
+            const getBalance: NodeJS.Timeout = setInterval(async () => {
+              balance = await this.providers[network].getBalance(await this.wallets[network].getAddress(), 'latest')
+              if (balance !== null) {
+                this.structuredLog(network, `Wallet balance is ${balance.toString()}`)
+                clearInterval(getBalance)
+                resolve(balance)
+              }
+            }, 100) // every 1/10th of a second
+          })
+        }
+
+        if (await tryGetBalance()) {
+          if (balance!.lt(gasLimit.mul(gasPrice))) {
+            this.structuredLog(network, `Wallet balance is lower than the transaction required amount. ${JSON.stringify({contract: await contract.resolvedAddress, method: methodName, args: [...args]}, undefined, 2)}`)
+            topResolve(null)
+          } else {
+            this.structuredLog(network, `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, 'gwei')}`)
+            this.structuredLog(network, `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(gasLimit.mul(gasPrice), 'ether')} native gas tokens (in ether)`)
+            const rawTx = await contract.populateTransaction[methodName](...args, {gasPrice, gasLimit})
+            rawTx.nonce = this.walletNonces[network]
+            let tx!: ethers.providers.TransactionResponse
+            const tryToSendTx = async (): Promise<boolean> => {
+              return new Promise<boolean>((resolve, _reject) => {
+                const getJobTx: NodeJS.Timeout = setInterval(async () => {
+                  try {
+                    tx = await this.wallets[network].sendTransaction(rawTx)
+                    clearInterval(getJobTx)
+                    resolve(true)
+                  } catch (error: any) {
+                    switch (error.message) {
+                      case 'already known': {
+                        // we are aware that more than one message has been sent, so avoid all errors echoed
+                        break
+                      }
+
+                      default: {
+                        this.structuredLogError(network, error, 'sendTransaction error')
+                      }
+                    }
+                  }
+                }, 100) // every 1/10th of a second
+              })
+            }
+
+            if (await tryToSendTx()) {
+              this.debug(tx)
+              this.structuredLog(network, `Transaction hash is ${tx.hash}`)
+              this.walletNonces[network]++
+              let receipt: ethers.ContractReceipt
+              const tryToGetTxReceipt = async (): Promise<ethers.ContractReceipt | null> => {
+                // eslint-disable-next-line no-async-promise-executor
+                return new Promise<ethers.ContractReceipt | null>(async (resolve, _reject) => {
+                  const getTxReceipt: NodeJS.Timeout = setInterval(async () => {
+                    receipt = await this.providers[network].getTransactionReceipt(tx.hash)
+                    if (receipt !== null) {
+                      this.debug(receipt)
+                      this.structuredLog(
+                        network,
+                        `Transaction ${receipt.transactionHash} mined and confirmed`,
+                      )
+                      clearInterval(getTxReceipt)
+                      resolve(receipt)
+                    }
+                  }, 1000) // every 1 second
+                })
+              }
+
+              topResolve(await tryToGetTxReceipt())
+            } else {
+              topResolve(null)
+            }
+          }
+        } else {
+          topResolve(null)
+        }
+      } else {
+        topResolve(null)
+      }
+    })
+  }
+
+}

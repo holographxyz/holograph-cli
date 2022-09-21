@@ -11,9 +11,9 @@ env:
   #
   PROD_IMAGE_TAG : main-${{ github.sha }}
   ########################################
-  PROD_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.15
-  PROD_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.10
-  PROD_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.11
+  PROD_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.16
+#  PROD_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.10
+#  PROD_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.11
   ########################################
   CLUSTER_NAME   : prod0
   #
@@ -47,7 +47,7 @@ env:
 on:
   pull_request:
     branches:
-      - main
+      - someting-really-special # <-- TODO
     types: [closed]
 
 jobs:

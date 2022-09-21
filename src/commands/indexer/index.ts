@@ -5,7 +5,7 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, sleep, getChainId} from '../../utils/utils'
+import {DeploymentConfig, decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, sleep, getChainId} from '../../utils/utils'
 import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
@@ -171,6 +171,11 @@ export default class Indexer extends Command {
         match: this.networkMonitor.operatorAddress,
         networkDependant: false,
       },
+      {
+        type: FilterType.functionSig,
+        match: '0xe003ba45', // cxipMint(uint224,uint8,string)
+        networkDependant: false,
+      },
     ]
     Promise.resolve()
   }
@@ -249,6 +254,7 @@ export default class Indexer extends Command {
         )
         const to: string | undefined = transaction.to?.toLowerCase()
         const from: string | undefined = transaction.from?.toLowerCase()
+        const functionSig: string | undefined = transaction.data?.slice(0, 10)
         switch (to) {
           case this.networkMonitor.factoryAddress: {
             await this.handleContractDeployedEvent(transaction, job.network)
@@ -271,6 +277,10 @@ export default class Indexer extends Command {
           default:
             if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
               await this.handleAvailableOperatorJobEvent(transaction, job.network)
+            } else if (functionSig === '0xe003ba45') {
+              // Capture cxipMint(uint224,uint8,string)
+              this.networkMonitor.structuredLog(job.network, `Handling event for cxipMint ${transaction.hash}`)
+              await this.handleMintEvent(transaction, job.network)
             } else {
               this.networkMonitor.structuredLog(
                 job.network,
@@ -294,10 +304,25 @@ export default class Indexer extends Command {
         `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`,
       )
       const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
+
       if (deploymentInfo !== undefined) {
         await this.updateDeployedCollection(transaction, network, deploymentInfo as any[])
       }
     }
+  }
+
+  async handleMintEvent(transaction: ethers.providers.TransactionResponse, network: string) {
+    console.log('HANDLE MINT EVENT')
+
+    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    if (receipt === null) {
+      throw new Error(`Could not get receipt for ${transaction.hash}`)
+    }
+
+    const transferInfo = this.networkMonitor.decodeErc721TransferEvent(receipt)
+
+    console.log(transaction, network, transferInfo)
+    await this.updateMintedNFT(transaction, network, transferInfo as any[])
   }
 
   async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
@@ -503,12 +528,20 @@ export default class Indexer extends Command {
     transaction: ethers.providers.TransactionResponse,
     network: string,
     deploymentAddress: string,
+    config: DeploymentConfig,
   ): Promise<void> {
     const data = JSON.stringify({
+      contractAddress: deploymentAddress,
+      // TODO: decide if this should be included in API call
+      // contractCreator: config.signer,
       chainId: transaction.chainId,
       status: 'DEPLOYED',
-      salt: '0x',
+      salt: config.config.salt,
       tx: transaction.hash,
+      blockNumber: transaction.blockNumber,
+      // TODO: decide if this should be included in API call
+      // blockTimestamp: transaction.timestamp,
+      isDeployed: true,
     })
     this.networkMonitor.structuredLog(network, `Successfully found Collection with address ${deploymentAddress}`)
     this.networkMonitor.structuredLog(
@@ -561,7 +594,7 @@ export default class Indexer extends Command {
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
       callback: this.updateCollectionCallback,
-      arguments: [transaction, network, deploymentAddress],
+      arguments: [transaction, network, deploymentAddress, config],
     }
     if (!(job.timestamp in this.dbJobMap)) {
       this.dbJobMap[job.timestamp] = []
@@ -598,7 +631,7 @@ export default class Indexer extends Command {
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
       callback: this.updateCollectionCallback,
-      arguments: [transaction, network, deploymentAddress],
+      arguments: [transaction, network, deploymentAddress, config],
     }
     if (!(job.timestamp in this.dbJobMap)) {
       this.dbJobMap[job.timestamp] = []
@@ -631,20 +664,6 @@ export default class Indexer extends Command {
       tx: transaction.hash,
     })
     this.networkMonitor.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
-    // TODO: This isn't working as expected, need to figure out why
-    // Only update the database if this transaction happened in a later block than the last transaction we indexed
-    // NOTE: This should only be necessary for NFTs because they can only exist on one network at a time so we don't
-    //       want to update change update the database to the wrong network while the warp cron is running
-    //       if a more recent bridge event happened on chain that moved the NFT to a different network
-    // const transactions = responseData.transactions
-    // if (transaction.blockNumber! > transactions[transactions.length - 1].blockNumber) {
-    //   this.networkMonitor.structuredLog(
-    //     network,
-    //     `Latest transaction in the database is more recent than this transaction. Skipping update for collection ${contractAddress} and tokeId ${tokenId}`,
-    //   )
-    //   return
-    // }
-
     this.networkMonitor.structuredLog(
       network,
       `API: Requesting to update NFT with collection ${contractAddress} and tokeId ${tokenId} and id ${responseData.id}`,
@@ -663,6 +682,79 @@ export default class Indexer extends Command {
       ],
     })
     Promise.resolve()
+  }
+
+  async updateMintedNFTCallback(
+    responseData: any,
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+    contractAddress: string,
+    tokenId: string,
+  ): Promise<void> {
+    const data = JSON.stringify({
+      contractAddress,
+      tokenId,
+      chainId: transaction.chainId,
+      status: 'MINTED',
+      tx: transaction.hash,
+      blockNumber: transaction.blockNumber,
+      isDeployed: true,
+      creatorAddress: transaction.from,
+      ownerAddress: transaction.from,
+    })
+    this.networkMonitor.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
+    this.networkMonitor.structuredLog(
+      network,
+      `API: Requesting to update minted NFT with collection ${contractAddress} and tokeId ${tokenId} and id ${responseData.id}`,
+    )
+
+    await this.sendPatchRequest({
+      responseData,
+      network,
+      query: `${this.BASE_URL}/v1/nfts/${responseData.id}`,
+      data,
+      messages: [
+        `PATCH collection ${contractAddress} tokeId ${tokenId}`,
+        `Successfully updated minted NFT collection ${contractAddress} and tokeId ${tokenId}`,
+        `Failed to update the database for collection ${contractAddress} and tokeId ${tokenId}`,
+        `collection ${contractAddress} and tokeId ${tokenId}`,
+      ],
+    })
+    Promise.resolve()
+  }
+
+  async updateMintedNFT(
+    transaction: ethers.providers.TransactionResponse,
+    network: string,
+    transferInfo: any[],
+  ): Promise<void> {
+    const tokenId = (transferInfo[2] as ethers.BigNumber).toString()
+    const contractAddress = transferInfo[3] as string
+
+    this.networkMonitor.structuredLog(
+      network,
+      `Indexer identified a minted an ERC721 NFT. Holographer minted a new NFT on ${capitalize(
+        network,
+      )} at address ${contractAddress}. The ID of the NFT is ${tokenId}. Account that minted the nft is ${
+        transaction.from
+      }`,
+    )
+    this.networkMonitor.structuredLog(network, `Sending minted nft job to DBJobManager ${contractAddress}`)
+
+    const job: DBJob = {
+      attempts: 0,
+      network,
+      timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
+      query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
+      message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
+      callback: this.updateMintedNFTCallback,
+      arguments: [transaction, network, contractAddress, tokenId],
+    }
+    if (!(job.timestamp in this.dbJobMap)) {
+      this.dbJobMap[job.timestamp] = []
+    }
+
+    this.dbJobMap[job.timestamp].push(job)
   }
 
   async updateBridgedNFT(

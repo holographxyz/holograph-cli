@@ -7,6 +7,8 @@ import {ethers} from 'ethers'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {addressValidator, tokenValidator} from '../../utils/validation'
+import {Environment, getEnvironment} from '../../utils/environment'
+import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
 
 export default class Nft extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
@@ -37,9 +39,8 @@ export default class Nft extends Command {
   holograph!: ethers.Contract
   registryContract!: ethers.Contract
   erc721Contract!: ethers.Contract
-  HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
 
-  async initializeEthers(configFile: ConfigFile): Promise<void> {
+  async initializeEthers(configFile: ConfigFile, environment: Environment): Promise<void> {
     for (let i = 0, l = this.supportedNetworks.length; i < l; i++) {
       const network = this.supportedNetworks[i]
       const rpcEndpoint = (configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork).providerUrl
@@ -57,21 +58,21 @@ export default class Nft extends Command {
       }
     }
 
-    const holographABI = await fs.readJson('./src/abi/Holograph.json')
+    const holographABI = await fs.readJson(`./src/abi/${environment}/Holograph.json`)
     this.holograph = new ethers.Contract(
-      this.HOLOGRAPH_ADDRESS,
+      HOLOGRAPH_ADDRESSES[environment],
       holographABI,
       this.providers[this.supportedNetworks[0]],
     )
 
-    const holographRegistryABI = await fs.readJson('./src/abi/HolographRegistry.json')
+    const holographRegistryABI = await fs.readJson(`./src/abi/${environment}/HolographRegistry.json`)
     this.registryAddress = await this.holograph.getRegistry()
     this.registryContract = new ethers.Contract(
       this.registryAddress,
       holographRegistryABI,
       this.providers[this.supportedNetworks[0]],
     )
-    const erc721ABI = await fs.readJson('./src/abi/ERC721Holograph.json')
+    const erc721ABI = await fs.readJson(`./src/abi/${environment}/ERC721Holograph.json`)
     this.erc721Contract = new ethers.Contract(
       this.contractAddress,
       erc721ABI,
@@ -121,6 +122,7 @@ export default class Nft extends Command {
 
   async run(): Promise<void> {
     this.log('Loading user configurations...')
+    const environment = getEnvironment()
     const {configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
     this.log('User configurations loaded.')
 
@@ -132,7 +134,7 @@ export default class Nft extends Command {
 
     this.supportedNetworks = Object.keys(configFile.networks)
 
-    await this.initializeEthers(configFile)
+    await this.initializeEthers(configFile, environment)
 
     // data we want
     // network -- deployed -- valid -- address -- explorer link
