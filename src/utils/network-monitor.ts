@@ -851,7 +851,6 @@ export class NetworkMonitor {
             const getBalance: NodeJS.Timeout = setInterval(async () => {
               balance = await this.providers[network].getBalance(await this.wallets[network].getAddress(), 'latest')
               if (balance !== null) {
-                this.structuredLog(network, `Wallet balance is ${balance.toString()}`)
                 clearInterval(getBalance)
                 resolve(balance)
               }
@@ -860,6 +859,7 @@ export class NetworkMonitor {
         }
 
         if (await tryGetBalance()) {
+          this.structuredLog(network, `Wallet balance is ${ethers.utils.formatUnits(balance!, 'ether')}`)
           if (balance!.lt(gasLimit.mul(gasPrice))) {
             this.structuredLog(network, `Wallet balance is lower than the transaction required amount. ${JSON.stringify({contract: await contract.resolvedAddress, method: methodName, args: [...args]}, undefined, 2)}`)
             topResolve(null)
