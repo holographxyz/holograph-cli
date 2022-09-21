@@ -5,7 +5,14 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {DeploymentConfig, decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, sleep, getChainId} from '../../utils/utils'
+import {
+  DeploymentConfig,
+  decodeDeploymentConfig,
+  decodeDeploymentConfigInput,
+  capitalize,
+  sleep,
+  getChainId,
+} from '../../utils/utils'
 import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
@@ -312,7 +319,7 @@ export default class Indexer extends Command {
   }
 
   async handleMintEvent(transaction: ethers.providers.TransactionResponse, network: string) {
-    console.log('HANDLE MINT EVENT')
+    this.networkMonitor.structuredLog(network, `Handling event for cxipMint ${transaction.hash}`)
 
     const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
     if (receipt === null) {
@@ -321,7 +328,7 @@ export default class Indexer extends Command {
 
     const transferInfo = this.networkMonitor.decodeErc721TransferEvent(receipt)
 
-    console.log(transaction, network, transferInfo)
+    this.debug(transaction, network, transferInfo)
     await this.updateMintedNFT(transaction, network, transferInfo as any[])
   }
 
@@ -728,7 +735,7 @@ export default class Indexer extends Command {
     network: string,
     transferInfo: any[],
   ): Promise<void> {
-    const tokenId = (transferInfo[2] as ethers.BigNumber).toString()
+    const tokenId = ethers.utils.hexZeroPad(transferInfo[2].toHexString(), 32)
     const contractAddress = transferInfo[3] as string
 
     this.networkMonitor.structuredLog(
@@ -762,7 +769,7 @@ export default class Indexer extends Command {
     network: string,
     transferInfo: any[],
   ): Promise<void> {
-    const tokenId = (transferInfo[2] as ethers.BigNumber).toString()
+    const tokenId = ethers.utils.hexZeroPad(transferInfo[2].toHexString(), 32)
     const contractAddress = transferInfo[3] as string
 
     this.networkMonitor.structuredLog(
@@ -828,7 +835,7 @@ export default class Indexer extends Command {
     const jobHash = operatorJobHash
 
     const args: BridgeTransactionArgs = bridgeTransaction.args as unknown as BridgeTransactionArgs
-    const tokenId = args.tokenId.toString()
+    const tokenId = ethers.utils.hexZeroPad(args.tokenId.toHexString(), 32)
     const contractAddress = bridgeTransaction.args.collection.toLowerCase()
 
     this.networkMonitor.structuredLog(network, `Sending cross chain transaction job to DBJobManager ${contractAddress}`)
