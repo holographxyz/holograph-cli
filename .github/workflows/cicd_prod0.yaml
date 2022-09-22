@@ -33,7 +33,7 @@ env:
 #  HOLO_CONFIG_FILE_DATA: prod-config-file # [stg-config-file/prod-config-file] #TODO - a different config file for prod?
   HOLO_CONFIG_FILE_DATA: stg-config-file #deleteme
   #
-  PROD_COMMON_NAMESPACE: holocli
+  PROD_COMMON_NAMESPACE: canary
   PROD_DOMAIN: "holograph.xyz"
 
 ## notice: the trigger
