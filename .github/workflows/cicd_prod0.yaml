@@ -60,35 +60,35 @@ jobs:
           role-to-assume: ${{ env.IAM_ROLE }}
           aws-region    : ${{ env.AWS_REGION }}
 
-#      - name: Login to ECR
-#        id: login-ecr
-#        uses: aws-actions/amazon-ecr-login@v1
-#
-#      - name: Checkout code
-#        uses: actions/checkout@v2
-#
-#      - name: Build and push image to ECR
-#        env:
-#          ECR_REGISTRY  : ${{ steps.login-ecr.outputs.registry }}
-#          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-#        run: |
-#          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$PROD_IMAGE_TAG .
-#          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$PROD_IMAGE_TAG
-#
-#      - name: Configure AWS creds to access EKS
-#        # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
-#        uses: aws-actions/configure-aws-credentials@v1
-#        with:
-#          aws-access-key-id    : ${{ env.AWS_KEY_ID }}     #notice: unique for each env
-#          aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
-#          aws-region           : ${{ env.AWS_REGION }}
-#
-#      - name: Create holocli prod ns
-#        uses: tensor-hq/eksctl-helm-action@main
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            kubectl create namespace ${{ env.PROD_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Build and push image to ECR
+        env:
+          ECR_REGISTRY  : ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$PROD_IMAGE_TAG .
+          docker push     $ECR_REGISTRY/$ECR_REPOSITORY:$PROD_IMAGE_TAG
+
+      - name: Configure AWS creds to access EKS
+        # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id    : ${{ env.AWS_KEY_ID }}     #notice: unique for each env
+          aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
+          aws-region           : ${{ env.AWS_REGION }}
+
+      - name: Create holocli prod ns
+        uses: tensor-hq/eksctl-helm-action@main
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            kubectl create namespace ${{ env.PROD_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
 #      #
 #      #
 #      # NOTICE: --- INDEXER ---
