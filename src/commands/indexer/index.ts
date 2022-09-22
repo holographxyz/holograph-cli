@@ -5,7 +5,14 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {DeploymentConfig, decodeDeploymentConfig, decodeDeploymentConfigInput, capitalize, sleep, getChainId} from '../../utils/utils'
+import {
+  DeploymentConfig,
+  decodeDeploymentConfig,
+  decodeDeploymentConfigInput,
+  capitalize,
+  sleep,
+  getChainId,
+} from '../../utils/utils'
 import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
@@ -311,9 +318,7 @@ export default class Indexer extends Command {
     }
   }
 
-  async handleMintEvent(transaction: ethers.providers.TransactionResponse, network: string) {
-    console.log('HANDLE MINT EVENT')
-
+  async handleMintEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
     const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
