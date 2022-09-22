@@ -50,7 +50,7 @@ on:
 
 jobs:
   deploy-to-prod0:
-    name: Deploy-toprod0
+    name: Deploy-to-prod0
     runs-on: ubuntu-latest
 
     steps:
