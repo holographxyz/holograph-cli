@@ -618,35 +618,29 @@ export class NetworkMonitor {
     })
   }
 
-  structuredLog(network: string, msg: string): void {
+  structuredLog(network: string, msg: string, hashId?: string | number): void {
+    const hash: string = (hashId === undefined ? '' : ` [${hashId.toString(16)}]`)
     const timestamp = new Date(Date.now()).toISOString()
     const timestampColor = color.keyword('green')
-
-    this.log(
-      `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
-        capitalize(network),
-      )}] -> ${msg}`,
-    )
+    this.log(`[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](capitalize(network))}]${hash} ${msg}`)
   }
 
-  structuredLogError(network: string, error: any, hashId: string): void {
-    let errorMessage = `unknown error message found for ${hashId}`
+  structuredLogError(network: string, error: any, hashId?: string | number): void {
+    const hash: string = (hashId === undefined ? '' : ` [${hashId.toString(16)}]`)
+    let errorMessage = `unknown error message`
     if (error.message) {
-      errorMessage = `${error.message}: ${hashId}`
+      errorMessage = `${error.message}`
     } else if (error.reason) {
-      errorMessage = `${error.reason}: ${hashId}`
+      errorMessage = `${error.reason}`
     } else if (error.error.reason) {
-      errorMessage = `${error.error.reason} + ${hashId}`
+      errorMessage = `${error.error.reason}`
     }
 
     const timestamp = new Date(Date.now()).toISOString()
     const timestampColor = color.keyword('green')
+    const errorColor = color.keyword('red')
 
-    this.warn(
-      `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
-        capitalize(network),
-      )}] [error] -> ${errorMessage}`,
-    )
+    this.warn(`[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](capitalize(network))}] [${errorColor('error')}]${hash} ${errorMessage}`)
   }
 
   static iface: ethers.utils.Interface = new ethers.utils.Interface([])
@@ -825,10 +819,7 @@ export class NetworkMonitor {
                   }
 
                   if (knownReason) {
-                    this.structuredLog(
-                      network,
-                      'web3 response -> "' + revertReason + '" -> ' + revertExplanation,
-                    )
+                    this.structuredLog(network, `[web3] ${revertReason} (${revertExplanation})`)
                   }
                 }
               } else {
@@ -880,6 +871,11 @@ export class NetworkMonitor {
                     switch (error.message) {
                       case 'already known': {
                         // we are aware that more than one message has been sent, so avoid all errors echoed
+                        break
+                      }
+
+                      case 'nonce has already been used': {
+                        // we will see this when a transaction has already been submitted and is no longer in tx pool
                         break
                       }
 
