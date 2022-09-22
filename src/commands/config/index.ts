@@ -20,8 +20,8 @@ export default class Config extends Command {
     'Initialize the Holo command line to become an operator or to bridge collections and NFTs manually'
 
   static examples = [
-    '$ holo --defaultFrom rinkeby',
-    '$ holo --defaultFrom rinkeby --defaultTo mumbai',
+    '$ holo --defaultFrom goerli',
+    '$ holo --defaultFrom goerli --defaultTo mumbai',
     '$ holo --privateKey abc...def',
     '$ holo --fromFile ./config.json',
     '$ holo --fromJson \'{"version": "beta1", ...}',

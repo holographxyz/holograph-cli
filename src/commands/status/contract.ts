@@ -9,6 +9,7 @@ import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {addressValidator} from '../../utils/validation'
 import {Environment, getEnvironment} from '../../utils/environment'
 import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
+import {blockExplorers} from '../../utils/networks'
 
 export default class Contract extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
@@ -25,13 +26,6 @@ export default class Contract extends Command {
 
   registryAddress!: string
   supportedNetworks: string[] = []
-  blockExplorers: {[key: string]: string} = {
-    rinkeby: 'https://rinkeby.etherscan.io/',
-    goerli: 'https://goerli.etherscan.io/',
-    mumbai: 'https://mumbai.polygonscan.com/',
-    fuji: 'https://testnet.snowtrace.io/',
-  }
-
   contractAddress!: string
 
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
@@ -135,7 +129,7 @@ export default class Contract extends Command {
         d.deployed = true
         // eslint-disable-next-line no-await-in-loop
         d.valid = await registry.isHolographedContract(this.contractAddress)
-        d.link = this.blockExplorers[network] + 'address/' + this.contractAddress
+        d.link = blockExplorers[network] + 'address/' + this.contractAddress
         // eslint-disable-next-line no-await-in-loop
         d.owner = await ownable.getOwner()
       }

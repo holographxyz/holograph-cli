@@ -144,6 +144,7 @@ export class NetworkMonitor {
 
   LAYERZERO_RECEIVERS: {[key: string]: string} = {
     rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
+    goerli: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     mumbai: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     fuji: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
   }
@@ -166,7 +167,7 @@ export class NetworkMonitor {
   }
 
   getProviderStatus() {
-    const outputNetworks = ['rinkeby', 'mumbai', 'fuji']
+    const outputNetworks = ['rinkeby', 'goerli', 'mumbai', 'fuji']
     const output = {} as any
 
     for (const n of outputNetworks) {
@@ -237,7 +238,6 @@ export class NetworkMonitor {
     blockJobs?: {[key: string]: BlockJob[]},
     ethersInitializedCallback?: () => Promise<void>,
   ): Promise<void> {
-
     await this.initializeEthers()
     if (ethersInitializedCallback !== undefined) {
       await ethersInitializedCallback.bind(this.parent)()
@@ -782,7 +782,12 @@ export class NetworkMonitor {
     return output
   }
 
-  async executeTransaction(network: string, contract: ethers.Contract, methodName: string, ...args: any[]): Promise<ethers.ContractReceipt | null> {
+  async executeTransaction(
+    network: string,
+    contract: ethers.Contract,
+    methodName: string,
+    ...args: any[]
+  ): Promise<ethers.ContractReceipt | null> {
     // eslint-disable-next-line no-async-promise-executor
     return new Promise<ethers.ContractReceipt | null>(async (topResolve, _topReject) => {
       contract = contract.connect(this.wallets[network])
@@ -808,7 +813,8 @@ export class NetworkMonitor {
                     }
 
                     case 'HOLOGRAPH: invalid job': {
-                      revertExplanation = 'Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.'
+                      revertExplanation =
+                        'Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.'
                       break
                     }
 
@@ -825,10 +831,7 @@ export class NetworkMonitor {
                   }
 
                   if (knownReason) {
-                    this.structuredLog(
-                      network,
-                      'web3 response -> "' + revertReason + '" -> ' + revertExplanation,
-                    )
+                    this.structuredLog(network, 'web3 response -> "' + revertReason + '" -> ' + revertExplanation)
                   }
                 }
               } else {
@@ -861,11 +864,24 @@ export class NetworkMonitor {
 
         if (await tryGetBalance()) {
           if (balance!.lt(gasLimit.mul(gasPrice))) {
-            this.structuredLog(network, `Wallet balance is lower than the transaction required amount. ${JSON.stringify({contract: await contract.resolvedAddress, method: methodName, args: [...args]}, undefined, 2)}`)
+            this.structuredLog(
+              network,
+              `Wallet balance is lower than the transaction required amount. ${JSON.stringify(
+                {contract: await contract.resolvedAddress, method: methodName, args: [...args]},
+                undefined,
+                2,
+              )}`,
+            )
             topResolve(null)
           } else {
             this.structuredLog(network, `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, 'gwei')}`)
-            this.structuredLog(network, `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(gasLimit.mul(gasPrice), 'ether')} native gas tokens (in ether)`)
+            this.structuredLog(
+              network,
+              `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(
+                gasLimit.mul(gasPrice),
+                'ether',
+              )} native gas tokens (in ether)`,
+            )
             const rawTx = await contract.populateTransaction[methodName](...args, {gasPrice, gasLimit})
             rawTx.nonce = this.walletNonces[network]
             let tx!: ethers.providers.TransactionResponse
@@ -904,10 +920,7 @@ export class NetworkMonitor {
                     receipt = await this.providers[network].getTransactionReceipt(tx.hash)
                     if (receipt !== null) {
                       this.debug(receipt)
-                      this.structuredLog(
-                        network,
-                        `Transaction ${receipt.transactionHash} mined and confirmed`,
-                      )
+                      this.structuredLog(network, `Transaction ${receipt.transactionHash} mined and confirmed`)
                       clearInterval(getTxReceipt)
                       resolve(receipt)
                     }
@@ -928,5 +941,4 @@ export class NetworkMonitor {
       }
     })
   }
-
 }

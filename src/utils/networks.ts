@@ -18,6 +18,12 @@ export interface Networks {
 }
 
 export const supportedNetworks: string[] = ['rinkeby', 'goerli', 'mumbai', 'fuji']
+export const blockExplorers: {[key: string]: string} = {
+  rinkeby: 'https://rinkeby.etherscan.io/',
+  goerli: 'https://goerli.etherscan.io/',
+  mumbai: 'https://mumbai.polygonscan.com/',
+  fuji: 'https://testnet.snowtrace.io/',
+}
 
 const networks: Networks = {
   hardhat: {

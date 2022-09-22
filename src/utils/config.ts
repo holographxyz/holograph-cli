@@ -19,6 +19,7 @@ export interface ConfigBridge {
 }
 
 export interface ConfigNetworks {
+  goerli: ConfigNetwork
   rinkeby: ConfigNetwork
   fuji: ConfigNetwork
   mumbai: ConfigNetwork

@@ -10,7 +10,7 @@ import {startHealthcheckServer} from '../../utils/health-check-server'
 
 export default class Operator extends Command {
   static description = 'Listen for EVM events for jobs and process them'
-  static examples = ['$ holo operator --networks="rinkeby mumbai fuji" --mode=auto']
+  static examples = ['$ holo operator --networks="goerli mumbai fuji" --mode=auto']
   static flags = {
     mode: Flags.string({
       description: 'The mode in which to run the operator',
@@ -155,10 +155,7 @@ export default class Operator extends Command {
           receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
           if (receipt !== null) {
             this.debug(receipt)
-            this.networkMonitor.structuredLog(
-              network,
-              `Transaction ${receipt.transactionHash} received`,
-            )
+            this.networkMonitor.structuredLog(network, `Transaction ${receipt.transactionHash} received`)
             clearInterval(getTxReceipt)
             resolve(receipt as ethers.ContractReceipt)
           }
