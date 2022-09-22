@@ -49,8 +49,8 @@ on:
     types: [closed]
 
 jobs:
-  deploy-to-prod0:
-    name: Deploy to prod0
+  deploytoprod0:
+    name: Deploytoprod0
     runs-on: ubuntu-latest
 
     steps:
