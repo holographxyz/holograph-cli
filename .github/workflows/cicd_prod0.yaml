@@ -11,8 +11,8 @@ env:
   #
   PROD_IMAGE_TAG : main-${{ github.sha }}
   ########################################
-  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.21
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.20
+  PROD_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.21
+  PROD_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.20
   ########################################
   CLUSTER_NAME   : prod0
   #
