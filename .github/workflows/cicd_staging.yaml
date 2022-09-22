@@ -22,7 +22,7 @@ env:
   #TODO - create new gh secret for prod. should be different from staging????
   STG_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
-  STG_HOLO_INDEXER_HOST: http://dev-nest-api.develop.svc.cluster.local:443
+  STG_HOLO_INDEXER_HOST: http://api-test-holo-api.testnet.svc.cluster.local:443
   #
   # notice: all 3 have the same password
   STG_HOLO_INDEXER_PASSWORD  : ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
@@ -62,7 +62,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Login to ECR
-        id: login-ecr
+        id  : login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build image
@@ -102,7 +102,7 @@ jobs:
       - name: -> Deploy INDEXER cli in staging [namespace -> ${{ steps.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: indexer-dev #notice
+          RELEASE_NAME: indexer-test #notice
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -141,7 +141,7 @@ jobs:
       - name: -> Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: operator-dev #notice
+          RELEASE_NAME: operator-test #notice
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
