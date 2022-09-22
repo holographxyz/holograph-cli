@@ -45,7 +45,7 @@ env:
 on:
   pull_request:
     branches:
-      - testnet
+      - 'testnet'
     types: [closed]
 
 jobs:
