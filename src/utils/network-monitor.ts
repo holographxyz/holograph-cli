@@ -618,15 +618,15 @@ export class NetworkMonitor {
     })
   }
 
-  structuredLog(network: string, msg: string, hashId?: string | number): void {
-    const hash: string = (hashId === undefined ? '' : ` [${hashId.toString(16)}]`)
+  structuredLog(network: string, msg: string, tagId?: string | number): void {
+    const hash: string = (tagId === undefined ? '' : ` [${tagId.toString()}]`)
     const timestamp = new Date(Date.now()).toISOString()
     const timestampColor = color.keyword('green')
     this.log(`[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](capitalize(network))}]${hash} ${msg}`)
   }
 
-  structuredLogError(network: string, error: any, hashId?: string | number): void {
-    const hash: string = (hashId === undefined ? '' : ` [${hashId.toString(16)}]`)
+  structuredLogError(network: string, error: any, tagId?: string | number): void {
+    const hash: string = (tagId === undefined ? '' : ` [${tagId.toString()}]`)
     let errorMessage = `unknown error message`
     if (error.message) {
       errorMessage = `${error.message}`
