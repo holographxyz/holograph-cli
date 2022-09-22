@@ -232,3 +232,4 @@ jobs:
             ENDPOINT=$PROPAGATOR_RELEASE_NAME-health.${{ env.PROD_DOMAIN }}
             echo "curl -k -H \"Host: $ENDPOINT\" https://$LB_URL/healthcheck"
             curl -k -H "Host: $ENDPOINT" https://$LB_URL/healthcheck | jq '.status'
+
