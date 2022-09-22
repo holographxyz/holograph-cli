@@ -37,16 +37,16 @@ env:
   PROD_DOMAIN: "holograph.xyz"
 
 ## notice: the trigger
-#on:
-#  push:
-#    branches:
-#      - 'fix/cicdtest' #deleteme
-# notice: the trigger
 on:
-  pull_request:
+  push:
     branches:
-      - 'testnet'
-    types: [closed]
+      - 'fix/cicdtest' #deleteme
+# notice: the trigger
+#on:
+#  pull_request:
+#    branches:
+#      - 'testnet'
+#    types: [closed]
 
 jobs:
   adfsdfsdf:
