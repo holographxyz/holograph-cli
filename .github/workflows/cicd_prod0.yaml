@@ -48,31 +48,31 @@ on:
       - 'testnet'
     types: [closed]
 
-jobs:
-  adfsdfsdf:
-    name: sdfsdfsd
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: sdfsdfsdf
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          role-to-assume: ${{ env.IAM_ROLE }}
-          aws-region    : ${{ env.AWS_REGION }}
-
-
 #jobs:
-#  deploy-to-prod0:
-#    name: Deploy to prod0
+#  adfsdfsdf:
+#    name: sdfsdfsd
 #    runs-on: ubuntu-latest
 #
 #    steps:
-#      - name: Use Githubs federated identity with AWS
+#      - name: sdfsdfsdf
 #        uses: aws-actions/configure-aws-credentials@v1
 #        with:
 #          role-to-assume: ${{ env.IAM_ROLE }}
 #          aws-region    : ${{ env.AWS_REGION }}
 #
+
+jobs:
+  deploy-to-prod0:
+    name: Deploy to prod0
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Use Githubs federated identity with AWS
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ env.IAM_ROLE }}
+          aws-region    : ${{ env.AWS_REGION }}
+
 #      - name: Login to ECR
 #        id: login-ecr
 #        uses: aws-actions/amazon-ecr-login@v1
