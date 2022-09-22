@@ -254,7 +254,6 @@ export class NetworkMonitor {
     blockJobs?: {[key: string]: BlockJob[]},
     ethersInitializedCallback?: () => Promise<void>,
   ): Promise<void> {
-
     await this.initializeEthers()
     if (ethersInitializedCallback !== undefined) {
       await ethersInitializedCallback.bind(this.parent)()
@@ -638,7 +637,11 @@ export class NetworkMonitor {
   structuredLog(network: string, msg: string, tagId?: string | number | (number | string)[]): void {
     const timestamp = new Date(Date.now()).toISOString()
     const timestampColor = color.keyword('green')
-    this.log(`[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](capitalize(network))}]${cleanTags(tagId)} ${msg}`)
+    this.log(
+      `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
+        capitalize(network),
+      )}]${cleanTags(tagId)} ${msg}`,
+    )
   }
 
   structuredLogError(network: string, error: any, tagId?: string | number | (number | string)[]): void {
@@ -655,7 +658,11 @@ export class NetworkMonitor {
     const timestampColor = color.keyword('green')
     const errorColor = color.keyword('red')
 
-    this.warn(`[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](capitalize(network))}] [${errorColor('error')}]${cleanTags(tagId)} ${errorMessage}`)
+    this.warn(
+      `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
+        capitalize(network),
+      )}] [${errorColor('error')}]${cleanTags(tagId)} ${errorMessage}`,
+    )
   }
 
   static iface: ethers.utils.Interface = new ethers.utils.Interface([])
@@ -792,10 +799,16 @@ export class NetworkMonitor {
   }
 
   randomTag(): string {
+    // 4_294_967_295 is max value for 2^32 which is uint32
     return Math.floor(Math.random() * 4_294_967_295).toString(16)
   }
 
-  async executeTransaction(network: string, contract: ethers.Contract, methodName: string, ...args: any[]): Promise<ethers.ContractReceipt | null> {
+  async executeTransaction(
+    network: string,
+    contract: ethers.Contract,
+    methodName: string,
+    ...args: any[]
+  ): Promise<ethers.ContractReceipt | null> {
     const tag: string = this.randomTag()
     this.structuredLog(network, `Executing contract function ${methodName}`, tag)
     // eslint-disable-next-line no-async-promise-executor
@@ -823,7 +836,8 @@ export class NetworkMonitor {
                     }
 
                     case 'HOLOGRAPH: invalid job': {
-                      revertExplanation = 'Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.'
+                      revertExplanation =
+                        'Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.'
                       break
                     }
 
@@ -873,11 +887,26 @@ export class NetworkMonitor {
         if (await tryGetBalance()) {
           this.structuredLog(network, `Wallet balance is ${ethers.utils.formatUnits(balance!, 'ether')}`, tag)
           if (balance!.lt(gasLimit.mul(gasPrice))) {
-            this.structuredLog(network, `Wallet balance is lower than the transaction required amount. ${JSON.stringify({contract: await contract.resolvedAddress, method: methodName, args: [...args]}, undefined, 2)}`, tag)
+            this.structuredLog(
+              network,
+              `Wallet balance is lower than the transaction required amount. ${JSON.stringify(
+                {contract: await contract.resolvedAddress, method: methodName, args: [...args]},
+                undefined,
+                2,
+              )}`,
+              tag,
+            )
             topResolve(null)
           } else {
             this.structuredLog(network, `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, 'gwei')}`, tag)
-            this.structuredLog(network, `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(gasLimit.mul(gasPrice), 'ether')} native gas tokens (in ether)`, tag)
+            this.structuredLog(
+              network,
+              `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(
+                gasLimit.mul(gasPrice),
+                'ether',
+              )} native gas tokens (in ether)`,
+              tag,
+            )
             const rawTx = await contract.populateTransaction[methodName](...args, {gasPrice, gasLimit})
             rawTx.nonce = this.walletNonces[network]
             let tx!: ethers.providers.TransactionResponse
@@ -919,11 +948,7 @@ export class NetworkMonitor {
                   const getTxReceipt: NodeJS.Timeout = setInterval(async () => {
                     receipt = await this.providers[network].getTransactionReceipt(tx.hash)
                     if (receipt !== null) {
-                      this.structuredLog(
-                        network,
-                        `Transaction ${receipt.transactionHash} mined and confirmed`,
-                        tag
-                      )
+                      this.structuredLog(network, `Transaction ${receipt.transactionHash} mined and confirmed`, tag)
                       clearInterval(getTxReceipt)
                       resolve(receipt)
                     }
@@ -944,5 +969,4 @@ export class NetworkMonitor {
       }
     })
   }
-
 }
