@@ -12,7 +12,7 @@ env:
   PROD_IMAGE_TAG : main-${{ github.sha }}
   ########################################
   STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.21
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.19
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.20
   ########################################
   CLUSTER_NAME   : prod0
   #
@@ -26,7 +26,7 @@ env:
   #
   # TODO -> replce them with the PROD specific password <---------------------------
   PROD_HOLO_INDEXER_PASSWORD   : ${{ secrets.STG_HOLO_INDEXER_PASSWORD }} #TODO <-------
-  PROD_HOLO_OPERATOR_PASSWORD  : ${{ secrets.STG_HOLO_OPERATOR_PASSWORD }} #TODO <-------
+  PROD_HOLO_OPERATOR_PASSWORD  : ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
   PROD_HOLO_PROPAGATOR_PASSWORD: ${{ secrets.STG_HOLO_PROPAGATOR_PASSWORD }} #TODO <-------
   #
   # switching between the keys in the config map
@@ -128,8 +128,8 @@ jobs:
             --set ingress.host=$RELEASE_NAME-health.${{ env.PROD_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
             --set ingress.blue_green_deployment=false
-#      #
-#      #
+     #
+     #
      # NOTICE: --- OPERATOR ---
      - name: Pull the holo-operator helm chart version x.x.x from ECR
        shell: bash
@@ -154,7 +154,7 @@ jobs:
            -n ${{ env.PROD_COMMON_NAMESPACE }} \
            --set image.repository=${{ env.ECR_REPOSITORY }} \
            --set image.image_tag=${{ env.PROD_IMAGE_TAG }} \
-           --set config_file_data=${{ env.HOLO_CONFIG_FILE_DATA }} \
+           --set config_file_data=prod-config-file \
            --set holo_operator_password=${{ env.PROD_HOLO_OPERATOR_PASSWORD }} \
            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
            --set datadog_tags.version=chart-${{ env.PROD_HOLO_OPERATOR_HELM_CHART_VERSION }} \
