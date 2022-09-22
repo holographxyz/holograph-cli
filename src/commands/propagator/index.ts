@@ -141,6 +141,7 @@ export default class Propagator extends Command {
       }
     }
 
+    // TODO: Add support for Goerli instead of Rinkeby
     if (recoveryData.length > 0) {
       this.log(`Manually running ${recoveryData.length} recovery jobs`)
       for (const data of recoveryData) {
@@ -267,7 +268,15 @@ export default class Propagator extends Command {
       (contractCode === '0x' || contractCode === '' || contractCode === undefined) &&
       !(await registry.callStatic.isHolographedContract(deploymentAddress, {blockTag: 'latest'}))
     ) {
-      const deployReceipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.executeTransaction(network, undefined, this.networkMonitor.factoryContract, 'deployHolographableContract', deploymentConfig.config, deploymentConfig.signature, deploymentConfig.signer)
+      const deployReceipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.executeTransaction(
+        network,
+        undefined,
+        this.networkMonitor.factoryContract,
+        'deployHolographableContract',
+        deploymentConfig.config,
+        deploymentConfig.signature,
+        deploymentConfig.signer,
+      )
       if (deployReceipt === null) {
         this.networkMonitor.structuredLog(network, `Submitting tx for collection ${deploymentAddress} failed`)
       } else {
@@ -275,9 +284,14 @@ export default class Propagator extends Command {
           network,
           `Transaction minted with hash ${deployReceipt.transactionHash} for collection ${deploymentAddress}`,
         )
-        const deploymentInfo: any[] | undefined = this.networkMonitor.decodeBridgeableContractDeployedEvent(deployReceipt as ethers.providers.TransactionReceipt)
+        const deploymentInfo: any[] | undefined = this.networkMonitor.decodeBridgeableContractDeployedEvent(
+          deployReceipt as ethers.providers.TransactionReceipt,
+        )
         if (deploymentInfo === undefined) {
-          this.networkMonitor.structuredLog(network, `Failed extracting BridgeableContractDeployedEvent for collection ${deploymentAddress}`)
+          this.networkMonitor.structuredLog(
+            network,
+            `Failed extracting BridgeableContractDeployedEvent for collection ${deploymentAddress}`,
+          )
         } else {
           const collectionAddress = deploymentInfo[0] as string
           this.networkMonitor.structuredLog(

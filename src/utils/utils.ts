@@ -141,6 +141,7 @@ const NETWORK_COLORS: Record<string, string> = {
   mumbai: '##B026FF ',
   polygon: '#B026FF ',
   rinkeby: '##83EEFF',
+  goerli: '#83EEFF',
   eth: '##83EEFF',
 }
 

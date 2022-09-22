@@ -10,7 +10,7 @@ import {BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 
 export default class Recover extends Command {
   static description = 'Attempt to re-run/recover a particular Operator Job'
-  static examples = ['$ holo operator:recover --network="rinkeby" --tx="0x..."']
+  static examples = ['$ holo operator:recover --network="goerli" --tx="0x..."']
   static flags = {
     network: Flags.string({description: 'The network on which the transaction was executed'}),
     tx: Flags.string({description: 'The hash of transaction that we want to attempt to execute'}),

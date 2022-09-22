@@ -7,6 +7,7 @@ import {ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-deployment'
 import {getEnvironment} from '../../utils/environment'
 import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
+import {supportedNetworks} from '../../utils/networks'
 
 export default class Contract extends Command {
   static description = 'Bridge a Holographable contract from source chain to destination chain'
@@ -90,7 +91,6 @@ export default class Contract extends Command {
     this.debug('Destination network', await destinationWallet?.provider.getNetwork())
     CliUx.ux.action.stop()
 
-    const supportedNetworks: string[] = ['rinkeby', 'mumbai', 'fuji']
     let remainingNetworks: string[] = supportedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
     remainingNetworks = remainingNetworks.filter((item: string) => {
@@ -110,7 +110,7 @@ export default class Contract extends Command {
     CliUx.ux.action.start('Retrieving HolographFactory contract')
     const holographABI = await fs.readJson(`./src/abi/${environment}/Holograph.json`)
     const holograph = new ethers.ContractFactory(holographABI, '0x', sourceWallet).attach(
-      HOLOGRAPH_ADDRESSES[environment]
+      HOLOGRAPH_ADDRESSES[environment],
     )
 
     const holographInterfacesABI = await fs.readJson(`./src/abi/${environment}/Interfaces.json`)
