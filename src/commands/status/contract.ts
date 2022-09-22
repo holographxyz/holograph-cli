@@ -10,7 +10,6 @@ import {addressValidator} from '../../utils/validation'
 import {Environment, getEnvironment} from '../../utils/environment'
 import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
 
-
 export default class Contract extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
   static description = 'Check the status of a contract across all enabled networks'
@@ -28,6 +27,7 @@ export default class Contract extends Command {
   supportedNetworks: string[] = []
   blockExplorers: {[key: string]: string} = {
     rinkeby: 'https://rinkeby.etherscan.io/',
+    goerli: 'https://goerli.etherscan.io/',
     mumbai: 'https://mumbai.polygonscan.com/',
     fuji: 'https://testnet.snowtrace.io/',
   }

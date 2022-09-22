@@ -31,6 +31,7 @@ export default class Nft extends Command {
   supportedNetworks: string[] = []
   blockExplorers: {[key: string]: string} = {
     rinkeby: 'https://rinkeby.etherscan.io/',
+    goerli: 'https://goerli.etherscan.io/',
     mumbai: 'https://mumbai.polygonscan.com/',
     fuji: 'https://testnet.snowtrace.io/',
   }

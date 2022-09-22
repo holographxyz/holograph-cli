@@ -143,6 +143,9 @@ export async function validateBeta1Schema(config: Record<string, unknown>): Prom
       rinkeby: Joi.object({
         providerUrl: Joi.string().required(),
       }),
+      goerli: Joi.object({
+        providerUrl: Joi.string().required(),
+      }),
       fuji: Joi.object({
         providerUrl: Joi.string().required(),
       }),
