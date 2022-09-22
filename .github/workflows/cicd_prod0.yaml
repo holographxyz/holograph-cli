@@ -40,7 +40,7 @@ env:
 on:
   push:
     branches:
-      - 'fix/cicd-stuck' #deleteme
+      - fix/cicd-stuck #deleteme
 # notice: the trigger
 #on:
 #  pull_request:
