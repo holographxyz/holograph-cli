@@ -33,6 +33,8 @@ env:
 #  HOLO_CONFIG_FILE_DATA: prod-config-file # [stg-config-file/prod-config-file] #TODO - a different config file for prod?
   HOLO_CONFIG_FILE_DATA: stg-config-file #deleteme
   #
+  ABI_ENVIRONMENT: develop # same for all apps [indexer,operator]
+  #
   PROD_COMMON_NAMESPACE: canary
   PROD_DOMAIN: "holograph.xyz"
 
@@ -119,6 +121,7 @@ jobs:
             --set holo_indexer_password=${{ env.PROD_HOLO_INDEXER_PASSWORD }} \
             --set HOLO_INDEXER_HOST=${{ env.PROD_HOLO_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.PROD_HOLO_INDEXER_OPERATOR_API_KEY }} \
+            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
             --set datadog_tags.version=chart-${{ env.PROD_HOLO_INDEXER_HELM_CHART_VERSION }} \
@@ -155,6 +158,7 @@ jobs:
            --set image.image_tag=${{ env.PROD_IMAGE_TAG }} \
            --set config_file_data=prod-config-file \
            --set holo_operator_password=${{ env.PROD_HOLO_OPERATOR_PASSWORD }} \
+           --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
            --set datadog_tags.version=chart-${{ env.PROD_HOLO_OPERATOR_HELM_CHART_VERSION }} \
            --values .github/values_for_prod_alb_ingress.yaml \
