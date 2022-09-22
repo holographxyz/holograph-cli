@@ -270,6 +270,7 @@ export default class Propagator extends Command {
     ) {
       const deployReceipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.executeTransaction(
         network,
+        undefined,
         this.networkMonitor.factoryContract,
         'deployHolographableContract',
         deploymentConfig.config,
