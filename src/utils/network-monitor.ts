@@ -90,6 +90,23 @@ export const keepAlive = ({
   })
 }
 
+const cleanTags = (tagIds?: string | number | (number | string)[]): string => {
+  if (tagIds === undefined) {
+    return ''
+  }
+
+  const tags: string[] = []
+  if (typeof tagIds === 'string' || typeof tagIds === 'number') {
+    tags.push(tagIds.toString())
+  } else {
+    for (const tag of tagIds) {
+      tags.push(tag.toString())
+    }
+  }
+
+  return ' [' + tags.join('] [') + ']'
+}
+
 type ImplementsCommand = Command
 
 type NetworkMonitorOptions = {
@@ -618,27 +635,10 @@ export class NetworkMonitor {
     })
   }
 
-  cleanTags(tagIds?: string | number | (number | string)[]): string {
-    if (tagIds === undefined) {
-      return ''
-    }
-
-    const tags: string[] = []
-    if (typeof tagIds === 'string' || typeof tagIds === 'number') {
-      tags.push(tagIds.toString())
-    } else {
-      for (const tag of tagIds) {
-        tags.push(tag.toString())
-      }
-    }
-
-    return ' [' + tags.join('] [') + ']'
-  }
-
   structuredLog(network: string, msg: string, tagId?: string | number | (number | string)[]): void {
     const timestamp = new Date(Date.now()).toISOString()
     const timestampColor = color.keyword('green')
-    this.log(`[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](capitalize(network))}]${this.cleanTags(tagId)} ${msg}`)
+    this.log(`[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](capitalize(network))}]${cleanTags(tagId)} ${msg}`)
   }
 
   structuredLogError(network: string, error: any, tagId?: string | number | (number | string)[]): void {
@@ -655,7 +655,7 @@ export class NetworkMonitor {
     const timestampColor = color.keyword('green')
     const errorColor = color.keyword('red')
 
-    this.warn(`[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](capitalize(network))}] [${errorColor('error')}]${this.cleanTags(tagId)} ${errorMessage}`)
+    this.warn(`[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](capitalize(network))}] [${errorColor('error')}]${cleanTags(tagId)} ${errorMessage}`)
   }
 
   static iface: ethers.utils.Interface = new ethers.utils.Interface([])
@@ -791,8 +791,12 @@ export class NetworkMonitor {
     return output
   }
 
+  randomTag(): string {
+    return Math.floor(Math.random() * 4_294_967_295).toString(16)
+  }
+
   async executeTransaction(network: string, contract: ethers.Contract, methodName: string, ...args: any[]): Promise<ethers.ContractReceipt | null> {
-    const tag: string = Math.floor(Math.random() * 4_294_967_295).toString(16)
+    const tag: string = this.randomTag()
     this.structuredLog(network, `Executing contract function ${methodName}`, tag)
     // eslint-disable-next-line no-async-promise-executor
     return new Promise<ethers.ContractReceipt | null>(async (topResolve, _topReject) => {
