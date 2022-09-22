@@ -35,7 +35,7 @@ env:
   #
   ABI_ENVIRONMENT: testnet # same for all apps [indexer,operator]
   #
-  PROD_COMMON_NAMESPACE: canary
+  PROD_COMMON_NAMESPACE: holocli
   PROD_DOMAIN: "holograph.xyz"
 
 ## notice: the trigger
