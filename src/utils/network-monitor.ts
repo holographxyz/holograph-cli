@@ -99,6 +99,10 @@ const cleanTags = (tagIds?: string | number | (number | string)[]): string => {
   if (typeof tagIds === 'string' || typeof tagIds === 'number') {
     tags.push(tagIds.toString())
   } else {
+    if (tagIds.length === 0) {
+      return ''
+    }
+
     for (const tag of tagIds) {
       tags.push(tag.toString())
     }
@@ -805,12 +809,19 @@ export class NetworkMonitor {
 
   async executeTransaction(
     network: string,
+    _tags: (string | number)[] | null | undefined,
     contract: ethers.Contract,
     methodName: string,
     ...args: any[]
   ): Promise<ethers.ContractReceipt | null> {
+    if (_tags === undefined || _tags === null) {
+      _tags = [] as (string | number)[]
+    }
+
     const tag: string = this.randomTag()
-    this.structuredLog(network, `Executing contract function ${methodName}`, tag)
+    _tags.push(tag)
+    const tags: (string | number)[] = _tags as (string | number)[]
+    this.structuredLog(network, `Executing contract function ${methodName}`, tags)
     // eslint-disable-next-line no-async-promise-executor
     return new Promise<ethers.ContractReceipt | null>(async (topResolve, _topReject) => {
       contract = contract.connect(this.wallets[network])
@@ -848,17 +859,17 @@ export class NetworkMonitor {
 
                     default: {
                       knownReason = false
-                      this.structuredLogError(network, error, tag)
+                      this.structuredLogError(network, error, tags)
                       break
                     }
                   }
 
                   if (knownReason) {
-                    this.structuredLog(network, `[web3] ${revertReason} (${revertExplanation})`, tag)
+                    this.structuredLog(network, `[web3] ${revertReason} (${revertExplanation})`, tags)
                   }
                 }
               } else {
-                this.structuredLogError(network, error, tag)
+                this.structuredLogError(network, error, tags)
               }
 
               clearInterval(getGasLimit)
@@ -885,7 +896,7 @@ export class NetworkMonitor {
         }
 
         if (await tryGetBalance()) {
-          this.structuredLog(network, `Wallet balance is ${ethers.utils.formatUnits(balance!, 'ether')}`, tag)
+          this.structuredLog(network, `Wallet balance is ${ethers.utils.formatUnits(balance!, 'ether')}`, tags)
           if (balance!.lt(gasLimit.mul(gasPrice))) {
             this.structuredLog(
               network,
@@ -894,18 +905,18 @@ export class NetworkMonitor {
                 undefined,
                 2,
               )}`,
-              tag,
+              tags,
             )
             topResolve(null)
           } else {
-            this.structuredLog(network, `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, 'gwei')}`, tag)
+            this.structuredLog(network, `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, 'gwei')}`, tags)
             this.structuredLog(
               network,
               `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(
                 gasLimit.mul(gasPrice),
                 'ether',
               )} native gas tokens (in ether)`,
-              tag,
+              tags,
             )
             const rawTx = await contract.populateTransaction[methodName](...args, {gasPrice, gasLimit})
             rawTx.nonce = this.walletNonces[network]
@@ -930,7 +941,7 @@ export class NetworkMonitor {
                       }
 
                       default: {
-                        this.structuredLogError(network, error, tag)
+                        this.structuredLogError(network, error, tags)
                       }
                     }
                   }
@@ -939,7 +950,7 @@ export class NetworkMonitor {
             }
 
             if (await tryToSendTx()) {
-              this.structuredLog(network, `Transaction ${tx.hash} has been submitted`, tag)
+              this.structuredLog(network, `Transaction ${tx.hash} has been submitted`, tags)
               this.walletNonces[network]++
               let receipt: ethers.ContractReceipt
               const tryToGetTxReceipt = async (): Promise<ethers.ContractReceipt | null> => {
@@ -948,7 +959,7 @@ export class NetworkMonitor {
                   const getTxReceipt: NodeJS.Timeout = setInterval(async () => {
                     receipt = await this.providers[network].getTransactionReceipt(tx.hash)
                     if (receipt !== null) {
-                      this.structuredLog(network, `Transaction ${receipt.transactionHash} mined and confirmed`, tag)
+                      this.structuredLog(network, `Transaction ${receipt.transactionHash} mined and confirmed`, tags)
                       clearInterval(getTxReceipt)
                       resolve(receipt)
                     }
