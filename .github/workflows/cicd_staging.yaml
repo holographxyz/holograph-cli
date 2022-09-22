@@ -11,9 +11,8 @@ env:
   #
   DEV_IMAGE_TAG : dev-${{ github.sha }}
   #######################################
-  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.17
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.12
-  STG_HOLO_PROPAGATOR_HELM_CHART_VERSION: 0.0.13
+  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.21
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.19
   #######################################
   CLUSTER_NAME   : staging
   #
@@ -23,28 +22,27 @@ env:
   #TODO - create new gh secret for prod. should be different from staging????
   STG_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
-  STG_HOLO_INDEXER_HOST: http://api-test-holo-api.testnet.svc.cluster.local:443
+  STG_HOLO_INDEXER_HOST: http://dev-nest-api.develop.svc.cluster.local:443
   #
   # notice: all 3 have the same password
-  STG_HOLO_INDEXER_PASSWORD   : ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
-  STG_HOLO_OPERATOR_PASSWORD  : ${{ secrets.STG_HOLO_OPERATOR_PASSWORD }}
-  STG_HOLO_PROPAGATOR_PASSWORD: ${{ secrets.STG_HOLO_PROPAGATOR_PASSWORD }}
+  STG_HOLO_INDEXER_PASSWORD  : ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
+  STG_HOLO_OPERATOR_PASSWORD : ${{ secrets.STG_HOLO_OPERATOR_PASSWORD }}
   #
   # switching between the keys in the config map
   HOLO_CONFIG_FILE_DATA: stg-config-file # [stg-config-file/prod-config-file]
   #
-  ABI_ENVIRONMENT: testnet # same for all 3 [indexer,operator,propagator]
+  ABI_ENVIRONMENT: develop # same for all apps [indexer,operator]
   #
-  STG_COMMON_NAMESPACE: holocli-test
+  STG_COMMON_NAMESPACE: holocli-dev
   STG_DOMAIN: "cxipchain.xyz"
 
 # notice: the trigger
 on:
   push:
     branches:
-      - 'testnet'
+      - 'develop'
       # Excluded branches
-      - '!develop'
+      - '!testnet'
       - '!main'
       - '!master'
 
@@ -104,7 +102,7 @@ jobs:
       - name: -> Deploy INDEXER cli in staging [namespace -> ${{ steps.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: indexer-test #notice
+          RELEASE_NAME: indexer-dev #notice
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -143,7 +141,7 @@ jobs:
       - name: -> Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: operator-test #notice
+          RELEASE_NAME: operator-dev #notice
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -156,71 +154,31 @@ jobs:
             --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-            --set datadog_tags.service=$RELEASE_NAME-holo-operator \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             --values .github/values_for_stg_alb_ingress.yaml \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
             --set ingress.blue_green_deployment=false
-      #
-      #
-      # NOTICE: --- PROPAGATOR ---
-      - name: Pull the holo-propagator helm chart version x.x.x from ECR
-        shell: bash
-        env:
-          #
-          CHART_REPO   : holo-propagator
-          CHART_VERSION: ${{ env.STG_HOLO_PROPAGATOR_HELM_CHART_VERSION }}
-          #
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        run: |
-          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-
-      - name: -> Deploy PROPAGATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
-        uses: tensor-hq/eksctl-helm-action@main
-        env:
-          RELEASE_NAME: propagator-test #notice
-        with:
-          eks_cluster: ${{ env.CLUSTER_NAME }}
-          command: |-
-            helm upgrade --install $RELEASE_NAME \
-            holo-propagator-${{ env.STG_HOLO_PROPAGATOR_HELM_CHART_VERSION }}.tgz \
-            -n ${{ env.STG_COMMON_NAMESPACE }} \
-            --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
-            --set config_file_data=${{ env.HOLO_CONFIG_FILE_DATA }} \
-            --set holo_propagator_password=${{ env.STG_HOLO_PROPAGATOR_PASSWORD }} \
-            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
-            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-            --set datadog_tags.service=$RELEASE_NAME-holo-propagator \
-            --set datadog_tags.version=chart-${{ env.STG_HOLO_PROPAGATOR_HELM_CHART_VERSION }} \
-            --values .github/values_for_stg_alb_ingress.yaml \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-propagator \
-            --set ingress.blue_green_deployment=false
 
       - name: -> Info for the new deployments
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          INDEXER_RELEASE_NAME   : indexer-test
-          OPERATOR_RELEASE_NAME  : operator-test
-          PROPAGATOR_RELEASE_NAME: propagator-test
+          INDEXER_RELEASE_NAME  : indexer-dev
+          OPERATOR_RELEASE_NAME : operator-dev
           LB_URL: "https://staging-alb-1490082055.us-west-2.elb.amazonaws.com"
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             echo "------------------------- Last 5 Helm releases -------------------------"
             echo "--INDEXER--"
-            helm history $INDEXER_RELEASE_NAME    -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
             echo "--OPERATOR--"
-            helm history $OPERATOR_RELEASE_NAME   -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
-            echo "--PROPAGATOR--"
-            helm history $PROPAGATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
 
-            echo "------------------------ Newly deployed image [same for all 3 apps] ------------------------"
+            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
             echo "$DEV_IMAGE_TAG"
+            sleep 40
 
             echo "------------------------ Healthchecks ------------------------"
             ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
@@ -229,8 +187,4 @@ jobs:
 
             ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
             echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-
-            ENDPOINT=$PROPAGATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-            echo "curl -k -H \"Host: $ENDPOINT\" https://$LB_URL/healthcheck"
             curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'

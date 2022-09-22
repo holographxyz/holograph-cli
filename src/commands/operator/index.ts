@@ -147,7 +147,27 @@ export default class Operator extends Command {
     network: string,
   ): Promise<void> {
     let bridgeTransaction
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const tryToGetTxReceipt = async (): Promise<ethers.ContractReceipt> => {
+      // eslint-disable-next-line no-async-promise-executor
+      return new Promise<ethers.ContractReceipt>(async (resolve, _reject) => {
+        let receipt: ethers.ContractReceipt | null
+        const getTxReceipt: NodeJS.Timeout = setInterval(async () => {
+          receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+          if (receipt !== null) {
+            this.debug(receipt)
+            this.networkMonitor.structuredLog(
+              network,
+              `Transaction ${receipt.transactionHash} received`,
+            )
+            clearInterval(getTxReceipt)
+            resolve(receipt as ethers.ContractReceipt)
+          }
+        }, 1000) // every 1 second
+      })
+    }
+
+    const receipt: ethers.ContractReceipt = await tryToGetTxReceipt()
+
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -199,50 +219,7 @@ export default class Operator extends Command {
     }
 
     if (operate) {
-      const contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.wallets[network])
-      let gasLimit
-      try {
-        gasLimit = await contract.estimateGas.executeJob(payload)
-      } catch (error: any) {
-        switch (error.reason) {
-          case 'execution reverted: HOLOGRAPH: already deployed': {
-            this.networkMonitor.structuredLog(network, 'HOLOGRAPH: already deployed')
-
-            break
-          }
-
-          case 'execution reverted: HOLOGRAPH: invalid job': {
-            this.networkMonitor.structuredLog(network, 'HOLOGRAPH: invalid job')
-
-            break
-          }
-
-          case 'execution reverted: HOLOGRAPH: not holographed': {
-            this.networkMonitor.structuredLog(network, 'HOLOGRAPH: not holographed')
-
-            break
-          }
-
-          default: {
-            this.networkMonitor.structuredLogError(network, error, contract.address)
-          }
-        }
-
-        // TODO: figure out how to display this data to front-end???
-        return
-      }
-
-      const gasPrice = await contract.provider.getGasPrice()
-      const jobRawTx = await contract.populateTransaction.executeJob(payload, {gasPrice, gasLimit})
-      jobRawTx.nonce = this.networkMonitor.walletNonces[network]
-      const jobTx = await this.networkMonitor.wallets[network].sendTransaction(jobRawTx)
-      this.debug(jobTx)
-      this.networkMonitor.structuredLog(network, `Transaction hash is ${jobTx.hash}`)
-      this.networkMonitor.walletNonces[network]++
-      jobTx.wait().then((jobReceipt: ethers.providers.TransactionReceipt) => {
-        this.debug(jobReceipt)
-        this.networkMonitor.structuredLog(network, `Transaction ${jobReceipt.transactionHash} mined and confirmed`)
-      })
+      await this.networkMonitor.executeTransaction(network, this.networkMonitor.operatorContract, 'executeJob', payload)
     } else {
       this.networkMonitor.structuredLog(network, 'Dropped potential payload to execute')
     }
