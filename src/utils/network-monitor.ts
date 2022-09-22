@@ -618,15 +618,30 @@ export class NetworkMonitor {
     })
   }
 
-  structuredLog(network: string, msg: string, tagId?: string | number): void {
-    const hash: string = (tagId === undefined ? '' : ` [${tagId.toString()}]`)
-    const timestamp = new Date(Date.now()).toISOString()
-    const timestampColor = color.keyword('green')
-    this.log(`[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](capitalize(network))}]${hash} ${msg}`)
+  cleanTags(tagIds?: string | number | (number | string)[]): string {
+    if (tagIds === undefined) {
+      return ''
+    }
+
+    const tags: string[] = []
+    if (typeof tagIds === 'string' || typeof tagIds === 'number') {
+      tags.push(tagIds.toString())
+    } else {
+      for (const tag of tagIds) {
+        tags.push(tag.toString())
+      }
+    }
+
+    return ' [' + tags.join('] [') + ']'
   }
 
-  structuredLogError(network: string, error: any, tagId?: string | number): void {
-    const hash: string = (tagId === undefined ? '' : ` [${tagId.toString()}]`)
+  structuredLog(network: string, msg: string, tagId?: string | number | (number | string)[]): void {
+    const timestamp = new Date(Date.now()).toISOString()
+    const timestampColor = color.keyword('green')
+    this.log(`[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](capitalize(network))}]${this.cleanTags(tagId)} ${msg}`)
+  }
+
+  structuredLogError(network: string, error: any, tagId?: string | number | (number | string)[]): void {
     let errorMessage = `unknown error message`
     if (error.message) {
       errorMessage = `${error.message}`
@@ -640,7 +655,7 @@ export class NetworkMonitor {
     const timestampColor = color.keyword('green')
     const errorColor = color.keyword('red')
 
-    this.warn(`[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](capitalize(network))}] [${errorColor('error')}]${hash} ${errorMessage}`)
+    this.warn(`[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](capitalize(network))}] [${errorColor('error')}]${this.cleanTags(tagId)} ${errorMessage}`)
   }
 
   static iface: ethers.utils.Interface = new ethers.utils.Interface([])
