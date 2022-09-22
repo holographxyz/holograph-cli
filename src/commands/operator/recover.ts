@@ -208,7 +208,7 @@ export default class Recover extends Command {
     const operate: boolean = operatorPrompt.shouldContinue
 
     if (operate) {
-      await this.networkMonitor.executeTransaction(network, this.networkMonitor.operatorContract, 'executeJob', payload)
+      await this.networkMonitor.executeTransaction(network, undefined, this.networkMonitor.operatorContract, 'executeJob', payload)
     }
 
     // eslint-disable-next-line no-process-exit, unicorn/no-process-exit

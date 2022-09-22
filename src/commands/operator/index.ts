@@ -128,14 +128,17 @@ export default class Operator extends Command {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
+        const tags: (string | number)[] = []
         this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${transaction.blockNumber}`)
+        tags.push(transaction.blockNumber as number, this.networkMonitor.randomTag())
         const from: string | undefined = transaction.from?.toLowerCase()
         if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
-          await this.handleAvailableOperatorJobEvent(transaction, job.network)
+          await this.handleAvailableOperatorJobEvent(transaction, job.network, tags)
         } else {
           this.networkMonitor.structuredLog(
             job.network,
             `Function processTransactions stumbled on an unknown transaction ${transaction.hash}`,
+            tags
           )
         }
       }
@@ -145,6 +148,7 @@ export default class Operator extends Command {
   async handleAvailableOperatorJobEvent(
     transaction: ethers.providers.TransactionResponse,
     network: string,
+    tags: (string | number)[],
   ): Promise<void> {
     let bridgeTransaction
     const tryToGetTxReceipt = async (): Promise<ethers.ContractReceipt> => {
@@ -154,11 +158,6 @@ export default class Operator extends Command {
         const getTxReceipt: NodeJS.Timeout = setInterval(async () => {
           receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
           if (receipt !== null) {
-            this.debug(receipt)
-            this.networkMonitor.structuredLog(
-              network,
-              `Transaction ${receipt.transactionHash} received`,
-            )
             clearInterval(getTxReceipt)
             resolve(receipt as ethers.ContractReceipt)
           }
@@ -170,21 +169,29 @@ export default class Operator extends Command {
 
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
+    } else {
+      this.networkMonitor.structuredLog(
+        network,
+        `Transaction ${receipt.transactionHash} receipt received`,
+        tags
+      )
     }
 
     if (receipt.status === 1) {
       this.networkMonitor.structuredLog(
         network,
         `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
+        tags
       )
       const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(receipt)
       const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
       if (operatorJobHash === undefined) {
-        this.networkMonitor.structuredLog(network, `Could not extract relayer available job for ${transaction.hash}`)
+        this.networkMonitor.structuredLog(network, `Could not extract relayer available job for ${transaction.hash}`, tags)
       } else {
         this.networkMonitor.structuredLog(
           network,
           `HolographOperator received a new bridge job. The job payload hash is ${operatorJobHash}. The job payload is ${operatorJobPayload}`,
+          tags
         )
         bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
@@ -193,15 +200,16 @@ export default class Operator extends Command {
         this.networkMonitor.structuredLog(
           network,
           `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
+          tags
         )
         if (this.operatorMode !== OperatorMode.listen) {
-          await this.executePayload(network, operatorJobPayload!)
+          await this.executePayload(network, operatorJobPayload!, tags)
         }
       }
     }
   }
 
-  async executePayload(network: string, payload: string): Promise<void> {
+  async executePayload(network: string, payload: string, tags: (string | number)[]): Promise<void> {
     // If the operator is in listen mode, payloads will not be executed
     // If the operator is in manual mode, the payload must be manually executed
     // If the operator is in auto mode, the payload will be executed automatically
@@ -219,9 +227,9 @@ export default class Operator extends Command {
     }
 
     if (operate) {
-      await this.networkMonitor.executeTransaction(network, this.networkMonitor.operatorContract, 'executeJob', payload)
+      await this.networkMonitor.executeTransaction(network, tags, this.networkMonitor.operatorContract, 'executeJob', payload)
     } else {
-      this.networkMonitor.structuredLog(network, 'Dropped potential payload to execute')
+      this.networkMonitor.structuredLog(network, 'Dropped potential payload to execute', tags)
     }
   }
 }
