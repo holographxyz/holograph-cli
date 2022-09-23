@@ -64,8 +64,8 @@ export type TransactionFilter = {
 export const keepAlive = ({
   provider,
   onDisconnect,
-  expectedPongBack = 15_000,
-  checkInterval = 7500,
+  expectedPongBack = 5000, // 5 seconds
+  checkInterval = 2500, // 2.5 seconds
 }: KeepAliveParams): void => {
   let pingTimeout: NodeJS.Timeout | null = null
   let keepAliveInterval: NodeJS.Timeout | null = null
@@ -325,10 +325,19 @@ export class NetworkMonitor {
         this.providers[network] = this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
         if (this.userWallet !== undefined) {
           this.wallets[network] = this.userWallet.connect(this.providers[network] as ethers.providers.WebSocketProvider)
-          this.wallets[network].getTransactionCount().then((nonce: number) => {
-            this.walletNonces[network] = nonce
-          })
+          const tryGetNonce = (): void => {
+            const getNonce: NodeJS.Timeout = setInterval(() => {
+              this.wallets[network].getTransactionCount().then((nonce: number) => {
+                this.walletNonces[network] = nonce
+                clearInterval(getNonce)
+              })
+            }, 100) // every 1/10th of a second
+          }
+
+          tryGetNonce()
         }
+
+        this.blockJobHandler(network)
       })
     }
   }
@@ -500,7 +509,8 @@ export class NetworkMonitor {
   blockJobMonitor = (network: string): void => {
     if (Date.now() - this.lastBlockJobDone[network] > this.blockJobThreshold) {
       this.structuredLog(network, 'Block Job Handler has been inactive longer than threshold time. Restarting.')
-      this.blockJobHandler(network)
+      ;(this.providers[network] as ethers.providers.WebSocketProvider)._websocket.terminate()
+      // this.blockJobHandler(network)
     }
   }
 
@@ -513,11 +523,14 @@ export class NetworkMonitor {
   blockJobHandler = (network: string, job?: BlockJob): void => {
     if (job !== undefined) {
       this.latestBlockHeight[job.network] = job.block
+      // we assume that this is latest
+      this.structuredLog(job.network, `Processed block`, job.block)
+      this.blockJobs[job.network].shift()
     }
 
     this.lastBlockJobDone[network] = Date.now()
     if (this.blockJobs[network].length > 0) {
-      const blockJob: BlockJob = this.blockJobs[network].shift() as BlockJob
+      const blockJob: BlockJob = this.blockJobs[network][0] as BlockJob
       this.processBlock(blockJob)
     } else if (this.needToSubscribe) {
       setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
@@ -571,24 +584,42 @@ export class NetworkMonitor {
   }
 
   async processBlock(job: BlockJob): Promise<void> {
-    this.structuredLog(job.network, `Processing Block ${job.block}`)
+    this.structuredLog(job.network, `Processing block`, job.block)
     let block!: BlockWithTransactions
-    try {
-      block = await this.providers[job.network].getBlockWithTransactions(job.block)
-    } catch (error: any) {
-      if (error.message === 'cannot query unfinalized data') {
-        this.structuredLog(job.network, `${job.network} ${color.red('Unfinalized Data!')} ${job.block}`)
-        this.blockJobs[job.network].unshift(job)
-        this.blockJobHandler(job.network)
-        return
-      }
+    const tryGetBlock = async (): Promise<BlockWithTransactions> => {
+      // eslint-disable-next-line no-async-promise-executor
+      return new Promise<BlockWithTransactions>(async (resolve, reject) => {
+        const getBlock: NodeJS.Timeout = setInterval(async () => {
+          try {
+            block = await this.providers[job.network].getBlockWithTransactions(job.block)
+            if (block !== null) {
+              this.structuredLog(job.network, `Block retrieved`, job.block)
+              clearInterval(getBlock)
+              resolve(block)
+            }
+          } catch (error: any) {
+            if (error.message === 'cannot query unfinalized data') {
+              this.structuredLog(job.network, `Block has ${color.red('unfinalized data')}`, job.block)
+            } else {
+              this.structuredLog(job.network, `${color.red('Errored block!')}`, job.block)
+              clearInterval(getBlock)
+              reject()
+            }
+          }
+        }, 1000) // every 1 second
+      })
+    }
 
-      this.structuredLog(job.network, `${color.red('Errored block!')} ${job.block}`)
+    try {
+      await tryGetBlock()
+    } catch {
+      this.blockJobHandler(job.network)
+      return
     }
 
     if (block !== undefined && block !== null && 'transactions' in block) {
       if (block.transactions.length === 0) {
-        this.structuredLog(job.network, `Zero block transactions for block ${job.block}`)
+        this.structuredLog(job.network, `Zero transactions in block`, job.block)
       }
 
       const interestingTransactions: ethers.providers.TransactionResponse[] = []
@@ -599,7 +630,8 @@ export class NetworkMonitor {
       if (interestingTransactions.length > 0) {
         this.structuredLog(
           job.network,
-          `Found ${interestingTransactions.length} interesting transactions on block ${job.block}`,
+          `Found ${interestingTransactions.length} interesting transactions`,
+          job.block
         )
         await this.processTransactions.bind(this.parent)(job, interestingTransactions)
         this.blockJobHandler(job.network, job)
@@ -607,8 +639,7 @@ export class NetworkMonitor {
         this.blockJobHandler(job.network, job)
       }
     } else {
-      this.structuredLog(job.network, `${color.red('Dropped block!')} ${job.block}`)
-      this.blockJobs[job.network].unshift(job)
+      this.structuredLog(job.network, `${color.red('Dropped block')}`, job.block)
       this.blockJobHandler(job.network)
     }
   }
@@ -620,7 +651,7 @@ export class NetworkMonitor {
         this.structuredLog(network, `Dropped websocket connection, gotta do some catching up`)
         let latest = this.currentBlockHeight[network]
         while (block - latest > 0) {
-          this.structuredLog(network, `Block ${latest} (Syncing)`)
+          this.structuredLog(network, `Block (Syncing)`, latest)
           this.blockJobs[network].push({
             network: network,
             block: latest,
@@ -630,7 +661,7 @@ export class NetworkMonitor {
       }
 
       this.currentBlockHeight[network] = block
-      this.structuredLog(network, `Block ${block}`)
+      this.structuredLog(network, `New block mined`, block)
       this.blockJobs[network].push({
         network: network,
         block: block,
@@ -805,6 +836,31 @@ export class NetworkMonitor {
   randomTag(): string {
     // 4_294_967_295 is max value for 2^32 which is uint32
     return Math.floor(Math.random() * 4_294_967_295).toString(16)
+  }
+
+  async getTransactionReceipt(network: string, transactionHash: string): Promise<ethers.ContractReceipt | null> {
+    let attempts = 0
+    const tryToGetTxReceipt = async (): Promise<ethers.ContractReceipt | null> => {
+      // eslint-disable-next-line no-async-promise-executor
+      return new Promise<ethers.ContractReceipt | null>(async (resolve, _reject) => {
+        let receipt: ethers.ContractReceipt | null
+        const getTxReceipt: NodeJS.Timeout = setInterval(async () => {
+          receipt = await this.providers[network].getTransactionReceipt(transactionHash)
+          if (receipt === null) {
+            attempts++
+            if (attempts > 10) {
+              clearInterval(getTxReceipt)
+              resolve(null)
+            }
+          } else {
+            clearInterval(getTxReceipt)
+            resolve(receipt as ethers.ContractReceipt)
+          }
+        }, 1000) // every 1 second
+      })
+    }
+
+    return tryToGetTxReceipt()
   }
 
   async executeTransaction(

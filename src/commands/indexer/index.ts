@@ -300,7 +300,7 @@ export default class Indexer extends Command {
   }
 
   async handleContractDeployedEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt(network, transaction.hash)
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -319,7 +319,7 @@ export default class Indexer extends Command {
   }
 
   async handleMintEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt(network, transaction.hash)
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -331,7 +331,7 @@ export default class Indexer extends Command {
   }
 
   async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt(network, transaction.hash)
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -383,12 +383,12 @@ export default class Indexer extends Command {
     let bridgeTransaction: ethers.utils.TransactionDescription
     let operatorJobPayload: string
     let operatorJobHash: string
-    let receipt: ethers.ContractReceipt
+    let receipt: ethers.ContractReceipt | null
     let deploymentInfo: any[] | undefined
     let transferInfo: any[] | undefined
     switch (parsedTransaction.name) {
       case 'executeJob':
-        receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+        receipt = await this.networkMonitor.getTransactionReceipt(network, transaction.hash)
         if (receipt === null) {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
@@ -466,8 +466,7 @@ export default class Indexer extends Command {
     network: string,
   ): Promise<void> {
     let deploymentInfo
-    let bridgeTransaction
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt(network, transaction.hash)
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -488,7 +487,7 @@ export default class Indexer extends Command {
             network,
           )}. The job payload hash is ${operatorJobHash}. The job payload is ${operatorJobPayload}`,
         )
-        bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
+        const bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
           value: ethers.BigNumber.from('0'),
         })

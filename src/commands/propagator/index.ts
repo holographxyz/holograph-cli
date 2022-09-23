@@ -220,7 +220,7 @@ export default class Propagator extends Command {
     transaction: ethers.providers.TransactionResponse,
     network: string,
   ): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt(network, transaction.hash)
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }

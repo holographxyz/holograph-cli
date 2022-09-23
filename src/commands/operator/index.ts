@@ -150,23 +150,7 @@ export default class Operator extends Command {
     network: string,
     tags: (string | number)[],
   ): Promise<void> {
-    let bridgeTransaction
-    const tryToGetTxReceipt = async (): Promise<ethers.ContractReceipt> => {
-      // eslint-disable-next-line no-async-promise-executor
-      return new Promise<ethers.ContractReceipt>(async (resolve, _reject) => {
-        let receipt: ethers.ContractReceipt | null
-        const getTxReceipt: NodeJS.Timeout = setInterval(async () => {
-          receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
-          if (receipt !== null) {
-            clearInterval(getTxReceipt)
-            resolve(receipt as ethers.ContractReceipt)
-          }
-        }, 1000) // every 1 second
-      })
-    }
-
-    const receipt: ethers.ContractReceipt = await tryToGetTxReceipt()
-
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt(network, transaction.hash)
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     } else {
@@ -193,7 +177,7 @@ export default class Operator extends Command {
           `HolographOperator received a new bridge job. The job payload hash is ${operatorJobHash}. The job payload is ${operatorJobPayload}`,
           tags
         )
-        bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
+        const bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
           value: ethers.BigNumber.from('0'),
         })
