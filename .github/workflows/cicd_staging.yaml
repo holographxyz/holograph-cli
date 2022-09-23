@@ -79,13 +79,12 @@ jobs:
           aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
           aws-region           : ${{ env.AWS_REGION }}
 
-      - name: Create holocli dev ns
+      - name: Create ns
         uses: tensor-hq/eksctl-helm-action@main
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             kubectl create namespace ${{ env.DEV_STG_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-
       #
       #
       # NOTICE: --- INDEXER ---
@@ -97,10 +96,10 @@ jobs:
           CHART_VERSION: ${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        run : |
+        run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-      - name: -> Deploy INDEXER cli in staging [namespace -> ${{ env.DEV_STG_COMMON_NAMESPACE }}]
+      - name: -> Deploy INDEXER cli in staging [namespace -> ${{ steps.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer-dev #notice
@@ -109,11 +108,12 @@ jobs:
           command: |-
             helm upgrade --install $RELEASE_NAME \
             holo-indexer-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
+            -n ${{ env.STG_COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.HOLO_CONFIG_FILE_DATA }} \
-            --set holo_indexer_password=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
-            --set HOLO_INDEXER_HOST=${{ env.STG_HOLO_INDEXER_HOST }} \
+            --set holo_indexer_password=${{ env.STG_HOLO_INDEXER_PASSWORD }} \
+            --set HOLO_INDEXER_HOST=${{ env.DEV_STG_HOLO_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
