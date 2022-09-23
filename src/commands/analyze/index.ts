@@ -248,7 +248,7 @@ export default class Analyze extends Command {
   }
 
   async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt(network, transaction.hash)
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -311,10 +311,10 @@ export default class Analyze extends Command {
     let operatorJobHash: string
     let index: number
     let operatorJob: AvailableJob
-    let receipt: ethers.ContractReceipt
+    let receipt: ethers.ContractReceipt | null
     switch (parsedTransaction.name) {
       case 'executeJob':
-        receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+        receipt = await this.networkMonitor.getTransactionReceipt(network, transaction.hash)
         if (receipt === null) {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
@@ -369,7 +369,7 @@ export default class Analyze extends Command {
     transaction: ethers.providers.TransactionResponse,
     network: string,
   ): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt(network, transaction.hash)
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
