@@ -168,7 +168,6 @@ jobs:
         env:
           INDEXER_RELEASE_NAME   : indexer-dev
           OPERATOR_RELEASE_NAME  : operator-dev
-          PROPAGATOR_RELEASE_NAME: propagator-dev
           LB_URL: "https://staging-alb-1490082055.us-west-2.elb.amazonaws.com"
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
