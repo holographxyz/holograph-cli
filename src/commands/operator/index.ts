@@ -10,7 +10,7 @@ import {startHealthcheckServer} from '../../utils/health-check-server'
 
 export default class Operator extends Command {
   static description = 'Listen for EVM events for jobs and process them'
-  static examples = ['$ holo operator --networks="rinkeby mumbai fuji" --mode=auto']
+  static examples = ['$ holo operator --networks="goerli mumbai fuji" --mode=auto']
   static flags = {
     mode: Flags.string({
       description: 'The mode in which to run the operator',
@@ -138,7 +138,7 @@ export default class Operator extends Command {
           this.networkMonitor.structuredLog(
             job.network,
             `Function processTransactions stumbled on an unknown transaction ${transaction.hash}`,
-            tags
+            tags,
           )
         }
       }
@@ -165,17 +165,21 @@ export default class Operator extends Command {
       this.networkMonitor.structuredLog(
         network,
         `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
-        tags
+        tags,
       )
       const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(receipt)
       const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
       if (operatorJobHash === undefined) {
-        this.networkMonitor.structuredLog(network, `Could not extract relayer available job for ${transaction.hash}`, tags)
+        this.networkMonitor.structuredLog(
+          network,
+          `Could not extract relayer available job for ${transaction.hash}`,
+          tags,
+        )
       } else {
         this.networkMonitor.structuredLog(
           network,
           `HolographOperator received a new bridge job. The job payload hash is ${operatorJobHash}. The job payload is ${operatorJobPayload}`,
-          tags
+          tags,
         )
         const bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
@@ -184,7 +188,7 @@ export default class Operator extends Command {
         this.networkMonitor.structuredLog(
           network,
           `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
-          tags
+          tags,
         )
         if (this.operatorMode !== OperatorMode.listen) {
           await this.executePayload(network, operatorJobPayload!, tags)
@@ -211,7 +215,13 @@ export default class Operator extends Command {
     }
 
     if (operate) {
-      await this.networkMonitor.executeTransaction(network, tags, this.networkMonitor.operatorContract, 'executeJob', payload)
+      await this.networkMonitor.executeTransaction(
+        network,
+        tags,
+        this.networkMonitor.operatorContract,
+        'executeJob',
+        payload,
+      )
     } else {
       this.networkMonitor.structuredLog(network, 'Dropped potential payload to execute', tags)
     }

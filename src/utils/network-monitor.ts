@@ -165,6 +165,7 @@ export class NetworkMonitor {
 
   LAYERZERO_RECEIVERS: {[key: string]: string} = {
     rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
+    goerli: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     mumbai: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     fuji: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
   }
@@ -187,7 +188,7 @@ export class NetworkMonitor {
   }
 
   getProviderStatus() {
-    const outputNetworks = ['rinkeby', 'mumbai', 'fuji']
+    const outputNetworks = ['rinkeby', 'goerli', 'mumbai', 'fuji']
     const output = {} as any
 
     for (const n of outputNetworks) {
