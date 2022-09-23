@@ -2,7 +2,7 @@ import * as fs from 'fs-extra'
 import * as path from 'node:path'
 
 import {ethers, BigNumber} from 'ethers'
-import {BlockWithTransactions} from '@ethersproject/abstract-provider'
+import {Block, BlockWithTransactions} from '@ethersproject/abstract-provider'
 import {Command, Flags} from '@oclif/core'
 
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
@@ -836,6 +836,31 @@ export class NetworkMonitor {
   randomTag(): string {
     // 4_294_967_295 is max value for 2^32 which is uint32
     return Math.floor(Math.random() * 4_294_967_295).toString(16)
+  }
+
+  async getBlock(network: string, blockNumber: number): Promise<Block> {
+    const tryGetBlock = async (): Promise<Block> => {
+      // eslint-disable-next-line no-async-promise-executor
+      return new Promise<Block>(async (resolve, reject) => {
+        const getBlock: NodeJS.Timeout = setInterval(async () => {
+          try {
+            const block: Block | null = await this.providers[network].getBlock(blockNumber)
+            if (block !== null) {
+              clearInterval(getBlock)
+              resolve(block)
+            }
+          } catch (error: any) {
+            if (error.message !== 'cannot query unfinalized data') {
+              this.structuredLog(network, `Block retrieve error`, blockNumber)
+              clearInterval(getBlock)
+              reject()
+            }
+          }
+        }, 500) // every 1/2 a second
+      })
+    }
+
+    return tryGetBlock()
   }
 
   async getTransactionReceipt(network: string, transactionHash: string): Promise<ethers.ContractReceipt | null> {

@@ -594,7 +594,7 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
+      timestamp: (await this.networkMonitor.getBlock(network, transaction.blockNumber!)).timestamp,
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
       callback: this.updateCollectionCallback,
@@ -631,7 +631,7 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
+      timestamp: (await this.networkMonitor.getBlock(network, transaction.blockNumber!)).timestamp,
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
       callback: this.updateCollectionCallback,
@@ -748,7 +748,7 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
+      timestamp: (await this.networkMonitor.getBlock(network, transaction.blockNumber!)).timestamp,
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
       callback: this.updateMintedNFTCallback,
@@ -782,7 +782,7 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
+      timestamp: (await this.networkMonitor.getBlock(network, transaction.blockNumber!)).timestamp,
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
       callback: this.updateBridgedNFTCallback,
@@ -839,7 +839,7 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
+      timestamp: (await this.networkMonitor.getBlock(network, transaction.blockNumber!)).timestamp,
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
       callback: this.updateCrossChainTransactionCallback,
