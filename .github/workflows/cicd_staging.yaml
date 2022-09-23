@@ -11,8 +11,8 @@ env:
   #
   DEV_IMAGE_TAG : dev-ed4db2cbf7883ec835d46b35b338732b2d98bdf9 #dev-${{ github.sha }}
   #######################################
-  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.17
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.15
+  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.21
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.19
   #######################################
   CLUSTER_NAME   : staging
   #
@@ -62,7 +62,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Login to ECR
-        id: login-ecr
+        id  : login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build image

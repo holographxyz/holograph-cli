@@ -7,6 +7,7 @@ import {ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-deployment'
 import {getEnvironment} from '../../utils/environment'
 import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
+import {supportedNetworks} from '../../utils/networks'
 
 export default class Contract extends Command {
   static description = 'Deploy a Holographable contract'
@@ -25,7 +26,6 @@ export default class Contract extends Command {
     const {flags} = await this.parse(Contract)
     this.log('User configurations loaded.')
 
-    const supportedNetworks = ['rinkeby', 'mumbai', 'fuji']
     let remainingNetworks = supportedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
 
