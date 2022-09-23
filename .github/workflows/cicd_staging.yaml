@@ -78,14 +78,14 @@ jobs:
           aws-access-key-id    : ${{ env.AWS_KEY_ID }}     #notice: unique for each env
           aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
           aws-region           : ${{ env.AWS_REGION }}
-#deleteme
-#      - name: Create holocli dev ns
-#        uses: tensor-hq/eksctl-helm-action@main
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            kubectl create namespace ${{ env.DEV_STG_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-#deleteme
+
+      - name: Create holocli dev ns
+        uses: tensor-hq/eksctl-helm-action@main
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            kubectl create namespace ${{ env.DEV_STG_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
       #
       #
       # NOTICE: --- INDEXER ---
@@ -100,7 +100,7 @@ jobs:
         run : |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-      - name: -> Deploy INDEXER cli in staging [namespace -> ${{ steps.DEV_STG_COMMON_NAMESPACE }}]
+      - name: -> Deploy INDEXER cli in staging [namespace -> ${{ env.DEV_STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer-dev #notice
@@ -109,7 +109,6 @@ jobs:
           command: |-
             helm upgrade --install $RELEASE_NAME \
             holo-indexer-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
-            --namespace ${{ env.DEV_STG_COMMON_NAMESPACE }} --create-namespace  \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.HOLO_CONFIG_FILE_DATA }} \
