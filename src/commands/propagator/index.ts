@@ -197,6 +197,7 @@ export default class Propagator extends Command {
       },
     ]
     Promise.resolve()
+    
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {

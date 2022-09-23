@@ -185,6 +185,7 @@ export default class Indexer extends Command {
       },
     ]
     Promise.resolve()
+    
   }
 
   async processDBJob(timestamp: number, job: DBJob): Promise<void> {
@@ -565,6 +566,7 @@ export default class Indexer extends Command {
       ],
     })
     Promise.resolve()
+    
   }
 
   async updateDeployedCollection(
@@ -686,6 +688,7 @@ export default class Indexer extends Command {
       ],
     })
     Promise.resolve()
+    
   }
 
   async updateMintedNFTCallback(
@@ -725,6 +728,7 @@ export default class Indexer extends Command {
       ],
     })
     Promise.resolve()
+    
   }
 
   async updateMintedNFT(
@@ -1007,5 +1011,6 @@ export default class Indexer extends Command {
     }
 
     Promise.resolve()
+    
   }
 }

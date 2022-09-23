@@ -586,17 +586,16 @@ export class NetworkMonitor {
 
   async processBlock(job: BlockJob): Promise<void> {
     this.structuredLog(job.network, `Processing block`, job.block)
-    let block!: BlockWithTransactions
-    const tryGetBlock = async (): Promise<BlockWithTransactions> => {
+    const tryGetBlock = async (): Promise<BlockWithTransactions | null> => {
       // eslint-disable-next-line no-async-promise-executor
-      return new Promise<BlockWithTransactions>(async (resolve, reject) => {
+      return new Promise<BlockWithTransactions | null>(async (resolve, _reject) => {
         const getBlock: NodeJS.Timeout = setInterval(async () => {
           try {
-            block = await this.providers[job.network].getBlockWithTransactions(job.block)
+            const block = await this.providers[job.network].getBlockWithTransactions(job.block)
             if (block !== null) {
-              this.structuredLog(job.network, `Block retrieved`, job.block)
               clearInterval(getBlock)
               resolve(block)
+              return
             }
           } catch (error: any) {
             if (error.message === 'cannot query unfinalized data') {
@@ -604,21 +603,18 @@ export class NetworkMonitor {
             } else {
               this.structuredLog(job.network, `${color.red('Errored block!')}`, job.block)
               clearInterval(getBlock)
-              reject()
+              resolve(null)
+
             }
           }
         }, 1000) // every 1 second
       })
     }
 
-    try {
-      await tryGetBlock()
-    } catch {
-      this.blockJobHandler(job.network)
-      return
-    }
+    const block: BlockWithTransactions | null = await tryGetBlock()
 
     if (block !== undefined && block !== null && 'transactions' in block) {
+      this.structuredLog(job.network, `Block retrieved`, job.block)
       if (block.transactions.length === 0) {
         this.structuredLog(job.network, `Zero transactions in block`, job.block)
       }
@@ -849,12 +845,14 @@ export class NetworkMonitor {
             if (block !== null) {
               clearInterval(getBlock)
               resolve(block)
+              return
             }
           } catch (error: any) {
             if (error.message !== 'cannot query unfinalized data') {
               this.structuredLog(network, `Block retrieve error`, blockNumber)
               clearInterval(getBlock)
               reject()
+              
             }
           }
         }, 500) // every 1/2 a second
@@ -877,10 +875,12 @@ export class NetworkMonitor {
             if (attempts > 10) {
               clearInterval(getTxReceipt)
               resolve(null)
+              
             }
           } else {
             clearInterval(getTxReceipt)
             resolve(receipt as ethers.ContractReceipt)
+            
           }
         }, 1000) // every 1 second
       })
@@ -915,6 +915,7 @@ export class NetworkMonitor {
               gasLimit = await contract.estimateGas[methodName](...args)
               clearInterval(getGasLimit)
               resolve(true)
+              return
             } catch (error: any) {
               if ('reason' in error) {
                 if (error.reason.startsWith('execution reverted:')) {
@@ -956,6 +957,7 @@ export class NetworkMonitor {
 
               clearInterval(getGasLimit)
               resolve(false)
+              
             }
           }, 1000) // every 1 second
         })
@@ -972,6 +974,7 @@ export class NetworkMonitor {
               if (balance !== null) {
                 clearInterval(getBalance)
                 resolve(balance)
+                
               }
             }, 100) // every 1/10th of a second
           })
@@ -990,6 +993,7 @@ export class NetworkMonitor {
               tags,
             )
             topResolve(null)
+            
           } else {
             this.structuredLog(network, `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, 'gwei')}`, tags)
             this.structuredLog(
@@ -1010,6 +1014,7 @@ export class NetworkMonitor {
                     tx = await this.wallets[network].sendTransaction(rawTx)
                     clearInterval(getJobTx)
                     resolve(true)
+                    return
                   } catch (error: any) {
                     switch (error.message) {
                       case 'already known': {
@@ -1044,21 +1049,26 @@ export class NetworkMonitor {
                       this.structuredLog(network, `Transaction ${receipt.transactionHash} mined and confirmed`, tags)
                       clearInterval(getTxReceipt)
                       resolve(receipt)
+                      
                     }
                   }, 1000) // every 1 second
                 })
               }
 
               topResolve(await tryToGetTxReceipt())
+              
             } else {
               topResolve(null)
+              
             }
           }
         } else {
           topResolve(null)
+          
         }
       } else {
         topResolve(null)
+        
       }
     })
   }
