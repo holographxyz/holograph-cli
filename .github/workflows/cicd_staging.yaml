@@ -11,8 +11,8 @@ env:
   #
   DEV_IMAGE_TAG : dev-${{ github.sha }}
   #######################################
-  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.21
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.19
+  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.22
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.21
   #######################################
   CLUSTER_NAME   : staging
   #
@@ -28,8 +28,9 @@ env:
   STG_HOLO_INDEXER_PASSWORD  : ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
   STG_HOLO_OPERATOR_PASSWORD : ${{ secrets.STG_HOLO_OPERATOR_PASSWORD }}
   #
-  # switching between the keys in the config map
-  HOLO_CONFIG_FILE_DATA: stg-config-file # [stg-config-file/prod-config-file]
+  # set the RPC endpoints config files
+  INDEXER_HOLO_CONFIG_FILE_DATA : stg-config-file
+  OPERATOR_HOLO_CONFIG_FILE_DATA: stg-config-file
   #
   ABI_ENVIRONMENT: develop # same for all apps [indexer,operator]
   #
@@ -47,8 +48,8 @@ on:
       - '!master'
 
 jobs:
-  deploy-to-new-staging:
-    name: deploy-to-staging
+  deploy-to-staging:
+    name: Deploy-to-staging
     runs-on: ubuntu-latest
 
     steps:
@@ -111,7 +112,7 @@ jobs:
             -n ${{ env.STG_COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
-            --set config_file_data=${{ env.HOLO_CONFIG_FILE_DATA }} \
+            --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
             --set holo_indexer_password=${{ env.STG_HOLO_INDEXER_PASSWORD }} \
             --set HOLO_INDEXER_HOST=${{ env.STG_HOLO_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
@@ -150,7 +151,7 @@ jobs:
             -n ${{ env.STG_COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
-            --set config_file_data=${{ env.HOLO_CONFIG_FILE_DATA }} \
+            --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
@@ -178,9 +179,10 @@ jobs:
 
             echo "------------------------ Newly deployed image [same for all apps] ------------------------"
             echo "$DEV_IMAGE_TAG"
-            sleep 40
 
             echo "------------------------ Healthchecks ------------------------"
+            sleep 55
+
             ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
             echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
             curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
