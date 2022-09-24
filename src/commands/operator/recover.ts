@@ -210,7 +210,6 @@ export default class Recover extends Command {
     if (operate) {
       await this.networkMonitor.executeTransaction({
         network,
-        _tags: [],
         contract: this.networkMonitor.operatorContract,
         methodName: 'executeJob',
         args: [payload],

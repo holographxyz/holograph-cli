@@ -151,7 +151,7 @@ export default class Operator extends Command {
     network: string,
     tags: (string | number)[],
   ): Promise<void> {
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt(network, transaction.hash)
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({ network, transactionHash: transaction.hash, attempts: 10, canFail: true })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     } else {
@@ -218,7 +218,7 @@ export default class Operator extends Command {
     if (operate) {
       await this.networkMonitor.executeTransaction({
         network,
-        _tags: tags,
+        tags,
         contract: this.networkMonitor.operatorContract,
         methodName: 'executeJob',
         args: [payload],

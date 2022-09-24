@@ -249,7 +249,7 @@ export default class Analyze extends Command {
   }
 
   async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt(network, transaction.hash)
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({ network, transactionHash: transaction.hash, attempts: 10, canFail: true })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -315,7 +315,7 @@ export default class Analyze extends Command {
     let receipt: ethers.ContractReceipt | null
     switch (parsedTransaction.name) {
       case 'executeJob':
-        receipt = await this.networkMonitor.getTransactionReceipt(network, transaction.hash)
+        receipt = await this.networkMonitor.getTransactionReceipt({ network, transactionHash: transaction.hash, attempts: 10, canFail: true })
         if (receipt === null) {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
@@ -370,7 +370,7 @@ export default class Analyze extends Command {
     transaction: ethers.providers.TransactionResponse,
     network: string,
   ): Promise<void> {
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt(network, transaction.hash)
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({ network, transactionHash: transaction.hash, attempts: 10, canFail: true })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -403,7 +403,7 @@ export default class Analyze extends Command {
     const contract: ethers.Contract = this.networkMonitor.operatorContract.connect(
       this.networkMonitor.providers[network],
     )
-    const gasLimit: BigNumber | null = await this.networkMonitor.getGasLimit({network, tags: [], contract, methodName: 'executeJob', args: [payload]})
+    const gasLimit: BigNumber | null = await this.networkMonitor.getGasLimit({network, contract, methodName: 'executeJob', args: [payload]})
     if (gasLimit === null) {
       this.networkMonitor.structuredLog(network, `Transaction: ${transactionHash} has already been done`)
       return true
