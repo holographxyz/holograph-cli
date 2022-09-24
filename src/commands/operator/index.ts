@@ -122,7 +122,7 @@ export default class Operator extends Command {
       },
     ]
     Promise.resolve()
-    
+
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
@@ -216,13 +216,13 @@ export default class Operator extends Command {
     }
 
     if (operate) {
-      await this.networkMonitor.executeTransaction(
+      await this.networkMonitor.executeTransaction({
         network,
-        tags,
-        this.networkMonitor.operatorContract,
-        'executeJob',
-        payload,
-      )
+        _tags: tags,
+        contract: this.networkMonitor.operatorContract,
+        methodName: 'executeJob',
+        args: [payload],
+      })
     } else {
       this.networkMonitor.structuredLog(network, 'Dropped potential payload to execute', tags)
     }

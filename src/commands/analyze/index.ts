@@ -1,6 +1,6 @@
 import * as fs from 'fs-extra'
 import {Command, Flags} from '@oclif/core'
-import {ethers} from 'ethers'
+import {ethers, BigNumber} from 'ethers'
 
 import {ConfigFile, ensureConfigFileIsValid} from '../../utils/config'
 
@@ -215,7 +215,7 @@ export default class Analyze extends Command {
       },
     ]
     Promise.resolve()
-    
+
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
@@ -403,58 +403,14 @@ export default class Analyze extends Command {
     const contract: ethers.Contract = this.networkMonitor.operatorContract.connect(
       this.networkMonitor.providers[network],
     )
-    const tryGetGasLimit = async (): Promise<boolean> => {
-      return new Promise<boolean>((resolve, _reject) => {
-        const getGasLimit: NodeJS.Timeout = setInterval(async () => {
-          try {
-            await contract.estimateGas.executeJob(payload)
-            clearInterval(getGasLimit)
-            resolve(false)
-            return
-          } catch (error: any) {
-            if ('reason' in error) {
-              if (error.reason.startsWith('execution reverted:')) {
-                const revertReason: string = error.reason.split('execution reverted: ')[1]
-                switch (revertReason) {
-                  case 'HOLOGRAPH: already deployed': {
-                    break
-                  }
-
-                  case 'HOLOGRAPH: invalid job': {
-                    break
-                  }
-
-                  case 'HOLOGRAPH: not holographed': {
-                    break
-                  }
-
-                  default: {
-                    this.networkMonitor.structuredLog(network, error.reason, 'tryGetGasLimit')
-                    break
-                  }
-                }
-              } else {
-                this.networkMonitor.structuredLog(network, error.reason, 'tryGetGasLimit')
-              }
-            } else {
-              this.networkMonitor.structuredLog(network, JSON.stringify(error), 'tryGetGasLimit')
-            }
-
-            clearInterval(getGasLimit)
-            resolve(true)
-            
-          }
-        }, 1000) // every 1 second
-      })
-    }
-
-    // if this returns true, gas estimation failed with an error, meaning job cannot be done or is already done
-    if (await tryGetGasLimit()) {
+    const gasLimit: BigNumber | null = await this.networkMonitor.getGasLimit({network, tags: [], contract, methodName: 'executeJob', args: [payload]})
+    if (gasLimit === null) {
       this.networkMonitor.structuredLog(network, `Transaction: ${transactionHash} has already been done`)
       return true
     }
 
-    this.networkMonitor.structuredLog(network, `Transaction: ${transactionHash} job needs to be done`)
-    return false
+      this.networkMonitor.structuredLog(network, `Transaction: ${transactionHash} job needs to be done`)
+      return false
+
   }
 }

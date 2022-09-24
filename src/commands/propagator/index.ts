@@ -197,7 +197,7 @@ export default class Propagator extends Command {
       },
     ]
     Promise.resolve()
-    
+
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
@@ -269,15 +269,13 @@ export default class Propagator extends Command {
       (contractCode === '0x' || contractCode === '' || contractCode === undefined) &&
       !(await registry.callStatic.isHolographedContract(deploymentAddress, {blockTag: 'latest'}))
     ) {
-      const deployReceipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.executeTransaction(
+      const deployReceipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.executeTransaction({
         network,
-        undefined,
-        this.networkMonitor.factoryContract,
-        'deployHolographableContract',
-        deploymentConfig.config,
-        deploymentConfig.signature,
-        deploymentConfig.signer,
-      )
+        _tags: [],
+        contract: this.networkMonitor.factoryContract,
+        methodName: 'deployHolographableContract',
+        args: [deploymentConfig.config, deploymentConfig.signature, deploymentConfig.signer]
+      })
       if (deployReceipt === null) {
         this.networkMonitor.structuredLog(network, `Submitting tx for collection ${deploymentAddress} failed`)
       } else {

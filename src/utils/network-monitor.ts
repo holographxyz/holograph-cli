@@ -1,7 +1,7 @@
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
 
-import {ethers, BigNumber} from 'ethers'
+import {ethers, BigNumber, PopulatedTransaction} from 'ethers'
 import {Block, BlockWithTransactions} from '@ethersproject/abstract-provider'
 import {Command, Flags} from '@oclif/core'
 
@@ -32,6 +32,7 @@ export enum OperatorMode {
 }
 
 export type KeepAliveParams = {
+  debug: (...args: any[]) => void
   provider: ethers.providers.WebSocketProvider
   onDisconnect: (err: any) => void
   expectedPongBack?: number
@@ -62,15 +63,33 @@ export type TransactionFilter = {
 }
 
 export const keepAlive = ({
+  debug,
   provider,
   onDisconnect,
-  expectedPongBack = 5000, // 5 seconds
-  checkInterval = 2500, // 2.5 seconds
+  expectedPongBack = 10_000, // 10 seconds
+  checkInterval = 5000, // 5 seconds
 }: KeepAliveParams): void => {
   let pingTimeout: NodeJS.Timeout | null = null
   let keepAliveInterval: NodeJS.Timeout | null = null
+  let counter = 0
+  let errorCounter = 0
+  let terminator: NodeJS.Timeout | null = null
+  const errHandler: (err: any) => void = (err: any) => {
+    if (errorCounter === 0) {
+      errorCounter++
+      debug(`websocket error event triggered ${err.code} ${err.syscall}`);
+      if (keepAliveInterval) clearInterval(keepAliveInterval)
+      if (pingTimeout) clearTimeout(pingTimeout)
+      terminator = setTimeout(() => {
+        provider._websocket.terminate()
+      }, checkInterval)
+    }
+  }
 
   provider._websocket.on('open', () => {
+    debug(`websocket open event triggered`);
+    provider._websocket.off('error', errHandler)
+    if (terminator) clearTimeout(terminator)
     keepAliveInterval = setInterval(() => {
       provider._websocket.ping()
       pingTimeout = setTimeout(() => {
@@ -80,14 +99,45 @@ export const keepAlive = ({
   })
 
   provider._websocket.on('close', (err: any) => {
-    if (keepAliveInterval) clearInterval(keepAliveInterval)
-    if (pingTimeout) clearTimeout(pingTimeout)
-    onDisconnect(err)
+    debug(`websocket close event triggered`);
+    if (counter === 0) {
+      debug(`websocket closed`);
+      counter++
+      if (keepAliveInterval) clearInterval(keepAliveInterval)
+      if (pingTimeout) clearTimeout(pingTimeout)
+      setTimeout(() => {
+        onDisconnect(err)
+      }, checkInterval)
+    }
   })
+
+  provider._websocket.on('error', errHandler)
 
   provider._websocket.on('pong', () => {
     if (pingTimeout) clearInterval(pingTimeout)
   })
+}
+
+export type ExecuteTransactionParams = {
+  network: string,
+  _tags: (string | number)[],
+  contract: ethers.Contract,
+  methodName: string,
+  args: any[]
+}
+
+export type SendTransactionParams = {
+  network: string,
+  tags: (string | number)[],
+  rawTx: PopulatedTransaction
+}
+
+export type GetGasLimitParams = {
+  network: string,
+  tags: (string | number)[],
+  contract: ethers.Contract,
+  methodName: string,
+  args: any[]
 }
 
 const cleanTags = (tagIds?: string | number | (number | string)[]): string => {
@@ -320,25 +370,19 @@ export class NetworkMonitor {
   }
 
   disconnectBuilder(network: string, rpcEndpoint: string, subscribe: boolean): (err: any) => void {
-    return (err: any) => {
-      ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
+    return (err: any): void => {
+      (this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
         this.structuredLog(network, `WS connection was closed ${JSON.stringify(err, null, 2)}`)
+        this.lastBlockJobDone[network] =  Date.now()
         this.providers[network] = this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
         if (this.userWallet !== undefined) {
           this.wallets[network] = this.userWallet.connect(this.providers[network] as ethers.providers.WebSocketProvider)
-          const tryGetNonce = (): void => {
-            const getNonce: NodeJS.Timeout = setInterval(() => {
-              this.wallets[network].getTransactionCount().then((nonce: number) => {
-                this.walletNonces[network] = nonce
-                clearInterval(getNonce)
-              })
-            }, 100) // every 1/10th of a second
-          }
-
-          tryGetNonce()
+          this.wallets[network].getAddress().then((walletAddres: string) => {
+            this.getNonce(network, walletAddres).then((nonce: number) => {
+              this.walletNonces[network] = nonce
+            })
+          })
         }
-
-        this.blockJobHandler(network)
       })
     }
   }
@@ -351,6 +395,7 @@ export class NetworkMonitor {
     this.debug('this.providers', network)
     const provider = new ethers.providers.WebSocketProvider(rpcEndpoint)
     keepAlive({
+      debug: this.debug,
       provider,
       onDisconnect: this.disconnectBuilder.bind(this)(network, rpcEndpoint, true),
     })
@@ -507,12 +552,17 @@ export class NetworkMonitor {
     }
   }
 
-  blockJobMonitor = (network: string): void => {
-    if (Date.now() - this.lastBlockJobDone[network] > this.blockJobThreshold) {
-      this.structuredLog(network, 'Block Job Handler has been inactive longer than threshold time. Restarting.')
-      ;(this.providers[network] as ethers.providers.WebSocketProvider)._websocket.terminate()
-      // this.blockJobHandler(network)
-    }
+  blockJobMonitor = (network: string): Promise<void> => {
+    return new Promise<void>(() => {
+      if (Date.now() - this.lastBlockJobDone[network] > this.blockJobThreshold) {
+        this.structuredLog(network, 'Block Job Handler has been inactive longer than threshold time. Restarting.', [])
+        this.lastBlockJobDone[network] = Date.now()
+        const provider = this.providers[network] as ethers.providers.WebSocketProvider
+        provider._websocket.terminate().then(() => {
+          Promise.resolve()
+        })
+      }
+    })
   }
 
   jobHandlerBuilder: (network: string) => () => void = (network: string): (() => void) => {
@@ -536,9 +586,13 @@ export class NetworkMonitor {
     } else if (this.needToSubscribe) {
       setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
     } else {
-      this.structuredLog(network, 'All jobs done for network')
-      clearInterval(this.blockJobMonitorProcess[network])
-      this.runningProcesses -= 1
+      if (network in this.blockJobMonitorProcess) {
+        this.structuredLog(network, 'All jobs done for network')
+        clearInterval(this.blockJobMonitorProcess[network])
+        delete this.blockJobMonitorProcess[network]
+        this.runningProcesses -= 1
+      }
+
       if (this.runningProcesses === 0) {
         this.log('Finished the last job. Exiting...')
         this.exitRouter({exit: true}, 'SIGINT')
@@ -586,58 +640,36 @@ export class NetworkMonitor {
 
   async processBlock(job: BlockJob): Promise<void> {
     this.structuredLog(job.network, `Processing block`, job.block)
-    const tryGetBlock = async (): Promise<BlockWithTransactions | null> => {
-      // eslint-disable-next-line no-async-promise-executor
-      return new Promise<BlockWithTransactions | null>(async (resolve, _reject) => {
-        const getBlock: NodeJS.Timeout = setInterval(async () => {
-          try {
-            const block = await this.providers[job.network].getBlockWithTransactions(job.block)
-            if (block !== null) {
-              clearInterval(getBlock)
-              resolve(block)
-              return
-            }
-          } catch (error: any) {
-            if (error.message === 'cannot query unfinalized data') {
-              this.structuredLog(job.network, `Block has ${color.red('unfinalized data')}`, job.block)
-            } else {
-              this.structuredLog(job.network, `${color.red('Errored block!')}`, job.block)
-              clearInterval(getBlock)
-              resolve(null)
+    const block: BlockWithTransactions | null = await this.getBlockWithTransactions(job.network, job.block)
+    let counter = 0
+    if (counter === 0) {
+      counter++
+      if (block !== undefined && block !== null && 'transactions' in block) {
+        this.structuredLog(job.network, `Block retrieved`, job.block)
+        if (block.transactions.length === 0) {
+          this.structuredLog(job.network, `Zero transactions in block`, job.block)
+        }
 
-            }
-          }
-        }, 1000) // every 1 second
-      })
-    }
+        const interestingTransactions: ethers.providers.TransactionResponse[] = []
+        for (let i = 0, l = block.transactions.length; i < l; i++) {
+          this.filterTransaction(job, block.transactions[i], interestingTransactions)
+        }
 
-    const block: BlockWithTransactions | null = await tryGetBlock()
-
-    if (block !== undefined && block !== null && 'transactions' in block) {
-      this.structuredLog(job.network, `Block retrieved`, job.block)
-      if (block.transactions.length === 0) {
-        this.structuredLog(job.network, `Zero transactions in block`, job.block)
-      }
-
-      const interestingTransactions: ethers.providers.TransactionResponse[] = []
-      for (let i = 0, l = block.transactions.length; i < l; i++) {
-        this.filterTransaction(job, block.transactions[i], interestingTransactions)
-      }
-
-      if (interestingTransactions.length > 0) {
-        this.structuredLog(
-          job.network,
-          `Found ${interestingTransactions.length} interesting transactions`,
-          job.block
-        )
-        await this.processTransactions.bind(this.parent)(job, interestingTransactions)
-        this.blockJobHandler(job.network, job)
+        if (interestingTransactions.length > 0) {
+          this.structuredLog(
+            job.network,
+            `Found ${interestingTransactions.length} interesting transactions`,
+            job.block
+          )
+          await this.processTransactions.bind(this.parent)(job, interestingTransactions)
+          this.blockJobHandler(job.network, job)
+        } else {
+          this.blockJobHandler(job.network, job)
+        }
       } else {
-        this.blockJobHandler(job.network, job)
+        this.structuredLog(job.network, `${color.red('Dropped block')}`, job.block)
+        this.blockJobHandler(job.network)
       }
-    } else {
-      this.structuredLog(job.network, `${color.red('Dropped block')}`, job.block)
-      this.blockJobHandler(job.network)
     }
   }
 
@@ -836,70 +868,299 @@ export class NetworkMonitor {
   }
 
   async getBlock(network: string, blockNumber: number): Promise<Block> {
-    const tryGetBlock = async (): Promise<Block> => {
-      // eslint-disable-next-line no-async-promise-executor
-      return new Promise<Block>(async (resolve, reject) => {
-        const getBlock: NodeJS.Timeout = setInterval(async () => {
-          try {
-            const block: Block | null = await this.providers[network].getBlock(blockNumber)
-            if (block !== null) {
-              clearInterval(getBlock)
-              resolve(block)
-              return
+    return new Promise<Block>((topResolve, _topReject) => {
+      let sent = false
+      let attempts = 0
+      let blockInterval: NodeJS.Timeout | null = null
+      const getBlock = async (): Promise<void> => {
+        try {
+          const block: Block | null = await this.providers[network].getBlock(blockNumber)
+          attempts++
+          if (block === null) {
+            if (attempts > 10) {
+              if (blockInterval) clearInterval(blockInterval)
+              if (!sent) {
+                sent = true
+                _topReject()
+              }
             }
-          } catch (error: any) {
-            if (error.message !== 'cannot query unfinalized data') {
-              this.structuredLog(network, `Block retrieve error`, blockNumber)
-              clearInterval(getBlock)
-              reject()
-              
+          } else {
+            if (blockInterval) clearInterval(blockInterval)
+            if (!sent) {
+              sent = true
+              topResolve(block as Block)
             }
           }
-        }, 500) // every 1/2 a second
-      })
-    }
+        } catch (error: any) {
+          if (error.message !== 'cannot query unfinalized data') {
+            this.structuredLog(network, `Block retrieve error`, blockNumber)
+            if (blockInterval) clearInterval(blockInterval)
+            if (!sent) {
+              sent = true
+              _topReject(error)
+            }
+          }
+        }
 
-    return tryGetBlock()
+      }
+
+      blockInterval = setInterval(getBlock, 500) // every 1/2 a second
+      getBlock()
+    })
+  }
+
+  async getBlockWithTransactions(network: string, blockNumber: number): Promise<BlockWithTransactions | null> {
+    return new Promise<BlockWithTransactions | null>((topResolve, _topReject) => {
+      let sent = false
+      let attempts = 0
+      let blockInterval: NodeJS.Timeout | null = null
+      const getBlock = async (): Promise<void> => {
+        try {
+          const block: BlockWithTransactions | null = await this.providers[network].getBlockWithTransactions(blockNumber)
+          attempts++
+          if (block === null) {
+            if (attempts > 10) {
+              if (blockInterval) clearInterval(blockInterval)
+              if (!sent) {
+                sent = true
+                topResolve(null)
+              }
+            }
+          } else {
+            if (blockInterval) clearInterval(blockInterval)
+            if (!sent) {
+              sent = true
+              topResolve(block as BlockWithTransactions)
+            }
+          }
+        } catch (error: any) {
+          if (error.message !== 'cannot query unfinalized data') {
+            this.structuredLog(network, `BlockWithTransactions retrieve error`, blockNumber)
+            if (blockInterval) clearInterval(blockInterval)
+            if (!sent) {
+              sent = true
+              _topReject(error)
+            }
+          }
+        }
+
+      }
+
+      blockInterval = setInterval(getBlock, 500) // every 1/2 a second
+      getBlock()
+    })
   }
 
   async getTransactionReceipt(network: string, transactionHash: string): Promise<ethers.ContractReceipt | null> {
-    let attempts = 0
-    const tryToGetTxReceipt = async (): Promise<ethers.ContractReceipt | null> => {
-      // eslint-disable-next-line no-async-promise-executor
-      return new Promise<ethers.ContractReceipt | null>(async (resolve, _reject) => {
-        let receipt: ethers.ContractReceipt | null
-        const getTxReceipt: NodeJS.Timeout = setInterval(async () => {
-          receipt = await this.providers[network].getTransactionReceipt(transactionHash)
-          if (receipt === null) {
-            attempts++
-            if (attempts > 10) {
-              clearInterval(getTxReceipt)
-              resolve(null)
-              
+    return new Promise<ethers.ContractReceipt | null>((topResolve, _topReject) => {
+      let sent = false
+      let attempts = 0
+      let txReceiptInterval: NodeJS.Timeout | null = null
+      const getTxReceipt = async (): Promise<void> => {
+        const receipt: ethers.ContractReceipt | null = await this.providers[network].getTransactionReceipt(transactionHash)
+        attempts++
+        if (receipt === null) {
+          if (attempts > 10) {
+            if (txReceiptInterval) clearInterval(txReceiptInterval)
+            if (!sent) {
+              sent = true
+              topResolve(null)
             }
-          } else {
-            clearInterval(getTxReceipt)
-            resolve(receipt as ethers.ContractReceipt)
-            
           }
-        }, 1000) // every 1 second
-      })
-    }
+        } else {
+          if (txReceiptInterval) clearInterval(txReceiptInterval)
+          if (!sent) {
+            sent = true
+            topResolve(receipt as ethers.ContractReceipt)
+          }
+        }
 
-    return tryToGetTxReceipt()
+      }
+
+      txReceiptInterval = setInterval(getTxReceipt, 500) // every 1/2 a second
+      getTxReceipt()
+    })
   }
 
-  async executeTransaction(
-    network: string,
-    _tags: (string | number)[] | null | undefined,
-    contract: ethers.Contract,
-    methodName: string,
-    ...args: any[]
-  ): Promise<ethers.ContractReceipt | null> {
-    if (_tags === undefined || _tags === null) {
-      _tags = [] as (string | number)[]
-    }
+  async getBalance(network: string, walletAddress: string): Promise<BigNumber> {
+    return new Promise<BigNumber>((topResolve, _topReject) => {
+      let sent = false
+      let balanceInterval: NodeJS.Timeout | null = null
+      const getBalance = async (): Promise<void> => {
+        try {
+          const balance: BigNumber = await this.providers[network].getBalance(walletAddress, 'latest')
+          if (balanceInterval) clearInterval(balanceInterval)
+          if (!sent) {
+            sent = true
+            topResolve(balance)
+          }
+        } catch (error: any) {
+          if (balanceInterval) clearInterval(balanceInterval)
+          if (!sent) {
+            sent = true
+            _topReject(error)
+          }
+        }
+      }
 
+      balanceInterval = setInterval(getBalance, 500) // every 1/2 a second
+      getBalance()
+    })
+  }
+
+  async getNonce(network: string, walletAddress: string): Promise<number> {
+    return new Promise<number>((topResolve, _topReject) => {
+      let sent = false
+      let nonceInterval: NodeJS.Timeout | null = null
+      const getNonce = async (): Promise<void> => {
+        try {
+          const nonce: number = await this.providers[network].getTransactionCount(walletAddress, 'latest')
+          if (nonceInterval) clearInterval(nonceInterval)
+          if (!sent) {
+            sent = true
+            topResolve(nonce)
+          }
+        } catch (error: any) {
+          if (nonceInterval) clearInterval(nonceInterval)
+          if (!sent) {
+            sent = true
+            _topReject(error)
+          }
+        }
+      }
+
+      nonceInterval = setInterval(getNonce, 500) // every 1/2 a second
+      getNonce()
+    })
+  }
+
+  async getGasLimit({network, tags, contract, methodName, args}: GetGasLimitParams): Promise<BigNumber | null> {
+    return new Promise<BigNumber | null>((topResolve, _topReject) => {
+      let sent = false
+      let attempts = 0
+      let calculateGasInterval: NodeJS.Timeout | null = null
+      const calculateGas = async (): Promise<void> => {
+        try {
+          const gasLimit: BigNumber | null = await contract.estimateGas[methodName](args)
+          attempts++
+          if (gasLimit === null) {
+            if (attempts > 10) {
+              if (calculateGasInterval) clearInterval(calculateGasInterval)
+              if (!sent) {
+                sent = true
+                topResolve(null)
+              }
+            }
+          } else {
+            if (calculateGasInterval) clearInterval(calculateGasInterval)
+            if (!sent) {
+              sent = true
+              topResolve(gasLimit)
+            }
+          }
+        } catch (error: any) {
+          if ('reason' in error) {
+            if (error.reason.startsWith('execution reverted:')) {
+              // transaction reverted, we got a `revert` error from web3 call
+              const revertReason: string = error.reason.split('execution reverted: ')[1]
+              let revertExplanation = 'unknown reason'
+              let knownReason = true
+              switch (revertReason) {
+                case 'HOLOGRAPH: already deployed': {
+                  revertExplanation = 'The deploy request is invalid, since requested contract is already deployed.'
+                  break
+                }
+
+                case 'HOLOGRAPH: invalid job': {
+                  revertExplanation =
+                    'Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.'
+                  break
+                }
+
+                case 'HOLOGRAPH: not holographed': {
+                  revertExplanation = 'Need to first deploy a holographable contract on destination chain.'
+                  break
+                }
+
+                default: {
+                  knownReason = false
+                  this.structuredLogError(network, error, tags)
+                  break
+                }
+              }
+
+              if (knownReason) {
+                this.structuredLog(network, `[web3] ${revertReason} (${revertExplanation})`, tags)
+              }
+            }
+          } else {
+            this.structuredLogError(network, JSON.stringify(error), tags)
+          }
+
+          if (calculateGasInterval) clearInterval(calculateGasInterval)
+          if (!sent) {
+            sent = true
+            topResolve(null)
+          }
+
+        }
+      }
+
+      calculateGasInterval = setInterval(calculateGas, 500) // every 1/2 a second
+      calculateGas()
+    })
+  }
+
+  async sendTransaction({network, tags, rawTx}: SendTransactionParams): Promise<ethers.providers.TransactionResponse> {
+    return new Promise<ethers.providers.TransactionResponse>((topResolve, _topReject) => {
+      let sent = false
+      let sendTxInterval: NodeJS.Timeout | null = null
+      const sendTx = async (): Promise<void> => {
+        try {
+          const tx: ethers.providers.TransactionResponse = await this.wallets[network].sendTransaction(rawTx)
+          if (sendTxInterval) clearInterval(sendTxInterval)
+          if (!sent) {
+            sent = true
+            topResolve(tx)
+          }
+        } catch (error: any) {
+          switch (error.message) {
+            case 'already known': {
+              // we are aware that more than one message has been sent, so avoid all errors echoed
+              break
+            }
+
+            case 'nonce has already been used': {
+              // we will see this when a transaction has already been submitted and is no longer in tx pool
+              break
+            }
+
+            default: {
+              this.structuredLogError(network, error, tags)
+              if (sendTxInterval) clearInterval(sendTxInterval)
+              if (!sent) {
+                sent = true
+                _topReject(error)
+              }
+
+              break
+            }
+          }
+        }
+      }
+
+      sendTxInterval = setInterval(sendTx, 500) // every 1/2 a second
+      sendTx()
+    })
+  }
+
+  async executeTransaction({
+    network,
+    _tags = [] as (string | number)[],
+    contract,
+    methodName,
+    args,
+  }: ExecuteTransactionParams): Promise<ethers.ContractReceipt | null> {
     const tag: string = this.randomTag()
     _tags.push(tag)
     const tags: (string | number)[] = _tags as (string | number)[]
@@ -907,168 +1168,52 @@ export class NetworkMonitor {
     // eslint-disable-next-line no-async-promise-executor
     return new Promise<ethers.ContractReceipt | null>(async (topResolve, _topReject) => {
       contract = contract.connect(this.wallets[network])
-      let gasLimit!: BigNumber
-      const tryGetGasLimit = async (): Promise<boolean> => {
-        return new Promise<boolean>((resolve, _reject) => {
-          const getGasLimit: NodeJS.Timeout = setInterval(async () => {
-            try {
-              gasLimit = await contract.estimateGas[methodName](...args)
-              clearInterval(getGasLimit)
-              resolve(true)
-              return
-            } catch (error: any) {
-              if ('reason' in error) {
-                if (error.reason.startsWith('execution reverted:')) {
-                  // transaction reverted, we got a `revert` error from web3 call
-                  const revertReason: string = error.reason.split('execution reverted: ')[1]
-                  let revertExplanation = 'unknown reason'
-                  let knownReason = true
-                  switch (revertReason) {
-                    case 'HOLOGRAPH: already deployed': {
-                      revertExplanation = 'The deploy request is invalid, since requested contract is already deployed.'
-                      break
-                    }
-
-                    case 'HOLOGRAPH: invalid job': {
-                      revertExplanation =
-                        'Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.'
-                      break
-                    }
-
-                    case 'HOLOGRAPH: not holographed': {
-                      revertExplanation = 'Need to first deploy a holographable contract on destination chain.'
-                      break
-                    }
-
-                    default: {
-                      knownReason = false
-                      this.structuredLogError(network, error, tags)
-                      break
-                    }
-                  }
-
-                  if (knownReason) {
-                    this.structuredLog(network, `[web3] ${revertReason} (${revertExplanation})`, tags)
-                  }
-                }
-              } else {
-                this.structuredLogError(network, error, tags)
-              }
-
-              clearInterval(getGasLimit)
-              resolve(false)
-              
-            }
-          }, 1000) // every 1 second
-        })
-      }
-
-      if (await tryGetGasLimit()) {
-        const gasPrice = await contract.provider.getGasPrice()
-        let balance: BigNumber
-        const tryGetBalance = async (): Promise<BigNumber> => {
-          // eslint-disable-next-line no-async-promise-executor
-          return new Promise<BigNumber>(async (resolve, _reject) => {
-            const getBalance: NodeJS.Timeout = setInterval(async () => {
-              balance = await this.providers[network].getBalance(await this.wallets[network].getAddress(), 'latest')
-              if (balance !== null) {
-                clearInterval(getBalance)
-                resolve(balance)
-                
-              }
-            }, 100) // every 1/10th of a second
-          })
-        }
-
-        if (await tryGetBalance()) {
-          this.structuredLog(network, `Wallet balance is ${ethers.utils.formatUnits(balance!, 'ether')}`, tags)
-          if (balance!.lt(gasLimit.mul(gasPrice))) {
-            this.structuredLog(
-              network,
-              `Wallet balance is lower than the transaction required amount. ${JSON.stringify(
-                {contract: await contract.resolvedAddress, method: methodName, args: [...args]},
-                undefined,
-                2,
-              )}`,
-              tags,
-            )
-            topResolve(null)
-            
-          } else {
-            this.structuredLog(network, `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, 'gwei')}`, tags)
-            this.structuredLog(
-              network,
-              `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(
-                gasLimit.mul(gasPrice),
-                'ether',
-              )} native gas tokens (in ether)`,
-              tags,
-            )
-            const rawTx = await contract.populateTransaction[methodName](...args, {gasPrice, gasLimit})
-            rawTx.nonce = this.walletNonces[network]
-            let tx!: ethers.providers.TransactionResponse
-            const tryToSendTx = async (): Promise<boolean> => {
-              return new Promise<boolean>((resolve, _reject) => {
-                const getJobTx: NodeJS.Timeout = setInterval(async () => {
-                  try {
-                    tx = await this.wallets[network].sendTransaction(rawTx)
-                    clearInterval(getJobTx)
-                    resolve(true)
-                    return
-                  } catch (error: any) {
-                    switch (error.message) {
-                      case 'already known': {
-                        // we are aware that more than one message has been sent, so avoid all errors echoed
-                        break
-                      }
-
-                      case 'nonce has already been used': {
-                        // we will see this when a transaction has already been submitted and is no longer in tx pool
-                        break
-                      }
-
-                      default: {
-                        this.structuredLogError(network, error, tags)
-                      }
-                    }
-                  }
-                }, 100) // every 1/10th of a second
-              })
-            }
-
-            if (await tryToSendTx()) {
-              this.structuredLog(network, `Transaction ${tx.hash} has been submitted`, tags)
-              this.walletNonces[network]++
-              let receipt: ethers.ContractReceipt
-              const tryToGetTxReceipt = async (): Promise<ethers.ContractReceipt | null> => {
-                // eslint-disable-next-line no-async-promise-executor
-                return new Promise<ethers.ContractReceipt | null>(async (resolve, _reject) => {
-                  const getTxReceipt: NodeJS.Timeout = setInterval(async () => {
-                    receipt = await this.providers[network].getTransactionReceipt(tx.hash)
-                    if (receipt !== null) {
-                      this.structuredLog(network, `Transaction ${receipt.transactionHash} mined and confirmed`, tags)
-                      clearInterval(getTxReceipt)
-                      resolve(receipt)
-                      
-                    }
-                  }, 1000) // every 1 second
-                })
-              }
-
-              topResolve(await tryToGetTxReceipt())
-              
-            } else {
-              topResolve(null)
-              
-            }
-          }
-        } else {
-          topResolve(null)
-          
-        }
-      } else {
+      const gasLimit: BigNumber | null = await this.getGasLimit({network, tags, contract, methodName, args})
+      if (gasLimit === null) {
         topResolve(null)
-        
+      } else {
+        const gasPrice = await contract.provider.getGasPrice()
+        const balance: BigNumber = await this.getBalance(network, await this.wallets[network].getAddress())
+        this.structuredLog(network, `Wallet balance is ${ethers.utils.formatUnits(balance!, 'ether')}`, tags)
+        if (balance.lt(gasLimit.mul(gasPrice))) {
+          this.structuredLog(
+            network,
+            `Wallet balance is lower than the transaction required amount. ${JSON.stringify(
+              {contract: await contract.resolvedAddress, method: methodName, args: [args]},
+              undefined,
+              2,
+            )}`,
+            tags,
+          )
+          topResolve(null)
+
+        } else {
+          this.structuredLog(network, `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, 'gwei')}`, tags)
+          this.structuredLog(
+            network,
+            `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(
+              gasLimit.mul(gasPrice),
+              'ether',
+            )} native gas tokens (in ether)`,
+            tags,
+          )
+          const rawTx = await contract.populateTransaction[methodName](args, {gasPrice, gasLimit})
+          rawTx.nonce = this.walletNonces[network]
+          try {
+            const tx: ethers.providers.TransactionResponse = await this.sendTransaction({network, tags, rawTx})
+            this.structuredLog(network, `Transaction ${tx.hash} has been submitted`, tags)
+            this.walletNonces[network]++
+            const receipt: ethers.ContractReceipt | null = await this.getTransactionReceipt(network, tx.hash)
+            if (receipt !== null) {
+              this.structuredLog(network, `Transaction ${receipt.transactionHash} mined and confirmed`, tags)
+            }
+
+            topResolve(receipt)
+          } catch {
+            // sending tx failed
+            topResolve(null)
+          }
+        }
       }
     })
   }
