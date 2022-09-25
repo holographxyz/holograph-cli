@@ -25,11 +25,11 @@ env:
   PROD_HOLO_INDEXER_HOST: https://api.holograph.xyz # TODO -> http://[release-name]-holo-api.main.svc.cluster.local:443
   #
   # TODO -> replace them with the PROD specific password <---------------------------
-  PROD_HOLO_INDEXER_PASSWORD   : ${{ secrets.STG_HOLO_INDEXER_PASSWORD }} #TODO <-------
-  PROD_HOLO_OPERATOR_PASSWORD  : ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
+  PROD_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }} #TODO <-------
+  PROD_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
-  INDEXER_HOLO_CONFIG_FILE_DATA : stg-config-file
+  INDEXER_HOLO_CONFIG_FILE_DATA: stg-config-file
   OPERATOR_HOLO_CONFIG_FILE_DATA: prod-config-file
   #
   ABI_ENVIRONMENT: testnet # same for all apps [indexer,operator]
@@ -65,14 +65,14 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Login to ECR
-        id  : login-ecr
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build image
-        run : docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.PROD_IMAGE_TAG }} .
+        run: docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.PROD_IMAGE_TAG }} .
 
       - name: Push image to ECR
-        run : docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.PROD_IMAGE_TAG }}
+        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.PROD_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -146,30 +146,30 @@ jobs:
         env:
           RELEASE_NAME: operator #notice
         with:
-         eks_cluster: ${{ env.CLUSTER_NAME }}
-         command: |-
-           helm upgrade --install $RELEASE_NAME \
-           holo-operator-${{ env.PROD_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
-           -n ${{ env.PROD_COMMON_NAMESPACE }} \
-           --set image.repository=${{ env.ECR_REPOSITORY }} \
-           --set image.image_tag=${{ env.PROD_IMAGE_TAG }} \
-           --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
-           --set holo_operator_password=${{ env.PROD_HOLO_OPERATOR_PASSWORD }} \
-           --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
-           --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-           --set datadog_tags.version=chart-${{ env.PROD_HOLO_OPERATOR_HELM_CHART_VERSION }} \
-           --values .github/values_for_prod_alb_ingress.yaml \
-           --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-           --set ingress.host=$RELEASE_NAME-health.${{ env.PROD_DOMAIN }} \
-           --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-           --set ingress.blue_green_deployment=false
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            helm upgrade --install $RELEASE_NAME \
+            holo-operator-${{ env.PROD_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
+            -n ${{ env.PROD_COMMON_NAMESPACE }} \
+            --set image.repository=${{ env.ECR_REPOSITORY }} \
+            --set image.image_tag=${{ env.PROD_IMAGE_TAG }} \
+            --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
+            --set holo_operator_password=${{ env.PROD_HOLO_OPERATOR_PASSWORD }} \
+            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.version=chart-${{ env.PROD_HOLO_OPERATOR_HELM_CHART_VERSION }} \
+            --values .github/values_for_prod_alb_ingress.yaml \
+            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+            --set ingress.host=$RELEASE_NAME-health.${{ env.PROD_DOMAIN }} \
+            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
+            --set ingress.blue_green_deployment=false
 
       - name: -> Info for the new deployments
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          INDEXER_RELEASE_NAME  : indexer
-          OPERATOR_RELEASE_NAME : operator
-          LB_URL: "https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com"
+          INDEXER_RELEASE_NAME: indexer
+          OPERATOR_RELEASE_NAME: operator
+          LB_URL: 'https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-

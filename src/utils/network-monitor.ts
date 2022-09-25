@@ -2,7 +2,13 @@ import * as fs from 'fs-extra'
 import * as path from 'node:path'
 
 import {ethers, BigNumber, PopulatedTransaction} from 'ethers'
-import {Block, BlockWithTransactions} from '@ethersproject/abstract-provider'
+import {
+  Block,
+  BlockWithTransactions,
+  TransactionRequest,
+  TransactionReceipt,
+  TransactionResponse,
+} from '@ethersproject/abstract-provider'
 import {Command, Flags} from '@oclif/core'
 
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
@@ -204,7 +210,7 @@ type NetworkMonitorOptions = {
   configFile: ConfigFile
   networks?: string[]
   debug: (...args: string[]) => void
-  processTransactions: (job: BlockJob, transactions: ethers.providers.TransactionResponse[]) => Promise<void>
+  processTransactions: (job: BlockJob, transactions: TransactionResponse[]) => Promise<void>
   filters?: TransactionFilter[]
   userWallet?: ethers.Wallet
   lastBlockFilename?: string
@@ -218,7 +224,7 @@ export class NetworkMonitor {
   userWallet?: ethers.Wallet
   LAST_BLOCKS_FILE_NAME: string
   filters: TransactionFilter[] = []
-  processTransactions: (job: BlockJob, transactions: ethers.providers.TransactionResponse[]) => Promise<void>
+  processTransactions: (job: BlockJob, transactions: TransactionResponse[]) => Promise<void>
   log: (message: string, ...args: any[]) => void
   warn: (message: string, ...args: any[]) => void
   debug: (...args: any[]) => void
@@ -638,8 +644,8 @@ export class NetworkMonitor {
 
   filterTransaction(
     job: BlockJob,
-    transaction: ethers.providers.TransactionResponse,
-    interestingTransactions: ethers.providers.TransactionResponse[],
+    transaction: TransactionResponse,
+    interestingTransactions: TransactionResponse[],
   ): void {
     const to: string = transaction.to?.toLowerCase() || ''
     const from: string = transaction.from?.toLowerCase() || ''
@@ -688,7 +694,7 @@ export class NetworkMonitor {
         this.structuredLog(job.network, `Zero transactions in block`, job.block)
       }
 
-      const interestingTransactions: ethers.providers.TransactionResponse[] = []
+      const interestingTransactions: TransactionResponse[] = []
       for (let i = 0, l = block.transactions.length; i < l; i++) {
         this.filterTransaction(job, block.transactions[i], interestingTransactions)
       }
@@ -782,7 +788,7 @@ export class NetworkMonitor {
     'BridgeableContractDeployed(address indexed contractAddress, bytes32 indexed hash)',
   )
 
-  decodePacketEvent(receipt: ethers.ContractReceipt): string | undefined {
+  decodePacketEvent(receipt: TransactionReceipt): string | undefined {
     const toFind = this.operatorAddress.slice(2, 42)
     if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
@@ -803,7 +809,7 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeErc20TransferEvent(receipt: ethers.ContractReceipt): any[] | undefined {
+  decodeErc20TransferEvent(receipt: TransactionReceipt): any[] | undefined {
     if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
@@ -821,7 +827,7 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeErc721TransferEvent(receipt: ethers.ContractReceipt): any[] | undefined {
+  decodeErc721TransferEvent(receipt: TransactionReceipt): any[] | undefined {
     if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
@@ -839,7 +845,7 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeAvailableJobEvent(receipt: ethers.ContractReceipt): string | undefined {
+  decodeAvailableJobEvent(receipt: TransactionReceipt): string | undefined {
     if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
@@ -858,7 +864,7 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeBridgeableContractDeployedEvent(receipt: ethers.ContractReceipt): any[] | undefined {
+  decodeBridgeableContractDeployedEvent(receipt: TransactionReceipt): any[] | undefined {
     if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
@@ -901,27 +907,27 @@ export class NetworkMonitor {
   }
 
   async getBlock({
-    network,
     blockNumber,
+    network,
     tags = [] as (string | number)[],
     attempts = 10,
     canFail = false,
     interval = 1000,
-  }: BlockParams): Promise<Block> {
-    return new Promise<Block>((topResolve, _topReject) => {
+  }: BlockParams): Promise<Block | null> {
+    return new Promise<Block | null>((topResolve, _topReject) => {
+      let counter = 0
       let sent = false
-      let attempts = 0
       let blockInterval: NodeJS.Timeout | null = null
       const getBlock = async (): Promise<void> => {
         try {
           const block: Block | null = await this.providers[network].getBlock(blockNumber)
-          attempts++
           if (block === null) {
-            if (attempts > 10) {
+            counter++
+            if (canFail && counter > attempts) {
               if (blockInterval) clearInterval(blockInterval)
               if (!sent) {
                 sent = true
-                _topReject()
+                topResolve(null)
               }
             }
           } else {
@@ -933,11 +939,14 @@ export class NetworkMonitor {
           }
         } catch (error: any) {
           if (error.message !== 'cannot query unfinalized data') {
-            this.structuredLog(network, `Block retrieve error`, blockNumber)
-            if (blockInterval) clearInterval(blockInterval)
-            if (!sent) {
-              sent = true
-              _topReject(error)
+            counter++
+            if (canFail && counter > attempts) {
+              this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
+              if (blockInterval) clearInterval(blockInterval)
+              if (!sent) {
+                sent = true
+                _topReject(error)
+              }
             }
           }
         }
@@ -949,25 +958,25 @@ export class NetworkMonitor {
   }
 
   async getBlockWithTransactions({
-    network,
     blockNumber,
+    network,
     tags = [] as (string | number)[],
     attempts = 10,
     canFail = false,
     interval = 1000,
   }: BlockParams): Promise<BlockWithTransactions | null> {
     return new Promise<BlockWithTransactions | null>((topResolve, _topReject) => {
+      let counter = 0
       let sent = false
-      let attempts = 0
       let blockInterval: NodeJS.Timeout | null = null
       const getBlock = async (): Promise<void> => {
         try {
           const block: BlockWithTransactions | null = await this.providers[network].getBlockWithTransactions(
             blockNumber,
           )
-          attempts++
           if (block === null) {
-            if (attempts > 10) {
+            counter++
+            if (canFail && counter > attempts) {
               if (blockInterval) clearInterval(blockInterval)
               if (!sent) {
                 sent = true
@@ -983,11 +992,14 @@ export class NetworkMonitor {
           }
         } catch (error: any) {
           if (error.message !== 'cannot query unfinalized data') {
-            this.structuredLog(network, `BlockWithTransactions retrieve error`, blockNumber)
-            if (blockInterval) clearInterval(blockInterval)
-            if (!sent) {
-              sent = true
-              _topReject(error)
+            counter++
+            if (canFail && counter > attempts) {
+              this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
+              if (blockInterval) clearInterval(blockInterval)
+              if (!sent) {
+                sent = true
+                _topReject(error)
+              }
             }
           }
         }
@@ -998,28 +1010,27 @@ export class NetworkMonitor {
     })
   }
 
-  async getTransactionReceipt({
-    network,
+  async getTransaction({
     transactionHash,
+    network,
     tags = [] as (string | number)[],
     attempts = 10,
     canFail = false,
     interval = 1000,
-  }: TransactionParams): Promise<ethers.ContractReceipt | null> {
-    return new Promise<ethers.ContractReceipt | null>((topResolve, _topReject) => {
+  }: TransactionParams): Promise<TransactionResponse | null> {
+    return new Promise<TransactionResponse | null>((topResolve, _topReject) => {
+      let counter = 0
       let sent = false
-      let attempts = 0
       let txReceiptInterval: NodeJS.Timeout | null = null
       const getTxReceipt = async (): Promise<void> => {
-        const receipt: ethers.ContractReceipt | null = await this.providers[network].getTransactionReceipt(
-          transactionHash,
-        )
-        attempts++
+        const receipt: TransactionResponse | null = await this.providers[network].getTransaction(transactionHash)
         if (receipt === null) {
-          if (attempts > 10) {
+          counter++
+          if (canFail && counter > attempts) {
             if (txReceiptInterval) clearInterval(txReceiptInterval)
             if (!sent) {
               sent = true
+              this.structuredLog(network, `Failed getting transaction ${transactionHash}`, tags)
               topResolve(null)
             }
           }
@@ -1027,7 +1038,45 @@ export class NetworkMonitor {
           if (txReceiptInterval) clearInterval(txReceiptInterval)
           if (!sent) {
             sent = true
-            topResolve(receipt as ethers.ContractReceipt)
+            topResolve(receipt as TransactionResponse)
+          }
+        }
+      }
+
+      txReceiptInterval = setInterval(getTxReceipt, interval)
+      getTxReceipt()
+    })
+  }
+
+  async getTransactionReceipt({
+    transactionHash,
+    network,
+    tags = [] as (string | number)[],
+    attempts = 10,
+    canFail = false,
+    interval = 1000,
+  }: TransactionParams): Promise<TransactionReceipt | null> {
+    return new Promise<TransactionReceipt | null>((topResolve, _topReject) => {
+      let counter = 0
+      let sent = false
+      let txReceiptInterval: NodeJS.Timeout | null = null
+      const getTxReceipt = async (): Promise<void> => {
+        const receipt: TransactionReceipt | null = await this.providers[network].getTransactionReceipt(transactionHash)
+        if (receipt === null) {
+          counter++
+          if (canFail && counter > attempts) {
+            if (txReceiptInterval) clearInterval(txReceiptInterval)
+            if (!sent) {
+              sent = true
+              this.structuredLog(network, `Failed getting transaction ${transactionHash} receipt`, tags)
+              topResolve(null)
+            }
+          }
+        } else {
+          if (txReceiptInterval) clearInterval(txReceiptInterval)
+          if (!sent) {
+            sent = true
+            topResolve(receipt as TransactionReceipt)
           }
         }
       }
@@ -1038,14 +1087,15 @@ export class NetworkMonitor {
   }
 
   async getBalance({
-    network,
     walletAddress,
+    network,
     tags = [] as (string | number)[],
     attempts = 10,
     canFail = false,
     interval = 1000,
   }: WalletParams): Promise<BigNumber> {
     return new Promise<BigNumber>((topResolve, _topReject) => {
+      let counter = 0
       let sent = false
       let balanceInterval: NodeJS.Timeout | null = null
       const getBalance = async (): Promise<void> => {
@@ -1057,10 +1107,14 @@ export class NetworkMonitor {
             topResolve(balance)
           }
         } catch (error: any) {
-          if (balanceInterval) clearInterval(balanceInterval)
-          if (!sent) {
-            sent = true
-            _topReject(error)
+          counter++
+          if (canFail && counter > attempts) {
+            if (balanceInterval) clearInterval(balanceInterval)
+            if (!sent) {
+              sent = true
+              this.structuredLog(network, `Failed getting ${walletAddress} balance`, tags)
+              _topReject(error)
+            }
           }
         }
       }
@@ -1071,14 +1125,15 @@ export class NetworkMonitor {
   }
 
   async getNonce({
-    network,
     walletAddress,
+    network,
     tags = [] as (string | number)[],
     attempts = 10,
     canFail = false,
     interval = 1000,
   }: WalletParams): Promise<number> {
     return new Promise<number>((topResolve, _topReject) => {
+      let counter = 0
       let sent = false
       let nonceInterval: NodeJS.Timeout | null = null
       const getNonce = async (): Promise<void> => {
@@ -1090,10 +1145,14 @@ export class NetworkMonitor {
             topResolve(nonce)
           }
         } catch (error: any) {
-          if (nonceInterval) clearInterval(nonceInterval)
-          if (!sent) {
-            sent = true
-            _topReject(error)
+          counter++
+          if (canFail && counter > attempts) {
+            if (nonceInterval) clearInterval(nonceInterval)
+            if (!sent) {
+              sent = true
+              this.structuredLog(network, `Failed getting ${walletAddress} nonce`, tags)
+              _topReject(error)
+            }
           }
         }
       }
@@ -1104,28 +1163,29 @@ export class NetworkMonitor {
   }
 
   async getGasLimit({
-    network,
-    tags = [] as (string | number)[],
     contract,
     methodName,
     args,
+    network,
+    tags = [] as (string | number)[],
     attempts = 10,
     canFail = false,
     interval = 1000,
   }: GasLimitParams): Promise<BigNumber | null> {
     return new Promise<BigNumber | null>((topResolve, _topReject) => {
+      let counter = 0
       let sent = false
-      let attempts = 0
       let calculateGasInterval: NodeJS.Timeout | null = null
       const calculateGas = async (): Promise<void> => {
         try {
-          const gasLimit: BigNumber | null = await contract.estimateGas[methodName](args)
-          attempts++
+          const gasLimit: BigNumber | null = await contract.estimateGas[methodName](...args)
           if (gasLimit === null) {
-            if (attempts > 10) {
+            counter++
+            if (canFail && counter > attempts) {
               if (calculateGasInterval) clearInterval(calculateGasInterval)
               if (!sent) {
                 sent = true
+                this.structuredLog(network, `Failed calculating gas limit`, tags)
                 topResolve(null)
               }
             }
@@ -1137,47 +1197,44 @@ export class NetworkMonitor {
             }
           }
         } catch (error: any) {
-          if ('reason' in error) {
-            if (error.reason.startsWith('execution reverted:')) {
-              // transaction reverted, we got a `revert` error from web3 call
-              const revertReason: string = error.reason.split('execution reverted: ')[1]
-              let revertExplanation = 'unknown reason'
-              let knownReason = true
-              switch (revertReason) {
-                case 'HOLOGRAPH: already deployed': {
-                  revertExplanation = 'The deploy request is invalid, since requested contract is already deployed.'
-                  break
-                }
-
-                case 'HOLOGRAPH: invalid job': {
-                  revertExplanation =
-                    'Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.'
-                  break
-                }
-
-                case 'HOLOGRAPH: not holographed': {
-                  revertExplanation = 'Need to first deploy a holographable contract on destination chain.'
-                  break
-                }
-
-                default: {
-                  knownReason = false
-                  this.structuredLogError(network, error, tags)
-                  break
-                }
+          let revertReason = 'unknown revert reason'
+          let revertExplanation = 'unknown'
+          let knownReason = false
+          if ('reason' in error && error.reason.startsWith('execution reverted:')) {
+            // transaction reverted, we got a `revert` error from web3 call
+            revertReason = error.reason.split('execution reverted: ')[1]
+            switch (revertReason) {
+              case 'HOLOGRAPH: already deployed': {
+                revertExplanation = 'The deploy request is invalid, since requested contract is already deployed.'
+                knownReason = true
+                break
               }
 
-              if (knownReason) {
-                this.structuredLog(network, `[web3] ${revertReason} (${revertExplanation})`, tags)
+              case 'HOLOGRAPH: invalid job': {
+                revertExplanation =
+                  'Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.'
+                knownReason = true
+                break
+              }
+
+              case 'HOLOGRAPH: not holographed': {
+                revertExplanation = 'Need to first deploy a holographable contract on destination chain.'
+                knownReason = true
+                break
               }
             }
+          }
+
+          if (knownReason) {
+            this.structuredLog(network, `[web3] ${revertReason} (${revertExplanation})`, tags)
           } else {
-            this.structuredLogError(network, JSON.stringify(error), tags)
+            this.structuredLog(network, JSON.stringify(error), tags)
           }
 
           if (calculateGasInterval) clearInterval(calculateGasInterval)
           if (!sent) {
             sent = true
+            this.structuredLog(network, `Transaction is expected to revert`, tags)
             topResolve(null)
           }
         }
@@ -1189,54 +1246,82 @@ export class NetworkMonitor {
   }
 
   async sendTransaction({
+    rawTx,
     network,
     tags = [] as (string | number)[],
-    rawTx,
     attempts = 10,
     canFail = false,
     interval = 1000,
-  }: SendTransactionParams): Promise<ethers.providers.TransactionResponse | null> {
-    return new Promise<ethers.providers.TransactionResponse | null>((topResolve, _topReject) => {
+  }: SendTransactionParams): Promise<TransactionResponse | null> {
+    const populatedTx: TransactionRequest = await this.wallets[network].populateTransaction(rawTx)
+    const signedTx: string = await this.wallets[network].signTransaction(populatedTx)
+    const txHash: string = ethers.utils.keccak256(signedTx)
+    return new Promise<TransactionResponse | null>((topResolve, _topReject) => {
+      let counter = 0
       let sent = false
       let sendTxInterval: NodeJS.Timeout | null = null
       const handleError = (error: any) => {
-        if (canFail) {
+        counter++
+        if (canFail && counter > attempts) {
           this.structuredLogError(network, error, tags)
           if (sendTxInterval) clearInterval(sendTxInterval)
           if (!sent) {
             sent = true
-            _topReject(error)
-          }
-        } else {
-          attempts++
-          if (attempts > 10) {
-            this.structuredLogError(network, error, tags)
-            if (sendTxInterval) clearInterval(sendTxInterval)
-            if (!sent) {
-              sent = true
-              topResolve(null)
-            }
+            topResolve(null)
           }
         }
       }
 
       const sendTx = async (): Promise<void> => {
+        let tx: TransactionResponse | null
         try {
-          const tx: ethers.providers.TransactionResponse = await this.wallets[network].sendTransaction(rawTx)
-          if (sendTxInterval) clearInterval(sendTxInterval)
-          if (!sent) {
-            sent = true
-            topResolve(tx)
+          tx = await this.providers[network].sendTransaction(signedTx)
+          if (tx === null) {
+            counter++
+            if (canFail && counter > attempts) {
+              this.structuredLog(network, 'Failed submitting transaction', tags)
+              if (sendTxInterval) clearInterval(sendTxInterval)
+              if (!sent) {
+                sent = true
+                topResolve(null)
+              }
+            }
+          } else {
+            if (sendTxInterval) clearInterval(sendTxInterval)
+            if (!sent) {
+              sent = true
+              topResolve(tx)
+            }
           }
         } catch (error: any) {
           switch (error.message) {
             case 'already known': {
               // we are aware that more than one message has been sent, so avoid all errors echoed
+              tx = await this.getTransaction({transactionHash: txHash, network, tags, attempts, canFail, interval})
+              if (tx !== null) {
+                if (sendTxInterval) clearInterval(sendTxInterval)
+                if (!sent) {
+                  this.structuredLog(network, 'Transaction already submitted', tags)
+                  sent = true
+                  topResolve(tx)
+                }
+              }
+
               break
             }
 
             case 'nonce has already been used': {
               // we will see this when a transaction has already been submitted and is no longer in tx pool
+              tx = await this.getTransaction({transactionHash: txHash, network, tags, attempts, canFail, interval})
+              if (tx !== null) {
+                if (sendTxInterval) clearInterval(sendTxInterval)
+                if (!sent) {
+                  this.structuredLog(network, 'Transaction already mined', tags)
+                  sent = true
+                  topResolve(tx)
+                }
+              }
+
               break
             }
 
@@ -1262,12 +1347,12 @@ export class NetworkMonitor {
     attempts = 10,
     canFail = false,
     interval = 500,
-  }: ExecuteTransactionParams): Promise<ethers.ContractReceipt | null> {
+  }: ExecuteTransactionParams): Promise<TransactionReceipt | null> {
     const tag: string = this.randomTag()
     tags.push(tag)
     this.structuredLog(network, `Executing contract function ${methodName}`, tags)
     // eslint-disable-next-line no-async-promise-executor
-    return new Promise<ethers.ContractReceipt | null>(async (topResolve, _topReject) => {
+    return new Promise<TransactionReceipt | null>(async (topResolve, _topReject) => {
       contract = contract.connect(this.wallets[network])
       const gasLimit: BigNumber | null = await this.getGasLimit({
         network,
@@ -1293,7 +1378,7 @@ export class NetworkMonitor {
           this.structuredLog(
             network,
             `Wallet balance is lower than the transaction required amount. ${JSON.stringify(
-              {contract: await contract.resolvedAddress, method: methodName, args: [args]},
+              {contract: await contract.resolvedAddress, method: methodName, args},
               undefined,
               2,
             )}`,
@@ -1310,9 +1395,9 @@ export class NetworkMonitor {
             )} native gas tokens (in ether)`,
             tags,
           )
-          const rawTx = await contract.populateTransaction[methodName](args, {gasPrice, gasLimit})
+          const rawTx = await contract.populateTransaction[methodName](...args, {gasPrice, gasLimit})
           rawTx.nonce = this.walletNonces[network]
-          const tx: ethers.providers.TransactionResponse | null = await this.sendTransaction({
+          const tx: TransactionResponse | null = await this.sendTransaction({
             network,
             tags,
             rawTx,
@@ -1327,7 +1412,7 @@ export class NetworkMonitor {
           } else {
             this.structuredLog(network, `Transaction ${tx.hash} has been submitted`, tags)
             this.walletNonces[network]++
-            const receipt: ethers.ContractReceipt | null = await this.getTransactionReceipt({
+            const receipt: TransactionReceipt | null = await this.getTransactionReceipt({
               network,
               transactionHash: tx.hash,
               attempts,

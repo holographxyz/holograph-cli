@@ -2,6 +2,7 @@ import axios from 'axios'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
+import {Block} from '@ethersproject/abstract-provider'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
@@ -619,8 +620,7 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.getBlock({network, blockNumber: transaction.blockNumber!, canFail: false}))
-        .timestamp,
+      timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
       callback: this.updateCollectionCallback,
@@ -657,8 +657,7 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.getBlock({network, blockNumber: transaction.blockNumber!, canFail: false}))
-        .timestamp,
+      timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
       callback: this.updateCollectionCallback,
@@ -775,8 +774,7 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.getBlock({network, blockNumber: transaction.blockNumber!, canFail: false}))
-        .timestamp,
+      timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
       callback: this.updateMintedNFTCallback,
@@ -810,8 +808,7 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.getBlock({network, blockNumber: transaction.blockNumber!, canFail: false}))
-        .timestamp,
+      timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
       callback: this.updateBridgedNFTCallback,
@@ -868,8 +865,7 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.getBlock({network, blockNumber: transaction.blockNumber!, canFail: false}))
-        .timestamp,
+      timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
       callback: this.updateCrossChainTransactionCallback,
@@ -1037,5 +1033,15 @@ export default class Indexer extends Command {
     }
 
     Promise.resolve()
+  }
+
+  async getBlockTimestamp(network: string, blockNumber: number): Promise<number> {
+    let timestamp = 0
+    const block: Block | null = await this.networkMonitor.getBlock({network, blockNumber, canFail: false})
+    if (block !== null) {
+      timestamp = block.timestamp
+    }
+
+    return timestamp
   }
 }
