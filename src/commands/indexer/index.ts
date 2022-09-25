@@ -185,7 +185,6 @@ export default class Indexer extends Command {
       },
     ]
     Promise.resolve()
-
   }
 
   async processDBJob(timestamp: number, job: DBJob): Promise<void> {
@@ -301,7 +300,12 @@ export default class Indexer extends Command {
   }
 
   async handleContractDeployedEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({ network, transactionHash: transaction.hash, attempts: 10, canFail: true })
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -320,7 +324,12 @@ export default class Indexer extends Command {
   }
 
   async handleMintEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({ network, transactionHash: transaction.hash, attempts: 10, canFail: true })
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -332,7 +341,12 @@ export default class Indexer extends Command {
   }
 
   async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({ network, transactionHash: transaction.hash, attempts: 10, canFail: true })
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -389,7 +403,12 @@ export default class Indexer extends Command {
     let transferInfo: any[] | undefined
     switch (parsedTransaction.name) {
       case 'executeJob':
-        receipt = await this.networkMonitor.getTransactionReceipt({ network, transactionHash: transaction.hash, attempts: 10, canFail: true })
+        receipt = await this.networkMonitor.getTransactionReceipt({
+          network,
+          transactionHash: transaction.hash,
+          attempts: 10,
+          canFail: true,
+        })
         if (receipt === null) {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
@@ -467,7 +486,12 @@ export default class Indexer extends Command {
     network: string,
   ): Promise<void> {
     let deploymentInfo
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({ network, transactionHash: transaction.hash, attempts: 10, canFail: true })
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -566,7 +590,6 @@ export default class Indexer extends Command {
       ],
     })
     Promise.resolve()
-
   }
 
   async updateDeployedCollection(
@@ -596,7 +619,8 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.getBlock({ network, blockNumber: transaction.blockNumber!, canFail: false })).timestamp,
+      timestamp: (await this.networkMonitor.getBlock({network, blockNumber: transaction.blockNumber!, canFail: false}))
+        .timestamp,
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
       callback: this.updateCollectionCallback,
@@ -633,7 +657,8 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.getBlock({ network, blockNumber: transaction.blockNumber!, canFail: false })).timestamp,
+      timestamp: (await this.networkMonitor.getBlock({network, blockNumber: transaction.blockNumber!, canFail: false}))
+        .timestamp,
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
       callback: this.updateCollectionCallback,
@@ -688,7 +713,6 @@ export default class Indexer extends Command {
       ],
     })
     Promise.resolve()
-
   }
 
   async updateMintedNFTCallback(
@@ -728,7 +752,6 @@ export default class Indexer extends Command {
       ],
     })
     Promise.resolve()
-
   }
 
   async updateMintedNFT(
@@ -752,7 +775,8 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.getBlock({ network, blockNumber: transaction.blockNumber!, canFail: false })).timestamp,
+      timestamp: (await this.networkMonitor.getBlock({network, blockNumber: transaction.blockNumber!, canFail: false}))
+        .timestamp,
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
       callback: this.updateMintedNFTCallback,
@@ -786,7 +810,8 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.getBlock({ network, blockNumber: transaction.blockNumber!, canFail: false })).timestamp,
+      timestamp: (await this.networkMonitor.getBlock({network, blockNumber: transaction.blockNumber!, canFail: false}))
+        .timestamp,
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
       callback: this.updateBridgedNFTCallback,
@@ -843,7 +868,8 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.getBlock({ network, blockNumber: transaction.blockNumber!, canFail: false })).timestamp,
+      timestamp: (await this.networkMonitor.getBlock({network, blockNumber: transaction.blockNumber!, canFail: false}))
+        .timestamp,
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
       callback: this.updateCrossChainTransactionCallback,
@@ -1011,6 +1037,5 @@ export default class Indexer extends Command {
     }
 
     Promise.resolve()
-
   }
 }

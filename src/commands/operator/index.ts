@@ -122,7 +122,6 @@ export default class Operator extends Command {
       },
     ]
     Promise.resolve()
-
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
@@ -151,15 +150,16 @@ export default class Operator extends Command {
     network: string,
     tags: (string | number)[],
   ): Promise<void> {
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({ network, transactionHash: transaction.hash, attempts: 10, canFail: true })
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     } else {
-      this.networkMonitor.structuredLog(
-        network,
-        `Transaction ${receipt.transactionHash} receipt received`,
-        tags
-      )
+      this.networkMonitor.structuredLog(network, `Transaction ${receipt.transactionHash} receipt received`, tags)
     }
 
     if (receipt.status === 1) {

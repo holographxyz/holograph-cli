@@ -197,7 +197,6 @@ export default class Propagator extends Command {
       },
     ]
     Promise.resolve()
-
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
@@ -222,7 +221,12 @@ export default class Propagator extends Command {
     transaction: ethers.providers.TransactionResponse,
     network: string,
   ): Promise<void> {
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({ network, transactionHash: transaction.hash, attempts: 10, canFail: true })
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -273,7 +277,7 @@ export default class Propagator extends Command {
         network,
         contract: this.networkMonitor.factoryContract,
         methodName: 'deployHolographableContract',
-        args: [deploymentConfig.config, deploymentConfig.signature, deploymentConfig.signer]
+        args: [deploymentConfig.config, deploymentConfig.signature, deploymentConfig.signer],
       })
       if (deployReceipt === null) {
         this.networkMonitor.structuredLog(network, `Submitting tx for collection ${deploymentAddress} failed`)

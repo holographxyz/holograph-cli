@@ -215,7 +215,6 @@ export default class Analyze extends Command {
       },
     ]
     Promise.resolve()
-
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
@@ -249,7 +248,12 @@ export default class Analyze extends Command {
   }
 
   async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({ network, transactionHash: transaction.hash, attempts: 10, canFail: true })
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -315,7 +319,12 @@ export default class Analyze extends Command {
     let receipt: ethers.ContractReceipt | null
     switch (parsedTransaction.name) {
       case 'executeJob':
-        receipt = await this.networkMonitor.getTransactionReceipt({ network, transactionHash: transaction.hash, attempts: 10, canFail: true })
+        receipt = await this.networkMonitor.getTransactionReceipt({
+          network,
+          transactionHash: transaction.hash,
+          attempts: 10,
+          canFail: true,
+        })
         if (receipt === null) {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
@@ -370,7 +379,12 @@ export default class Analyze extends Command {
     transaction: ethers.providers.TransactionResponse,
     network: string,
   ): Promise<void> {
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({ network, transactionHash: transaction.hash, attempts: 10, canFail: true })
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -403,14 +417,18 @@ export default class Analyze extends Command {
     const contract: ethers.Contract = this.networkMonitor.operatorContract.connect(
       this.networkMonitor.providers[network],
     )
-    const gasLimit: BigNumber | null = await this.networkMonitor.getGasLimit({network, contract, methodName: 'executeJob', args: [payload]})
+    const gasLimit: BigNumber | null = await this.networkMonitor.getGasLimit({
+      network,
+      contract,
+      methodName: 'executeJob',
+      args: [payload],
+    })
     if (gasLimit === null) {
       this.networkMonitor.structuredLog(network, `Transaction: ${transactionHash} has already been done`)
       return true
     }
 
-      this.networkMonitor.structuredLog(network, `Transaction: ${transactionHash} job needs to be done`)
-      return false
-
+    this.networkMonitor.structuredLog(network, `Transaction: ${transactionHash} job needs to be done`)
+    return false
   }
 }
