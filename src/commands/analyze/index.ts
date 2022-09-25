@@ -248,7 +248,7 @@ export default class Analyze extends Command {
   }
 
   async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
       attempts: 10,
@@ -316,7 +316,7 @@ export default class Analyze extends Command {
     let operatorJobHash: string
     let index: number
     let operatorJob: AvailableJob
-    let receipt: ethers.ContractReceipt | null
+    let receipt: ethers.providers.TransactionReceipt | null
     switch (parsedTransaction.name) {
       case 'executeJob':
         receipt = await this.networkMonitor.getTransactionReceipt({
@@ -379,7 +379,7 @@ export default class Analyze extends Command {
     transaction: ethers.providers.TransactionResponse,
     network: string,
   ): Promise<void> {
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
       attempts: 10,

@@ -1021,13 +1021,13 @@ export class NetworkMonitor {
     return new Promise<TransactionResponse | null>((topResolve, _topReject) => {
       let counter = 0
       let sent = false
-      let txReceiptInterval: NodeJS.Timeout | null = null
-      const getTxReceipt = async (): Promise<void> => {
-        const receipt: TransactionResponse | null = await this.providers[network].getTransaction(transactionHash)
-        if (receipt === null) {
+      let txInterval: NodeJS.Timeout | null = null
+      const getTx = async (): Promise<void> => {
+        const tx: TransactionResponse | null = await this.providers[network].getTransaction(transactionHash)
+        if (tx === null) {
           counter++
           if (canFail && counter > attempts) {
-            if (txReceiptInterval) clearInterval(txReceiptInterval)
+            if (txInterval) clearInterval(txInterval)
             if (!sent) {
               sent = true
               this.structuredLog(network, `Failed getting transaction ${transactionHash}`, tags)
@@ -1035,16 +1035,16 @@ export class NetworkMonitor {
             }
           }
         } else {
-          if (txReceiptInterval) clearInterval(txReceiptInterval)
+          if (txInterval) clearInterval(txInterval)
           if (!sent) {
             sent = true
-            topResolve(receipt as TransactionResponse)
+            topResolve(tx as TransactionResponse)
           }
         }
       }
 
-      txReceiptInterval = setInterval(getTxReceipt, interval)
-      getTxReceipt()
+      txInterval = setInterval(getTx, interval)
+      getTx()
     })
   }
 

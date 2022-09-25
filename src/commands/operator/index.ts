@@ -129,7 +129,6 @@ export default class Operator extends Command {
     if (transactions.length > 0) {
       for (const transaction of transactions) {
         const tags: (string | number)[] = []
-        this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${transaction.blockNumber}`)
         tags.push(transaction.blockNumber as number, this.networkMonitor.randomTag())
         const from: string | undefined = transaction.from?.toLowerCase()
         if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
@@ -150,10 +149,10 @@ export default class Operator extends Command {
     network: string,
     tags: (string | number)[],
   ): Promise<void> {
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
-      attempts: 10,
+      attempts: 30,
       canFail: true,
     })
     if (receipt === null) {

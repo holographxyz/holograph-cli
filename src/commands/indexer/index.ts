@@ -301,7 +301,7 @@ export default class Indexer extends Command {
   }
 
   async handleContractDeployedEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
       attempts: 10,
@@ -325,7 +325,7 @@ export default class Indexer extends Command {
   }
 
   async handleMintEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
       attempts: 10,
@@ -342,7 +342,7 @@ export default class Indexer extends Command {
   }
 
   async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
       attempts: 10,
@@ -399,7 +399,7 @@ export default class Indexer extends Command {
     let bridgeTransaction: ethers.utils.TransactionDescription
     let operatorJobPayload: string
     let operatorJobHash: string
-    let receipt: ethers.ContractReceipt | null
+    let receipt: ethers.providers.TransactionReceipt | null
     let deploymentInfo: any[] | undefined
     let transferInfo: any[] | undefined
     switch (parsedTransaction.name) {
@@ -487,7 +487,7 @@ export default class Indexer extends Command {
     network: string,
   ): Promise<void> {
     let deploymentInfo
-    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
       attempts: 10,

@@ -145,34 +145,40 @@ export default class Propagator extends Command {
     if (recoveryData.length > 0) {
       this.log(`Manually running ${recoveryData.length} recovery jobs`)
       for (const data of recoveryData) {
-        const network = data.chain_id === 4 ? 'rinkeby' : data.chain_id === 43_113 ? 'mumbai' : 'fuji'
+        // TODO: change this to use a more stable network chain id conversion
+        let network: string = data.chain_id === 4 ? 'rinkeby' : data.chain_id === 43_113 ? 'mumbai' : 'fuji'
+        const checkNetworks: string[] = ['rinkeby', 'fuji', 'mumbai']
+        if (checkNetworks.includes(network)) {
+          checkNetworks.splice(checkNetworks.indexOf(network), 1)
+        }
+
         // eslint-disable-next-line no-await-in-loop
-        let tx = await this.networkMonitor.providers[network].getTransaction(data.tx)
-        if (tx === null) {
-          // we need to try alternatives
-          this.networkMonitor.structuredLog(network, `${data.tx} is on wrong network`)
-          const checkNetworks: string[] =
-            network === 'rinkeby'
-              ? ['fuji', 'mumbai']
-              : network === 'fuji'
-              ? ['rinkeby', 'mumbai']
-              : ['rinkeby', 'fuji']
-          // eslint-disable-next-line no-await-in-loop
-          tx = await this.networkMonitor.providers[checkNetworks[0]].getTransaction(data.tx)
+        let tx = await this.networkMonitor.getTransaction({
+          transactionHash: data.tx,
+          network,
+          canFail: true,
+          attempts: 10,
+          interval: 500,
+        })
+        for (const checkNetwork of checkNetworks) {
           if (tx === null) {
-            this.networkMonitor.structuredLog(checkNetworks[0], `${data.tx} is on wrong network`)
+            this.networkMonitor.structuredLog(network, `Transaction ${data.tx} is on wrong network`)
+            network = checkNetwork
             // eslint-disable-next-line no-await-in-loop
-            tx = await this.networkMonitor.providers[checkNetworks[1]].getTransaction(data.tx)
-            if (tx === null) {
-              this.networkMonitor.structuredLog(checkNetworks[1], `${data.tx} is on wrong network`)
-            } else {
-              // eslint-disable-next-line no-await-in-loop
-              await this.handleContractDeployedEvents(tx, checkNetworks[1])
-            }
+            tx = await this.networkMonitor.getTransaction({
+              transactionHash: data.tx,
+              network,
+              canFail: true,
+              attempts: 10,
+              interval: 500,
+            })
           } else {
-            // eslint-disable-next-line no-await-in-loop
-            await this.handleContractDeployedEvents(tx, checkNetworks[0])
+            break
           }
+        }
+
+        if (tx === null) {
+          this.networkMonitor.structuredLog(network, `Could not find ${data.tx} on any network`)
         } else {
           // eslint-disable-next-line no-await-in-loop
           await this.handleContractDeployedEvents(tx, network)
