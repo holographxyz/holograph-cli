@@ -34,7 +34,7 @@ env:
   #
   ABI_ENVIRONMENT: develop # same for all apps [indexer,operator]
   #
-  STG_COMMON_NAMESPACE: holocli-dev
+  STG_COMMON_NAMESPACE: holocli-dev # notice <---
   STG_DOMAIN: "cxipchain.xyz"
 
 # notice: the trigger
@@ -67,7 +67,9 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build image
-        run : docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
+        run: |
+          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
+          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
 
       - name: Push image to ECR
         run : docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
@@ -80,7 +82,7 @@ jobs:
           aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
           aws-region           : ${{ env.AWS_REGION }}
 
-      - name: Create holocli ns
+      - name: Create ns
         uses: tensor-hq/eksctl-helm-action@main
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
@@ -100,7 +102,7 @@ jobs:
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-      - name: -> Deploy INDEXER cli in staging [namespace -> ${{ steps.STG_COMMON_NAMESPACE }}]
+      - name: -> Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer-dev #notice
