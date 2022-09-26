@@ -34,14 +34,14 @@ env:
   #
   ABI_ENVIRONMENT: develop # same for all apps [indexer,operator]
   #
-  STG_COMMON_NAMESPACE: testholo # notice <---
+  STG_COMMON_NAMESPACE: holocli-dev # notice <---
   STG_DOMAIN: "cxipchain.xyz"
 
 # notice: the trigger
 on:
   push:
     branches:
-      - 'feat/update-node-version-in-dockerfile'
+      - 'develop'
       # Excluded branches
       - '!testnet'
       - '!main'
