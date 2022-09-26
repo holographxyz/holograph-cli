@@ -32,9 +32,9 @@ env:
   INDEXER_HOLO_CONFIG_FILE_DATA : stg-config-file
   OPERATOR_HOLO_CONFIG_FILE_DATA: stg-config-file
   #
-  ABI_ENVIRONMENT: testholo # same for all apps [indexer,operator]
+  ABI_ENVIRONMENT: develop # same for all apps [indexer,operator]
   #
-  STG_COMMON_NAMESPACE: holocli-dev
+  STG_COMMON_NAMESPACE: testholo # notice <---
   STG_DOMAIN: "cxipchain.xyz"
 
 # notice: the trigger
