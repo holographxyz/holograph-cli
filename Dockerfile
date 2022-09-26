@@ -3,8 +3,10 @@ ARG REPO_NAME=misc
 
 FROM $AWS_ECR_URL/$REPO_NAME:node-18.9.0
 
-RUN apk update && apk add git curl jq
-RUN apk add --update python3 make g++ && rm -rf /var/cache/apk/*
+#RUN apk update && apk add git curl jq
+#RUN apk add --update python3 make g++ && rm -rf /var/cache/apk/*
+RUN apt-get update && apt-get install -y git curl jq
+RUN apt install -y python3.9
 
 WORKDIR /holo-cli
 
