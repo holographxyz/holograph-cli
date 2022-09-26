@@ -102,7 +102,7 @@ jobs:
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-      - name: -> Deploy INDEXER cli in staging [namespace -> ${{ steps.STG_COMMON_NAMESPACE }}]
+      - name: -> Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer-dev #notice
