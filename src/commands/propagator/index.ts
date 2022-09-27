@@ -6,8 +6,8 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {decodeDeploymentConfigInput, capitalize, DeploymentConfig} from '../../utils/utils'
-
+import {decodeDeploymentConfigInput, capitalize, getNetworkName, DeploymentConfig} from '../../utils/utils'
+import {supportedNetworks} from '../../utils/networks'
 import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
@@ -141,38 +141,42 @@ export default class Propagator extends Command {
       }
     }
 
-    // TODO: Add support for Goerli instead of Rinkeby
     if (recoveryData.length > 0) {
       this.log(`Manually running ${recoveryData.length} recovery jobs`)
       for (const data of recoveryData) {
-        const network = data.chain_id === 4 ? 'rinkeby' : data.chain_id === 43_113 ? 'mumbai' : 'fuji'
+        let network: string = getNetworkName(data.chain_id)
+        const checkNetworks: string[] = supportedNetworks
+        if (checkNetworks.includes(network)) {
+          checkNetworks.splice(checkNetworks.indexOf(network), 1)
+        }
+
         // eslint-disable-next-line no-await-in-loop
-        let tx = await this.networkMonitor.providers[network].getTransaction(data.tx)
-        if (tx === null) {
-          // we need to try alternatives
-          this.networkMonitor.structuredLog(network, `${data.tx} is on wrong network`)
-          const checkNetworks: string[] =
-            network === 'rinkeby'
-              ? ['fuji', 'mumbai']
-              : network === 'fuji'
-              ? ['rinkeby', 'mumbai']
-              : ['rinkeby', 'fuji']
-          // eslint-disable-next-line no-await-in-loop
-          tx = await this.networkMonitor.providers[checkNetworks[0]].getTransaction(data.tx)
+        let tx = await this.networkMonitor.getTransaction({
+          transactionHash: data.tx,
+          network,
+          canFail: true,
+          attempts: 10,
+          interval: 500,
+        })
+        for (const checkNetwork of checkNetworks) {
           if (tx === null) {
-            this.networkMonitor.structuredLog(checkNetworks[0], `${data.tx} is on wrong network`)
+            this.networkMonitor.structuredLog(network, `Transaction ${data.tx} is on wrong network`)
+            network = checkNetwork
             // eslint-disable-next-line no-await-in-loop
-            tx = await this.networkMonitor.providers[checkNetworks[1]].getTransaction(data.tx)
-            if (tx === null) {
-              this.networkMonitor.structuredLog(checkNetworks[1], `${data.tx} is on wrong network`)
-            } else {
-              // eslint-disable-next-line no-await-in-loop
-              await this.handleContractDeployedEvents(tx, checkNetworks[1])
-            }
+            tx = await this.networkMonitor.getTransaction({
+              transactionHash: data.tx,
+              network,
+              canFail: true,
+              attempts: 10,
+              interval: 500,
+            })
           } else {
-            // eslint-disable-next-line no-await-in-loop
-            await this.handleContractDeployedEvents(tx, checkNetworks[0])
+            break
           }
+        }
+
+        if (tx === null) {
+          this.networkMonitor.structuredLog(network, `Could not find ${data.tx} on any network`)
         } else {
           // eslint-disable-next-line no-await-in-loop
           await this.handleContractDeployedEvents(tx, network)
@@ -221,7 +225,12 @@ export default class Propagator extends Command {
     transaction: ethers.providers.TransactionResponse,
     network: string,
   ): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -268,15 +277,12 @@ export default class Propagator extends Command {
       (contractCode === '0x' || contractCode === '' || contractCode === undefined) &&
       !(await registry.callStatic.isHolographedContract(deploymentAddress, {blockTag: 'latest'}))
     ) {
-      const deployReceipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.executeTransaction(
+      const deployReceipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.executeTransaction({
         network,
-        undefined,
-        this.networkMonitor.factoryContract,
-        'deployHolographableContract',
-        deploymentConfig.config,
-        deploymentConfig.signature,
-        deploymentConfig.signer,
-      )
+        contract: this.networkMonitor.factoryContract,
+        methodName: 'deployHolographableContract',
+        args: [deploymentConfig.config, deploymentConfig.signature, deploymentConfig.signer],
+      })
       if (deployReceipt === null) {
         this.networkMonitor.structuredLog(network, `Submitting tx for collection ${deploymentAddress} failed`)
       } else {
