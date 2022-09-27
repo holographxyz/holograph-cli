@@ -129,7 +129,6 @@ export default class Operator extends Command {
     if (transactions.length > 0) {
       for (const transaction of transactions) {
         const tags: (string | number)[] = []
-        this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${transaction.blockNumber}`)
         tags.push(transaction.blockNumber as number, this.networkMonitor.randomTag())
         const from: string | undefined = transaction.from?.toLowerCase()
         if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
@@ -150,23 +149,12 @@ export default class Operator extends Command {
     network: string,
     tags: (string | number)[],
   ): Promise<void> {
-    let bridgeTransaction
-    const tryToGetTxReceipt = async (): Promise<ethers.ContractReceipt> => {
-      // eslint-disable-next-line no-async-promise-executor
-      return new Promise<ethers.ContractReceipt>(async (resolve, _reject) => {
-        let receipt: ethers.ContractReceipt | null
-        const getTxReceipt: NodeJS.Timeout = setInterval(async () => {
-          receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
-          if (receipt !== null) {
-            clearInterval(getTxReceipt)
-            resolve(receipt as ethers.ContractReceipt)
-          }
-        }, 1000) // every 1 second
-      })
-    }
-
-    const receipt: ethers.ContractReceipt = await tryToGetTxReceipt()
-
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 30,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     } else {
@@ -193,7 +181,7 @@ export default class Operator extends Command {
           `HolographOperator received a new bridge job. The job payload hash is ${operatorJobHash}. The job payload is ${operatorJobPayload}`,
           tags,
         )
-        bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
+        const bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
           value: ethers.BigNumber.from('0'),
         })
@@ -227,13 +215,13 @@ export default class Operator extends Command {
     }
 
     if (operate) {
-      await this.networkMonitor.executeTransaction(
+      await this.networkMonitor.executeTransaction({
         network,
         tags,
-        this.networkMonitor.operatorContract,
-        'executeJob',
-        payload,
-      )
+        contract: this.networkMonitor.operatorContract,
+        methodName: 'executeJob',
+        args: [payload],
+      })
     } else {
       this.networkMonitor.structuredLog(network, 'Dropped potential payload to execute', tags)
     }

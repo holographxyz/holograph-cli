@@ -1,4 +1,4 @@
-name: Deploy holoclis to prod
+name: Deploy holoclis to staging
 
 permissions:
   id-token: write
@@ -7,51 +7,50 @@ permissions:
 env:
   AWS_REGION: us-west-2
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
-  ECR_REPOSITORY: holo-cli # notice: the same for all 3 cli apps
+  ECR_REPOSITORY: holo-cli-dev # notice: the same for all 3 cli apps
   #
-  PROD_IMAGE_TAG: main-${{ github.sha }}
-  ########################################
-  PROD_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.21
-  PROD_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.20
-  ########################################
-  CLUSTER_NAME: prod0
+  DEV_IMAGE_TAG: dev-${{ github.sha }}
+  #######################################
+  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.22
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.21
+  #######################################
+  CLUSTER_NAME: staging
   #
-  AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
-  AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
+  AWS_KEY_ID: ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
+  AWS_ACCESS_KEY: ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
   #
   #TODO - create new gh secret for prod. should be different from staging????
-  PROD_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO <-------
+  STG_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
-  PROD_HOLO_INDEXER_HOST: https://api.holograph.xyz # TODO -> http://[release-name]-holo-api.main.svc.cluster.local:443
+  STG_HOLO_INDEXER_HOST: http://dev-nest-api.develop.svc.cluster.local:443
   #
-  # TODO -> replace them with the PROD specific password <---------------------------
-  PROD_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }} #TODO <-------
-  PROD_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
+  # notice: all 3 have the same password
+  STG_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
+  STG_HOLO_OPERATOR_PASSWORD: ${{ secrets.STG_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
   INDEXER_HOLO_CONFIG_FILE_DATA: stg-config-file
-  OPERATOR_HOLO_CONFIG_FILE_DATA: prod-config-file
+  OPERATOR_HOLO_CONFIG_FILE_DATA: stg-config-file
   #
-  ABI_ENVIRONMENT: sdgfsdgsdfgsf # same for all apps [indexer,operator]
+  ABI_ENVIRONMENT: develop # same for all apps [indexer,operator]
   #
-  PROD_COMMON_NAMESPACE: sfgsfgsfgdfgdf
-  PROD_DOMAIN: "holograph.xyz"
+  STG_DOMAIN: "cxipchain.xyz"
+  #
+  STG_COMMON_NAMESPACE: holocli-dev # NOTICE <---
 
-## notice: the trigger
+# notice: the trigger
 on:
   push:
     branches:
-      - 'something-to-deactivate-me' #deleteme
-# notice: the trigger
-#on:
-#  pull_request:
-#    branches:
-#      - '??????????????????'
-#    types: [closed]
+      - 'develop'
+      # Excluded branches
+      - '!testnet'
+      - '!main'
+      - '!master'
 
 jobs:
-  deploy-to-prod0:
-    name: Deploy-to-prod0
+  deploy-to-staging:
+    name: Deploy-to-staging
     runs-on: ubuntu-latest
 
     steps:
@@ -64,11 +63,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Checkout code
-        uses: actions/checkout@v2
-
       - name: Login to ECR
-        id  : login-ecr
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build image
@@ -77,7 +73,7 @@ jobs:
           -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
 
       - name: Push image to ECR
-        run : docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.PROD_IMAGE_TAG }}
+        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -92,7 +88,7 @@ jobs:
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
-            kubectl create namespace ${{ env.PROD_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+            kubectl create namespace ${{ env.STG_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
       #
       #
       # NOTICE: --- INDEXER ---
@@ -101,35 +97,35 @@ jobs:
         env:
           #
           CHART_REPO: holo-indexer
-          CHART_VERSION: ${{ env.PROD_HOLO_INDEXER_HELM_CHART_VERSION }}
+          CHART_VERSION: ${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-      - name: -> Deploy INDEXER cli in prod [namespace -> ${{ env.PROD_COMMON_NAMESPACE }}]
+      - name: -> Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: indexer #notice
+          RELEASE_NAME: indexer-dev #notice
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             helm upgrade --install $RELEASE_NAME \
-            holo-indexer-${{ env.PROD_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
-            -n ${{ env.PROD_COMMON_NAMESPACE }} \
+            holo-indexer-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
+            -n ${{ env.STG_COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=${{ env.PROD_IMAGE_TAG }} \
+            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
-            --set holo_indexer_password=${{ env.PROD_HOLO_INDEXER_PASSWORD }} \
-            --set HOLO_INDEXER_HOST=${{ env.PROD_HOLO_INDEXER_HOST }} \
-            --set OPERATOR_API_KEY=${{ env.PROD_HOLO_INDEXER_OPERATOR_API_KEY }} \
+            --set holo_indexer_password=${{ env.STG_HOLO_INDEXER_PASSWORD }} \
+            --set HOLO_INDEXER_HOST=${{ env.STG_HOLO_INDEXER_HOST }} \
+            --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
-            --set datadog_tags.version=chart-${{ env.PROD_HOLO_INDEXER_HELM_CHART_VERSION }} \
-            --values .github/values_for_prod_alb_ingress.yaml \
+            --set datadog_tags.version=chart-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }} \
+            --values .github/values_for_stg_alb_ingress.yaml \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.PROD_DOMAIN }} \
+            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
             --set ingress.blue_green_deployment=false
       #
@@ -140,60 +136,60 @@ jobs:
         env:
           #
           CHART_REPO: holo-operator
-          CHART_VERSION: ${{ env.PROD_HOLO_OPERATOR_HELM_CHART_VERSION }}
+          CHART_VERSION: ${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-      - name: -> Deploy OPERATOR cli in prod [namespace -> ${{ env.PROD_COMMON_NAMESPACE }}]
+      - name: -> Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: operator #notice
+          RELEASE_NAME: operator-dev #notice
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             helm upgrade --install $RELEASE_NAME \
-            holo-operator-${{ env.PROD_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
-            -n ${{ env.PROD_COMMON_NAMESPACE }} \
+            holo-operator-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
+            -n ${{ env.STG_COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=${{ env.PROD_IMAGE_TAG }} \
+            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
-            --set holo_operator_password=${{ env.PROD_HOLO_OPERATOR_PASSWORD }} \
+            --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-            --set datadog_tags.version=chart-${{ env.PROD_HOLO_OPERATOR_HELM_CHART_VERSION }} \
-            --values .github/values_for_prod_alb_ingress.yaml \
+            --set datadog_tags.version=chart-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }} \
+            --values .github/values_for_stg_alb_ingress.yaml \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.PROD_DOMAIN }} \
+            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
             --set ingress.blue_green_deployment=false
 
       - name: -> Info for the new deployments
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          INDEXER_RELEASE_NAME: indexer
-          OPERATOR_RELEASE_NAME: operator
-          LB_URL: 'https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com'
+          INDEXER_RELEASE_NAME: indexer-dev
+          OPERATOR_RELEASE_NAME: operator-dev
+          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             echo "------------------------- Last 5 Helm releases -------------------------"
             echo "--INDEXER--"
-            helm history $INDEXER_RELEASE_NAME  -n ${{ env.PROD_COMMON_NAMESPACE }} --max 3
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
             echo "--OPERATOR--"
-            helm history $OPERATOR_RELEASE_NAME -n ${{ env.PROD_COMMON_NAMESPACE }} --max 3
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
 
-            echo "------------------------ Newly deployed image [same for all apps] ------------------------ "
-            echo "$PROD_IMAGE_TAG"
+            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+            echo "$DEV_IMAGE_TAG"
 
             echo "------------------------ Healthchecks ------------------------"
             sleep 55
 
-            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.PROD_DOMAIN }}
+            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
             echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
             curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
 
-            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.PROD_DOMAIN }}
+            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
             echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
             curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
