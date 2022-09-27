@@ -3,6 +3,7 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 enum Environment {
+  experimental = 'experimental',
   develop = 'develop',
   testnet = 'testnet',
   mainnet = 'mainnet',
@@ -12,7 +13,7 @@ enum Environment {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getEnvironmentByGitBranch = (): Environment => {
   let environment = Environment.develop
-  const acceptableBranches: Set<string> = new Set<string>(['develop', 'testnet', 'mainnet'])
+  const acceptableBranches: Set<string> = new Set<string>(['experimental', 'develop', 'testnet', 'mainnet'])
   const head = './.git/HEAD'
   const env: string = process.env.HOLOGRAPH_ENVIRONMENT || ''
   if (env === '') {
@@ -33,17 +34,15 @@ const getEnvironmentByGitBranch = (): Environment => {
 // Description: Get environment by ABI_ENVIRONMENT
 const getEnvironment = (): Environment => {
   let environment = Environment.develop
-  const acceptableBranches: Set<string> = new Set<string>(['experimental', 'develop', 'testnet', 'mainnet'])
+  const acceptableBranches: Array<keyof typeof Environment> = Object.values(Environment)
 
-  const envVar = process.env.ABI_ENVIRONMENT || 'testnet' // NOTE: after deployment, use ?? operator and set default 'develop'
-  if (acceptableBranches.has(envVar)) {
-    environment = Environment[envVar as keyof typeof Environment]
+  if (acceptableBranches.includes(environment as keyof typeof Environment)) {
+    environment = Environment[environment as keyof typeof Environment]
   } else {
-    throw new Error(`Unknown value for ABI_ENVIRONMENT=${envVar}`)
+    throw new Error(`Unknown value for ABI_ENVIRONMENT=${environment}`)
   }
 
   console.log(`ABI_ENVIRONMENT=${environment}`) // NOTE: remove after deployment
-
   return environment
 }
 
