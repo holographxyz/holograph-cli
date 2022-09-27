@@ -161,12 +161,18 @@ function networkRestruct(networkMap: any) {
 
       prev.byChainId[chainId] = holographId
       prev.byHolographId[holographId] = chainId
+      prev.byNetworkName[chainId] = next
 
       return prev
     },
-    {byChainId: {}, byHolographId: {}},
+    {byChainId: {}, byHolographId: {}, byNetworkName: {}},
   )
   return out
+}
+
+function getNetworkName(chainId: any) {
+  const dataMap = networkRestruct(networks)
+  return dataMap.byNetworkName[chainId]
 }
 
 function getChainId(holographId: any) {
@@ -187,6 +193,7 @@ export {
   decodeDeploymentConfig,
   decodeDeploymentConfigInput,
   getChainId,
+  getNetworkName,
   getHolographId,
   webSocketConfig,
   NETWORK_COLORS,
