@@ -42,7 +42,7 @@ on:
   push:
     branches:
       - 'something-to-deactivate-me' #deleteme
- notice: the trigger
+# notice: the trigger
 #on:
 #  pull_request:
 #    branches:
