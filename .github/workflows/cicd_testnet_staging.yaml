@@ -56,7 +56,7 @@ on:
 
 jobs:
   deploy-to-staging[testnet]:
-    name: Deploy-to-staging[testnet]
+    name: Deploy-to-staging
     runs-on: ubuntu-latest
 
     steps:
