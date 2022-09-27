@@ -5,19 +5,19 @@ permissions:
   contents: read # This is required for actions/checkout@v2
 
 env:
-  AWS_REGION    : us-west-2
-  IAM_ROLE      : arn:aws:iam::177635894328:role/Github_role_to_access_ECR
+  AWS_REGION: us-west-2
+  IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli-dev # notice: the same for all 3 cli apps
   #
-  DEV_IMAGE_TAG : dev-${{ github.sha }}
+  DEV_IMAGE_TAG: dev-${{ github.sha }}
   #######################################
-  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.22
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.21
+  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.22
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.21
   #######################################
-  CLUSTER_NAME   : staging
+  CLUSTER_NAME: staging
   #
-  AWS_KEY_ID     : ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
-  AWS_ACCESS_KEY : ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
+  AWS_KEY_ID: ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
+  AWS_ACCESS_KEY: ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
   #
   #TODO - create new gh secret for prod. should be different from staging????
   STG_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
@@ -25,15 +25,16 @@ env:
   STG_HOLO_INDEXER_HOST: http://dev-nest-api.develop.svc.cluster.local:443
   #
   # notice: all 3 have the same password
-  STG_HOLO_INDEXER_PASSWORD  : ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
-  STG_HOLO_OPERATOR_PASSWORD : ${{ secrets.STG_HOLO_OPERATOR_PASSWORD }}
+  STG_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
+  STG_HOLO_OPERATOR_PASSWORD: ${{ secrets.STG_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
-  INDEXER_HOLO_CONFIG_FILE_DATA : stg-config-file
+  INDEXER_HOLO_CONFIG_FILE_DATA: stg-config-file
   OPERATOR_HOLO_CONFIG_FILE_DATA: stg-config-file
   #
   ABI_ENVIRONMENT: develop # same for all apps [indexer,operator]
   #
+
   STG_COMMON_NAMESPACE: holocli-dev # notice <---
   STG_DOMAIN: "cxipchain.xyz"
 
@@ -57,13 +58,13 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v1
         with:
           role-to-assume: ${{ env.IAM_ROLE }}
-          aws-region    : ${{ env.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Checkout code
         uses: actions/checkout@v2
 
       - name: Login to ECR
-        id  : login-ecr
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build image
@@ -72,15 +73,15 @@ jobs:
           -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
 
       - name: Push image to ECR
-        run : docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
+        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id    : ${{ env.AWS_KEY_ID }}     #notice: unique for each env
+          aws-access-key-id: ${{ env.AWS_KEY_ID }} #notice: unique for each env
           aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
-          aws-region           : ${{ env.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Create ns
         uses: tensor-hq/eksctl-helm-action@main
@@ -95,7 +96,7 @@ jobs:
         shell: bash
         env:
           #
-          CHART_REPO   : holo-indexer
+          CHART_REPO: holo-indexer
           CHART_VERSION: ${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -134,7 +135,7 @@ jobs:
         shell: bash
         env:
           #
-          CHART_REPO   : holo-operator
+          CHART_REPO: holo-operator
           CHART_VERSION: ${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -167,9 +168,9 @@ jobs:
       - name: -> Info for the new deployments
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          INDEXER_RELEASE_NAME  : indexer-dev
-          OPERATOR_RELEASE_NAME : operator-dev
-          LB_URL: "https://staging-alb-1490082055.us-west-2.elb.amazonaws.com"
+          INDEXER_RELEASE_NAME: indexer-dev
+          OPERATOR_RELEASE_NAME: operator-dev
+          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-

@@ -79,11 +79,22 @@ export default class Recover extends Command {
     CliUx.ux.action.stop()
 
     CliUx.ux.action.start('Retrieving transaction details from ' + network + ' network')
-    const transaction = await this.networkMonitor.providers[network].getTransaction(tx)
-    //    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash as string)
+    const transaction = await this.networkMonitor.getTransaction({
+      transactionHash: tx,
+      network,
+      canFail: true,
+      attempts: 30,
+      interval: 500,
+    })
     CliUx.ux.action.stop()
 
-    await this.processTransaction(network, transaction)
+    if (transaction === null) {
+      this.networkMonitor.structuredLog(network, 'Could not retrieve the transaction')
+      // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+      process.exit()
+    } else {
+      await this.processTransaction(network, transaction)
+    }
   }
 
   async processTransaction(network: string, transaction: ethers.providers.TransactionResponse): Promise<void> {
@@ -113,7 +124,12 @@ export default class Recover extends Command {
   }
 
   async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 30,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -161,7 +177,12 @@ export default class Recover extends Command {
     transaction: ethers.providers.TransactionResponse,
     network: string,
   ): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 30,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -208,7 +229,12 @@ export default class Recover extends Command {
     const operate: boolean = operatorPrompt.shouldContinue
 
     if (operate) {
-      await this.networkMonitor.executeTransaction(network, undefined, this.networkMonitor.operatorContract, 'executeJob', payload)
+      await this.networkMonitor.executeTransaction({
+        network,
+        contract: this.networkMonitor.operatorContract,
+        methodName: 'executeJob',
+        args: [payload],
+      })
     }
 
     // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
