@@ -38,6 +38,10 @@ on:
       - '!testnet'
       - '!main'
       - '!master'
+  pull_request:
+    branches:
+      - 'experimental'
+    types: [closed]
 
 jobs:
   deploy-to-staging:
