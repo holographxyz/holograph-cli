@@ -41,7 +41,7 @@ env:
 on:
   push:
     branches:
-      - '...................' #deleteme
+      - 'something-to-deactivate-me' #deleteme
  notice: the trigger
 #on:
 #  pull_request:
