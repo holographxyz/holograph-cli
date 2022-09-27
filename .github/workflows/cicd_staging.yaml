@@ -11,8 +11,8 @@ env:
   #
   DEV_IMAGE_TAG : dev-fd85bcd1df55c11bd487b7a9fc6028208e7b0d6c #dev-${{ github.sha }}
   #######################################
-  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.21
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.19
+  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.22
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.21
   #######################################
   CLUSTER_NAME   : staging
   #
@@ -28,6 +28,7 @@ env:
   STG_HOLO_INDEXER_PASSWORD  : ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
   STG_HOLO_OPERATOR_PASSWORD : ${{ secrets.STG_HOLO_OPERATOR_PASSWORD }}
   #
+  # set the RPC endpoints config files
   INDEXER_HOLO_CONFIG_FILE_DATA : stg-config-file
   OPERATOR_HOLO_CONFIG_FILE_DATA: stg-config-file
   #
@@ -48,7 +49,7 @@ on:
 
 jobs:
   deploy-to-staging:
-    name: deploy-to-staging
+    name: Deploy-to-staging
     runs-on: ubuntu-latest
 
     steps:
@@ -65,11 +66,13 @@ jobs:
         id  : login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-#      - name: Build image
-#        run : docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
-#
-#      - name: Push image to ECR
-#        run : docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
+      - name: Build image
+        run: |
+          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
+          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
+
+      - name: Push image to ECR
+        run : docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -99,7 +102,7 @@ jobs:
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-      - name: -> Deploy INDEXER cli in staging [namespace -> ${{ steps.STG_COMMON_NAMESPACE }}]
+      - name: -> Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer-dev #notice
@@ -111,7 +114,7 @@ jobs:
             -n ${{ env.DEV_STG_COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
-            --set config_file_data=${{ env.HOLO_CONFIG_FILE_DATA }} \
+            --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
             --set holo_indexer_password=${{ env.STG_HOLO_INDEXER_PASSWORD }} \
             --set HOLO_INDEXER_HOST=${{ env.DEV_STG_HOLO_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
@@ -173,14 +176,16 @@ jobs:
           command: |-
             echo "------------------------- Last 5 Helm releases -------------------------"
             echo "--INDEXER--"
-            helm history $INDEXER_RELEASE_NAME    -n ${{ env.DEV_STG_COMMON_NAMESPACE }} --max 3
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.DEV_STG_COMMON_NAMESPACE }} --max 3
             echo "--OPERATOR--"
-            helm history $OPERATOR_RELEASE_NAME   -n ${{ env.DEV_STG_COMMON_NAMESPACE }} --max 3
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.DEV_STG_COMMON_NAMESPACE }} --max 3
 
             echo "------------------------ Newly deployed image [same for all 3 apps] ------------------------"
             echo "$DEV_IMAGE_TAG"
 
             echo "------------------------ Healthchecks ------------------------"
+
+            sleep 55
 
             ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.DEV_STG_DOMAIN }}
             echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"

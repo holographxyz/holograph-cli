@@ -188,7 +188,7 @@ export class NetworkMonitor {
   }
 
   getProviderStatus() {
-    const outputNetworks = ['rinkeby', 'goerli', 'mumbai', 'fuji']
+    const outputNetworks = Object.keys(this.configFile.networks)
     const output = {} as any
 
     for (const n of outputNetworks) {
