@@ -1,4 +1,4 @@
-name: Deploy holoclis to staging
+name: Deploy holoclis to staging[experimental]
 
 permissions:
   id-token: write
@@ -11,7 +11,6 @@ env:
   #
   DEV_IMAGE_TAG : dev-${{ github.sha }}
   #######################################
-#  STG_HOLO_INDEXER_HELM_CHART_VERSION   : 0.0.22
   STG_HOLO_OPERATOR_HELM_CHART_VERSION  : 0.0.98
   #######################################
   CLUSTER_NAME   : staging
@@ -19,22 +18,14 @@ env:
   AWS_KEY_ID     : ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY : ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
   #
-  #TODO - create new gh secret for prod. should be different from staging????
-#  STG_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
-  #
-#  STG_HOLO_INDEXER_HOST: http://dev-nest-api.develop.svc.cluster.local:443
-  #
-  # notice: all 3 have the same password
-#  STG_HOLO_INDEXER_PASSWORD  :  ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
-  STG_HOLO_OPERATOR_PASSWORD : "d82aFsZdmtVxpWMJLpJu" #${{ secrets.STG_HOLO_OPERATOR_PASSWORD }}
+  STG_HOLO_OPERATOR_PASSWORD : ${{ secrets.STG_EXPERIMENTAL_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
-#  INDEXER_HOLO_CONFIG_FILE_DATA : stg-config-file #TODO
-  OPERATOR_HOLO_CONFIG_FILE_DATA: experimental-config-file #TODO
+  OPERATOR_HOLO_CONFIG_FILE_DATA: experimental-config-file
   #
-  ABI_ENVIRONMENT: experimental # same for all apps [indexer,operator]
+  ABI_ENVIRONMENT: experimental
   #
-  STG_COMMON_NAMESPACE: experimental # notice <---
+  STG_COMMON_NAMESPACE: experimental
   STG_DOMAIN: "cxipchain.xyz"
 
 # notice: the trigger
@@ -50,7 +41,7 @@ on:
 
 jobs:
   deploy-to-staging:
-    name: Deploy-to-staging
+    name: Deploy-to-staging[experimental]
     runs-on: ubuntu-latest
 
     steps:
@@ -91,45 +82,6 @@ jobs:
             kubectl create namespace ${{ env.STG_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
       #
       #
-      # NOTICE: --- INDEXER ---
-#      - name: Pull the holo-indexer helm chart version x.x.x from ECR
-#        shell: bash
-#        env:
-#          #
-#          CHART_REPO   : holo-indexer
-#          CHART_VERSION: ${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}
-#          #
-#          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-#        run: |
-#          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-#
-#      - name: -> Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          RELEASE_NAME: indexer-dev #notice
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            helm upgrade --install $RELEASE_NAME \
-#            holo-indexer-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
-#            -n ${{ env.STG_COMMON_NAMESPACE }} \
-#            --set image.repository=${{ env.ECR_REPOSITORY }} \
-#            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
-#            --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
-#            --set holo_indexer_password=${{ env.STG_HOLO_INDEXER_PASSWORD }} \
-#            --set HOLO_INDEXER_HOST=${{ env.STG_HOLO_INDEXER_HOST }} \
-#            --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
-#            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
-#            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-#            --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
-#            --set datadog_tags.version=chart-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }} \
-#            --values .github/values_for_stg_alb_ingress.yaml \
-#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-#            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-#            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
-#            --set ingress.blue_green_deployment=false
-      #
-      #
       # NOTICE: --- OPERATOR ---
       - name: Pull the holo-operator helm chart version x.x.x from ECR
         shell: bash
@@ -164,32 +116,3 @@ jobs:
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
             --set ingress.blue_green_deployment=false
-
-#      - name: -> Info for the new deployments
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          INDEXER_RELEASE_NAME  : indexer-dev
-#          OPERATOR_RELEASE_NAME : operator-dev
-#          LB_URL: "https://staging-alb-1490082055.us-west-2.elb.amazonaws.com"
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            echo "------------------------- Last 5 Helm releases -------------------------"
-#            echo "--INDEXER--"
-#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
-#            echo "--OPERATOR--"
-#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
-#
-#            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
-#            echo "$DEV_IMAGE_TAG"
-#
-#            echo "------------------------ Healthchecks ------------------------"
-#            sleep 55
-#
-#            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-#
-#            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
