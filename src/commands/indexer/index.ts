@@ -571,7 +571,6 @@ export default class Indexer extends Command {
       blockNumber: transaction.blockNumber,
       // TODO: decide if this should be included in API call
       // blockTimestamp: transaction.timestamp,
-      isDeployed: true,
     })
     this.networkMonitor.structuredLog(network, `Successfully found Collection with address ${deploymentAddress}`)
     this.networkMonitor.structuredLog(
@@ -728,7 +727,6 @@ export default class Indexer extends Command {
       status: 'MINTED',
       tx: transaction.hash,
       blockNumber: transaction.blockNumber,
-      isDeployed: true,
       creatorAddress: transaction.from,
       ownerAddress: transaction.from,
     })
