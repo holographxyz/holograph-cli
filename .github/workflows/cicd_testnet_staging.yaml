@@ -55,8 +55,8 @@ on:
 #    types: [closed]
 
 jobs:
-  deploy-to-staging[testnet]:
-    name: Deploy-to-staging
+  deploy-to-staging:
+    name: Deploy-to-staging[testnet]
     runs-on: ubuntu-latest
 
     steps:
