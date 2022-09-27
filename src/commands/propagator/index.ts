@@ -6,8 +6,8 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {decodeDeploymentConfigInput, capitalize, DeploymentConfig} from '../../utils/utils'
-
+import {decodeDeploymentConfigInput, capitalize, getNetworkName, DeploymentConfig} from '../../utils/utils'
+import {supportedNetworks} from '../../utils/networks'
 import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
@@ -141,13 +141,11 @@ export default class Propagator extends Command {
       }
     }
 
-    // TODO: Add support for Goerli instead of Rinkeby
     if (recoveryData.length > 0) {
       this.log(`Manually running ${recoveryData.length} recovery jobs`)
       for (const data of recoveryData) {
-        // TODO: change this to use a more stable network chain id conversion
-        let network: string = data.chain_id === 4 ? 'rinkeby' : data.chain_id === 43_113 ? 'mumbai' : 'fuji'
-        const checkNetworks: string[] = ['rinkeby', 'fuji', 'mumbai']
+        let network: string = getNetworkName(data.chain_id)
+        const checkNetworks: string[] = supportedNetworks
         if (checkNetworks.includes(network)) {
           checkNetworks.splice(checkNetworks.indexOf(network), 1)
         }
