@@ -41,8 +41,9 @@ env:
 on:
   push:
     branches:
-      - 'feat/experimental-holocli' # NOTICE: <------------------------------change me
+      - 'experimental'
       # Excluded branches
+      - '!develop'
       - '!testnet'
       - '!main'
       - '!master'

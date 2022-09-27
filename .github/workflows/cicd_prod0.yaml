@@ -32,22 +32,22 @@ env:
   INDEXER_HOLO_CONFIG_FILE_DATA : stg-config-file
   OPERATOR_HOLO_CONFIG_FILE_DATA: prod-config-file
   #
-  ABI_ENVIRONMENT: testnet # same for all apps [indexer,operator]
+  ABI_ENVIRONMENT: sdgfsdgsdfgsf # same for all apps [indexer,operator]
   #
-  PROD_COMMON_NAMESPACE: holocli
+  PROD_COMMON_NAMESPACE: sfgsfgsfgdfgdf
   PROD_DOMAIN: "holograph.xyz"
 
 ## notice: the trigger
-#on:
-#  push:
-#    branches:
-#      - 'fix/cicdtest' #deleteme
-# notice: the trigger
 on:
-  pull_request:
+  push:
     branches:
-      - 'testnet'
-    types: [closed]
+      - '...................' #deleteme
+ notice: the trigger
+#on:
+#  pull_request:
+#    branches:
+#      - 'testnet'
+#    types: [closed]
 
 jobs:
   deploy-to-prod0:
