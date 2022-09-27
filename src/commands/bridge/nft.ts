@@ -7,6 +7,7 @@ import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {addressValidator, tokenValidator} from '../../utils/validation'
 import {getEnvironment} from '../../utils/environment'
 import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
+import {supportedNetworks} from '../../utils/networks'
 
 export default class Contract extends Command {
   static description = 'Bridge a Holographable NFT from source chain to destination chain'
@@ -156,7 +157,6 @@ export default class Contract extends Command {
     CliUx.ux.action.stop()
     this.debug('Destination network', await destinationWallet.provider.getNetwork())
 
-    const supportedNetworks = ['rinkeby', 'mumbai', 'fuji']
     let remainingNetworks = supportedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
     remainingNetworks = remainingNetworks.filter((item: string) => {

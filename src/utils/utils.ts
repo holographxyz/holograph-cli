@@ -141,6 +141,7 @@ const NETWORK_COLORS: Record<string, string> = {
   mumbai: '##B026FF ',
   polygon: '#B026FF ',
   rinkeby: '##83EEFF',
+  goerli: '#83EEFF',
   eth: '##83EEFF',
 }
 
@@ -160,12 +161,18 @@ function networkRestruct(networkMap: any) {
 
       prev.byChainId[chainId] = holographId
       prev.byHolographId[holographId] = chainId
+      prev.byNetworkName[chainId] = next
 
       return prev
     },
-    {byChainId: {}, byHolographId: {}},
+    {byChainId: {}, byHolographId: {}, byNetworkName: {}},
   )
   return out
+}
+
+function getNetworkName(chainId: any) {
+  const dataMap = networkRestruct(networks)
+  return dataMap.byNetworkName[chainId]
 }
 
 function getChainId(holographId: any) {
@@ -186,6 +193,7 @@ export {
   decodeDeploymentConfig,
   decodeDeploymentConfigInput,
   getChainId,
+  getNetworkName,
   getHolographId,
   webSocketConfig,
   NETWORK_COLORS,

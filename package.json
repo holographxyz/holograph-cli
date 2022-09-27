@@ -24,7 +24,9 @@
     "posttest": "yarn lint",
     "prepack": "yarn build && oclif manifest && oclif readme",
     "test": "mocha --forbid-only \"test/**/*.test.ts\"",
-    "version": "oclif readme && git add README.md"
+    "version": "oclif readme && git add README.md",
+    "prettier:check": "prettier --loglevel error --ignore-path .gitignore --list-different .",
+    "prettier:fix": "prettier --loglevel error --ignore-path .gitignore --write ."
   },
   "dependencies": {
     "@ethereumjs/common": "^2.6.4",
@@ -43,6 +45,7 @@
     "dotenv": "^16.0.1",
     "es6-promise": "^4.2.8",
     "ethereum-cryptography": "^1.1.0",
+    "ethereumjs-abi": "^0.6.8",
     "ethereumjs-util": "^7.1.5",
     "ethereumjs-wallet": "^1.0.2",
     "ethers": "^5.6.9",
