@@ -106,7 +106,7 @@ jobs:
       - name: -> Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: indexer-dev #notice
+          RELEASE_NAME: indexer-boo #notice
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -124,6 +124,8 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }} \
             --values .github/values_for_stg_alb_ingress.yaml \
+            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='arn:aws:acm:us-west-2:177635894328:certificate/a450d2d6-585b-4cf0-9b2c-e5b26de12b0f'
+
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
