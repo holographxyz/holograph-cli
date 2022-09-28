@@ -18,7 +18,7 @@ ingress:
     alb.ingress.kubernetes.io/target-type: ip
 
     # notice: *.cxipchain.xyz
-    alb.ingress.kubernetes.io/certificate-arn: here-goes-the--alb-ingress-arn
+    alb.ingress.kubernetes.io/certificate-arn: here-goes-the-alb-ingress-arn
 
     # notice: ALB healthcheck details
     # ref: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/target-group-health-checks.html
