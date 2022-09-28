@@ -18,7 +18,7 @@ env:
   #
   AWS_KEY_ID: ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
-  ALB_CERT_ARN: arn:aws:acm:us-west-2:177635894328:certificate/a450d2d6-585b-4cf0-9b2c-e5b26de12b0f
+  ALB_CERT_ARN: ${{ secrets.STG_ALB_CERT_ARN }}
   #
   #TODO - create new gh secret for prod. should be different from staging????
   STG_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
@@ -167,34 +167,34 @@ jobs:
 #            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
 #            --set ingress.blue_green_deployment=false
 
-      - name: -> Info for the new deployments
-        uses: tensor-hq/eksctl-helm-action@main
-        env:
-          INDEXER_RELEASE_NAME: indexer-dev
-          OPERATOR_RELEASE_NAME: operator-dev
-          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
-        with:
-          eks_cluster: ${{ env.CLUSTER_NAME }}
-          command: |-
-            echo "------------------------- Last 5 Helm releases -------------------------"
-            echo "--INDEXER--"
-            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
-            echo "--OPERATOR--"
-            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
-
-            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
-            echo "$DEV_IMAGE_TAG"
-
-            echo "------------------------ Healthchecks ------------------------"
-            sleep 55
-
-            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-
-            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+#      - name: -> Info for the new deployments
+#        uses: tensor-hq/eksctl-helm-action@main
+#        env:
+#          INDEXER_RELEASE_NAME: indexer-dev
+#          OPERATOR_RELEASE_NAME: operator-dev
+#          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
+#        with:
+#          eks_cluster: ${{ env.CLUSTER_NAME }}
+#          command: |-
+#            echo "------------------------- Last 5 Helm releases -------------------------"
+#            echo "--INDEXER--"
+#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
+#            echo "--OPERATOR--"
+#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
+#
+#            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+#            echo "$DEV_IMAGE_TAG"
+#
+#            echo "------------------------ Healthchecks ------------------------"
+#            sleep 55
+#
+#            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+#
+#            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
 
 #  datadog-log-checks:
 #      #####
