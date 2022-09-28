@@ -2,6 +2,7 @@ import axios from 'axios'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
+import {Block} from '@ethersproject/abstract-provider'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
@@ -300,7 +301,12 @@ export default class Indexer extends Command {
   }
 
   async handleContractDeployedEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -319,7 +325,12 @@ export default class Indexer extends Command {
   }
 
   async handleMintEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -331,7 +342,12 @@ export default class Indexer extends Command {
   }
 
   async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -383,12 +399,17 @@ export default class Indexer extends Command {
     let bridgeTransaction: ethers.utils.TransactionDescription
     let operatorJobPayload: string
     let operatorJobHash: string
-    let receipt: ethers.ContractReceipt
+    let receipt: ethers.providers.TransactionReceipt | null
     let deploymentInfo: any[] | undefined
     let transferInfo: any[] | undefined
     switch (parsedTransaction.name) {
       case 'executeJob':
-        receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+        receipt = await this.networkMonitor.getTransactionReceipt({
+          network,
+          transactionHash: transaction.hash,
+          attempts: 10,
+          canFail: true,
+        })
         if (receipt === null) {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
@@ -466,8 +487,12 @@ export default class Indexer extends Command {
     network: string,
   ): Promise<void> {
     let deploymentInfo
-    let bridgeTransaction
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -488,7 +513,7 @@ export default class Indexer extends Command {
             network,
           )}. The job payload hash is ${operatorJobHash}. The job payload is ${operatorJobPayload}`,
         )
-        bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
+        const bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
           value: ethers.BigNumber.from('0'),
         })
@@ -546,7 +571,6 @@ export default class Indexer extends Command {
       blockNumber: transaction.blockNumber,
       // TODO: decide if this should be included in API call
       // blockTimestamp: transaction.timestamp,
-      isDeployed: true,
     })
     this.networkMonitor.structuredLog(network, `Successfully found Collection with address ${deploymentAddress}`)
     this.networkMonitor.structuredLog(
@@ -595,7 +619,7 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
+      timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
       callback: this.updateCollectionCallback,
@@ -632,7 +656,7 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
+      timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
       query: `${this.BASE_URL}/v1/collections/contract/${deploymentAddress}`,
       message: `API: Requesting to get Collection with address ${deploymentAddress}`,
       callback: this.updateCollectionCallback,
@@ -703,7 +727,6 @@ export default class Indexer extends Command {
       status: 'MINTED',
       tx: transaction.hash,
       blockNumber: transaction.blockNumber,
-      isDeployed: true,
       creatorAddress: transaction.from,
       ownerAddress: transaction.from,
     })
@@ -749,7 +772,7 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
+      timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
       callback: this.updateMintedNFTCallback,
@@ -783,7 +806,7 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
+      timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
       callback: this.updateBridgedNFTCallback,
@@ -840,7 +863,7 @@ export default class Indexer extends Command {
     const job: DBJob = {
       attempts: 0,
       network,
-      timestamp: (await this.networkMonitor.providers[network].getBlock(transaction.blockNumber!)).timestamp,
+      timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
       callback: this.updateCrossChainTransactionCallback,
@@ -1008,5 +1031,15 @@ export default class Indexer extends Command {
     }
 
     Promise.resolve()
+  }
+
+  async getBlockTimestamp(network: string, blockNumber: number): Promise<number> {
+    let timestamp = 0
+    const block: Block | null = await this.networkMonitor.getBlock({network, blockNumber, canFail: false})
+    if (block !== null) {
+      timestamp = block.timestamp
+    }
+
+    return timestamp
   }
 }
