@@ -238,7 +238,7 @@ export class NetworkMonitor {
   wallets: {[key: string]: ethers.Wallet} = {}
   walletNonces: {[key: string]: number} = {}
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
-  aCoder = ethers.utils.defaultAbiCoder
+  abiCoder = ethers.utils.defaultAbiCoder
   networkColors: any = {}
   latestBlockHeight: {[key: string]: number} = {}
   currentBlockHeight: {[key: string]: number} = {}
