@@ -11,8 +11,8 @@ env:
   #
   DEV_IMAGE_TAG: dev-${{ github.sha }}
   #######################################
-  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.22
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.21
+  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.26
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.25
   #######################################
   CLUSTER_NAME: staging
   #
@@ -25,13 +25,12 @@ env:
   #
   STG_HOLO_INDEXER_HOST: http://dev-nest-api.develop.svc.cluster.local:443
   #
-  # notice: all 3 have the same password
-  STG_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
-  STG_HOLO_OPERATOR_PASSWORD: ${{ secrets.STG_HOLO_OPERATOR_PASSWORD }}
+  STG_HOLO_INDEXER_PASSWORD: ${{ secrets.DEV_HOLO_INDEXER_PASSWORD }}
+  STG_HOLO_OPERATOR_PASSWORD: ${{ secrets.DEV_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
-  INDEXER_HOLO_CONFIG_FILE_DATA: stg-config-file
-  OPERATOR_HOLO_CONFIG_FILE_DATA: stg-config-file
+  INDEXER_HOLO_CONFIG_FILE_DATA: dev-config-file
+  OPERATOR_HOLO_CONFIG_FILE_DATA: dev-config-file
   #
   ABI_ENVIRONMENT: develop # same for all apps [indexer,operator]
   #
@@ -51,7 +50,7 @@ on:
 
 jobs:
   deploy-to-staging:
-    name: Deploy-to-staging
+    name: Deploy-to-staging[dev]
     runs-on: ubuntu-latest
 
     steps:
@@ -73,7 +72,7 @@ jobs:
           docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
           -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
 
-      - name: Push image to ECR
+      - name: Push image
         run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
@@ -84,7 +83,7 @@ jobs:
           aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Create ns
+      - name: Create ns [${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
