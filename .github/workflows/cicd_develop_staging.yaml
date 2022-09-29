@@ -106,7 +106,7 @@ jobs:
       - name: -> Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: indexer-boo #notice
+          RELEASE_NAME: indexer-tsou #notice
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
