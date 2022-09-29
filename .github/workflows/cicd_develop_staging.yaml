@@ -25,13 +25,12 @@ env:
   #
   STG_HOLO_INDEXER_HOST: http://dev-nest-api.develop.svc.cluster.local:443
   #
-  # notice: all 3 have the same password
-  STG_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
-  STG_HOLO_OPERATOR_PASSWORD: ${{ secrets.STG_HOLO_OPERATOR_PASSWORD }}
+  STG_HOLO_INDEXER_PASSWORD: ${{ secrets.DEV_HOLO_INDEXER_PASSWORD }}
+  STG_HOLO_OPERATOR_PASSWORD: ${{ secrets.DEV_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
-  INDEXER_HOLO_CONFIG_FILE_DATA: stg-config-file
-  OPERATOR_HOLO_CONFIG_FILE_DATA: stg-config-file
+  INDEXER_HOLO_CONFIG_FILE_DATA: dev-config-file
+  OPERATOR_HOLO_CONFIG_FILE_DATA: dev-config-file
   #
   ABI_ENVIRONMENT: develop # same for all apps [indexer,operator]
   #
@@ -147,7 +146,7 @@ jobs:
       - name: -> Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: operator-dev #notice
+          RELEASE_NAME: operator-boo #notice
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
