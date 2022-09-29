@@ -238,7 +238,7 @@ export class NetworkMonitor {
   wallets: {[key: string]: ethers.Wallet} = {}
   walletNonces: {[key: string]: number} = {}
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
-  abiCoder = ethers.utils.defaultAbiCoder
+  aCoder = ethers.utils.defaultAbiCoder
   networkColors: any = {}
   latestBlockHeight: {[key: string]: number} = {}
   currentBlockHeight: {[key: string]: number} = {}
@@ -413,6 +413,10 @@ export class NetworkMonitor {
 
   disconnectBuilder(network: string, rpcEndpoint: string, subscribe: boolean): (error: any) => void {
     return (error: any): void => {
+      if (this.providers[network] === undefined) {
+        throw new Error(`Provider for ${network} is undefined`)
+      }
+
       ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
         this.structuredLog(network, `WS connection was closed ${JSON.stringify(error)}`)
         this.lastBlockJobDone[network] = Date.now()
@@ -600,9 +604,14 @@ export class NetworkMonitor {
         this.structuredLog(network, 'Block Job Handler has been inactive longer than threshold time. Restarting.', [])
         this.lastBlockJobDone[network] = Date.now()
         const provider = this.providers[network] as ethers.providers.WebSocketProvider
-        provider._websocket.terminate().then(() => {
-          Promise.resolve()
-        })
+
+        if (provider !== undefined && provider._websocket !== undefined) {
+          provider._websocket.terminate().then(() => {
+            Promise.resolve()
+          })
+        } else {
+          throw new Error(`Provider for ${network} is undefined`)
+        }
       }
     })
   }
