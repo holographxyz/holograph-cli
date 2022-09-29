@@ -18,7 +18,7 @@ ingress:
     alb.ingress.kubernetes.io/target-type: ip
 
     # notice: *.holograph.xyz
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:177635894328:certificate/2be86978-1b32-4954-bb93-4baa7db8c6ac
+    alb.ingress.kubernetes.io/certificate-arn: here-goes-the-alb-ingress-arn
 
     # notice: ALB healthcheck details
     # ref: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/target-group-health-checks.html
