@@ -11,8 +11,8 @@ env:
   #
   DEV_IMAGE_TAG: dev-fc24b09a31b6370cd2db7f418ee4a0bfc206ae12 # dev-${{ github.sha }}
   #######################################
-  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.22
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.21
+  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.24
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.23
   #######################################
   CLUSTER_NAME: staging
   #
@@ -130,42 +130,42 @@ jobs:
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
             --set ingress.blue_green_deployment=false
-#      #
-#      #
-#      # NOTICE: --- OPERATOR ---
-#      - name: Pull the holo-operator helm chart version x.x.x from ECR
-#        shell: bash
-#        env:
-#          #
-#          CHART_REPO: holo-operator
-#          CHART_VERSION: ${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}
-#          #
-#          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-#        run: |
-#          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-#
-#      - name: -> Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          RELEASE_NAME: operator-dev #notice
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            helm upgrade --install $RELEASE_NAME \
-#            holo-operator-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
-#            -n ${{ env.STG_COMMON_NAMESPACE }} \
-#            --set image.repository=${{ env.ECR_REPOSITORY }} \
-#            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
-#            --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
-#            --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
-#            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
-#            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-#            --set datadog_tags.version=chart-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }} \
-#            --values .github/values_for_stg_alb_ingress.yaml \
-#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-#            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-#            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-#            --set ingress.blue_green_deployment=false
+      #
+      #
+      # NOTICE: --- OPERATOR ---
+      - name: Pull the holo-operator helm chart version x.x.x from ECR
+        shell: bash
+        env:
+          #
+          CHART_REPO: holo-operator
+          CHART_VERSION: ${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}
+          #
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
+
+      - name: -> Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          RELEASE_NAME: operator-dev #notice
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            helm upgrade --install $RELEASE_NAME \
+            holo-operator-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
+            -n ${{ env.STG_COMMON_NAMESPACE }} \
+            --set image.repository=${{ env.ECR_REPOSITORY }} \
+            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
+            --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
+            --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
+            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.version=chart-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }} \
+            --values .github/values_for_stg_alb_ingress.yaml \
+            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
+            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
+            --set ingress.blue_green_deployment=false
 
 #      - name: -> Info for the new deployments
 #        uses: tensor-hq/eksctl-helm-action@main
