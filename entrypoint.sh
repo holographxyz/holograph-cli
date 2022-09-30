@@ -1,17 +1,17 @@
 #!/bin/bash
 
 # notice: set the env vars
-if [[ $ENABLE_DEBUG == "True" ]]
+if [[ $ENABLE_DEBUG == "true" ]]
 then
   ENABLE_DEBUG="DEBUG=\*"
 fi
 
-if [[ $ENABLE_SYNC == "True" ]]
+if [[ $ENABLE_SYNC == "true" ]]
 then
   ENABLE_SYNC="--sync"
 fi
 
-if [[ $HEALTHCHECK == "True" ]]
+if [[ $HEALTHCHECK == "true" ]]
 then
   HEALTHCHECK="--healthCheck"
 fi
