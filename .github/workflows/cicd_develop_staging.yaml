@@ -118,10 +118,10 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer-boo #notice
-          ENABLE_DEBUG: 'True'
-          ENABLE_SYNC : 'True'
-          HEALTHCHECK : 'True'
-          MODE        : 'auto'
+          ENABLE_DEBUG: True
+          ENABLE_SYNC : True
+          HEALTHCHECK : True
+          MODE        : auto
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -174,10 +174,10 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: operator-boo #notice
-          ENABLE_DEBUG: 'True'
-          ENABLE_SYNC : 'True'
-          HEALTHCHECK : 'True'
-          MODE        : 'auto'
+          ENABLE_DEBUG: True
+          ENABLE_SYNC : True
+          HEALTHCHECK : True
+          MODE        : auto
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
