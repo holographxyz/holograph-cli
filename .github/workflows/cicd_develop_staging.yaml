@@ -9,7 +9,7 @@ env:
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli-dev # notice: the same for all 3 cli apps
   #
-  DEV_IMAGE_TAG: dev-${{ github.sha }}
+  DEV_IMAGE_TAG: dev-828486f8dd767afa4a4edc53e69b65bd10be0855 #dev-${{ github.sha }}
   #######################################
   STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.29
   STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.28
@@ -78,13 +78,13 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build image
-        run: |
-          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
-          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
-
-      - name: Push image
-        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
+#      - name: Build image
+#        run: |
+#          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
+#          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
+#
+#      - name: Push image
+#        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -136,10 +136,10 @@ jobs:
             --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             \
-            --set ENABLE_DEBUG=$ENABLE_DEBUG \
-            --set ENABLE_SYNC=$ENABLE_SYNC \
-            --set HEALTHCHECK=$HEALTHCHECK \
-            --set MODE=$MODE \
+            --set ENABLE_DEBUG="${ENABLE_DEBUG}" \
+            --set ENABLE_SYNC="${ENABLE_SYNC}" \
+            --set HEALTHCHECK="${HEALTHCHECK}" \
+            --set MODE="${MODE}" \
             \
             --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
             --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \
