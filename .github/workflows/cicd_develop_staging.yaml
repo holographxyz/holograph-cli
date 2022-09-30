@@ -11,8 +11,8 @@ env:
   #
   DEV_IMAGE_TAG: dev-${{ github.sha }}
   #######################################
-  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.27
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.26
+  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.26
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.25
   #######################################
   CLUSTER_NAME: staging
   #
@@ -118,6 +118,10 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer-dev #notice
+          ENABLE_DEBUG: "true"
+          HEALTHCHECK : "true"
+          MODE        : "auto"
+          NETWORK     : "fuji,mumbai,rinkeby"
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -131,6 +135,11 @@ jobs:
             --set HOLO_INDEXER_HOST=${{ env.STG_HOLO_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            \
+            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set HEALTHCHECK=$HEALTHCHECK \
+            --set MODE=$MODE \
+            --set NETWORK=$NETWORK \
             \
             --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
             --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \
@@ -165,6 +174,10 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: operator-dev #notice
+          ENABLE_DEBUG: "true"
+          ENABLE_SYNC : "true"
+          HEALTHCHECK : "true"
+          MODE        : "auto"
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -176,6 +189,11 @@ jobs:
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            \
+            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set ENABLE_SYNC=$ENABLE_SYNC \
+            --set HEALTHCHECK=$HEALTHCHECK \
+            --set MODE=$MODE \
             \
             --set dev_rpc_config_values.fuji_rpc_url=${{ env.operator_dev_fuji_rpc_url }} \
             --set dev_rpc_config_values.mumbai_rpc_url=${{ env.operator_dev_mumbai_rpc_url }} \
