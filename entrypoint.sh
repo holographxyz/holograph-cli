@@ -4,16 +4,22 @@
 if [[ $ENABLE_DEBUG == "true" ]]
 then
   ENABLE_DEBUG="DEBUG=\*"
+else
+  ENABLE_DEBUG=""
 fi
 
 if [[ $ENABLE_SYNC == "true" ]]
 then
   ENABLE_SYNC="--sync"
+else
+  ENABLE_SYNC=""
 fi
 
 if [[ $HEALTHCHECK == "true" ]]
 then
   HEALTHCHECK="--healthCheck"
+else
+  HEALTHCHECK=""
 fi
 
 # notice: configure
