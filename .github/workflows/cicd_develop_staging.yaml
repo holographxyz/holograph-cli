@@ -37,7 +37,7 @@ env:
   STG_DOMAIN: "cxipchain.xyz"
   #
   STG_COMMON_NAMESPACE: testholo # NOTICE <---
-
+  #
   # INDEXER DEV rpc endpoints
   indexer_dev_fuji_rpc_url: "wss://ws-nd-610-081-090.p2pify.com/c08917803705e79df1a1007afb5002b9/ext/bc/C/ws"
   indexer_dev_mumbai_rpc_url: "wss://polygon-mumbai.g.alchemy.com/v2/2FcrJIJ2udLFqz2Uv7NxZzy27ecmP-Xd"
@@ -131,10 +131,12 @@ jobs:
             --set HOLO_INDEXER_HOST=${{ env.STG_HOLO_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            \
             --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
             --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \
             --set dev_rpc_config_values.rinkeby_rpc_url=${{ env.indexer_dev_rinkeby_rpc_url }} \
             --set dev_rpc_config_values.goerli_rpc_url=${{ env.indexer_dev_goerli_rpc_url }} \
+            \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }} \
