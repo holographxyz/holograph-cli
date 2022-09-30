@@ -11,8 +11,8 @@ env:
   #
   DEV_IMAGE_TAG: dev-${{ github.sha }}
   #######################################
-  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.26
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.25
+  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.27
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.26
   #######################################
   CLUSTER_NAME: staging
   #
@@ -37,6 +37,17 @@ env:
   STG_DOMAIN: "cxipchain.xyz"
   #
   STG_COMMON_NAMESPACE: holocli-dev # NOTICE <---
+  #
+  # INDEXER DEV rpc endpoints
+  indexer_dev_fuji_rpc_url: "wss://ws-nd-610-081-090.p2pify.com/c08917803705e79df1a1007afb5002b9/ext/bc/C/ws"
+  indexer_dev_mumbai_rpc_url: "wss://polygon-mumbai.g.alchemy.com/v2/2FcrJIJ2udLFqz2Uv7NxZzy27ecmP-Xd"
+  indexer_dev_rinkeby_rpc_url: "wss://eth-rinkeby.alchemyapi.io/v2/yySAG9LrpzFgOn-FTjLBNUTgahZkW-tp"
+  indexer_dev_goerli_rpc_url: "wss://eth-goerli.g.alchemy.com/v2/4nWm_nijdjoVfooEHTt9GXbYUnkFjj2R"
+  # OPERATOR DEV rpc endpoints
+  operator_dev_fuji_rpc_url: "wss://rpc.ankr.com/avalanche_fuji/ws/80d91b90a032e2d0dc0775bddb80e018c2c0bdb9bd63accd75b91437d1c8d548"
+  operator_dev_mumbai_rpc_url: "wss://polygon-mumbai.g.alchemy.com/v2/KS7QKtJ6kOqppPMPjgi6KwbQWhsC5Xbt"
+  operator_dev_rinkeby_rpc_url: "wss://eth-rinkeby.alchemyapi.io/v2/82fY3I0r5rpix2z4dsnGj4sBgW47i3-Y"
+  operator_dev_goerli_rpc_url: "wss://eth-goerli.g.alchemy.com/v2/4nWm_nijdjoVfooEHTt9GXbYUnkFjj2R"
 
 # notice: the trigger
 on:
@@ -120,9 +131,16 @@ jobs:
             --set HOLO_INDEXER_HOST=${{ env.STG_HOLO_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            \
+            --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
+            --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \
+            --set dev_rpc_config_values.rinkeby_rpc_url=${{ env.indexer_dev_rinkeby_rpc_url }} \
+            --set dev_rpc_config_values.goerli_rpc_url=${{ env.indexer_dev_goerli_rpc_url }} \
+            \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }} \
+            \
             --values .github/values_for_stg_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
@@ -158,8 +176,15 @@ jobs:
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            \
+            --set dev_rpc_config_values.fuji_rpc_url=${{ env.operator_dev_fuji_rpc_url }} \
+            --set dev_rpc_config_values.mumbai_rpc_url=${{ env.operator_dev_mumbai_rpc_url }} \
+            --set dev_rpc_config_values.rinkeby_rpc_url=${{ env.operator_dev_rinkeby_rpc_url }} \
+            --set dev_rpc_config_values.goerli_rpc_url=${{ env.operator_dev_goerli_rpc_url }} \
+            \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }} \
+            \
             --values .github/values_for_stg_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
