@@ -16,8 +16,9 @@ env:
   #######################################
   CLUSTER_NAME: staging
   #
-  AWS_KEY_ID: ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
-  AWS_ACCESS_KEY: ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
+  AWS_KEY_ID     : ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
+  AWS_ACCESS_KEY : ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
+  ALB_CERT_ARN: ${{ secrets.STG_ALB_CERT_ARN_FOR_CXIPCHAIN_XYZ }}
   #
   #TODO - create new gh secret for prod. should be different from staging????
   STG_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
@@ -130,6 +131,7 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }} \
             --values .github/values_for_stg_alb_ingress.yaml \
+            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
@@ -166,6 +168,7 @@ jobs:
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             --values .github/values_for_stg_alb_ingress.yaml \
+            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \

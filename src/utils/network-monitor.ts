@@ -413,13 +413,21 @@ export class NetworkMonitor {
 
   disconnectBuilder(network: string, rpcEndpoint: string, subscribe: boolean): (error: any) => void {
     return (error: any): void => {
+      if (this.providers[network] === undefined) {
+        this.debug(this.providers)
+        throw new Error(`Provider for ${network} is undefined`)
+      }
+
       ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
         this.structuredLog(network, `WS connection was closed ${JSON.stringify(error)}`)
         this.lastBlockJobDone[network] = Date.now()
         this.providers[network] = this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
         if (this.userWallet !== undefined) {
           this.wallets[network] = this.userWallet.connect(this.providers[network] as ethers.providers.WebSocketProvider)
+
+          this.debug(`Address of wallet for ${network}: ${this.wallets[network].getAddress()}`)
           this.wallets[network].getAddress().then((walletAddress: string) => {
+            this.debug(`Checking what getNonce is: ${this.getNonce}`)
             this.getNonce({network, walletAddress, canFail: false}).then((nonce: number) => {
               this.walletNonces[network] = nonce
             })
@@ -600,9 +608,16 @@ export class NetworkMonitor {
         this.structuredLog(network, 'Block Job Handler has been inactive longer than threshold time. Restarting.', [])
         this.lastBlockJobDone[network] = Date.now()
         const provider = this.providers[network] as ethers.providers.WebSocketProvider
-        provider._websocket.terminate().then(() => {
-          Promise.resolve()
-        })
+
+        if (provider !== undefined && provider._websocket !== undefined) {
+          this.debug(`Closing websocket connection for ${network}`)
+          this.debug(`Provider _websocket is: ${provider._websocket}`)
+          provider._websocket.terminate().then(() => {
+            Promise.resolve()
+          })
+        } else {
+          throw new Error(`Provider for ${network} is undefined`)
+        }
       }
     })
   }
