@@ -1,4 +1,4 @@
-name: Deploy holoclis to staging
+name: Deploy holoclis to staging[dev]
 
 permissions:
   id-token: write
@@ -11,8 +11,8 @@ env:
   #
   DEV_IMAGE_TAG: dev-${{ github.sha }}
   #######################################
-  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.26
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.25
+  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.31
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.29
   #######################################
   CLUSTER_NAME: staging
   #
@@ -107,6 +107,8 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer-dev #notice
+          ENABLE_DEBUG: "true"
+          HEALTHCHECK : "true"
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -120,6 +122,10 @@ jobs:
             --set HOLO_INDEXER_HOST=${{ env.STG_HOLO_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            \
+            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set HEALTHCHECK=$HEALTHCHECK \
+            \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }} \
@@ -147,6 +153,10 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: operator-dev #notice
+          ENABLE_DEBUG: "true"
+          ENABLE_SYNC : "true"
+          HEALTHCHECK : "true"
+          MODE        : "auto"
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -158,6 +168,12 @@ jobs:
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            \
+            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set ENABLE_SYNC=$ENABLE_SYNC \
+            --set HEALTHCHECK=$HEALTHCHECK \
+            --set MODE=$MODE \
+            \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             --values .github/values_for_stg_alb_ingress.yaml \
