@@ -118,10 +118,10 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer-boo #notice
-          ENABLE_DEBUG: "True"
-          ENABLE_SYNC : "True"
-          HEALTHCHECK : "True"
-          MODE        : "auto"
+          ENABLE_DEBUG: 'True'
+          ENABLE_SYNC : 'True'
+          HEALTHCHECK : 'True'
+          MODE        : 'auto'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -136,10 +136,10 @@ jobs:
             --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             \
-            --set ENABLE_DEBUG="${ENABLE_DEBUG}" \
-            --set ENABLE_SYNC="${ENABLE_SYNC}" \
-            --set HEALTHCHECK="${HEALTHCHECK}" \
-            --set MODE="${MODE}" \
+            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set ENABLE_SYNC=$ENABLE_SYNC \
+            --set HEALTHCHECK=$HEALTHCHECK \
+            --set MODE=$MODE \
             \
             --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
             --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \
@@ -174,10 +174,10 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: operator-boo #notice
-          ENABLE_DEBUG: "True"
-          ENABLE_SYNC : "True"
-          HEALTHCHECK : "True"
-          MODE        : "auto"
+          ENABLE_DEBUG: 'True'
+          ENABLE_SYNC : 'True'
+          HEALTHCHECK : 'True'
+          MODE        : 'auto'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -189,6 +189,11 @@ jobs:
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            \
+            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set ENABLE_SYNC=$ENABLE_SYNC \
+            --set HEALTHCHECK=$HEALTHCHECK \
+            --set MODE=$MODE \
             \
             --set dev_rpc_config_values.fuji_rpc_url=${{ env.operator_dev_fuji_rpc_url }} \
             --set dev_rpc_config_values.mumbai_rpc_url=${{ env.operator_dev_mumbai_rpc_url }} \
