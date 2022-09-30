@@ -119,7 +119,7 @@ jobs:
         env:
           RELEASE_NAME: indexer-boo #notice
           ENABLE_DEBUG: "True"
-          ENABLE_SYNC : "Thue"
+          ENABLE_SYNC : "True"
           HEALTHCHECK : "True"
           MODE        : "auto"
         with:
@@ -175,7 +175,7 @@ jobs:
         env:
           RELEASE_NAME: operator-boo #notice
           ENABLE_DEBUG: "True"
-          ENABLE_SYNC : "Thue"
+          ENABLE_SYNC : "True"
           HEALTHCHECK : "True"
           MODE        : "auto"
         with:
