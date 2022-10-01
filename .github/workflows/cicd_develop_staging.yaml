@@ -121,7 +121,7 @@ jobs:
           ENABLE_DEBUG: "true"
           HEALTHCHECK : "true"
           MODE        : "auto"
-          NETWORK     : "fuji,mumbai,rinkeby"
+          NETWORK     : "fuji\,mumbai\,rinkeby"
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
