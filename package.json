@@ -36,7 +36,7 @@
     "@oclif/core": "1.16.0",
     "@oclif/plugin-help": "5.1.12",
     "@oclif/plugin-plugins": "2.1.0",
-    "@truffle/hdwallet-provider": "^2.0.9",
+    "@truffle/hdwallet-provider": "^2.0.16",
     "@types/axios": "^0.14.0",
     "abortcontroller-polyfill": "^1.7.3",
     "axios": "^0.27.2",
