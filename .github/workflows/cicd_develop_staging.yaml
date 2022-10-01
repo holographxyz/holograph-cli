@@ -117,9 +117,11 @@ jobs:
       - name: -> Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: indexer-boo #notice
+          RELEASE_NAME: indexer-dev #notice
           ENABLE_DEBUG: "true"
           HEALTHCHECK : "true"
+          MODE        : "auto"
+          NETWORK     : "fuji,mumbai,rinkeby"
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -138,6 +140,7 @@ jobs:
             --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
+            --set NETWORK=$NETWORK \
             \
             --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
             --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \
