@@ -143,26 +143,22 @@ jobs:
             --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
-            --set NETWORK_1=$NETWORK_1 \
-            --set NETWORK_2=$NETWORK_2 \
-            --set NETWORK_3=$NETWORK_3 \
-            --set NETWORK_4=$NETWORK_4
-#            \
-#            --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
-#            --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \
-#            --set dev_rpc_config_values.rinkeby_rpc_url=${{ env.indexer_dev_rinkeby_rpc_url }} \
-#            --set dev_rpc_config_values.goerli_rpc_url=${{ env.indexer_dev_goerli_rpc_url }} \
-#            \
-#            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-#            --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
-#            --set datadog_tags.version=chart-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }} \
-#            \
-#            --values .github/values_for_stg_alb_ingress.yaml \
-#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-#            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-#            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
-#            --set ingress.blue_green_deployment=false
+            \
+            --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
+            --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \
+            --set dev_rpc_config_values.rinkeby_rpc_url=${{ env.indexer_dev_rinkeby_rpc_url }} \
+            --set dev_rpc_config_values.goerli_rpc_url=${{ env.indexer_dev_goerli_rpc_url }} \
+            \
+            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
+            --set datadog_tags.version=chart-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }} \
+            \
+            --values .github/values_for_stg_alb_ingress.yaml \
+            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
+            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
+            --set ingress.blue_green_deployment=false
 #      #
 #      #
 #      # NOTICE: --- OPERATOR ---
