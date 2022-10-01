@@ -9,9 +9,9 @@ env:
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli-dev # notice: the same for all 3 cli apps
   #
-  DEV_IMAGE_TAG: dev-0c4c2b217087ac48c68ce7a4513464c660b9f6d6 #dev-${{ github.sha }}
+  DEV_IMAGE_TAG: dev-${{ github.sha }}
   #######################################
-  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.36
+  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.37
   STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.29
   #######################################
   CLUSTER_NAME: staging
@@ -78,13 +78,13 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-#      - name: Build image
-#        run: |
-#          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
-#          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
-#
-#      - name: Push image
-#        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
+      - name: Build image
+        run: |
+          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
+          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
+
+      - name: Push image
+        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -117,7 +117,7 @@ jobs:
       - name: -> Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: "indexer-boo" #notice
+          RELEASE_NAME: indexer-boo #notice
           ENABLE_DEBUG: "true"
           HEALTHCHECK : "true"
           MODE        : "auto"
@@ -139,10 +139,7 @@ jobs:
             --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
-            --set NETWORK_1="--networks fuji" \
-            --set NETWORK_2="--networks mumbai" \
-            --set NETWORK_3="--networks rinkeby" \
-            --set NETWORK_4="--networks goerli" \
+            --set NETWORK="fuji mumbai rinkeby goerli" \
             \
             --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
             --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \
