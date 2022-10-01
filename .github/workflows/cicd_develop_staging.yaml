@@ -121,10 +121,10 @@ jobs:
           ENABLE_DEBUG: "true"
           HEALTHCHECK : "true"
           MODE        : "auto"
-          NETWORK_1   : "--networks fuji"
-          NETWORK_2   : "--networks mumbai"
-          NETWORK_3   : "--networks rinkeby"
-          NETWORK_4   : "--networks goerli"
+#          NETWORK_1   : "--networks fuji"
+#          NETWORK_2   : "--networks mumbai"
+#          NETWORK_3   : "--networks rinkeby"
+#          NETWORK_4   : "--networks goerli"
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -143,7 +143,10 @@ jobs:
             --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
-            --set NETWORK_1="--networks fuji"
+            --set NETWORK_1="--networks fuji" \
+            --set NETWORK_2="--networks mumbai" \
+            --set NETWORK_3="--networks rinkeby" \
+            --set NETWORK_4="--networks goerli" \
             \
             --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
             --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \
