@@ -121,10 +121,10 @@ jobs:
           ENABLE_DEBUG: "true"
           HEALTHCHECK : "true"
           MODE        : "auto"
-          NETWORK_1   : '--networks fuji'
-          NETWORK_2   : '--networks mumbai'
-          NETWORK_3   : '--networks rinkeby'
-          NETWORK_4   : '--networks goerli'
+          NETWORK_1   : "--networks fuji"
+          NETWORK_2   : "--networks mumbai"
+          NETWORK_3   : "--networks rinkeby"
+          NETWORK_4   : "--networks goerli"
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
