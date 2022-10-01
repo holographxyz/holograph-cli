@@ -11,7 +11,7 @@ env:
   #
   DEV_IMAGE_TAG: dev-${{ github.sha }}
   #######################################
-  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.34
+  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.35
   STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.29
   #######################################
   CLUSTER_NAME: staging
@@ -121,7 +121,10 @@ jobs:
           ENABLE_DEBUG: "true"
           HEALTHCHECK : "true"
           MODE        : "auto"
-          NETWORK     : 'fuji\,mumbai\,rinkeby'
+          NETWORK_1   : '--networks fuji'
+          NETWORK_2   : '--networks mumbai'
+          NETWORK_3   : '--networks rinkeby'
+          NETWORK_4   : '--networks goerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -140,7 +143,10 @@ jobs:
             --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
-            --set NETWORK=$NETWORK \
+            --set NETWORK_1=$NETWORK_1 \
+            --set NETWORK_2=$NETWORK_2 \
+            --set NETWORK_3=$NETWORK_3 \
+            --set NETWORK_4=$NETWORK_4 \
             \
             --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
             --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \

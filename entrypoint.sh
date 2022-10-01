@@ -36,7 +36,12 @@ then
 
 elif [[ $HOLO_CLI_CMD == "indexer" ]]
 then
-  eval env $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holo $HOLO_CLI_CMD --networks fuji --networks mumbai --networks rinkeby --networks goerli --mode $MODE --host=$HOLO_INDEXER_HOST $HEALTHCHECK
+  eval env $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holo $HOLO_CLI_CMD \
+  $NETWORK_1 \
+  $NETWORK_2 \
+  $NETWORK_3 \
+  $NETWORK_4 \
+  --mode $MODE --host=$HOLO_INDEXER_HOST $HEALTHCHECK
 
 else
   echo
