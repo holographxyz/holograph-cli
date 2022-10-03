@@ -71,91 +71,91 @@ jobs:
           role-to-assume: ${{ env.IAM_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Login to ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-#      - name: Build image
-#        run: |
-#          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
-#          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
+#      - name: Checkout code
+#        uses: actions/checkout@v2
 #
-#      - name: Push image
-#        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
-
-      - name: Configure AWS creds to access EKS
-        # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ env.AWS_KEY_ID }} #notice: unique for each env
-          aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Create ns [${{ env.STG_COMMON_NAMESPACE }}]
-        uses: tensor-hq/eksctl-helm-action@main
-        with:
-          eks_cluster: ${{ env.CLUSTER_NAME }}
-          command: |-
-            kubectl create namespace ${{ env.STG_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-      #
-      #
-      # NOTICE: --- INDEXER ---
-      - name: Pull the holo-indexer helm chart version x.x.x from ECR
-        shell: bash
-        env:
-          #
-          CHART_REPO: holo-indexer
-          CHART_VERSION: ${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}
-          #
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        run: |
-          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-
-      - name: -> Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
-        uses: tensor-hq/eksctl-helm-action@main
-        env:
-          RELEASE_NAME: indexer-boo #notice
-          ENABLE_DEBUG: "true"
-          HEALTHCHECK : "true"
-          MODE        : "auto"
-        with:
-          eks_cluster: ${{ env.CLUSTER_NAME }}
-          command: |-
-            helm upgrade --install $RELEASE_NAME \
-            holo-indexer-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
-            -n ${{ env.STG_COMMON_NAMESPACE }} \
-            --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
-            --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
-            --set holo_indexer_password=${{ env.STG_HOLO_INDEXER_PASSWORD }} \
-            --set HOLO_INDEXER_HOST=${{ env.STG_HOLO_INDEXER_HOST }} \
-            --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
-            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
-            \
-            --set ENABLE_DEBUG=$ENABLE_DEBUG \
-            --set ENABLE_SYNC=$ENABLE_SYNC \
-            --set HEALTHCHECK=$HEALTHCHECK \
-            --set MODE=$MODE \
-            --set NETWORK="fuji mumbai rinkeby goerli" \
-            \
-            --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
-            --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \
-            --set dev_rpc_config_values.rinkeby_rpc_url=${{ env.indexer_dev_rinkeby_rpc_url }} \
-            --set dev_rpc_config_values.goerli_rpc_url=${{ env.indexer_dev_goerli_rpc_url }} \
-            \
-            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-            --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
-            --set datadog_tags.version=chart-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }} \
-            \
-            --values .github/values_for_stg_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
-            --set ingress.blue_green_deployment=false
+#      - name: Login to ECR
+#        id: login-ecr
+#        uses: aws-actions/amazon-ecr-login@v1
+#
+##      - name: Build image
+##        run: |
+##          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
+##          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
+##
+##      - name: Push image
+##        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
+#
+#      - name: Configure AWS creds to access EKS
+#        # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
+#        uses: aws-actions/configure-aws-credentials@v1
+#        with:
+#          aws-access-key-id: ${{ env.AWS_KEY_ID }} #notice: unique for each env
+#          aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
+#          aws-region: ${{ env.AWS_REGION }}
+#
+#      - name: Create ns [${{ env.STG_COMMON_NAMESPACE }}]
+#        uses: tensor-hq/eksctl-helm-action@main
+#        with:
+#          eks_cluster: ${{ env.CLUSTER_NAME }}
+#          command: |-
+#            kubectl create namespace ${{ env.STG_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+#      #
+#      #
+#      # NOTICE: --- INDEXER ---
+#      - name: Pull the holo-indexer helm chart version x.x.x from ECR
+#        shell: bash
+#        env:
+#          #
+#          CHART_REPO: holo-indexer
+#          CHART_VERSION: ${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}
+#          #
+#          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+#        run: |
+#          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
+#
+#      - name: -> Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
+#        uses: tensor-hq/eksctl-helm-action@main
+#        env:
+#          RELEASE_NAME: indexer-boo #notice
+#          ENABLE_DEBUG: "true"
+#          HEALTHCHECK : "true"
+#          MODE        : "auto"
+#        with:
+#          eks_cluster: ${{ env.CLUSTER_NAME }}
+#          command: |-
+#            helm upgrade --install $RELEASE_NAME \
+#            holo-indexer-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
+#            -n ${{ env.STG_COMMON_NAMESPACE }} \
+#            --set image.repository=${{ env.ECR_REPOSITORY }} \
+#            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
+#            --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
+#            --set holo_indexer_password=${{ env.STG_HOLO_INDEXER_PASSWORD }} \
+#            --set HOLO_INDEXER_HOST=${{ env.STG_HOLO_INDEXER_HOST }} \
+#            --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
+#            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+#            \
+#            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+#            --set ENABLE_SYNC=$ENABLE_SYNC \
+#            --set HEALTHCHECK=$HEALTHCHECK \
+#            --set MODE=$MODE \
+#            --set NETWORK="fuji mumbai rinkeby goerli" \
+#            \
+#            --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
+#            --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \
+#            --set dev_rpc_config_values.rinkeby_rpc_url=${{ env.indexer_dev_rinkeby_rpc_url }} \
+#            --set dev_rpc_config_values.goerli_rpc_url=${{ env.indexer_dev_goerli_rpc_url }} \
+#            \
+#            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+#            --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
+#            --set datadog_tags.version=chart-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }} \
+#            \
+#            --values .github/values_for_stg_alb_ingress.yaml \
+#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+#            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
+#            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
+#            --set ingress.blue_green_deployment=false
 #      #
 #      #
 #      # NOTICE: --- OPERATOR ---
