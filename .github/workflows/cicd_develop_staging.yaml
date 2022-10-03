@@ -71,9 +71,9 @@ jobs:
           role-to-assume: ${{ env.IAM_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
 
-#      - name: Checkout code
-#        uses: actions/checkout@v2
-#
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - name: Login to ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
