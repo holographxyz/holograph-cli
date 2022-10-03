@@ -283,18 +283,17 @@ jobs:
         - name: Check Datadog monitor for -> Too Many Pod Restarts [indexer]
           env:
             ENV: ${{ env.CLUSTER_NAME }}
-            RELEASE_NAME: "indexer-boo" #notice
-            APP: "indexer"
+            RELEASE_NAME: "indexer-boo"
+#            APP: "indexer"
           run: |
             python python_api_tests/test_dd_k8s_holocli_TooManyRestarts.py
 
-        - name: Check Datadog monitor for -> Too Many Pod Restarts [operator]
-          env:
-            ENV: ${{ env.CLUSTER_NAME }}
-#            BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-            APP: "operator"
-          run: |
-            python python_api_tests/test_dd_k8s_TooManyRestarts.py
+#        - name: Check Datadog monitor for -> Too Many Pod Restarts [operator]
+#          env:
+#            ENV: ${{ env.CLUSTER_NAME }}
+#            RELEASE_NAME: "operator-boo"
+#          run: |
+#            python python_api_tests/test_dd_k8s_holocli_TooManyRestarts.py
 
 #        - name: Check Datadog monitor for -> ImgPullBackoff
 #          env:
