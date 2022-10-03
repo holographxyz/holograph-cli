@@ -283,8 +283,8 @@ jobs:
         - name: Check Datadog monitor for -> Too Many Pod Restarts [indexer]
           env:
             ENV: ${{ env.CLUSTER_NAME }}
-#            BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-            APP: "indexer" # todo - for operator & propagator
+            RELEASE_NAME: "indexer-boo" #notice
+            APP: "indexer"
           run: |
             python python_api_tests/test_dd_k8s_holocli_TooManyRestarts.py
 
