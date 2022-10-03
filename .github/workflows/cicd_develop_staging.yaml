@@ -39,10 +39,10 @@ env:
   STG_COMMON_NAMESPACE: testholo # NOTICE <---
   #
   # INDEXER DEV rpc endpoints
-  indexer_dev_fuji_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }} #"wss://ws-nd-610-081-090.p2pify.com/c08917803705e79df1a1007afb5002b9/ext/bc/C/ws"
-  indexer_dev_mumbai_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }} #"wss://polygon-mumbai.g.alchemy.com/v2/2FcrJIJ2udLFqz2Uv7NxZzy27ecmP-Xd"
-  indexer_dev_rinkeby_rpc_url: ${{ secrets.INDEXER_DEV_RINKEBY_RPC_URL }} #"wss://eth-rinkeby.alchemyapi.io/v2/yySAG9LrpzFgOn-FTjLBNUTgahZkW-tp"
-  indexer_dev_goerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }} #"wss://eth-goerli.g.alchemy.com/v2/4nWm_nijdjoVfooEHTt9GXbYUnkFjj2R"
+  indexer_dev_fuji_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
+  indexer_dev_mumbai_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }}
+  indexer_dev_rinkeby_rpc_url: ${{ secrets.INDEXER_DEV_RINKEBY_RPC_URL }}
+  indexer_dev_goerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }}
   # OPERATOR DEV rpc endpoints
   operator_dev_fuji_rpc_url: ${{ secrets.OPERATOR_DEV_FUJI_RPC_URL }} #"wss://rpc.ankr.com/avalanche_fuji/ws/80d91b90a032e2d0dc0775bddb80e018c2c0bdb9bd63accd75b91437d1c8d548"
   operator_dev_mumbai_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }} #"wss://polygon-mumbai.g.alchemy.com/v2/KS7QKtJ6kOqppPMPjgi6KwbQWhsC5Xbt"
@@ -156,92 +156,92 @@ jobs:
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
             --set ingress.blue_green_deployment=false
-#      #
-#      # TODO -> a separate service endpoint for each operator network
-#      # NOTICE: --- OPERATOR ---
-#      - name: Pull the holo-operator helm chart version x.x.x from ECR
-#        shell: bash
-#        env:
-#          #
-#          CHART_REPO: holo-operator
-#          CHART_VERSION: ${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}
-#          #
-#          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-#        run: |
-#          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-#
-#      - name: -> Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          RELEASE_NAME: operator-boo #notice
-#          ENABLE_DEBUG: "true"
-#          ENABLE_SYNC : "true"
-#          HEALTHCHECK : "true"
-#          MODE        : "auto"
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            helm upgrade --install $RELEASE_NAME \
-#            holo-operator-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
-#            -n ${{ env.STG_COMMON_NAMESPACE }} \
-#            --set image.repository=${{ env.ECR_REPOSITORY }} \
-#            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
-#            --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
-#            --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
-#            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
-#            \
-#            --set ENABLE_DEBUG=$ENABLE_DEBUG \
-#            --set ENABLE_SYNC=$ENABLE_SYNC \
-#            --set HEALTHCHECK=$HEALTHCHECK \
-#            --set MODE=$MODE \
-#            \
-#            --set dev_rpc_config_values.fuji_rpc_url=${{ env.operator_dev_fuji_rpc_url }} \
-#            --set dev_rpc_config_values.mumbai_rpc_url=${{ env.operator_dev_mumbai_rpc_url }} \
-#            --set dev_rpc_config_values.rinkeby_rpc_url=${{ env.operator_dev_rinkeby_rpc_url }} \
-#            --set dev_rpc_config_values.goerli_rpc_url=${{ env.operator_dev_goerli_rpc_url }} \
-#            \
-#            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-#            --set datadog_tags.version=chart-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }} \
-#            \
-#            --values .github/values_for_stg_alb_ingress.yaml \
-#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-#            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-#            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-#            --set ingress.blue_green_deployment=false
+      #
+      # TODO -> a separate service endpoint for each operator network
+      # NOTICE: --- OPERATOR ---
+      - name: Pull the holo-operator helm chart version x.x.x from ECR
+        shell: bash
+        env:
+          #
+          CHART_REPO: holo-operator
+          CHART_VERSION: ${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}
+          #
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-#      - name: -> Info for the new deployments
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          INDEXER_RELEASE_NAME : "indexer-boo"
-#          OPERATOR_RELEASE_NAME: "operator-boo"
-#          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            echo "------------------------- Last 5 Helm releases -------------------------"
-#            echo "--INDEXER--"
-#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
-#            echo "--OPERATOR--"
-#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
-#
-#            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
-#            echo "$DEV_IMAGE_TAG"
-#
-#            echo "------------------------ Healthchecks ------------------------"
-#            sleep 30
-#
-#            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            indexer_status=$(curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq -r '.status')
-#            echo $indexer_status
-#            if [ $indexer_status == "alive" ]; then echo "OK ! Is aliiiiive !"; else echo "ERROR..Is dead !" && exit 1; fi
-#
-#            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            operator_status=$(curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq -r '.status')
-#            echo $operator_status
-#            if [ $indexer_status == "alive" ]; then echo "OK ! Is aliiiiive !"; else echo "ERROR..Is dead !" && exit 1; fi
+      - name: -> Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          RELEASE_NAME: operator-boo #notice
+          ENABLE_DEBUG: "true"
+          ENABLE_SYNC : "true"
+          HEALTHCHECK : "true"
+          MODE        : "auto"
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            helm upgrade --install $RELEASE_NAME \
+            holo-operator-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
+            -n ${{ env.STG_COMMON_NAMESPACE }} \
+            --set image.repository=${{ env.ECR_REPOSITORY }} \
+            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
+            --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
+            --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
+            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            \
+            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set ENABLE_SYNC=$ENABLE_SYNC \
+            --set HEALTHCHECK=$HEALTHCHECK \
+            --set MODE=$MODE \
+            \
+            --set dev_rpc_config_values.fuji_rpc_url=${{ env.operator_dev_fuji_rpc_url }} \
+            --set dev_rpc_config_values.mumbai_rpc_url=${{ env.operator_dev_mumbai_rpc_url }} \
+            --set dev_rpc_config_values.rinkeby_rpc_url=${{ env.operator_dev_rinkeby_rpc_url }} \
+            --set dev_rpc_config_values.goerli_rpc_url=${{ env.operator_dev_goerli_rpc_url }} \
+            \
+            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.version=chart-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }} \
+            \
+            --values .github/values_for_stg_alb_ingress.yaml \
+            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
+            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
+            --set ingress.blue_green_deployment=false
+
+      - name: -> Info for the new deployments
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          INDEXER_RELEASE_NAME : "indexer-boo"
+          OPERATOR_RELEASE_NAME: "operator-boo"
+          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            echo "------------------------- Last 5 Helm releases -------------------------"
+            echo "--INDEXER--"
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
+            echo "--OPERATOR--"
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
+
+            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+            echo "$DEV_IMAGE_TAG"
+
+            echo "------------------------ Healthchecks ------------------------"
+            sleep 30
+
+            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+            indexer_status=$(curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq -r '.status')
+            echo $indexer_status
+            if [ $indexer_status == "alive" ]; then echo "OK ! Is aliiiiive !"; else echo "ERROR..Is dead !" && exit 1; fi
+
+            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+            operator_status=$(curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq -r '.status')
+            echo $operator_status
+            if [ $indexer_status == "alive" ]; then echo "OK ! Is aliiiiive !"; else echo "ERROR..Is dead !" && exit 1; fi
 
 #  datadog-log-checks:
 #      #####
