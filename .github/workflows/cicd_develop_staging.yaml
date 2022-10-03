@@ -232,7 +232,7 @@ jobs:
 
             ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
             echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-            indexer_status = $(curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status')
+            indexer_status=$(curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status')
             echo "---> $indexer_status"
 
             ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
