@@ -39,15 +39,15 @@ env:
   STG_COMMON_NAMESPACE: holocli-dev # NOTICE <---
   #
   # INDEXER DEV rpc endpoints
-  indexer_dev_fuji_rpc_url: "wss://ws-nd-610-081-090.p2pify.com/c08917803705e79df1a1007afb5002b9/ext/bc/C/ws"
-  indexer_dev_mumbai_rpc_url: "wss://polygon-mumbai.g.alchemy.com/v2/2FcrJIJ2udLFqz2Uv7NxZzy27ecmP-Xd"
-  indexer_dev_rinkeby_rpc_url: "wss://eth-rinkeby.alchemyapi.io/v2/yySAG9LrpzFgOn-FTjLBNUTgahZkW-tp"
-  indexer_dev_goerli_rpc_url: "wss://eth-goerli.g.alchemy.com/v2/4nWm_nijdjoVfooEHTt9GXbYUnkFjj2R"
+  indexer_dev_fuji_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
+  indexer_dev_mumbai_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }}
+  indexer_dev_rinkeby_rpc_url: ${{ secrets.INDEXER_DEV_RINKEBY_RPC_URL }}
+  indexer_dev_goerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }}
   # OPERATOR DEV rpc endpoints
-  operator_dev_fuji_rpc_url: "wss://rpc.ankr.com/avalanche_fuji/ws/80d91b90a032e2d0dc0775bddb80e018c2c0bdb9bd63accd75b91437d1c8d548"
-  operator_dev_mumbai_rpc_url: "wss://polygon-mumbai.g.alchemy.com/v2/KS7QKtJ6kOqppPMPjgi6KwbQWhsC5Xbt"
-  operator_dev_rinkeby_rpc_url: "wss://eth-rinkeby.alchemyapi.io/v2/82fY3I0r5rpix2z4dsnGj4sBgW47i3-Y"
-  operator_dev_goerli_rpc_url: "wss://eth-goerli.g.alchemy.com/v2/4nWm_nijdjoVfooEHTt9GXbYUnkFjj2R"
+  operator_dev_fuji_rpc_url: ${{ secrets.OPERATOR_DEV_FUJI_RPC_URL }}
+  operator_dev_mumbai_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }}
+  operator_dev_rinkeby_rpc_url: ${{ secrets.OPERATOR_DEV_RINKEBY_RPC_URL }}
+  operator_dev_goerli_rpc_url: ${{ secrets.OPERATOR_DEV_GOERLI_RPC_URL }}
 
 # notice: the trigger
 on:
