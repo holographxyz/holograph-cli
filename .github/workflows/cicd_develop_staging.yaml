@@ -229,12 +229,11 @@ jobs:
             echo "$DEV_IMAGE_TAG"
 
             echo "------------------------ Healthchecks ------------------------"
-            sleep 55
 
             ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
             echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
             indexer_status = $(curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status')
-            if [ $indexer_status == "alive" ]; then echo "Hoooray ! All is good !"; else exit 1; fi
+            echo "---> $indexer_status"
 
             ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
             echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
