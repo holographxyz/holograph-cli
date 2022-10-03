@@ -233,64 +233,65 @@ jobs:
             ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
             echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
             indexer_status=$(curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status')
+            echo $indexer_status
             if [ $indexer_status == "alive" ]; then echo "Hoooray ! All is good !"; else exit 1; fi
 
             ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
             echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
             curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
 
-  datadog-log-checks:
-      #####
-      needs: [deploy-to-staging]
-      name: datadog-log-checks
-      runs-on: ubuntu-latest
-      #####
-      env:
-        DD_API_KEY: ${{ secrets.STAGING_DD_API_KEY }}
-        DD_APPLICATION_KEY: ${{ secrets.PYTHON_TESTS_DD_APPLICATION_KEY }}
-        #
-        CHECK_TIMEFRAME: 15 # in minutes
-        RUN_FOR: 1 # in minutes
-
-      steps:
-        - name: Sanitize the branch name to use with Helm
-          id: sanitized_branch
-          shell: bash
-          # replaces '/' to '-' , '_' to '-' , uppercase to lowercase
-          run: echo "##[set-output name=branch;]$( echo ${GITHUB_REF_NAME} | tr '/' '-' | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
-
-        - name: Checkout tests repo
-          uses: actions/checkout@v3
-          with:
-            repository: holographxyz/qa
-            ref  : wip  # notice: main/wip
-            token: ${{ secrets.HOLOGRAPH_GITHUB_PERSONAL_ACCESS_TOKEN }}  # reminder -> created in my personal GH account
-            path : './'
-
-        - name: Setup python
-          uses: actions/setup-python@v2
-          with:
-            python-version: 3.8
-
-        - name: Install Python packages
-          run : |
-            python -m pip install datadog_api_client
-
-        - name: Check Datadog monitor for -> Too Many Pod Restarts [indexer]
-          env:
-            ENV: ${{ env.CLUSTER_NAME }}
-            BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-            APP: "indexer" # todo - for operator & propagator
-          run: |
-            python python_api_tests/test_dd_k8s_TooManyRestarts.py
-
-        - name: Check Datadog monitor for -> Too Many Pod Restarts [operator]
-          env:
-            ENV: ${{ env.CLUSTER_NAME }}
-            BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-            APP: "operator"
-          run: |
-            python python_api_tests/test_dd_k8s_TooManyRestarts.py
+#  datadog-log-checks:
+#      #####
+#      needs: [deploy-to-staging]
+#      name: datadog-log-checks
+#      runs-on: ubuntu-latest
+#      #####
+#      env:
+#        DD_API_KEY: ${{ secrets.STAGING_DD_API_KEY }}
+#        DD_APPLICATION_KEY: ${{ secrets.PYTHON_TESTS_DD_APPLICATION_KEY }}
+#        #
+#        CHECK_TIMEFRAME: 15 # in minutes
+#        RUN_FOR: 1 # in minutes
+#
+#      steps:
+#        - name: Sanitize the branch name to use with Helm
+#          id: sanitized_branch
+#          shell: bash
+#          # replaces '/' to '-' , '_' to '-' , uppercase to lowercase
+#          run: echo "##[set-output name=branch;]$( echo ${GITHUB_REF_NAME} | tr '/' '-' | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
+#
+#        - name: Checkout tests repo
+#          uses: actions/checkout@v3
+#          with:
+#            repository: holographxyz/qa
+#            ref  : wip  # notice: main/wip
+#            token: ${{ secrets.HOLOGRAPH_GITHUB_PERSONAL_ACCESS_TOKEN }}  # reminder -> created in my personal GH account
+#            path : './'
+#
+#        - name: Setup python
+#          uses: actions/setup-python@v2
+#          with:
+#            python-version: 3.8
+#
+#        - name: Install Python packages
+#          run : |
+#            python -m pip install datadog_api_client
+#
+#        - name: Check Datadog monitor for -> Too Many Pod Restarts [indexer]
+#          env:
+#            ENV: ${{ env.CLUSTER_NAME }}
+#            BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+#            APP: "indexer" # todo - for operator & propagator
+#          run: |
+#            python python_api_tests/test_dd_k8s_TooManyRestarts.py
+#
+#        - name: Check Datadog monitor for -> Too Many Pod Restarts [operator]
+#          env:
+#            ENV: ${{ env.CLUSTER_NAME }}
+#            BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+#            APP: "operator"
+#          run: |
+#            python python_api_tests/test_dd_k8s_TooManyRestarts.py
 
   #      - name: Check Datadog monitor for -> ImgPullBackoff
   #        env:
