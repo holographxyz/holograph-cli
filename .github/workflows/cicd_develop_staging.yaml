@@ -86,13 +86,13 @@ jobs:
 ##      - name: Push image
 ##        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
 #
-#      - name: Configure AWS creds to access EKS
-#        # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
-#        uses: aws-actions/configure-aws-credentials@v1
-#        with:
-#          aws-access-key-id: ${{ env.AWS_KEY_ID }} #notice: unique for each env
-#          aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
-#          aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS creds to access EKS
+        # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ env.AWS_KEY_ID }} #notice: unique for each env
+          aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
+          aws-region: ${{ env.AWS_REGION }}
 #
 #      - name: Create ns [${{ env.STG_COMMON_NAMESPACE }}]
 #        uses: tensor-hq/eksctl-helm-action@main
