@@ -286,7 +286,7 @@ jobs:
 #            BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
             APP: "indexer" # todo - for operator & propagator
           run: |
-            python python_api_tests/test_dd_k8s_TooManyRestarts.py
+            python python_api_tests/test_dd_k8s_holocli_TooManyRestarts.py
 
         - name: Check Datadog monitor for -> Too Many Pod Restarts [operator]
           env:
