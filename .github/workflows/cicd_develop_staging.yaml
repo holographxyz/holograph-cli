@@ -243,6 +243,7 @@ jobs:
             echo $operator_status
             if [ $indexer_status == "alive" ]; then echo "OK ! Is aliiiiive !"; else echo "ERROR..Is dead !" && exit 1; fi
 
+
 #  datadog-log-checks:
 #      #####
 #      needs: [deploy-to-staging]
