@@ -44,10 +44,10 @@ env:
   indexer_dev_rinkeby_rpc_url: ${{ secrets.INDEXER_DEV_RINKEBY_RPC_URL }}
   indexer_dev_goerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }}
   # OPERATOR DEV rpc endpoints
-  operator_dev_fuji_rpc_url: ${{ secrets.OPERATOR_DEV_FUJI_RPC_URL }} #"wss://rpc.ankr.com/avalanche_fuji/ws/80d91b90a032e2d0dc0775bddb80e018c2c0bdb9bd63accd75b91437d1c8d548"
-  operator_dev_mumbai_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }} #"wss://polygon-mumbai.g.alchemy.com/v2/KS7QKtJ6kOqppPMPjgi6KwbQWhsC5Xbt"
-  operator_dev_rinkeby_rpc_url: ${{ secrets.OPERATOR_DEV_RINKEBY_RPC_URL }} #"wss://eth-rinkeby.alchemyapi.io/v2/82fY3I0r5rpix2z4dsnGj4sBgW47i3-Y"
-  operator_dev_goerli_rpc_url: ${{ secrets.OPERATOR_DEV_GOERLI_RPC_URL }} #"wss://eth-goerli.g.alchemy.com/v2/4nWm_nijdjoVfooEHTt9GXbYUnkFjj2R"
+  operator_dev_fuji_rpc_url: ${{ secrets.OPERATOR_DEV_FUJI_RPC_URL }}
+  operator_dev_mumbai_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }}
+  operator_dev_rinkeby_rpc_url: ${{ secrets.OPERATOR_DEV_RINKEBY_RPC_URL }}
+  operator_dev_goerli_rpc_url: ${{ secrets.OPERATOR_DEV_GOERLI_RPC_URL }}
 
 # notice: the trigger
 on:
@@ -229,7 +229,7 @@ jobs:
             echo "$DEV_IMAGE_TAG"
 
             echo "------------------------ Healthchecks ------------------------"
-            sleep 30
+            sleep 40
 
             ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
             echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
@@ -243,59 +243,58 @@ jobs:
             echo $operator_status
             if [ $indexer_status == "alive" ]; then echo "OK ! Is aliiiiive !"; else echo "ERROR..Is dead !" && exit 1; fi
 
+  datadog-log-checks:
+      #####
+      needs: [deploy-to-staging]
+      name: datadog-log-checks
+      runs-on: ubuntu-latest
+      #####
+      env:
+        DD_API_KEY: ${{ secrets.STAGING_DD_API_KEY }}
+        DD_APPLICATION_KEY: ${{ secrets.PYTHON_TESTS_DD_APPLICATION_KEY }}
+        #
+        CHECK_TIMEFRAME: 15 # in minutes
+        RUN_FOR: 1 # in minutes
 
-#  datadog-log-checks:
-#      #####
-#      needs: [deploy-to-staging]
-#      name: datadog-log-checks
-#      runs-on: ubuntu-latest
-#      #####
-#      env:
-#        DD_API_KEY: ${{ secrets.STAGING_DD_API_KEY }}
-#        DD_APPLICATION_KEY: ${{ secrets.PYTHON_TESTS_DD_APPLICATION_KEY }}
-#        #
-#        CHECK_TIMEFRAME: 15 # in minutes
-#        RUN_FOR: 1 # in minutes
-#
-#      steps:
-#        - name: Sanitize the branch name to use with Helm
-#          id: sanitized_branch
-#          shell: bash
-#          # replaces '/' to '-' , '_' to '-' , uppercase to lowercase
-#          run: echo "##[set-output name=branch;]$( echo ${GITHUB_REF_NAME} | tr '/' '-' | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
-#
-#        - name: Checkout tests repo
-#          uses: actions/checkout@v3
-#          with:
-#            repository: holographxyz/qa
-#            ref  : wip  # notice: main/wip
-#            token: ${{ secrets.HOLOGRAPH_GITHUB_PERSONAL_ACCESS_TOKEN }}  # reminder -> created in my personal GH account
-#            path : './'
-#
-#        - name: Setup python
-#          uses: actions/setup-python@v2
-#          with:
-#            python-version: 3.8
-#
-#        - name: Install Python packages
-#          run : |
-#            python -m pip install datadog_api_client
-#
-#        - name: Check Datadog monitor for -> Too Many Pod Restarts [indexer]
-#          env:
-#            ENV: ${{ env.CLUSTER_NAME }}
-#            BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-#            APP: "indexer" # todo - for operator & propagator
-#          run: |
-#            python python_api_tests/test_dd_k8s_TooManyRestarts.py
-#
-#        - name: Check Datadog monitor for -> Too Many Pod Restarts [operator]
-#          env:
-#            ENV: ${{ env.CLUSTER_NAME }}
-#            BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-#            APP: "operator"
-#          run: |
-#            python python_api_tests/test_dd_k8s_TooManyRestarts.py
+      steps:
+        - name: Sanitize the branch name to use with Helm
+          id: sanitized_branch
+          shell: bash
+          # replaces '/' to '-' , '_' to '-' , uppercase to lowercase
+          run: echo "##[set-output name=branch;]$( echo ${GITHUB_REF_NAME} | tr '/' '-' | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
+
+        - name: Checkout tests repo
+          uses: actions/checkout@v3
+          with:
+            repository: holographxyz/qa
+            ref  : wip  # notice: main/wip
+            token: ${{ secrets.HOLOGRAPH_GITHUB_PERSONAL_ACCESS_TOKEN }}  # reminder -> created in my personal GH account
+            path : './'
+
+        - name: Setup python
+          uses: actions/setup-python@v2
+          with:
+            python-version: 3.8
+
+        - name: Install Python packages
+          run : |
+            python -m pip install datadog_api_client
+
+        - name: Check Datadog monitor for -> Too Many Pod Restarts [indexer]
+          env:
+            ENV: ${{ env.CLUSTER_NAME }}
+            BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+            APP: "indexer" # todo - for operator & propagator
+          run: |
+            python python_api_tests/test_dd_k8s_TooManyRestarts.py
+
+        - name: Check Datadog monitor for -> Too Many Pod Restarts [operator]
+          env:
+            ENV: ${{ env.CLUSTER_NAME }}
+            BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+            APP: "operator"
+          run: |
+            python python_api_tests/test_dd_k8s_TooManyRestarts.py
 
   #      - name: Check Datadog monitor for -> ImgPullBackoff
   #        env:
