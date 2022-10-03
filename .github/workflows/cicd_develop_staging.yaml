@@ -235,11 +235,12 @@ jobs:
             echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
             indexer_status=$(curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq -r '.status')
             echo $indexer_status
+            indexer_status=sdfsdfsdf
             if [ $indexer_status == "alive" ]; then echo "Hoooray ! All is good !"; else exit 1; fi
 
-            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq -r '.status'
+#            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq -r '.status'
 
 #  datadog-log-checks:
 #      #####
