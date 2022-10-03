@@ -283,7 +283,7 @@ jobs:
         - name: Check Datadog monitor for -> Too Many Pod Restarts [indexer]
           env:
             ENV: ${{ env.CLUSTER_NAME }}
-            BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+#            BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
             APP: "indexer" # todo - for operator & propagator
           run: |
             python python_api_tests/test_dd_k8s_TooManyRestarts.py
@@ -291,17 +291,17 @@ jobs:
         - name: Check Datadog monitor for -> Too Many Pod Restarts [operator]
           env:
             ENV: ${{ env.CLUSTER_NAME }}
-            BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+#            BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
             APP: "operator"
           run: |
             python python_api_tests/test_dd_k8s_TooManyRestarts.py
 
-        - name: Check Datadog monitor for -> ImgPullBackoff
-          env:
-            ENV: ${{ env.CLUSTER_NAME }}
-            BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
-            CHECK_TIMEFRAME: 5 # in minutes
-            RUN_FOR: 5 # in minutes
-            APP: "indexer" # todo - for operator & propagator
-          run: |
-            python python_api_tests/test_dd_k8s_ImgPullBackoff.py
+#        - name: Check Datadog monitor for -> ImgPullBackoff
+#          env:
+#            ENV: ${{ env.CLUSTER_NAME }}
+#            BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }} # this is the namespace
+#            CHECK_TIMEFRAME: 5 # in minutes
+#            RUN_FOR: 5 # in minutes
+#            APP: "indexer" # todo - for operator & propagator
+#          run: |
+#            python python_api_tests/test_dd_k8s_ImgPullBackoff.py
