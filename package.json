@@ -92,7 +92,6 @@
     "commands": "./dist/commands",
     "npmRegistry": "https://registry.npmjs.org",
     "macos": {
-      "sign": "Developer ID Installer: CXIP Labs",
       "identifier": "com.holograph.cli"
     },
     "update": {
@@ -100,8 +99,7 @@
         "version": "18.9.0"
       },
       "s3": {
-        "xz": true,
-        "host": "<s3-host>"
+        "bucket": "holo-cli"
       }
     },
     "plugins": [
