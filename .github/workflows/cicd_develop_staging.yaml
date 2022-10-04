@@ -28,7 +28,7 @@ env:
   STG_HOLO_INDEXER_HOST: http://dev-nest-api.develop.svc.cluster.local:443
   #
   STG_HOLO_INDEXER_PASSWORD: ${{ secrets.DEV_HOLO_INDEXER_PASSWORD }}
-  STG_HOLO_OPERATOR_PASSWORD: ${{ secrets.DEV_HOLO_OPERATOR_PASSWORD }}
+  STG_HOLO_OPERATOR_PASSWORD: "sdfgsdfsdfgsdfgsdgfsdgsdgsdgfsdfsdgsdgsdgsdg" #"${{ secrets.DEV_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
   INDEXER_HOLO_CONFIG_FILE_DATA: dev-config-file
