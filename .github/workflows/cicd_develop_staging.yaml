@@ -11,32 +11,43 @@ env:
   #
   DEV_IMAGE_TAG: dev-${{ github.sha }}
   #######################################
-  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.22
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.21
+  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.39
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.31
   #######################################
   CLUSTER_NAME: staging
   #
   AWS_KEY_ID: ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
+  ALB_CERT_ARN: ${{ secrets.STG_ALB_CERT_ARN_FOR_CXIPCHAIN_XYZ }}
   #
   #TODO - create new gh secret for prod. should be different from staging????
   STG_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
   STG_HOLO_INDEXER_HOST: http://dev-nest-api.develop.svc.cluster.local:443
   #
-  # notice: all 3 have the same password
-  STG_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
-  STG_HOLO_OPERATOR_PASSWORD: ${{ secrets.STG_HOLO_OPERATOR_PASSWORD }}
+  STG_HOLO_INDEXER_PASSWORD: ${{ secrets.DEV_HOLO_INDEXER_PASSWORD }}
+  STG_HOLO_OPERATOR_PASSWORD: ${{ secrets.DEV_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
-  INDEXER_HOLO_CONFIG_FILE_DATA: stg-config-file
-  OPERATOR_HOLO_CONFIG_FILE_DATA: stg-config-file
+  INDEXER_HOLO_CONFIG_FILE_DATA: dev-config-file
+  OPERATOR_HOLO_CONFIG_FILE_DATA: dev-config-file
   #
   ABI_ENVIRONMENT: develop # same for all apps [indexer,operator]
   #
   STG_DOMAIN: "cxipchain.xyz"
   #
   STG_COMMON_NAMESPACE: holocli-dev # NOTICE <---
+  #
+  # INDEXER DEV rpc endpoints
+  indexer_dev_fuji_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
+  indexer_dev_mumbai_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }}
+  indexer_dev_rinkeby_rpc_url: ${{ secrets.INDEXER_DEV_RINKEBY_RPC_URL }}
+  indexer_dev_goerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }}
+  # OPERATOR DEV rpc endpoints
+  operator_dev_fuji_rpc_url: ${{ secrets.OPERATOR_DEV_FUJI_RPC_URL }}
+  operator_dev_mumbai_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }}
+  operator_dev_rinkeby_rpc_url: ${{ secrets.OPERATOR_DEV_RINKEBY_RPC_URL }}
+  operator_dev_goerli_rpc_url: ${{ secrets.OPERATOR_DEV_GOERLI_RPC_URL }}
 
 # notice: the trigger
 on:
@@ -50,7 +61,7 @@ on:
 
 jobs:
   deploy-to-staging:
-    name: Deploy-to-staging
+    name: Deploy-to-staging[dev]
     runs-on: ubuntu-latest
 
     steps:
@@ -72,7 +83,7 @@ jobs:
           docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
           -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
 
-      - name: Push image to ECR
+      - name: Push image
         run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
@@ -83,7 +94,7 @@ jobs:
           aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Create ns
+      - name: Create ns [${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
@@ -107,6 +118,10 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer-dev #notice
+          ENABLE_DEBUG: "true"
+          HEALTHCHECK : "true"
+          MODE        : "auto"
+          NETWORK     : "fuji mumbai goerli"
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -120,10 +135,25 @@ jobs:
             --set HOLO_INDEXER_HOST=${{ env.STG_HOLO_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            \
+            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set HEALTHCHECK=$HEALTHCHECK \
+            --set MODE=$MODE \
+            --set NETWORK="${NETWORK}" \
+            --set dev_rpc_config_values.bridge_source="goerli" \
+            --set dev_rpc_config_values.bridge_destination="mumbai" \
+            \
+            --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
+            --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \
+            --set dev_rpc_config_values.rinkeby_rpc_url=${{ env.indexer_dev_rinkeby_rpc_url }} \
+            --set dev_rpc_config_values.goerli_rpc_url=${{ env.indexer_dev_goerli_rpc_url }} \
+            \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }} \
+            \
             --values .github/values_for_stg_alb_ingress.yaml \
+            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
@@ -146,6 +176,10 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: operator-dev #notice
+          ENABLE_DEBUG: "true"
+          ENABLE_SYNC : "true"
+          HEALTHCHECK : "true"
+          MODE        : "auto"
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -157,9 +191,24 @@ jobs:
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            \
+            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set ENABLE_SYNC=$ENABLE_SYNC \
+            --set HEALTHCHECK=$HEALTHCHECK \
+            --set MODE=$MODE \
+            --set dev_rpc_config_values.bridge_source="goerli" \
+            --set dev_rpc_config_values.bridge_destination="mumbai" \
+            \
+            --set dev_rpc_config_values.fuji_rpc_url=${{ env.operator_dev_fuji_rpc_url }} \
+            --set dev_rpc_config_values.mumbai_rpc_url=${{ env.operator_dev_mumbai_rpc_url }} \
+            --set dev_rpc_config_values.rinkeby_rpc_url=${{ env.operator_dev_rinkeby_rpc_url }} \
+            --set dev_rpc_config_values.goerli_rpc_url=${{ env.operator_dev_goerli_rpc_url }} \
+            \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.version=chart-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }} \
+            \
             --values .github/values_for_stg_alb_ingress.yaml \
+            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
