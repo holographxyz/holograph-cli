@@ -8,6 +8,11 @@ import {ensureConfigFileIsValid} from '../../utils/config'
 import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
+/**
+ * Description: Operator CLI
+ * The primary command for operating jobs on the Holograph network.
+ * holo operator --networks="goerli mumbai fuji" --mode=auto
+ */
 export default class Operator extends Command {
   static description = 'Listen for EVM events for jobs and process them'
   static examples = ['$ holo operator --networks="goerli mumbai fuji" --mode=auto']
@@ -31,16 +36,14 @@ export default class Operator extends Command {
     ...networkFlag,
   }
 
-  /**
-   * Operator class variables
-   */
+  // Operator class variables
   operatorMode: OperatorMode = OperatorMode.listen
-
   networkMonitor!: NetworkMonitor
 
   async run(): Promise<void> {
     const {flags} = await this.parse(Operator)
 
+    // Check the flags
     const enableHealthCheckServer = flags.healthCheck
     const syncFlag = flags.sync
     const unsafePassword = flags.unsafePassword
@@ -78,7 +81,10 @@ export default class Operator extends Command {
       lastBlockFilename: 'operator-blocks.json',
     })
 
+    // Load the last block height from the file
     this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
+
+    // Check if the operator has previous missed blocks
     let canSync = false
     const lastBlockKeys: string[] = Object.keys(this.networkMonitor.latestBlockHeight)
     for (let i = 0, l: number = lastBlockKeys.length; i < l; i++) {
@@ -107,12 +113,16 @@ export default class Operator extends Command {
     await this.networkMonitor.run(true, undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
-    // Start server
+    // Start health check server on port 6000
+    // Can be used to monitor that the operator is online and running
     if (enableHealthCheckServer) {
       startHealthcheckServer({networkMonitor: this.networkMonitor})
     }
   }
 
+  /**
+   * Build the filters to search for events via the network monitor
+   */
   async filterBuilder(): Promise<void> {
     this.networkMonitor.filters = [
       {
@@ -124,6 +134,9 @@ export default class Operator extends Command {
     Promise.resolve()
   }
 
+  /**
+   * Process the transactions in each block job
+   */
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
@@ -144,6 +157,9 @@ export default class Operator extends Command {
     }
   }
 
+  /**
+   * Handle the AvailableOperatorJob event from the LayerZero contract when one is picked up while processing transactions
+   */
   async handleAvailableOperatorJobEvent(
     transaction: ethers.providers.TransactionResponse,
     network: string,
@@ -197,6 +213,9 @@ export default class Operator extends Command {
     }
   }
 
+  /**
+   * Execute the payload on the destination network
+   */
   async executePayload(network: string, payload: string, tags: (string | number)[]): Promise<void> {
     // If the operator is in listen mode, payloads will not be executed
     // If the operator is in manual mode, the payload must be manually executed
