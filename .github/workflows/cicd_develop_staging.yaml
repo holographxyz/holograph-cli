@@ -123,6 +123,7 @@ jobs:
           ENABLE_DEBUG: "true"
           HEALTHCHECK : "true"
           MODE        : "auto"
+          NETWORK: "fuji mumbai goerli"
           #TODO indexer_dev_bridge_source: "goerli"      # -> dev_rpc_config_values.bridge_source
           #TODO indexer_dev_bridge_destination: "mumbai" # -> dev_rpc_config_values.bridge_destination mumbai
         with:
@@ -143,7 +144,7 @@ jobs:
             --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
-            --set NETWORK="fuji mumbai goerli" \
+            --set NETWORK=$NETWORK \
             \
             --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
             --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \
