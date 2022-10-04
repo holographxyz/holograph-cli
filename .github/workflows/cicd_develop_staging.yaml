@@ -11,8 +11,8 @@ env:
   #
   DEV_IMAGE_TAG: dev-${{ github.sha }}
   #######################################
-  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.37
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.30
+  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.39
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.31
   #######################################
   CLUSTER_NAME: staging
   #
@@ -121,6 +121,7 @@ jobs:
           ENABLE_DEBUG: "true"
           HEALTHCHECK : "true"
           MODE        : "auto"
+          NETWORK     : "fuji mumbai goerli"
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -138,7 +139,9 @@ jobs:
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
-            --set NETWORK="fuji mumbai rinkeby goerli" \
+            --set NETWORK="${NETWORK}" \
+            --set dev_rpc_config_values.bridge_source="goerli" \
+            --set dev_rpc_config_values.bridge_destination="mumbai" \
             \
             --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
             --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \
@@ -193,6 +196,8 @@ jobs:
             --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
+            --set dev_rpc_config_values.bridge_source="goerli" \
+            --set dev_rpc_config_values.bridge_destination="mumbai" \
             \
             --set dev_rpc_config_values.fuji_rpc_url=${{ env.operator_dev_fuji_rpc_url }} \
             --set dev_rpc_config_values.mumbai_rpc_url=${{ env.operator_dev_mumbai_rpc_url }} \
