@@ -33,16 +33,16 @@ const getEnvironmentByGitBranch = (): Environment => {
 
 // Description: Get environment by ABI_ENVIRONMENT
 const getEnvironment = (): Environment => {
-  let environment = Environment.develop
+  let environment = process.env.HOLOGRAPH_ENVIRONMENT || Environment.experimental
   const acceptableBranches: Array<keyof typeof Environment> = Object.values(Environment)
 
   if (acceptableBranches.includes(environment as keyof typeof Environment)) {
     environment = Environment[environment as keyof typeof Environment]
   } else {
-    throw new Error(`Unknown value for ABI_ENVIRONMENT=${environment}`)
+    throw new Error(`Unknown value for HOLOGRAPH_ENVIRONMENT=${environment}`)
   }
 
-  console.log(`ABI_ENVIRONMENT=${environment}`) // NOTE: remove after deployment
+  console.log(`HOLOGRAPH_ENVIRONMENT=${environment}`) // NOTE: remove after deployment
   return environment
 }
 
