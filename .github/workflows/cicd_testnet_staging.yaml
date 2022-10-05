@@ -40,20 +40,20 @@ env:
   STG_COMMON_NAMESPACE: holocli-test # NOTICE <---
 
 # notice: the trigger
-#on:
-#  push:
-#    branches:
-#      - '...............'
-#      # Excluded branches
-#      - '!develop'
-#      - '!main'
-#      - '!master'
-# notice: the trigger
 on:
-  pull_request:
+  push:
     branches:
-      - 'testnet'
-    types: [closed]
+      - '...............'
+      # Excluded branches
+      - '!develop'
+      - '!main'
+      - '!master'
+# notice: the trigger
+#on:
+#  pull_request:
+#    branches:
+#      - 'testnet'
+#    types: [closed]
 
 jobs:
   deploy-to-staging:
