@@ -67,6 +67,9 @@ export default class Analyze extends Command {
   transactionLogs: (ContractDeployment | AvailableJob)[] = []
   networkMonitor!: NetworkMonitor
 
+  /**
+   * Keeps track of the operator jobs
+   */
   manageOperatorJobMaps(index: number, operatorJobHash: string, operatorJob: AvailableJob): void {
     if (index >= 0) {
       this.transactionLogs[index] = operatorJob
@@ -82,6 +85,9 @@ export default class Analyze extends Command {
     }
   }
 
+  /**
+   * Validates that the input scope is valid and using a supported network
+   */
   validateScope(scope: Scope, configFile: ConfigFile, networks: string[], scopeJobs: Scope[]): void {
     if ('network' in scope && 'startBlock' in scope && 'endBlock' in scope) {
       if (Object.keys(configFile.networks).includes(scope.network as string)) {
@@ -98,6 +104,9 @@ export default class Analyze extends Command {
     }
   }
 
+  /**
+   * Checks all the input scopes and validates them
+   */
   scopeItOut(configFile: ConfigFile, scopeFlags: string[]): {networks: string[]; scopeJobs: Scope[]} {
     const networks: string[] = []
     const scopeJobs: Scope[] = []
@@ -196,6 +205,9 @@ export default class Analyze extends Command {
     fs.writeFileSync(this.outputFile, JSON.stringify(this.transactionLogs, undefined, 2))
   }
 
+  /**
+   * Build the filters to search for events via the network monitor
+   */
   async filterBuilder(): Promise<void> {
     this.networkMonitor.filters = [
       {
@@ -217,6 +229,9 @@ export default class Analyze extends Command {
     Promise.resolve()
   }
 
+  /**
+   * Process the transactions in each block job
+   */
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
@@ -247,6 +262,9 @@ export default class Analyze extends Command {
     }
   }
 
+  /**
+   * Finds bridge out events and keeps track of them
+   */
   async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
     const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
@@ -309,6 +327,9 @@ export default class Analyze extends Command {
     }
   }
 
+  /**
+   * Finds bridge in events and keeps track of them
+   */
   async handleBridgeInEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
     const parsedTransaction: ethers.utils.TransactionDescription =
       this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
@@ -375,6 +396,9 @@ export default class Analyze extends Command {
     }
   }
 
+  /**
+   * Handle the AvailableOperatorJob event from the LayerZero contract when one is picked up while processing transactions
+   */
   async handleAvailableOperatorJobEvent(
     transaction: ethers.providers.TransactionResponse,
     network: string,
@@ -413,6 +437,9 @@ export default class Analyze extends Command {
     }
   }
 
+  /**
+   * Checks if the operator job is valid and has not already been executed
+   */
   async validateOperatorJob(transactionHash: string, network: string, payload: string): Promise<boolean> {
     const contract: ethers.Contract = this.networkMonitor.operatorContract.connect(
       this.networkMonitor.providers[network],

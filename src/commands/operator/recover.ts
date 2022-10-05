@@ -5,8 +5,7 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 import networks from '../../utils/networks'
-
-import {BlockJob, NetworkMonitor} from '../../utils/network-monitor'
+import {NetworkMonitor} from '../../utils/network-monitor'
 
 export default class Recover extends Command {
   static description = 'Attempt to re-run/recover a particular Operator Job'
@@ -16,19 +15,7 @@ export default class Recover extends Command {
     tx: Flags.string({description: 'The hash of transaction that we want to attempt to execute'}),
   }
 
-  /**
-   * Operator class variables
-   */
-  operatorAddress!: string
   networkMonitor!: NetworkMonitor
-
-  async fakeProcessor(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
-    this.networkMonitor.structuredLog(
-      job.network,
-      `This should not trigger: ${JSON.stringify(transactions, undefined, 2)}`,
-    )
-    Promise.resolve()
-  }
 
   async run(): Promise<void> {
     this.log('Loading user configurations...')
@@ -39,7 +26,7 @@ export default class Recover extends Command {
       parent: this,
       configFile,
       debug: this.debug,
-      processTransactions: this.fakeProcessor,
+      processTransactions: undefined, // Recover doesn't process transactions
       userWallet,
     })
 
@@ -97,6 +84,9 @@ export default class Recover extends Command {
     }
   }
 
+  /**
+   * Process a transaction and attempt to either handle the bridge out or bridge in depending on the event emitted
+   */
   async processTransaction(network: string, transaction: ethers.providers.TransactionResponse): Promise<void> {
     this.networkMonitor.structuredLog(
       network,
@@ -123,6 +113,9 @@ export default class Recover extends Command {
     }
   }
 
+  /**
+   * Handles the event emitted by the bridge contract when a token is bridged out
+   */
   async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
     const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
@@ -173,6 +166,9 @@ export default class Recover extends Command {
     }
   }
 
+  /**
+   * Handles the event emitted by the operator contract when a job is available and can be executed
+   */
   async handleAvailableOperatorJobEvent(
     transaction: ethers.providers.TransactionResponse,
     network: string,
@@ -214,6 +210,9 @@ export default class Recover extends Command {
     }
   }
 
+  /**
+   * Execute the payload on the destination network
+   */
   async executePayload(network: string, payload: string): Promise<void> {
     // If the operator is in listen mode, payloads will not be executed
     // If the operator is in manual mode, the payload must be manually executed

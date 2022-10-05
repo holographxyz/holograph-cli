@@ -17,7 +17,7 @@ import {supportedNetworks} from '../../utils/networks'
 
 export default class Config extends Command {
   static description =
-    'Initialize the Holo command line to become an operator or to bridge collections and NFTs manually'
+    'Initialize the Holo CLI with a config file. If no flags are passed, the CLI will prompt you for the required information.'
 
   static examples = [
     '$ holo --defaultFrom goerli',
@@ -49,6 +49,9 @@ export default class Config extends Command {
     fromJson: Flags.string({description: 'JSON object to use as the config'}),
   }
 
+  /**
+   * Load the config file from the path provided by the user
+   */
   async loadConfigPath(configPath: string, filePath: string | undefined): Promise<void> {
     // Check if config Dir flag is empty
     if (filePath !== undefined) {
@@ -89,14 +92,15 @@ export default class Config extends Command {
         } else {
           this.error(`Failed to load ${filePath}`)
         }
-
-        this.exit()
       }
 
       this.exit()
     }
   }
 
+  /**
+   * Load the config file from the JSON provided by the user
+   */
   async loadConfigJson(configPath: string, jsonString: string | undefined): Promise<void> {
     // Check if config Json flag is empty
     if (jsonString !== undefined) {
@@ -110,6 +114,9 @@ export default class Config extends Command {
     }
   }
 
+  /**
+   * Checks that the origin and destination networks are not the same
+   */
   validateToAndFrom(defaultTo: string | undefined, defaultFrom: string | undefined): void {
     // Make sure default from and to networks are not the same when using flags
     if (defaultFrom !== undefined && defaultTo !== undefined) {

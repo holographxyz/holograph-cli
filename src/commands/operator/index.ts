@@ -9,9 +9,8 @@ import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '.
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
 /**
- * Description: Operator CLI
- * The primary command for operating jobs on the Holograph network.
- * holo operator --networks="goerli mumbai fuji" --mode=auto
+ * Operator
+ * Description: The primary command for operating jobs on the Holograph network.
  */
 export default class Operator extends Command {
   static description = 'Listen for EVM events for jobs and process them'
@@ -36,7 +35,6 @@ export default class Operator extends Command {
     ...networkFlag,
   }
 
-  // Operator class variables
   operatorMode: OperatorMode = OperatorMode.listen
   networkMonitor!: NetworkMonitor
 
