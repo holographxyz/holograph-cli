@@ -94,7 +94,7 @@ jobs:
           aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Create ns [${{ env.STG_COMMON_NAMESPACE }}]
+      - name: Create ns [${{ env.PROD_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
