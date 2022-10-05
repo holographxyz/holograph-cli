@@ -1453,9 +1453,12 @@ export class NetworkMonitor {
             )} native gas tokens (in ether)`,
             tags,
           )
-          const rawTx = await contract.populateTransaction[methodName](...args, {gasPrice, gasLimit})
-          rawTx.nonce = this.walletNonces[network]
           this.lastBlockJobDone[network] = Date.now()
+          this.structuredLog(network, 'starting populateTransaction')
+          const rawTx = await contract.populateTransaction[methodName](...args, {nonce: this.walletNonces[network], gasPrice, gasLimit})
+          this.structuredLog(network, 'finished populateTransaction')
+          this.lastBlockJobDone[network] = Date.now()
+          this.structuredLog(network, 'starting sendTransaction')
           const tx: TransactionResponse | null = await this.sendTransaction({
             network,
             tags,
@@ -1464,6 +1467,7 @@ export class NetworkMonitor {
             canFail,
             interval,
           })
+          this.structuredLog(network, 'finished sendTransaction')
           if (tx === null) {
             // sending tx failed
             this.structuredLog(network, `Failed to send transaction ${methodName} ${JSON.stringify(args)}`, tags)
