@@ -421,7 +421,7 @@ export class NetworkMonitor {
         throw new Error(`Provider for ${network} is undefined`)
       }
 
-      ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
+      const restart = () => {
         this.structuredLog(network, `WS connection was closed ${JSON.stringify(error)}`)
         this.lastBlockJobDone[network] = Date.now()
         this.providers[network] = this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
@@ -436,7 +436,15 @@ export class NetworkMonitor {
             })
           })
         }
-      })
+      }
+
+      const websocketProvider = this.providers[network] as ethers.providers.WebSocketProvider
+      if (websocketProvider === undefined) {
+        this.structuredLog(network, `Websocket was undefined in disconnectBuilder function`)
+        restart()
+      } else {
+        websocketProvider.destroy().then(restart)
+      }
     }
   }
 
@@ -615,9 +623,15 @@ export class NetworkMonitor {
         if (provider !== undefined && provider._websocket !== undefined) {
           this.debug(`Closing websocket connection for ${network}`)
           this.debug(`Provider _websocket is: ${provider._websocket}`)
-          provider._websocket.terminate().then(() => {
+          const terminationPromise = provider._websocket.terminate()
+          if (terminationPromise === undefined) {
+            this.structuredLog(network, `Websocket was undefined in blockJobMonitor function`)
             Promise.resolve()
-          })
+          } else {
+            terminationPromise.then(() => {
+              Promise.resolve()
+            })
+          }
         } else {
           throw new Error(`Provider for ${network} is undefined`)
         }
