@@ -37,7 +37,7 @@ env:
   #
   PROD_DOMAIN: 'holograph.xyz'
   #
-  PROD_COMMON_NAMESPACE: testholo #holocli # NOTICE <---
+  PROD_COMMON_NAMESPACE: holocli # NOTICE <---
   #
   # INDEXER PROD rpc endpoints
   indexer_prod_fuji_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
@@ -81,7 +81,7 @@ jobs:
       - name: Build image
         run: |
           docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
-          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
+          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.PROD_IMAGE_TAG }} .
 
       - name: Push image
         run : docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.PROD_IMAGE_TAG }}
@@ -94,7 +94,7 @@ jobs:
           aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Create ns [${{ env.STG_COMMON_NAMESPACE }}]
+      - name: Create ns [${{ env.PROD_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
