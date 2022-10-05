@@ -17,6 +17,9 @@ export default class Recover extends Command {
 
   networkMonitor!: NetworkMonitor
 
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     this.log('Loading user configurations...')
     const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)

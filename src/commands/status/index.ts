@@ -5,6 +5,9 @@ export default class Status extends Command {
   static description = 'Get asset status'
   static examples = ['$ holograph status', '$ holograph status:contract', '$ holograph status:nft']
 
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     await ensureConfigFileIsValid(this.config.configDir, undefined, false)
     await this.parse(Status)

@@ -26,17 +26,17 @@ fi
 holograph config --fromFile $CONFIG_FILE
 
 # notice: run the specified app
-if [[ $HOLO_CLI_CMD == "operator" ]]
+if [[ $HOLOGRAPH_CLI_CMD == "operator" ]]
 then
-  eval env $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holograph $HOLO_CLI_CMD --networks $NETWORK --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD
+  eval env $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holograph $HOLOGRAPH_CLI_CMD --networks $NETWORK --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD
 
-elif [[ $HOLO_CLI_CMD == "propagator" ]]
+elif [[ $HOLOGRAPH_CLI_CMD == "propagator" ]]
 then
-  eval env $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holograph $HOLO_CLI_CMD --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD
+  eval env $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holograph $HOLOGRAPH_CLI_CMD --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD
 
-elif [[ $HOLO_CLI_CMD == "indexer" ]]
+elif [[ $HOLOGRAPH_CLI_CMD == "indexer" ]]
 then
-  eval env $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holograph $HOLO_CLI_CMD --networks $NETWORK --mode $MODE --host=$HOLO_INDEXER_HOST $HEALTHCHECK
+  eval env $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holograph $HOLOGRAPH_CLI_CMD --networks $NETWORK --mode $MODE --host=$HOLOGRAPH_INDEXER_HOST $HEALTHCHECK
 
 else
   echo

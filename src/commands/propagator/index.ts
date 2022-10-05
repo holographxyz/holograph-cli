@@ -53,14 +53,12 @@ export default class Propagator extends Command {
   }
 
   crossDeployments: string[] = []
-
-  /**
-   * Propagator class variables
-   */
   operatorMode: OperatorMode = OperatorMode.listen
-
   networkMonitor!: NetworkMonitor
 
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     const {flags} = await this.parse(Propagator)
 

@@ -20,11 +20,11 @@ oclif example Hello World CLI
 <!-- usage -->
 
 ```sh-session
-$ npm install -g holo-cli
+$ npm install -g holograph-cli
 $ holograph COMMAND
 running command...
 $ holograph (--version)
-holo-cli/0.0.1 darwin-arm64 node-v18.9.0
+holograph-cli/0.0.1 darwin-arm64 node-v18.9.0
 $ holograph --help [COMMAND]
 USAGE
   $ holograph COMMAND
@@ -37,33 +37,33 @@ USAGE
 
 <!-- commands -->
 
-- [`holograph analyze`](#holo-analyze)
-- [`holograph bridge`](#holo-bridge)
-- [`holograph bridge:contract`](#holo-bridgecontract)
-- [`holograph bridge:nft`](#holo-bridgenft)
-- [`holograph config`](#holo-config)
-- [`holograph config:networks`](#holo-confignetworks)
-- [`holograph config:user`](#holo-configuser)
-- [`holograph config:view`](#holo-configview)
-- [`holograph deploy`](#holo-deploy)
-- [`holograph deploy:contract`](#holo-deploycontract)
-- [`holograph help [COMMAND]`](#holo-help-command)
-- [`holograph indexer`](#holo-indexer)
-- [`holograph operator`](#holo-operator)
-- [`holograph operator:recover`](#holo-operatorrecover)
-- [`holograph plugins`](#holo-plugins)
-- [`holograph plugins:install PLUGIN...`](#holo-pluginsinstall-plugin)
-- [`holograph plugins:inspect PLUGIN...`](#holo-pluginsinspect-plugin)
-- [`holograph plugins:install PLUGIN...`](#holo-pluginsinstall-plugin-1)
-- [`holograph plugins:link PLUGIN`](#holo-pluginslink-plugin)
-- [`holograph plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin)
-- [`holograph plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin-1)
-- [`holograph plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin-2)
-- [`holograph plugins:update`](#holo-pluginsupdate)
-- [`holograph propagator`](#holo-propagator)
-- [`holograph status`](#holo-status)
-- [`holograph status:contract`](#holo-statuscontract)
-- [`holograph status:nft`](#holo-statusnft)
+- [`holograph analyze`](#holograph-analyze)
+- [`holograph bridge`](#holograph-bridge)
+- [`holograph bridge:contract`](#holograph-bridgecontract)
+- [`holograph bridge:nft`](#holograph-bridgenft)
+- [`holograph config`](#holograph-config)
+- [`holograph config:networks`](#holograph-confignetworks)
+- [`holograph config:user`](#holograph-configuser)
+- [`holograph config:view`](#holograph-configview)
+- [`holograph deploy`](#holograph-deploy)
+- [`holograph deploy:contract`](#holograph-deploycontract)
+- [`holograph help [COMMAND]`](#holograph-help-command)
+- [`holograph indexer`](#holograph-indexer)
+- [`holograph operator`](#holograph-operator)
+- [`holograph operator:recover`](#holograph-operatorrecover)
+- [`holograph plugins`](#holograph-plugins)
+- [`holograph plugins:install PLUGIN...`](#holograph-pluginsinstall-plugin)
+- [`holograph plugins:inspect PLUGIN...`](#holograph-pluginsinspect-plugin)
+- [`holograph plugins:install PLUGIN...`](#holograph-pluginsinstall-plugin-1)
+- [`holograph plugins:link PLUGIN`](#holograph-pluginslink-plugin)
+- [`holograph plugins:uninstall PLUGIN...`](#holograph-pluginsuninstall-plugin)
+- [`holograph plugins:uninstall PLUGIN...`](#holograph-pluginsuninstall-plugin-1)
+- [`holograph plugins:uninstall PLUGIN...`](#holograph-pluginsuninstall-plugin-2)
+- [`holograph plugins:update`](#holograph-pluginsupdate)
+- [`holograph propagator`](#holograph-propagator)
+- [`holograph status`](#holograph-status)
+- [`holograph status:contract`](#holograph-statuscontract)
+- [`holograph status:nft`](#holograph-statusnft)
 
 ## `holograph analyze`
 
@@ -86,7 +86,7 @@ EXAMPLES
   $ holograph analyze --scope='[{"network":"goerli","startBlock":10857626,"endBlock":11138178},{"network":"mumbai","startBlock":26758573,"endBlock":27457918},{"network":"fuji","startBlock":11406945,"endBlock":12192217}]'
 ```
 
-_See code: [dist/commands/analyze/index.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/analyze/index.ts)_
+_See code: [dist/commands/analyze/index.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/analyze/index.ts)_
 
 ## `holograph bridge`
 
@@ -105,7 +105,7 @@ EXAMPLES
   $ holograph bridge:contract
 ```
 
-_See code: [dist/commands/bridge/index.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/bridge/index.ts)_
+_See code: [dist/commands/bridge/index.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/bridge/index.ts)_
 
 ## `holograph bridge:contract`
 
@@ -130,7 +130,7 @@ EXAMPLES
   $ holograph bridge:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"
 ```
 
-_See code: [dist/commands/bridge/contract.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/bridge/contract.ts)_
+_See code: [dist/commands/bridge/contract.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/bridge/contract.ts)_
 
 ## `holograph bridge:nft`
 
@@ -154,7 +154,7 @@ EXAMPLES
   $ holograph bridge:nft --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1
 ```
 
-_See code: [dist/commands/bridge/nft.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/bridge/nft.ts)_
+_See code: [dist/commands/bridge/nft.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/bridge/nft.ts)_
 
 ## `holograph config`
 
@@ -192,7 +192,7 @@ EXAMPLES
   $ holograph --fromJson '{"version": "beta1", ...}
 ```
 
-_See code: [dist/commands/config/index.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/config/index.ts)_
+_See code: [dist/commands/config/index.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/config/index.ts)_
 
 ## `holograph config:networks`
 
@@ -219,7 +219,7 @@ EXAMPLES
   $ holo:networks --output clean
 ```
 
-_See code: [dist/commands/config/networks.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/config/networks.ts)_
+_See code: [dist/commands/config/networks.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/config/networks.ts)_
 
 ## `holograph config:user`
 
@@ -246,7 +246,7 @@ EXAMPLES
   $ holo:user --output clean
 ```
 
-_See code: [dist/commands/config/user.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/config/user.ts)_
+_See code: [dist/commands/config/user.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/config/user.ts)_
 
 ## `holograph config:view`
 
@@ -273,7 +273,7 @@ EXAMPLES
   $ holo:view --output clean
 ```
 
-_See code: [dist/commands/config/view.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/config/view.ts)_
+_See code: [dist/commands/config/view.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/config/view.ts)_
 
 ## `holograph deploy`
 
@@ -292,7 +292,7 @@ EXAMPLES
   $ holograph deploy:contract
 ```
 
-_See code: [dist/commands/deploy/index.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/deploy/index.ts)_
+_See code: [dist/commands/deploy/index.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/deploy/index.ts)_
 
 ## `holograph deploy:contract`
 
@@ -314,7 +314,7 @@ EXAMPLES
   $ holograph deploy:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"
 ```
 
-_See code: [dist/commands/deploy/contract.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/deploy/contract.ts)_
+_See code: [dist/commands/deploy/contract.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/deploy/contract.ts)_
 
 ## `holograph help [COMMAND]`
 
@@ -359,7 +359,7 @@ EXAMPLES
   $ holograph indexer --networks="goerli mumbai fuji" --mode=auto
 ```
 
-_See code: [dist/commands/indexer/index.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/indexer/index.ts)_
+_See code: [dist/commands/indexer/index.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/indexer/index.ts)_
 
 ## `holograph operator`
 
@@ -385,7 +385,7 @@ EXAMPLES
   $ holograph operator --networks="goerli mumbai fuji" --mode=auto
 ```
 
-_See code: [dist/commands/operator/index.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/operator/index.ts)_
+_See code: [dist/commands/operator/index.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/operator/index.ts)_
 
 ## `holograph operator:recover`
 
@@ -406,7 +406,7 @@ EXAMPLES
   $ holograph operator:recover --network="goerli" --tx="0x..."
 ```
 
-_See code: [dist/commands/operator/recover.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/operator/recover.ts)_
+_See code: [dist/commands/operator/recover.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/operator/recover.ts)_
 
 ## `holograph plugins`
 
@@ -675,7 +675,7 @@ EXAMPLES
   $ holograph propagator --networks="rinkeby mumbai fuji" --mode=auto
 ```
 
-_See code: [dist/commands/propagator/index.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/propagator/index.ts)_
+_See code: [dist/commands/propagator/index.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/propagator/index.ts)_
 
 ## `holograph status`
 
@@ -696,7 +696,7 @@ EXAMPLES
   $ holograph status:nft
 ```
 
-_See code: [dist/commands/status/index.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/status/index.ts)_
+_See code: [dist/commands/status/index.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/status/index.ts)_
 
 ## `holograph status:contract`
 
@@ -718,7 +718,7 @@ EXAMPLES
   $ holograph status:contract --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78"
 ```
 
-_See code: [dist/commands/status/contract.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/status/contract.ts)_
+_See code: [dist/commands/status/contract.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/status/contract.ts)_
 
 ## `holograph status:nft`
 
@@ -741,6 +741,6 @@ EXAMPLES
   $ holograph status:nft --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78" --id=1
 ```
 
-_See code: [dist/commands/status/nft.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/status/nft.ts)_
+_See code: [dist/commands/status/nft.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/status/nft.ts)_
 
 <!-- commandsstop -->

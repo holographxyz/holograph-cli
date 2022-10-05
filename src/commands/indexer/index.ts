@@ -71,18 +71,13 @@ export default class Indexer extends Command {
     ...warpFlag,
   }
 
-  /**
-   * Indexer class variables
-   */
   // API Params
   BASE_URL!: string
   JWT!: string
   DELAY = 20_000
   apiColor = color.keyword('orange')
   errorColor = color.keyword('red')
-
   operatorMode: OperatorMode = OperatorMode.listen
-
   networkMonitor!: NetworkMonitor
   dbJobMap: DBJobMap = {}
 
@@ -99,6 +94,9 @@ export default class Indexer extends Command {
     return numbers
   }
 
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     this.log(`Operator command has begun!!!`)
     const {flags} = await this.parse(Indexer)

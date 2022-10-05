@@ -24,6 +24,9 @@ export default class Contract extends Command {
     '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b': 'BridgeableContractDeployed',
   }
 
+  /**
+   * Command Entry Point
+   */
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
     const environment = getEnvironment()

@@ -5,6 +5,9 @@ export default class Deploy extends Command {
   static description = 'Make a deploy request'
   static examples = ['$ holograph deploy', '$ holograph deploy:contract']
 
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     await ensureConfigFileIsValid(this.config.configDir, undefined, false)
     await this.parse(Deploy)

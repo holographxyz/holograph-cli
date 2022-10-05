@@ -38,6 +38,9 @@ export default class Operator extends Command {
   operatorMode: OperatorMode = OperatorMode.listen
   networkMonitor!: NetworkMonitor
 
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     const {flags} = await this.parse(Operator)
 

@@ -22,6 +22,9 @@ export default class ConfigView extends Command {
   configJson: any
   configPath!: string
 
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     const {flags} = await this.parse(ConfigView)
     await this.setup()

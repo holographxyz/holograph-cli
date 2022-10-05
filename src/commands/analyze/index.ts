@@ -68,62 +68,8 @@ export default class Analyze extends Command {
   networkMonitor!: NetworkMonitor
 
   /**
-   * Keeps track of the operator jobs
+   * Command Entry Point
    */
-  manageOperatorJobMaps(index: number, operatorJobHash: string, operatorJob: AvailableJob): void {
-    if (index >= 0) {
-      this.transactionLogs[index] = operatorJob
-      this.operatorJobCounterMap[operatorJobHash] = 1
-    } else {
-      this.operatorJobIndexMap[operatorJobHash] = this.transactionLogs.push(operatorJob) - 1
-      this.operatorJobCounterMap[operatorJobHash] += 1
-    }
-
-    if (this.operatorJobCounterMap[operatorJobHash] === 3) {
-      delete this.operatorJobIndexMap[operatorJobHash]
-      delete this.operatorJobCounterMap[operatorJobHash]
-    }
-  }
-
-  /**
-   * Validates that the input scope is valid and using a supported network
-   */
-  validateScope(scope: Scope, configFile: ConfigFile, networks: string[], scopeJobs: Scope[]): void {
-    if ('network' in scope && 'startBlock' in scope && 'endBlock' in scope) {
-      if (Object.keys(configFile.networks).includes(scope.network as string)) {
-        if (!networks.includes(scope.network as string)) {
-          networks.push(scope.network as string)
-        }
-
-        scopeJobs.push(scope)
-      } else {
-        this.log(`${scope.network} is not a supported network`)
-      }
-    } else {
-      this.log(`${scope} is an invalid Scope object`)
-    }
-  }
-
-  /**
-   * Checks all the input scopes and validates them
-   */
-  scopeItOut(configFile: ConfigFile, scopeFlags: string[]): {networks: string[]; scopeJobs: Scope[]} {
-    const networks: string[] = []
-    const scopeJobs: Scope[] = []
-    for (const scopeString of scopeFlags) {
-      try {
-        const scopeArray: Scope[] = JSON.parse(scopeString)
-        for (const scope of scopeArray) {
-          this.validateScope(scope, configFile, networks, scopeJobs)
-        }
-      } catch {
-        this.log(`${scopeString} is an invalid Scope[] JSON object`)
-      }
-    }
-
-    return {networks, scopeJobs}
-  }
-
   async run(): Promise<void> {
     const {flags} = await this.parse(Analyze)
     this.log('Loading user configurations...')
@@ -199,6 +145,63 @@ export default class Analyze extends Command {
 
     this.networkMonitor.exitCallback = this.exitCallback.bind(this)
     await this.networkMonitor.run(false, blockJobs, this.filterBuilder)
+  }
+
+  /**
+   * Keeps track of the operator jobs
+   */
+  manageOperatorJobMaps(index: number, operatorJobHash: string, operatorJob: AvailableJob): void {
+    if (index >= 0) {
+      this.transactionLogs[index] = operatorJob
+      this.operatorJobCounterMap[operatorJobHash] = 1
+    } else {
+      this.operatorJobIndexMap[operatorJobHash] = this.transactionLogs.push(operatorJob) - 1
+      this.operatorJobCounterMap[operatorJobHash] += 1
+    }
+
+    if (this.operatorJobCounterMap[operatorJobHash] === 3) {
+      delete this.operatorJobIndexMap[operatorJobHash]
+      delete this.operatorJobCounterMap[operatorJobHash]
+    }
+  }
+
+  /**
+   * Validates that the input scope is valid and using a supported network
+   */
+  validateScope(scope: Scope, configFile: ConfigFile, networks: string[], scopeJobs: Scope[]): void {
+    if ('network' in scope && 'startBlock' in scope && 'endBlock' in scope) {
+      if (Object.keys(configFile.networks).includes(scope.network as string)) {
+        if (!networks.includes(scope.network as string)) {
+          networks.push(scope.network as string)
+        }
+
+        scopeJobs.push(scope)
+      } else {
+        this.log(`${scope.network} is not a supported network`)
+      }
+    } else {
+      this.log(`${scope} is an invalid Scope object`)
+    }
+  }
+
+  /**
+   * Checks all the input scopes and validates them
+   */
+  scopeItOut(configFile: ConfigFile, scopeFlags: string[]): {networks: string[]; scopeJobs: Scope[]} {
+    const networks: string[] = []
+    const scopeJobs: Scope[] = []
+    for (const scopeString of scopeFlags) {
+      try {
+        const scopeArray: Scope[] = JSON.parse(scopeString)
+        for (const scope of scopeArray) {
+          this.validateScope(scope, configFile, networks, scopeJobs)
+        }
+      } catch {
+        this.log(`${scopeString} is an invalid Scope[] JSON object`)
+      }
+    }
+
+    return {networks, scopeJobs}
   }
 
   exitCallback(): void {

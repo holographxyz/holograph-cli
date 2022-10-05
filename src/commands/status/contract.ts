@@ -93,6 +93,9 @@ export default class Contract extends Command {
     }
   }
 
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     this.log('Loading user configurations...')
     const environment = getEnvironment()
