@@ -1,6 +1,6 @@
 ingress:
   ingress_name: somethingspecial # notice: set in the gh workflow
-  ingressClassName: "alb"
+  ingressClassName: 'alb'
 
   host: something.special.xyz # notice: set in the gh workflow
   target_svc_name: super-special-svc # notice: set in the gh workflow
@@ -13,17 +13,17 @@ ingress:
     # ref: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/ingress/annotations/#healthcheck-protocol
     #
     alb.ingress.kubernetes.io/load-balancer-name: prod0-alb
-    alb.ingress.kubernetes.io/scheme            : internet-facing
-    alb.ingress.kubernetes.io/group.name        : prod0-ing-group
-    alb.ingress.kubernetes.io/target-type : ip
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/group.name: prod0-ing-group
+    alb.ingress.kubernetes.io/target-type: ip
 
     # notice: *.holograph.xyz
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:177635894328:certificate/2be86978-1b32-4954-bb93-4baa7db8c6ac
+    alb.ingress.kubernetes.io/certificate-arn: here-goes-the-alb-ingress-arn
 
     # notice: ALB healthcheck details
     # ref: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/target-group-health-checks.html
     alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
-    alb.ingress.kubernetes.io/healthcheck-path    : /v1/health
+    alb.ingress.kubernetes.io/healthcheck-path: /v1/health
     alb.ingress.kubernetes.io/healthcheck-interval-seconds: '30'
 
     #

@@ -19,6 +19,7 @@ export interface ConfigBridge {
 }
 
 export interface ConfigNetworks {
+  goerli: ConfigNetwork
   rinkeby: ConfigNetwork
   fuji: ConfigNetwork
   mumbai: ConfigNetwork
@@ -141,6 +142,9 @@ export async function validateBeta1Schema(config: Record<string, unknown>): Prom
     }).required(),
     networks: Joi.object({
       rinkeby: Joi.object({
+        providerUrl: Joi.string().required(),
+      }),
+      goerli: Joi.object({
         providerUrl: Joi.string().required(),
       }),
       fuji: Joi.object({

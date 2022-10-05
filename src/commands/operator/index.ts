@@ -10,7 +10,7 @@ import {startHealthcheckServer} from '../../utils/health-check-server'
 
 export default class Operator extends Command {
   static description = 'Listen for EVM events for jobs and process them'
-  static examples = ['$ holo operator --networks="rinkeby mumbai fuji" --mode=auto']
+  static examples = ['$ holo operator --networks="goerli mumbai fuji" --mode=auto']
   static flags = {
     mode: Flags.string({
       description: 'The mode in which to run the operator',
@@ -128,14 +128,16 @@ export default class Operator extends Command {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
-        this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${transaction.blockNumber}`)
+        const tags: (string | number)[] = []
+        tags.push(transaction.blockNumber as number, this.networkMonitor.randomTag())
         const from: string | undefined = transaction.from?.toLowerCase()
         if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
-          await this.handleAvailableOperatorJobEvent(transaction, job.network)
+          await this.handleAvailableOperatorJobEvent(transaction, job.network, tags)
         } else {
           this.networkMonitor.structuredLog(
             job.network,
             `Function processTransactions stumbled on an unknown transaction ${transaction.hash}`,
+            tags,
           )
         }
       }
@@ -145,63 +147,57 @@ export default class Operator extends Command {
   async handleAvailableOperatorJobEvent(
     transaction: ethers.providers.TransactionResponse,
     network: string,
+    tags: (string | number)[],
   ): Promise<void> {
-    let bridgeTransaction
-    const tryToGetTxReceipt = async (): Promise<ethers.ContractReceipt> => {
-      // eslint-disable-next-line no-async-promise-executor
-      return new Promise<ethers.ContractReceipt>(async (resolve, _reject) => {
-        let receipt: ethers.ContractReceipt | null
-        const getTxReceipt: NodeJS.Timeout = setInterval(async () => {
-          receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
-          if (receipt !== null) {
-            this.debug(receipt)
-            this.networkMonitor.structuredLog(
-              network,
-              `Transaction ${receipt.transactionHash} received`,
-            )
-            clearInterval(getTxReceipt)
-            resolve(receipt as ethers.ContractReceipt)
-          }
-        }, 1000) // every 1 second
-      })
-    }
-
-    const receipt: ethers.ContractReceipt = await tryToGetTxReceipt()
-
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 30,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
+    } else {
+      this.networkMonitor.structuredLog(network, `Transaction ${receipt.transactionHash} receipt received`, tags)
     }
 
     if (receipt.status === 1) {
       this.networkMonitor.structuredLog(
         network,
         `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
+        tags,
       )
       const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(receipt)
       const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
       if (operatorJobHash === undefined) {
-        this.networkMonitor.structuredLog(network, `Could not extract relayer available job for ${transaction.hash}`)
+        this.networkMonitor.structuredLog(
+          network,
+          `Could not extract relayer available job for ${transaction.hash}`,
+          tags,
+        )
       } else {
         this.networkMonitor.structuredLog(
           network,
           `HolographOperator received a new bridge job. The job payload hash is ${operatorJobHash}. The job payload is ${operatorJobPayload}`,
+          tags,
         )
-        bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
+        const bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
           value: ethers.BigNumber.from('0'),
         })
         this.networkMonitor.structuredLog(
           network,
           `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
+          tags,
         )
         if (this.operatorMode !== OperatorMode.listen) {
-          await this.executePayload(network, operatorJobPayload!)
+          await this.executePayload(network, operatorJobPayload!, tags)
         }
       }
     }
   }
 
-  async executePayload(network: string, payload: string): Promise<void> {
+  async executePayload(network: string, payload: string, tags: (string | number)[]): Promise<void> {
     // If the operator is in listen mode, payloads will not be executed
     // If the operator is in manual mode, the payload must be manually executed
     // If the operator is in auto mode, the payload will be executed automatically
@@ -219,9 +215,15 @@ export default class Operator extends Command {
     }
 
     if (operate) {
-      await this.networkMonitor.executeTransaction(network, this.networkMonitor.operatorContract, 'executeJob', payload)
+      await this.networkMonitor.executeTransaction({
+        network,
+        tags,
+        contract: this.networkMonitor.operatorContract,
+        methodName: 'executeJob',
+        args: [payload],
+      })
     } else {
-      this.networkMonitor.structuredLog(network, 'Dropped potential payload to execute')
+      this.networkMonitor.structuredLog(network, 'Dropped potential payload to execute', tags)
     }
   }
 }
