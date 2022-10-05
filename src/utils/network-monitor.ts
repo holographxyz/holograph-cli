@@ -68,12 +68,14 @@ export type TransactionFilter = {
   networkDependant: boolean
 }
 
+const TIMEOUT_THRESHOLD = 20_000
+
 export const keepAlive = ({
   debug,
   provider,
   onDisconnect,
-  expectedPongBack = 10_000, // 10 seconds
-  checkInterval = 5000, // 5 seconds
+  expectedPongBack = TIMEOUT_THRESHOLD,
+  checkInterval = Math.round(TIMEOUT_THRESHOLD / 2),
 }: KeepAliveParams): void => {
   let pingTimeout: NodeJS.Timeout | null = null
   let keepAliveInterval: NodeJS.Timeout | null = null
@@ -244,7 +246,6 @@ export class NetworkMonitor {
   currentBlockHeight: {[key: string]: number} = {}
   blockJobs: {[key: string]: BlockJob[]} = {}
   exited = false
-  blockJobThreshold = 15_000 // 15 seconds
   lastBlockJobDone: {[key: string]: number} = {}
   blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
   holograph!: ethers.Contract
@@ -615,7 +616,7 @@ export class NetworkMonitor {
 
   blockJobMonitor = (network: string): Promise<void> => {
     return new Promise<void>(() => {
-      if (Date.now() - this.lastBlockJobDone[network] > this.blockJobThreshold) {
+      if (Date.now() - this.lastBlockJobDone[network] > TIMEOUT_THRESHOLD) {
         this.structuredLog(network, 'Block Job Handler has been inactive longer than threshold time. Restarting.', [])
         this.lastBlockJobDone[network] = Date.now()
         const provider = this.providers[network] as ethers.providers.WebSocketProvider
@@ -1454,6 +1455,7 @@ export class NetworkMonitor {
           )
           const rawTx = await contract.populateTransaction[methodName](...args, {gasPrice, gasLimit})
           rawTx.nonce = this.walletNonces[network]
+          this.lastBlockJobDone[network] = Date.now()
           const tx: TransactionResponse | null = await this.sendTransaction({
             network,
             tags,
@@ -1469,6 +1471,7 @@ export class NetworkMonitor {
           } else {
             this.structuredLog(network, `Transaction ${tx.hash} has been submitted`, tags)
             this.walletNonces[network]++
+            this.lastBlockJobDone[network] = Date.now()
             const receipt: TransactionReceipt | null = await this.getTransactionReceipt({
               network,
               transactionHash: tx.hash,
