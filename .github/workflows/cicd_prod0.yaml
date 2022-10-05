@@ -37,7 +37,7 @@ env:
   #
   PROD_DOMAIN: 'holograph.xyz'
   #
-  PROD_COMMON_NAMESPACE: testholo #holocli # NOTICE <---
+  PROD_COMMON_NAMESPACE: holocli # NOTICE <---
   #
   # INDEXER PROD rpc endpoints
   indexer_prod_fuji_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
