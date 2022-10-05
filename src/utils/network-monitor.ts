@@ -838,12 +838,12 @@ export class NetworkMonitor {
         const log = receipt.logs[i]
         if (log.topics[0] === this.targetEvents.LzPacket) {
           const packetPayload = NetworkMonitor.iface.decodeEventLog(
-            NetworkMonitor.packetEventFragment,
+            NetworkMonitor.lzPacketEventFragment,
             log.data,
             log.topics,
           )[0] as string
           if (packetPayload.indexOf(toFind) > 0) {
-            return ('0x' + packetPayload.split(this.operatorAddress.slice(2, 42).repeat(2))[1]).toLowerCase()
+            return ('0x' + packetPayload.split(toFind)[2]).toLowerCase()
           }
         }
       }
