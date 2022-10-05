@@ -11,7 +11,10 @@ import {supportedNetworks} from '../../utils/networks'
 
 export default class Contract extends Command {
   static description = 'Bridge a Holographable contract from source chain to destination chain'
-  static examples = ['$ holo bridge:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"']
+  static examples = [
+    '$ holograph bridge:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"',
+  ]
+
   static flags = {
     sourceNetwork: Flags.string({description: 'The name of source network, from which to make the bridge request'}),
     destinationNetwork: Flags.string({

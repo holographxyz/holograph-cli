@@ -14,7 +14,7 @@ import {startHealthcheckServer} from '../../utils/health-check-server'
  */
 export default class Operator extends Command {
   static description = 'Listen for EVM events for jobs and process them'
-  static examples = ['$ holo operator --networks="goerli mumbai fuji" --mode=auto']
+  static examples = ['$ holograph operator --networks="goerli mumbai fuji" --mode=auto']
   static flags = {
     mode: Flags.string({
       description: 'The mode in which to run the operator',
@@ -30,7 +30,7 @@ export default class Operator extends Command {
       default: false,
     }),
     unsafePassword: Flags.string({
-      description: 'Enter the plain text password for the wallet in the holo cli config',
+      description: 'Enter the plain text password for the wallet in the holograph cli config',
     }),
     ...networkFlag,
   }

@@ -6,7 +6,7 @@ import {CONFIG_FILE_NAME, ensureConfigFileIsValid, readConfig} from '../../utils
 import {capitalize} from '../../utils/utils'
 
 export default class ConfigView extends Command {
-  static description = 'View the current configuration state of the Holo command line'
+  static description = 'View the current configuration state of the Holograph command line'
   static examples = [
     '$ holo:view',
     '$ holo:view --output json',

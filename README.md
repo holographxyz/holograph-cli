@@ -9,65 +9,69 @@ oclif example Hello World CLI
 [![License](https://img.shields.io/npm/l/oclif-hello-world.svg)](https://github.com/oclif/hello-world/blob/main/package.json)
 
 <!-- toc -->
-* [oclif-hello-world](#oclif-hello-world)
-* [Usage](#usage)
-* [Commands](#commands)
+
+- [oclif-hello-world](#oclif-hello-world)
+- [Usage](#usage)
+- [Commands](#commands)
 <!-- tocstop -->
 
 # Usage
 
 <!-- usage -->
+
 ```sh-session
 $ npm install -g holo-cli
-$ holo COMMAND
+$ holograph COMMAND
 running command...
-$ holo (--version)
+$ holograph (--version)
 holo-cli/0.0.1 darwin-arm64 node-v18.9.0
-$ holo --help [COMMAND]
+$ holograph --help [COMMAND]
 USAGE
-  $ holo COMMAND
+  $ holograph COMMAND
 ...
 ```
+
 <!-- usagestop -->
 
 # Commands
 
 <!-- commands -->
-* [`holo analyze`](#holo-analyze)
-* [`holo bridge`](#holo-bridge)
-* [`holo bridge:contract`](#holo-bridgecontract)
-* [`holo bridge:nft`](#holo-bridgenft)
-* [`holo config`](#holo-config)
-* [`holo config:networks`](#holo-confignetworks)
-* [`holo config:user`](#holo-configuser)
-* [`holo config:view`](#holo-configview)
-* [`holo deploy`](#holo-deploy)
-* [`holo deploy:contract`](#holo-deploycontract)
-* [`holo help [COMMAND]`](#holo-help-command)
-* [`holo indexer`](#holo-indexer)
-* [`holo operator`](#holo-operator)
-* [`holo operator:recover`](#holo-operatorrecover)
-* [`holo plugins`](#holo-plugins)
-* [`holo plugins:install PLUGIN...`](#holo-pluginsinstall-plugin)
-* [`holo plugins:inspect PLUGIN...`](#holo-pluginsinspect-plugin)
-* [`holo plugins:install PLUGIN...`](#holo-pluginsinstall-plugin-1)
-* [`holo plugins:link PLUGIN`](#holo-pluginslink-plugin)
-* [`holo plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin)
-* [`holo plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin-1)
-* [`holo plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin-2)
-* [`holo plugins:update`](#holo-pluginsupdate)
-* [`holo propagator`](#holo-propagator)
-* [`holo status`](#holo-status)
-* [`holo status:contract`](#holo-statuscontract)
-* [`holo status:nft`](#holo-statusnft)
 
-## `holo analyze`
+- [`holograph analyze`](#holo-analyze)
+- [`holograph bridge`](#holo-bridge)
+- [`holograph bridge:contract`](#holo-bridgecontract)
+- [`holograph bridge:nft`](#holo-bridgenft)
+- [`holograph config`](#holo-config)
+- [`holograph config:networks`](#holo-confignetworks)
+- [`holograph config:user`](#holo-configuser)
+- [`holograph config:view`](#holo-configview)
+- [`holograph deploy`](#holo-deploy)
+- [`holograph deploy:contract`](#holo-deploycontract)
+- [`holograph help [COMMAND]`](#holo-help-command)
+- [`holograph indexer`](#holo-indexer)
+- [`holograph operator`](#holo-operator)
+- [`holograph operator:recover`](#holo-operatorrecover)
+- [`holograph plugins`](#holo-plugins)
+- [`holograph plugins:install PLUGIN...`](#holo-pluginsinstall-plugin)
+- [`holograph plugins:inspect PLUGIN...`](#holo-pluginsinspect-plugin)
+- [`holograph plugins:install PLUGIN...`](#holo-pluginsinstall-plugin-1)
+- [`holograph plugins:link PLUGIN`](#holo-pluginslink-plugin)
+- [`holograph plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin)
+- [`holograph plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin-1)
+- [`holograph plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin-2)
+- [`holograph plugins:update`](#holo-pluginsupdate)
+- [`holograph propagator`](#holo-propagator)
+- [`holograph status`](#holo-status)
+- [`holograph status:contract`](#holo-statuscontract)
+- [`holograph status:nft`](#holo-statusnft)
+
+## `holograph analyze`
 
 Extract all operator jobs and get their status
 
 ```
 USAGE
-  $ holo analyze [--scope <value>] [--output <value>]
+  $ holograph analyze [--scope <value>] [--output <value>]
 
 FLAGS
   --output=<value>    [default: ./analyze_results.json] specify a file to output the results to (ie
@@ -79,37 +83,37 @@ DESCRIPTION
   Extract all operator jobs and get their status
 
 EXAMPLES
-  $ holo analyze --scope='[{"network":"goerli","startBlock":10857626,"endBlock":11138178},{"network":"mumbai","startBlock":26758573,"endBlock":27457918},{"network":"fuji","startBlock":11406945,"endBlock":12192217}]'
+  $ holograph analyze --scope='[{"network":"goerli","startBlock":10857626,"endBlock":11138178},{"network":"mumbai","startBlock":26758573,"endBlock":27457918},{"network":"fuji","startBlock":11406945,"endBlock":12192217}]'
 ```
 
 _See code: [dist/commands/analyze/index.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/analyze/index.ts)_
 
-## `holo bridge`
+## `holograph bridge`
 
 Make a bridge request
 
 ```
 USAGE
-  $ holo bridge
+  $ holograph bridge
 
 DESCRIPTION
   Make a bridge request
 
 EXAMPLES
-  $ holo bridge
+  $ holograph bridge
 
-  $ holo bridge:contract
+  $ holograph bridge:contract
 ```
 
 _See code: [dist/commands/bridge/index.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/bridge/index.ts)_
 
-## `holo bridge:contract`
+## `holograph bridge:contract`
 
 Bridge a Holographable contract from source chain to destination chain
 
 ```
 USAGE
-  $ holo bridge:contract [--sourceNetwork <value>] [--destinationNetwork <value>] [--tx <value>] [--txNetwork
+  $ holograph bridge:contract [--sourceNetwork <value>] [--destinationNetwork <value>] [--tx <value>] [--txNetwork
     <value>] [--deploymentType <value>]
 
 FLAGS
@@ -123,18 +127,18 @@ DESCRIPTION
   Bridge a Holographable contract from source chain to destination chain
 
 EXAMPLES
-  $ holo bridge:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"
+  $ holograph bridge:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"
 ```
 
 _See code: [dist/commands/bridge/contract.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/bridge/contract.ts)_
 
-## `holo bridge:nft`
+## `holograph bridge:nft`
 
 Bridge a Holographable NFT from source chain to destination chain
 
 ```
 USAGE
-  $ holo bridge:nft [--sourceNetwork <value>] [--destinationNetwork <value>] [--address <value>] [--tokenId
+  $ holograph bridge:nft [--sourceNetwork <value>] [--destinationNetwork <value>] [--address <value>] [--tokenId
     <value>]
 
 FLAGS
@@ -147,18 +151,18 @@ DESCRIPTION
   Bridge a Holographable NFT from source chain to destination chain
 
 EXAMPLES
-  $ holo bridge:nft --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1
+  $ holograph bridge:nft --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1
 ```
 
 _See code: [dist/commands/bridge/nft.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/bridge/nft.ts)_
 
-## `holo config`
+## `holograph config`
 
-Initialize the Holo command line to become an operator or to bridge collections and NFTs manually
+Initialize the Holograph command line to become an operator or to bridge collections and NFTs manually
 
 ```
 USAGE
-  $ holo config [--defaultFrom rinkeby|goerli|mumbai|fuji] [--defaultTo rinkeby|goerli|mumbai|fuji] [--url
+  $ holograph config [--defaultFrom rinkeby|goerli|mumbai|fuji] [--defaultTo rinkeby|goerli|mumbai|fuji] [--url
     <value> --network rinkeby|goerli|mumbai|fuji] [--privateKey <value>] [--fromFile <value>] [--fromJson <value>]
 
 FLAGS
@@ -174,29 +178,29 @@ FLAGS
   --url=<value>           Provider URL of network to set
 
 DESCRIPTION
-  Initialize the Holo command line to become an operator or to bridge collections and NFTs manually
+  Initialize the Holograph command line to become an operator or to bridge collections and NFTs manually
 
 EXAMPLES
-  $ holo --defaultFrom goerli
+  $ holograph --defaultFrom goerli
 
-  $ holo --defaultFrom goerli --defaultTo mumbai
+  $ holograph --defaultFrom goerli --defaultTo mumbai
 
-  $ holo --privateKey abc...def
+  $ holograph --privateKey abc...def
 
-  $ holo --fromFile ./config.json
+  $ holograph --fromFile ./config.json
 
-  $ holo --fromJson '{"version": "beta1", ...}
+  $ holograph --fromJson '{"version": "beta1", ...}
 ```
 
 _See code: [dist/commands/config/index.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/config/index.ts)_
 
-## `holo config:networks`
+## `holograph config:networks`
 
 View the current network config
 
 ```
 USAGE
-  $ holo config:networks [--output clean|json|yaml]
+  $ holograph config:networks [--output clean|json|yaml]
 
 FLAGS
   --output=<option>  Output format
@@ -217,13 +221,13 @@ EXAMPLES
 
 _See code: [dist/commands/config/networks.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/config/networks.ts)_
 
-## `holo config:user`
+## `holograph config:user`
 
 View the current user address
 
 ```
 USAGE
-  $ holo config:user [--output clean|json|yaml]
+  $ holograph config:user [--output clean|json|yaml]
 
 FLAGS
   --output=<option>  Output format
@@ -244,20 +248,20 @@ EXAMPLES
 
 _See code: [dist/commands/config/user.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/config/user.ts)_
 
-## `holo config:view`
+## `holograph config:view`
 
-View the current configuration state of the Holo command line
+View the current configuration state of the Holograph command line
 
 ```
 USAGE
-  $ holo config:view [--output clean|json|yaml]
+  $ holograph config:view [--output clean|json|yaml]
 
 FLAGS
   --output=<option>  Output format
                      <options: clean|json|yaml>
 
 DESCRIPTION
-  View the current configuration state of the Holo command line
+  View the current configuration state of the Holograph command line
 
 EXAMPLES
   $ holo:view
@@ -271,32 +275,32 @@ EXAMPLES
 
 _See code: [dist/commands/config/view.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/config/view.ts)_
 
-## `holo deploy`
+## `holograph deploy`
 
 Make a deploy request
 
 ```
 USAGE
-  $ holo deploy
+  $ holograph deploy
 
 DESCRIPTION
   Make a deploy request
 
 EXAMPLES
-  $ holo deploy
+  $ holograph deploy
 
-  $ holo deploy:contract
+  $ holograph deploy:contract
 ```
 
 _See code: [dist/commands/deploy/index.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/deploy/index.ts)_
 
-## `holo deploy:contract`
+## `holograph deploy:contract`
 
 Deploy a Holographable contract
 
 ```
 USAGE
-  $ holo deploy:contract [--tx <value>] [--txNetwork <value>] [--deploymentType <value>]
+  $ holograph deploy:contract [--tx <value>] [--txNetwork <value>] [--deploymentType <value>]
 
 FLAGS
   --deploymentType=<value>  The type of deployment to use: [deployedTx, deploymentConfig]
@@ -307,18 +311,18 @@ DESCRIPTION
   Deploy a Holographable contract
 
 EXAMPLES
-  $ holo deploy:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"
+  $ holograph deploy:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"
 ```
 
 _See code: [dist/commands/deploy/contract.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/deploy/contract.ts)_
 
-## `holo help [COMMAND]`
+## `holograph help [COMMAND]`
 
 Display help for holo.
 
 ```
 USAGE
-  $ holo help [COMMAND] [-n]
+  $ holograph help [COMMAND] [-n]
 
 ARGUMENTS
   COMMAND  Command to show help for.
@@ -332,13 +336,13 @@ DESCRIPTION
 
 _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.1.12/src/commands/help.ts)_
 
-## `holo indexer`
+## `holograph indexer`
 
 Listen for EVM events and update database network status
 
 ```
 USAGE
-  $ holo indexer [-m listen|manual|auto] [-h <value>] [--healthCheck] [--networks <value>] [-w <value>]
+  $ holograph indexer [-m listen|manual|auto] [-h <value>] [--healthCheck] [--networks <value>] [-w <value>]
 
 FLAGS
   -h, --host=<value>     [default: http://localhost:9001] The host to listen on
@@ -352,18 +356,18 @@ DESCRIPTION
   Listen for EVM events and update database network status
 
 EXAMPLES
-  $ holo indexer --networks="goerli mumbai fuji" --mode=auto
+  $ holograph indexer --networks="goerli mumbai fuji" --mode=auto
 ```
 
 _See code: [dist/commands/indexer/index.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/indexer/index.ts)_
 
-## `holo operator`
+## `holograph operator`
 
 Listen for EVM events for jobs and process them
 
 ```
 USAGE
-  $ holo operator [-m listen|manual|auto] [--healthCheck] [--sync] [--unsafePassword <value>] [--networks
+  $ holograph operator [-m listen|manual|auto] [--healthCheck] [--sync] [--unsafePassword <value>] [--networks
     <value>]
 
 FLAGS
@@ -372,24 +376,24 @@ FLAGS
   --healthCheck             Launch server on http://localhost:6000 to make sure command is still running
   --networks=<value>...     Comma separated list of networks to operate on
   --sync                    Start from last saved block position instead of latest block position
-  --unsafePassword=<value>  Enter the plain text password for the wallet in the holo cli config
+  --unsafePassword=<value>  Enter the plain text password for the wallet in the holograph cli config
 
 DESCRIPTION
   Listen for EVM events for jobs and process them
 
 EXAMPLES
-  $ holo operator --networks="goerli mumbai fuji" --mode=auto
+  $ holograph operator --networks="goerli mumbai fuji" --mode=auto
 ```
 
 _See code: [dist/commands/operator/index.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/operator/index.ts)_
 
-## `holo operator:recover`
+## `holograph operator:recover`
 
 Attempt to re-run/recover a particular Operator Job
 
 ```
 USAGE
-  $ holo operator:recover [--network <value>] [--tx <value>]
+  $ holograph operator:recover [--network <value>] [--tx <value>]
 
 FLAGS
   --network=<value>  The network on which the transaction was executed
@@ -399,18 +403,18 @@ DESCRIPTION
   Attempt to re-run/recover a particular Operator Job
 
 EXAMPLES
-  $ holo operator:recover --network="goerli" --tx="0x..."
+  $ holograph operator:recover --network="goerli" --tx="0x..."
 ```
 
 _See code: [dist/commands/operator/recover.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/operator/recover.ts)_
 
-## `holo plugins`
+## `holograph plugins`
 
 List installed plugins.
 
 ```
 USAGE
-  $ holo plugins [--core]
+  $ holograph plugins [--core]
 
 FLAGS
   --core  Show core plugins.
@@ -419,18 +423,18 @@ DESCRIPTION
   List installed plugins.
 
 EXAMPLES
-  $ holo plugins
+  $ holograph plugins
 ```
 
 _See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.0/src/commands/plugins/index.ts)_
 
-## `holo plugins:install PLUGIN...`
+## `holograph plugins:install PLUGIN...`
 
 Installs a plugin into the CLI.
 
 ```
 USAGE
-  $ holo plugins:install PLUGIN...
+  $ holograph plugins:install PLUGIN...
 
 ARGUMENTS
   PLUGIN  Plugin to install.
@@ -452,23 +456,23 @@ DESCRIPTION
   the CLI without the need to patch and update the whole CLI.
 
 ALIASES
-  $ holo plugins:add
+  $ holograph plugins:add
 
 EXAMPLES
-  $ holo plugins:install myplugin 
+  $ holograph plugins:install myplugin
 
-  $ holo plugins:install https://github.com/someuser/someplugin
+  $ holograph plugins:install https://github.com/someuser/someplugin
 
-  $ holo plugins:install someuser/someplugin
+  $ holograph plugins:install someuser/someplugin
 ```
 
-## `holo plugins:inspect PLUGIN...`
+## `holograph plugins:inspect PLUGIN...`
 
 Displays installation properties of a plugin.
 
 ```
 USAGE
-  $ holo plugins:inspect PLUGIN...
+  $ holograph plugins:inspect PLUGIN...
 
 ARGUMENTS
   PLUGIN  [default: .] Plugin to inspect.
@@ -481,18 +485,18 @@ DESCRIPTION
   Displays installation properties of a plugin.
 
 EXAMPLES
-  $ holo plugins:inspect myplugin
+  $ holograph plugins:inspect myplugin
 ```
 
 _See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.0/src/commands/plugins/inspect.ts)_
 
-## `holo plugins:install PLUGIN...`
+## `holograph plugins:install PLUGIN...`
 
 Installs a plugin into the CLI.
 
 ```
 USAGE
-  $ holo plugins:install PLUGIN...
+  $ holograph plugins:install PLUGIN...
 
 ARGUMENTS
   PLUGIN  Plugin to install.
@@ -514,25 +518,25 @@ DESCRIPTION
   the CLI without the need to patch and update the whole CLI.
 
 ALIASES
-  $ holo plugins:add
+  $ holograph plugins:add
 
 EXAMPLES
-  $ holo plugins:install myplugin 
+  $ holograph plugins:install myplugin
 
-  $ holo plugins:install https://github.com/someuser/someplugin
+  $ holograph plugins:install https://github.com/someuser/someplugin
 
-  $ holo plugins:install someuser/someplugin
+  $ holograph plugins:install someuser/someplugin
 ```
 
 _See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.0/src/commands/plugins/install.ts)_
 
-## `holo plugins:link PLUGIN`
+## `holograph plugins:link PLUGIN`
 
 Links a plugin into the CLI for development.
 
 ```
 USAGE
-  $ holo plugins:link PLUGIN
+  $ holograph plugins:link PLUGIN
 
 ARGUMENTS
   PATH  [default: .] path to plugin
@@ -550,18 +554,18 @@ DESCRIPTION
   command will override the user-installed or core plugin implementation. This is useful for development work.
 
 EXAMPLES
-  $ holo plugins:link myplugin
+  $ holograph plugins:link myplugin
 ```
 
 _See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.0/src/commands/plugins/link.ts)_
 
-## `holo plugins:uninstall PLUGIN...`
+## `holograph plugins:uninstall PLUGIN...`
 
 Removes a plugin from the CLI.
 
 ```
 USAGE
-  $ holo plugins:uninstall PLUGIN...
+  $ holograph plugins:uninstall PLUGIN...
 
 ARGUMENTS
   PLUGIN  plugin to uninstall
@@ -574,17 +578,17 @@ DESCRIPTION
   Removes a plugin from the CLI.
 
 ALIASES
-  $ holo plugins:unlink
-  $ holo plugins:remove
+  $ holograph plugins:unlink
+  $ holograph plugins:remove
 ```
 
-## `holo plugins:uninstall PLUGIN...`
+## `holograph plugins:uninstall PLUGIN...`
 
 Removes a plugin from the CLI.
 
 ```
 USAGE
-  $ holo plugins:uninstall PLUGIN...
+  $ holograph plugins:uninstall PLUGIN...
 
 ARGUMENTS
   PLUGIN  plugin to uninstall
@@ -597,19 +601,19 @@ DESCRIPTION
   Removes a plugin from the CLI.
 
 ALIASES
-  $ holo plugins:unlink
-  $ holo plugins:remove
+  $ holograph plugins:unlink
+  $ holograph plugins:remove
 ```
 
 _See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.0/src/commands/plugins/uninstall.ts)_
 
-## `holo plugins:uninstall PLUGIN...`
+## `holograph plugins:uninstall PLUGIN...`
 
 Removes a plugin from the CLI.
 
 ```
 USAGE
-  $ holo plugins:uninstall PLUGIN...
+  $ holograph plugins:uninstall PLUGIN...
 
 ARGUMENTS
   PLUGIN  plugin to uninstall
@@ -622,17 +626,17 @@ DESCRIPTION
   Removes a plugin from the CLI.
 
 ALIASES
-  $ holo plugins:unlink
-  $ holo plugins:remove
+  $ holograph plugins:unlink
+  $ holograph plugins:remove
 ```
 
-## `holo plugins:update`
+## `holograph plugins:update`
 
 Update installed plugins.
 
 ```
 USAGE
-  $ holo plugins:update [-h] [-v]
+  $ holograph plugins:update [-h] [-v]
 
 FLAGS
   -h, --help     Show CLI help.
@@ -644,13 +648,13 @@ DESCRIPTION
 
 _See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.0/src/commands/plugins/update.ts)_
 
-## `holo propagator`
+## `holograph propagator`
 
 Listen for EVM events deploys collections to ther supported networks
 
 ```
 USAGE
-  $ holo propagator [-m listen|manual|auto] [--healthCheck] [--sync] [--unsafePassword <value>] [-w <value>]
+  $ holograph propagator [-m listen|manual|auto] [--healthCheck] [--sync] [--unsafePassword <value>] [-w <value>]
     [--networks <value>] [--recover <value>] [--recoverFile <value>]
 
 FLAGS
@@ -662,45 +666,45 @@ FLAGS
   --recover=<value>         [default: []] Provide a JSON array of RecoveryData objects to manually ensure propagation
   --recoverFile=<value>     Filename reference to JSON array of RecoveryData objects to manually ensure propagation
   --sync                    Start from last saved block position instead of latest block position
-  --unsafePassword=<value>  Enter the plain text password for the wallet in the holo cli config
+  --unsafePassword=<value>  Enter the plain text password for the wallet in the holograph cli config
 
 DESCRIPTION
   Listen for EVM events deploys collections to ther supported networks
 
 EXAMPLES
-  $ holo propagator --networks="rinkeby mumbai fuji" --mode=auto
+  $ holograph propagator --networks="rinkeby mumbai fuji" --mode=auto
 ```
 
 _See code: [dist/commands/propagator/index.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/propagator/index.ts)_
 
-## `holo status`
+## `holograph status`
 
 Get asset status
 
 ```
 USAGE
-  $ holo status
+  $ holograph status
 
 DESCRIPTION
   Get asset status
 
 EXAMPLES
-  $ holo status
+  $ holograph status
 
-  $ holo status:contract
+  $ holograph status:contract
 
-  $ holo status:nft
+  $ holograph status:nft
 ```
 
 _See code: [dist/commands/status/index.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/status/index.ts)_
 
-## `holo status:contract`
+## `holograph status:contract`
 
 Check the status of a contract across all enabled networks
 
 ```
 USAGE
-  $ holo status:contract [--address <value>] [--output csv|json|yaml|]
+  $ holograph status:contract [--address <value>] [--output csv|json|yaml|]
 
 FLAGS
   --address=<value>  The address of contract to check status of
@@ -711,18 +715,18 @@ DESCRIPTION
   Check the status of a contract across all enabled networks
 
 EXAMPLES
-  $ holo status:contract --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78"
+  $ holograph status:contract --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78"
 ```
 
 _See code: [dist/commands/status/contract.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/status/contract.ts)_
 
-## `holo status:nft`
+## `holograph status:nft`
 
 Check the status of an nft across all enabled networks
 
 ```
 USAGE
-  $ holo status:nft [--address <value>] [--id <value>] [--output csv|json|yaml|]
+  $ holograph status:nft [--address <value>] [--id <value>] [--output csv|json|yaml|]
 
 FLAGS
   --address=<value>  The address of contract to check status of
@@ -734,8 +738,9 @@ DESCRIPTION
   Check the status of an nft across all enabled networks
 
 EXAMPLES
-  $ holo status:nft --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78" --id=1
+  $ holograph status:nft --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78" --id=1
 ```
 
 _See code: [dist/commands/status/nft.ts](https://github.com/cxip-labs/holo-cli/blob/v0.0.1/dist/commands/status/nft.ts)_
+
 <!-- commandsstop -->

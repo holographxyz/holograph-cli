@@ -44,7 +44,7 @@ interface AvailableJob extends TransactionLog {
 export default class Analyze extends Command {
   static description = 'Extract all operator jobs and get their status'
   static examples = [
-    `$ holo analyze --scope='[{"network":"goerli","startBlock":10857626,"endBlock":11138178},{"network":"mumbai","startBlock":26758573,"endBlock":27457918},{"network":"fuji","startBlock":11406945,"endBlock":12192217}]'`,
+    `$ holograph analyze --scope='[{"network":"goerli","startBlock":10857626,"endBlock":11138178},{"network":"mumbai","startBlock":26758573,"endBlock":27457918},{"network":"fuji","startBlock":11406945,"endBlock":12192217}]'`,
   ]
 
   static flags = {

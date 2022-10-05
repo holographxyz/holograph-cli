@@ -58,7 +58,7 @@ async function tryToUnlockWallet(
           ),
         )
       } catch {
-        throw new Error('password provided for wallet in holo config is not correct')
+        throw new Error('password provided for wallet in holograph config is not correct')
       }
     } else {
       try {
@@ -116,7 +116,7 @@ export async function ensureConfigFileIsValid(
 
   const exists = await fs.pathExists(configPath)
   if (!exists) {
-    throw new Error('Please run `holo config` before running any other holo command')
+    throw new Error('Please run `holograph config` before running any other holograph command')
   }
 
   try {

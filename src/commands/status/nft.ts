@@ -14,7 +14,7 @@ import {blockExplorers} from '../../utils/networks'
 export default class Nft extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
   static description = 'Check the status of an nft across all enabled networks'
-  static examples = ['$ holo status:nft --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78" --id=1']
+  static examples = ['$ holograph status:nft --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78" --id=1']
   static flags = {
     address: Flags.string({description: 'The address of contract to check status of'}),
     id: Flags.string({description: 'Token ID to check'}),

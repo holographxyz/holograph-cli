@@ -17,14 +17,14 @@ import {supportedNetworks} from '../../utils/networks'
 
 export default class Config extends Command {
   static description =
-    'Initialize the Holo CLI with a config file. If no flags are passed, the CLI will prompt you for the required information.'
+    'Initialize the Holograph CLI with a config file. If no flags are passed, the CLI will prompt you for the required information.'
 
   static examples = [
-    '$ holo --defaultFrom goerli',
-    '$ holo --defaultFrom goerli --defaultTo mumbai',
-    '$ holo --privateKey abc...def',
-    '$ holo --fromFile ./config.json',
-    '$ holo --fromJson \'{"version": "beta1", ...}',
+    '$ holograph --defaultFrom goerli',
+    '$ holograph --defaultFrom goerli --defaultTo mumbai',
+    '$ holograph --privateKey abc...def',
+    '$ holograph --fromFile ./config.json',
+    '$ holograph --fromJson \'{"version": "beta1", ...}',
   ]
 
   static flags = {
