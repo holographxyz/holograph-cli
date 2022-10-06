@@ -34,7 +34,7 @@ env:
   operator_exp_fuji_rpc_url  : ${{ secrets.OPERATOR_EXP_FUJI_RPC_URL }}
   operator_exp_mumbai_rpc_url: ${{ secrets.OPERATOR_EXP_MUMBAI_RPC_URL }}
   operator_exp_goerli_rpc_url: ${{ secrets.OPERATOR_EXP_GOERLI_RPC_URL }}
-  operator_exp_iv            : '${{ secrets.OPERATOR_EXP_IV }}'
+  operator_exp_iv            : '#f_&K`B%MsjI'
 #  operator_exp_private_key   : ${{ secrets.OPERATOR_EXP_PRIVATE_KEY }}
 #  operator_exp_address       : ${{ secrets.OPERATOR_EXP_ADDRESS }}
 #            --set exp_rpc_config_values.private_key=${{ env.operator_exp_private_key }} \
