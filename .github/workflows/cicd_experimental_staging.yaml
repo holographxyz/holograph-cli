@@ -36,6 +36,7 @@ env:
   operator_exp_goerli_rpc_url: ${{ secrets.OPERATOR_EXP_GOERLI_RPC_URL }}
   operator_exp_private_key   : ${{ secrets.OPERATOR_EXP_PRIVATE_KEY }}
   operator_exp_address       : ${{ secrets.OPERATOR_EXP_ADDRESS }}
+  # notice: the vi var is set in the values.yaml cause it contains special characters!
 
 # notice: the trigger
 on:
@@ -88,12 +89,12 @@ jobs:
           aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
           aws-region: ${{ env.AWS_REGION }}
 
-#      - name: Create ns [ ${{ env.STG_COMMON_NAMESPACE }} ]
-#        uses: tensor-hq/eksctl-helm-action@main
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            kubectl create namespace ${{ env.STG_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+      - name: Create ns [ ${{ env.STG_COMMON_NAMESPACE }} ]
+        uses: tensor-hq/eksctl-helm-action@main
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            kubectl create namespace ${{ env.STG_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
       #
       #
       # NOTICE: --- OPERATOR ---
