@@ -33,7 +33,7 @@ const getEnvironmentByGitBranch = (): Environment => {
 // Description: Get environment by ABI_ENVIRONMENT
 const getEnvironment = (): Environment => {
   let environment = Environment.develop
-  const acceptableBranches: Set<string> = new Set<string>(['develop', 'testnet', 'mainnet'])
+  const acceptableBranches: Set<string> = new Set<string>(['experimental', 'develop', 'testnet', 'mainnet'])
 
   const envVar = process.env.ABI_ENVIRONMENT || 'testnet' // NOTE: after deployment, use ?? operator and set default 'develop'
   if (acceptableBranches.has(envVar)) {

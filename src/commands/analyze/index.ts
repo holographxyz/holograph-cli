@@ -1,6 +1,6 @@
 import * as fs from 'fs-extra'
 import {Command, Flags} from '@oclif/core'
-import {ethers} from 'ethers'
+import {ethers, BigNumber} from 'ethers'
 
 import {ConfigFile, ensureConfigFileIsValid} from '../../utils/config'
 
@@ -44,7 +44,7 @@ interface AvailableJob extends TransactionLog {
 export default class Analyze extends Command {
   static description = 'Extract all operator jobs and get their status'
   static examples = [
-    `$ holo analyze --scope='[{"network":"rinkeby","startBlock":10857626,"endBlock":11138178},{"network":"mumbai","startBlock":26758573,"endBlock":27457918},{"network":"fuji","startBlock":11406945,"endBlock":12192217}]'`,
+    `$ holo analyze --scope='[{"network":"goerli","startBlock":10857626,"endBlock":11138178},{"network":"mumbai","startBlock":26758573,"endBlock":27457918},{"network":"fuji","startBlock":11406945,"endBlock":12192217}]'`,
   ]
 
   static flags = {
@@ -248,13 +248,18 @@ export default class Analyze extends Command {
   }
 
   async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
 
     if (receipt.status === 1) {
-      const operatorJobPayload = this.networkMonitor.decodePacketEvent(receipt)
+      const operatorJobPayload = this.networkMonitor.decodePacketEvent(receipt) ?? this.networkMonitor.decodeLzPacketEvent(receipt)
       const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract cross-chain packet for ${transaction.hash}`)
@@ -311,10 +316,15 @@ export default class Analyze extends Command {
     let operatorJobHash: string
     let index: number
     let operatorJob: AvailableJob
-    let receipt: ethers.ContractReceipt
+    let receipt: ethers.providers.TransactionReceipt | null
     switch (parsedTransaction.name) {
       case 'executeJob':
-        receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+        receipt = await this.networkMonitor.getTransactionReceipt({
+          network,
+          transactionHash: transaction.hash,
+          attempts: 10,
+          canFail: true,
+        })
         if (receipt === null) {
           throw new Error(`Could not get receipt for ${transaction.hash}`)
         }
@@ -369,7 +379,12 @@ export default class Analyze extends Command {
     transaction: ethers.providers.TransactionResponse,
     network: string,
   ): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -402,17 +417,13 @@ export default class Analyze extends Command {
     const contract: ethers.Contract = this.networkMonitor.operatorContract.connect(
       this.networkMonitor.providers[network],
     )
-    let hasError = false
-    try {
-      await contract.estimateGas.executeJob(payload)
-    } catch (error: any) {
-      hasError = true
-      if (error.reason !== 'execution reverted: HOLOGRAPH: invalid job') {
-        this.networkMonitor.structuredLog(network, error.reason)
-      }
-    }
-
-    if (hasError) {
+    const gasLimit: BigNumber | null = await this.networkMonitor.getGasLimit({
+      network,
+      contract,
+      methodName: 'executeJob',
+      args: [payload],
+    })
+    if (gasLimit === null) {
       this.networkMonitor.structuredLog(network, `Transaction: ${transactionHash} has already been done`)
       return true
     }

@@ -9,6 +9,7 @@ import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {addressValidator, tokenValidator} from '../../utils/validation'
 import {Environment, getEnvironment} from '../../utils/environment'
 import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
+import {blockExplorers} from '../../utils/networks'
 
 export default class Nft extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
@@ -29,12 +30,6 @@ export default class Nft extends Command {
 
   registryAddress!: string
   supportedNetworks: string[] = []
-  blockExplorers: {[key: string]: string} = {
-    rinkeby: 'https://rinkeby.etherscan.io/',
-    mumbai: 'https://mumbai.polygonscan.com/',
-    fuji: 'https://testnet.snowtrace.io/',
-  }
-
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   holograph!: ethers.Contract
   registryContract!: ethers.Contract
@@ -167,7 +162,7 @@ export default class Nft extends Command {
           if (d.exists) {
             // eslint-disable-next-line no-await-in-loop
             d.owner = await erc721.ownerOf(token.toHexString())
-            d.link = this.blockExplorers[network] + 'token/' + this.contractAddress + '?a=' + token.toString()
+            d.link = blockExplorers[network] + 'token/' + this.contractAddress + '?a=' + token.toString()
           }
         }
       }

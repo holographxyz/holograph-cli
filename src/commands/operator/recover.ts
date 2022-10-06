@@ -10,7 +10,7 @@ import {BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 
 export default class Recover extends Command {
   static description = 'Attempt to re-run/recover a particular Operator Job'
-  static examples = ['$ holo operator:recover --network="rinkeby" --tx="0x..."']
+  static examples = ['$ holo operator:recover --network="goerli" --tx="0x..."']
   static flags = {
     network: Flags.string({description: 'The network on which the transaction was executed'}),
     tx: Flags.string({description: 'The hash of transaction that we want to attempt to execute'}),
@@ -79,11 +79,22 @@ export default class Recover extends Command {
     CliUx.ux.action.stop()
 
     CliUx.ux.action.start('Retrieving transaction details from ' + network + ' network')
-    const transaction = await this.networkMonitor.providers[network].getTransaction(tx)
-    //    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash as string)
+    const transaction = await this.networkMonitor.getTransaction({
+      transactionHash: tx,
+      network,
+      canFail: true,
+      attempts: 30,
+      interval: 500,
+    })
     CliUx.ux.action.stop()
 
-    await this.processTransaction(network, transaction)
+    if (transaction === null) {
+      this.networkMonitor.structuredLog(network, 'Could not retrieve the transaction')
+      // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+      process.exit()
+    } else {
+      await this.processTransaction(network, transaction)
+    }
   }
 
   async processTransaction(network: string, transaction: ethers.providers.TransactionResponse): Promise<void> {
@@ -113,14 +124,19 @@ export default class Recover extends Command {
   }
 
   async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 30,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
 
     if (receipt.status === 1) {
       this.networkMonitor.structuredLog(network, `Checking if a bridge request was made at tx: ${transaction.hash}`)
-      const operatorJobPayload = this.networkMonitor.decodePacketEvent(receipt)
+      const operatorJobPayload = this.networkMonitor.decodePacketEvent(receipt) ?? this.networkMonitor.decodeLzPacketEvent(receipt)
       const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract cross-chain packet for ${transaction.hash}`)
@@ -161,7 +177,12 @@ export default class Recover extends Command {
     transaction: ethers.providers.TransactionResponse,
     network: string,
   ): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 30,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -208,111 +229,12 @@ export default class Recover extends Command {
     const operate: boolean = operatorPrompt.shouldContinue
 
     if (operate) {
-      const contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.wallets[network])
-      let gasLimit
-      const tryGetGasLimit = async (): Promise<boolean> => {
-        return new Promise<boolean>((resolve, _reject) => {
-          const getGasLimit: NodeJS.Timeout = setInterval(async () => {
-            try {
-              gasLimit = await contract.estimateGas.executeJob(payload)
-              clearInterval(getGasLimit)
-              resolve(true)
-            } catch (error: any) {
-              switch (error.reason) {
-                case 'execution reverted: HOLOGRAPH: already deployed': {
-                  this.networkMonitor.structuredLog(
-                    network,
-                    'web3 response -> "HOLOGRAPH: already deployed". -> The deploy request is invalid, since requested contract is already deployed.',
-                  )
-
-                  break
-                }
-
-                case 'execution reverted: HOLOGRAPH: invalid job': {
-                  this.networkMonitor.structuredLog(
-                    network,
-                    'web3 response -> "HOLOGRAPH: invalid job". -> Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.',
-                  )
-
-                  break
-                }
-
-                case 'execution reverted: HOLOGRAPH: not holographed': {
-                  this.networkMonitor.structuredLog(
-                    network,
-                    'web3 response -> "HOLOGRAPH: not holographed". -> Need to first deploy a holographable contract on destination chain.',
-                  )
-
-                  break
-                }
-
-                default: {
-                  this.networkMonitor.structuredLogError(network, error, contract.address)
-                }
-              }
-
-              clearInterval(getGasLimit)
-              resolve(false)
-            }
-          }, 1000) // every 1 second
-        })
-      }
-
-      if (await tryGetGasLimit()) {
-        const gasPrice = await contract.provider.getGasPrice()
-        const jobRawTx = await contract.populateTransaction.executeJob(payload, {gasPrice, gasLimit})
-        jobRawTx.nonce = this.networkMonitor.walletNonces[network]
-        let jobTx!: ethers.providers.TransactionResponse
-        const tryToSendTx = async (): Promise<boolean> => {
-          return new Promise<boolean>((resolve, _reject) => {
-            const getJobTx: NodeJS.Timeout = setInterval(async () => {
-              try {
-                jobTx = await this.networkMonitor.wallets[network].sendTransaction(jobRawTx)
-                clearInterval(getJobTx)
-                resolve(true)
-              } catch (error: any) {
-                switch (error.message) {
-                  case 'already known': {
-                    // we are aware that more than one message has been sent, so avoid all errors echoed
-                    break
-                  }
-
-                  default: {
-                    this.networkMonitor.structuredLogError(network, error, 'sendTransaction error')
-                  }
-                }
-              }
-            }, 100) // every 1/10th of a second
-          })
-        }
-
-        if (await tryToSendTx()) {
-          this.debug(jobTx)
-          this.networkMonitor.structuredLog(network, `Transaction hash is ${jobTx.hash}`)
-          this.networkMonitor.walletNonces[network]++
-          let jobReceipt: ethers.ContractReceipt
-          const tryToGetTxReceipt = async (): Promise<void> => {
-            return new Promise<void>((resolve, _reject) => {
-              const getTxReceipt: NodeJS.Timeout = setInterval(async () => {
-                jobReceipt = await this.networkMonitor.providers[network].getTransactionReceipt(jobTx.hash)
-                if (jobReceipt !== null) {
-                  this.debug(jobReceipt)
-                  this.networkMonitor.structuredLog(
-                    network,
-                    `Transaction ${jobReceipt.transactionHash} mined and confirmed`,
-                  )
-                  clearInterval(getTxReceipt)
-                  resolve()
-                }
-              }, 1000) // every 1 second
-            })
-          }
-
-          await tryToGetTxReceipt()
-        }
-      }
-    } else {
-      this.networkMonitor.structuredLog(network, 'Dropped potential payload to execute')
+      await this.networkMonitor.executeTransaction({
+        network,
+        contract: this.networkMonitor.operatorContract,
+        methodName: 'executeJob',
+        args: [payload],
+      })
     }
 
     // eslint-disable-next-line no-process-exit, unicorn/no-process-exit

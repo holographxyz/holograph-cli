@@ -13,32 +13,31 @@ import {
   validateBeta1Schema,
 } from '../../utils/config'
 import AesEncryption from '../../utils/aes-encryption'
+import {supportedNetworks} from '../../utils/networks'
 
 export default class Config extends Command {
   static description =
     'Initialize the Holo command line to become an operator or to bridge collections and NFTs manually'
 
   static examples = [
-    '$ holo --defaultFrom rinkeby',
-    '$ holo --defaultFrom rinkeby --defaultTo mumbai',
+    '$ holo --defaultFrom goerli',
+    '$ holo --defaultFrom goerli --defaultTo mumbai',
     '$ holo --privateKey abc...def',
     '$ holo --fromFile ./config.json',
     '$ holo --fromJson \'{"version": "beta1", ...}',
   ]
 
-  static supportedNetworks = ['rinkeby', 'mumbai', 'fuji']
-
   static flags = {
     defaultFrom: Flags.string({
-      options: this.supportedNetworks,
+      options: supportedNetworks,
       description: 'Default network to bridge FROM (source network)',
     }),
     defaultTo: Flags.string({
-      options: this.supportedNetworks,
+      options: supportedNetworks,
       description: 'Default network to bridge TO (destination network)',
     }),
     network: Flags.string({
-      options: this.supportedNetworks,
+      options: supportedNetworks,
       description: 'Network to set',
     }),
     url: Flags.string({
@@ -197,7 +196,7 @@ export default class Config extends Command {
 
     if (updateNetworksPrompt.update || !isConfigExist) {
       // Array will get smaller depending on input defaultFrom and defaultTo values. I copy value so I can manipulate it
-      let remainingNetworks = Config.supportedNetworks
+      let remainingNetworks = supportedNetworks
       this.debug(`remainingNetworks = ${remainingNetworks}`)
 
       // Collect default FROM network value
@@ -245,7 +244,7 @@ export default class Config extends Command {
 
           name: 'networks',
           message: 'Which networks do you want to operate?',
-          choices: Config.supportedNetworks,
+          choices: supportedNetworks,
           validate: async (input: any) => {
             if (input.length >= 2) {
               return true
