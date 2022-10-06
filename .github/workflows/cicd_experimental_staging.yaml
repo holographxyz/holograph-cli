@@ -22,7 +22,7 @@ env:
   STG_HOLO_OPERATOR_PASSWORD: ${{ secrets.STG_EXPERIMENTAL_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
-  OPERATOR_HOLO_CONFIG_FILE_DATA: experimental-config-file
+  OPERATOR_HOLO_CONFIG_FILE_DATA: exp-config-file
   #
   ABI_ENVIRONMENT: experimental
   #
