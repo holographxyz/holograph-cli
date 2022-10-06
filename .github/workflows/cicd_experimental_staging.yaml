@@ -11,7 +11,7 @@ env:
   #
   DEV_IMAGE_TAG: dev-87c992a9bccb052ad87a15fba06f5ce97f130f3a #dev-${{ github.sha }}
   #######################################
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.31
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.32
   #######################################
   CLUSTER_NAME: staging
   #
@@ -34,11 +34,10 @@ env:
   operator_exp_fuji_rpc_url  : ${{ secrets.OPERATOR_EXP_FUJI_RPC_URL }}
   operator_exp_mumbai_rpc_url: ${{ secrets.OPERATOR_EXP_MUMBAI_RPC_URL }}
   operator_exp_goerli_rpc_url: ${{ secrets.OPERATOR_EXP_GOERLI_RPC_URL }}
-  operator_exp_iv            : '#f_&K`B%MsjI'
-#  operator_exp_private_key   : ${{ secrets.OPERATOR_EXP_PRIVATE_KEY }}
-#  operator_exp_address       : ${{ secrets.OPERATOR_EXP_ADDRESS }}
-#            --set exp_rpc_config_values.private_key=${{ env.operator_exp_private_key }} \
-#            --set exp_rpc_config_values.address=${{ env.operator_exp_address }} \
+  operator_exp_iv            : '#f_&K\`B%MsjI'
+  operator_exp_private_key   : ${{ secrets.OPERATOR_EXP_PRIVATE_KEY }}
+  operator_exp_address       : ${{ secrets.OPERATOR_EXP_ADDRESS }}
+
 
 # notice: the trigger
 on:
@@ -140,6 +139,8 @@ jobs:
             --set exp_rpc_config_values.bridge_destination="mumbai" \
             \
             --set exp_rpc_config_values.iv=${{ env.operator_exp_iv }} \
+            --set exp_rpc_config_values.private_key=${{ env.operator_exp_private_key }} \
+            --set exp_rpc_config_values.address=${{ env.operator_exp_address }} \
             \
             --set exp_rpc_config_values.fuji_rpc_url=${{ env.operator_exp_fuji_rpc_url }} \
             --set exp_rpc_config_values.mumbai_rpc_url=${{ env.operator_exp_mumbai_rpc_url }} \
