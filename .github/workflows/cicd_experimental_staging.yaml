@@ -34,7 +34,7 @@ env:
   operator_exp_fuji_rpc_url  : ${{ secrets.OPERATOR_EXP_FUJI_RPC_URL }}
   operator_exp_mumbai_rpc_url: ${{ secrets.OPERATOR_EXP_MUMBAI_RPC_URL }}
   operator_exp_goerli_rpc_url: ${{ secrets.OPERATOR_EXP_GOERLI_RPC_URL }}
-  operator_exp_address       : "0xCF7B3892760e7B9fe018306036E7bDf46a4Cb844" #${{ secrets.OPERATOR_EXP_ADDRESS }}
+  operator_exp_address       : "0x4BB282b41b17cC0EDD8cED6eC7702Dba039b4AB0" #${{ secrets.OPERATOR_EXP_ADDRESS }}
 
 # notice: the trigger
 on:
