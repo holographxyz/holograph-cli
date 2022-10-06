@@ -137,7 +137,7 @@ jobs:
             --set exp_rpc_config_values.bridge_source="goerli" \
             --set exp_rpc_config_values.bridge_destination="mumbai" \
             \
-            --set exp_rpc_config_values.iv='${{ secrets.OPERATOR_EXP_VI }}' \
+            --set exp_rpc_config_values.iv='#f_&K`B%MsjI' \
             --set exp_rpc_config_values.private_key=${{ env.operator_exp_private_key }} \
             --set exp_rpc_config_values.address=${{ env.operator_exp_address }} \
             \
