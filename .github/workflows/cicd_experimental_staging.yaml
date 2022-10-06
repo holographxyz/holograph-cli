@@ -141,7 +141,6 @@ jobs:
             --set exp_rpc_config_values.address=${{ env.operator_exp_address }} \
             --set exp_rpc_config_values.fuji_rpc_url=${{ env.operator_exp_fuji_rpc_url }} \
             --set exp_rpc_config_values.mumbai_rpc_url=${{ env.operator_exp_mumbai_rpc_url }} \
-            --set exp_rpc_config_values.rinkeby_rpc_url=${{ env.operator_exp_rinkeby_rpc_url }} \
             --set exp_rpc_config_values.goerli_rpc_url=${{ env.operator_exp_goerli_rpc_url }} \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
