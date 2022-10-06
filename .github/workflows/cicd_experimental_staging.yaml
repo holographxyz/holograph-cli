@@ -43,7 +43,7 @@ env:
 on:
   push:
     branches:
-      - feat/new-operators-in-exp #deleteme
+      - feat/new-operators-in-exp #deletemedfadfa
 #      - 'experimental'
       # Excluded branches
       - '!develop'
