@@ -71,13 +71,13 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build image
-        run: |
-          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
-          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
-
-      - name: Push image
-        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
+#      - name: Build image
+#        run: |
+#          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
+#          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
+#
+#      - name: Push image
+#        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
