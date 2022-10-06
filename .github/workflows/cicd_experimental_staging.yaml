@@ -11,7 +11,7 @@ env:
   #
   DEV_IMAGE_TAG: dev-87c992a9bccb052ad87a15fba06f5ce97f130f3a #dev-${{ github.sha }}
   #######################################
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.33
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.34
   #######################################
   CLUSTER_NAME: staging
   #
@@ -88,12 +88,12 @@ jobs:
           aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Create ns [ ${{ env.STG_COMMON_NAMESPACE }} ]
-        uses: tensor-hq/eksctl-helm-action@main
-        with:
-          eks_cluster: ${{ env.CLUSTER_NAME }}
-          command: |-
-            kubectl create namespace ${{ env.STG_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+#      - name: Create ns [ ${{ env.STG_COMMON_NAMESPACE }} ]
+#        uses: tensor-hq/eksctl-helm-action@main
+#        with:
+#          eks_cluster: ${{ env.CLUSTER_NAME }}
+#          command: |-
+#            kubectl create namespace ${{ env.STG_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
       #
       #
       # NOTICE: --- OPERATOR ---
@@ -137,7 +137,6 @@ jobs:
             --set exp_rpc_config_values.bridge_source="goerli" \
             --set exp_rpc_config_values.bridge_destination="mumbai" \
             \
-            --set exp_rpc_config_values.iv='#f_&K`B%MsjI' \
             --set exp_rpc_config_values.private_key=${{ env.operator_exp_private_key }} \
             --set exp_rpc_config_values.address=${{ env.operator_exp_address }} \
             \
