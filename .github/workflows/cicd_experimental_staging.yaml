@@ -34,13 +34,13 @@ env:
   operator_exp_fuji_rpc_url  : ${{ secrets.OPERATOR_EXP_FUJI_RPC_URL }}
   operator_exp_mumbai_rpc_url: ${{ secrets.OPERATOR_EXP_MUMBAI_RPC_URL }}
   operator_exp_goerli_rpc_url: ${{ secrets.OPERATOR_EXP_GOERLI_RPC_URL }}
-  operator_exp_address       : 0xCF7B3892760e7B9fe018306036E7bDf46a4Cb844 #${{ secrets.OPERATOR_EXP_ADDRESS }}
+  operator_exp_address       : "0xCF7B3892760e7B9fe018306036E7bDf46a4Cb844" #${{ secrets.OPERATOR_EXP_ADDRESS }}
 
 # notice: the trigger
 on:
   push:
     branches:
-      - feat/new-operators-in-exp #
+      - feat/new-operators-in-exp #deleteme
 #      - 'experimental'
       # Excluded branches
       - '!develop'
