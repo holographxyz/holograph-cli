@@ -444,7 +444,8 @@ export class NetworkMonitor {
         this.structuredLog(network, `Websocket was undefined in disconnectBuilder function`)
         restart()
       } else {
-        websocketProvider.destroy().then(restart)
+        websocketProvider._websocket.terminate().then(restart)
+        //websocketProvider.destroy().then(restart)
       }
     }
   }
