@@ -35,8 +35,7 @@ holo config --fromFile $CONFIG_FILE
 # notice: run the specified app
 if [[ $HOLO_CLI_CMD == "operator" ]]
 then
-  echo $(eval ${ENABLE_DEBUG} ABI_ENVIRONMENT=${ABI_ENVIRONMENT} holo ${HOLO_CLI_CMD} --networks ${NETWORK} --mode ${MODE} ${ENABLE_SYNC} ${HEALTHCHECK} --unsafePassword ${PASSWORD})
-  eval env DEBUG=\* ABI_ENVIRONMENT=${ABI_ENVIRONMENT} holo ${HOLO_CLI_CMD} --networks ${NETWORK} --mode ${MODE} ${ENABLE_SYNC} ${HEALTHCHECK} --unsafePassword ${PASSWORD}
+  eval $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holo $HOLO_CLI_CMD --networks $NETWORK --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD
 
 elif [[ $HOLO_CLI_CMD == "propagator" ]]
 then
