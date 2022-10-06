@@ -42,8 +42,7 @@ env:
 on:
   push:
     branches:
-      - feat/new-operators-in-exp #deletemedfadfa
-#      - 'experimental'
+      - 'experimental'
       # Excluded branches
       - '!develop'
       - '!testnet'
