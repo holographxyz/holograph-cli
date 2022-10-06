@@ -11,7 +11,7 @@ env:
   #
   DEV_IMAGE_TAG: dev-87c992a9bccb052ad87a15fba06f5ce97f130f3a #dev-${{ github.sha }}
   #######################################
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.32
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.33
   #######################################
   CLUSTER_NAME: staging
   #
