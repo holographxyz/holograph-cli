@@ -331,13 +331,14 @@ export default class Indexer extends Command {
       attempts: 10,
       canFail: true,
     })
+
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
 
     const transferInfo = this.networkMonitor.decodeErc721TransferEvent(receipt)
 
-    console.log(transaction, network, transferInfo)
+    this.debug(transaction, network, transferInfo)
     await this.updateMintedNFT(transaction, network, transferInfo as any[])
   }
 
@@ -756,7 +757,7 @@ export default class Indexer extends Command {
     network: string,
     transferInfo: any[],
   ): Promise<void> {
-    const tokenId = (transferInfo[2] as ethers.BigNumber).toString()
+    const tokenId = ethers.utils.hexZeroPad(transferInfo[2].toHexString(), 32)
     const contractAddress = transferInfo[3] as string
 
     this.networkMonitor.structuredLog(
@@ -790,7 +791,7 @@ export default class Indexer extends Command {
     network: string,
     transferInfo: any[],
   ): Promise<void> {
-    const tokenId = (transferInfo[2] as ethers.BigNumber).toString()
+    const tokenId = ethers.utils.hexZeroPad(transferInfo[2].toHexString(), 32)
     const contractAddress = transferInfo[3] as string
 
     this.networkMonitor.structuredLog(
@@ -856,7 +857,7 @@ export default class Indexer extends Command {
     const jobHash = operatorJobHash
 
     const args: BridgeTransactionArgs = bridgeTransaction.args as unknown as BridgeTransactionArgs
-    const tokenId = args.tokenId.toString()
+    const tokenId = ethers.utils.hexZeroPad(args.tokenId.toHexString(), 32)
     const contractAddress = bridgeTransaction.args.collection.toLowerCase()
 
     this.networkMonitor.structuredLog(network, `Sending cross chain transaction job to DBJobManager ${contractAddress}`)
