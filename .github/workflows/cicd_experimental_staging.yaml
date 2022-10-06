@@ -121,9 +121,6 @@ jobs:
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
-            operator_exp_iv="#f_&K`B%MsjI"
-            export operator_exp_iv=$(echo ${operator_exp_iv})
-            echo operator_exp_iv
 
             helm upgrade --install $RELEASE_NAME \
             holo-operator-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
@@ -142,7 +139,7 @@ jobs:
             --set exp_rpc_config_values.bridge_source="goerli" \
             --set exp_rpc_config_values.bridge_destination="mumbai" \
             \
-            --set exp_rpc_config_values.iv=$operator_exp_iv \
+            --set exp_rpc_config_values.iv='#f_&K`B%MsjI' \
             --set exp_rpc_config_values.private_key=${{ env.operator_exp_private_key }} \
             --set exp_rpc_config_values.address=${{ env.operator_exp_address }} \
             \
