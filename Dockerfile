@@ -37,6 +37,6 @@ EXPOSE 6000
 
 RUN chmod 755 /holo-cli/entrypoint.sh
 # notice: The ENTRYPOINT specifies a command that will always be executed when the container starts.
-ENTRYPOINT ["/bin/bash /holo-cli/entrypoint.sh"]
+ENTRYPOINT ["/holo-cli/entrypoint.sh"]
 # notice: The CMD specifies arguments that will be fed to the ENTRYPOINT
 # https://docs.docker.com/engine/reference/builder/#understand-how-cmd-and-entrypoint-interact
