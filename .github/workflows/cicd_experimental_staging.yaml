@@ -34,10 +34,8 @@ env:
   operator_exp_fuji_rpc_url  : ${{ secrets.OPERATOR_EXP_FUJI_RPC_URL }}
   operator_exp_mumbai_rpc_url: ${{ secrets.OPERATOR_EXP_MUMBAI_RPC_URL }}
   operator_exp_goerli_rpc_url: ${{ secrets.OPERATOR_EXP_GOERLI_RPC_URL }}
-#  operator_exp_iv         #f_&K`B%MsjI   :
   operator_exp_private_key   : ${{ secrets.OPERATOR_EXP_PRIVATE_KEY }}
   operator_exp_address       : ${{ secrets.OPERATOR_EXP_ADDRESS }}
-
 
 # notice: the trigger
 on:
@@ -74,13 +72,13 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-#      - name: Build image
-#        run: |
-#          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
-#          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
-#
-#      - name: Push image
-#        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
+      - name: Build image
+        run: |
+          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
+          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }} .
+
+      - name: Push image
+        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster

@@ -3,7 +3,7 @@
 # notice: set the env vars
 if [[ $ENABLE_DEBUG == "true" ]]
 then
-  ENABLE_DEBUG="DEBUG=\*"
+  ENABLE_DEBUG="env DEBUG=\*"
 else
   ENABLE_DEBUG=""
 fi
@@ -28,7 +28,8 @@ holo config --fromFile $CONFIG_FILE
 # notice: run the specified app
 if [[ $HOLO_CLI_CMD == "operator" ]]
 then
-  eval env $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holo $HOLO_CLI_CMD --networks $NETWORK --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD
+  echo $(eval $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holo $HOLO_CLI_CMD --networks $NETWORK --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD)
+  eval $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holo $HOLO_CLI_CMD --networks $NETWORK --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD
 
 elif [[ $HOLO_CLI_CMD == "propagator" ]]
 then
