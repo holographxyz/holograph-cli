@@ -1,42 +1,49 @@
 #!/bin/bash
 
+echo "-- The env vars are below... --"
 # notice: set the env vars
-if [[ $ENABLE_DEBUG == "true" ]]
+if [[ $ENABLE_DEBUG == 'true' ]]
 then
-  ENABLE_DEBUG="DEBUG=\*"
+  export ENABLE_DEBUG='env DEBUG=\*'
+  echo "ENABLE_DEBUG=${ENABLE_DEBUG}"
 else
-  ENABLE_DEBUG=""
+  export ENABLE_DEBUG=""
+  echo "ENABLE_DEBUG=${ENABLE_DEBUG}"
 fi
 
-if [[ $ENABLE_SYNC == "true" ]]
+if [[ $ENABLE_SYNC == 'true' ]]
 then
-  ENABLE_SYNC="--sync"
+  export ENABLE_SYNC="--sync"
+  echo "ENABLE_SYNC=${ENABLE_SYNC}"
 else
-  ENABLE_SYNC=""
+  export ENABLE_SYNC=""
+  echo "ENABLE_SYNC=${ENABLE_SYNC}"
 fi
 
-if [[ $HEALTHCHECK == "true" ]]
+if [[ $HEALTHCHECK == 'true' ]]
 then
-  HEALTHCHECK="--healthCheck"
+  export HEALTHCHECK="--healthCheck"
+  echo "HEALTHCHECK=${HEALTHCHECK}"
 else
-  HEALTHCHECK=""
+  export HEALTHCHECK=""
+  echo "HEALTHCHECK=${HEALTHCHECK}"
 fi
 
 # notice: configure
-holograph config --fromFile $CONFIG_FILE
+holo config --fromFile $CONFIG_FILE
 
 # notice: run the specified app
-if [[ $HOLOGRAPH_CLI_CMD == "operator" ]]
+if [[ $HOLO_CLI_CMD == "operator" ]]
 then
-  eval env $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holograph $HOLOGRAPH_CLI_CMD --networks $NETWORK --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD
+  eval $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holo $HOLO_CLI_CMD --networks $NETWORK --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD
 
-elif [[ $HOLOGRAPH_CLI_CMD == "propagator" ]]
+elif [[ $HOLO_CLI_CMD == "propagator" ]]
 then
-  eval env $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holograph $HOLOGRAPH_CLI_CMD --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD
+  eval $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holo $HOLO_CLI_CMD --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD
 
-elif [[ $HOLOGRAPH_CLI_CMD == "indexer" ]]
+elif [[ $HOLO_CLI_CMD == "indexer" ]]
 then
-  eval env $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holograph $HOLOGRAPH_CLI_CMD --networks $NETWORK --mode $MODE --host=$HOLOGRAPH_INDEXER_HOST $HEALTHCHECK
+  eval $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holo $HOLO_CLI_CMD --networks $NETWORK --mode $MODE --host=$HOLO_INDEXER_HOST $HEALTHCHECK
 
 else
   echo
