@@ -9,6 +9,9 @@ export default class ConfigUser extends ConfigView {
     '$ holo:user --output clean',
   ]
 
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     const {flags} = await this.parse(ConfigView)
     await this.setup()

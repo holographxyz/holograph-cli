@@ -17,14 +17,14 @@ import {supportedNetworks} from '../../utils/networks'
 
 export default class Config extends Command {
   static description =
-    'Initialize the Holo command line to become an operator or to bridge collections and NFTs manually'
+    'Initialize the Holograph CLI with a config file. If no flags are passed, the CLI will prompt you for the required information.'
 
   static examples = [
-    '$ holo --defaultFrom goerli',
-    '$ holo --defaultFrom goerli --defaultTo mumbai',
-    '$ holo --privateKey abc...def',
-    '$ holo --fromFile ./config.json',
-    '$ holo --fromJson \'{"version": "beta1", ...}',
+    '$ holograph --defaultFrom goerli',
+    '$ holograph --defaultFrom goerli --defaultTo mumbai',
+    '$ holograph --privateKey abc...def',
+    '$ holograph --fromFile ./config.json',
+    '$ holograph --fromJson \'{"version": "beta1", ...}',
   ]
 
   static flags = {
@@ -49,78 +49,9 @@ export default class Config extends Command {
     fromJson: Flags.string({description: 'JSON object to use as the config'}),
   }
 
-  async loadConfigPath(configPath: string, filePath: string | undefined): Promise<void> {
-    // Check if config Dir flag is empty
-    if (filePath !== undefined) {
-      try {
-        const stats = fs.lstatSync(filePath)
-
-        this.debug(`Is file: ${stats.isFile()}`)
-        this.debug(`Is directory: ${stats.isDirectory()}`)
-        this.debug(`Is symbolic link: ${stats.isSymbolicLink()}`)
-        this.debug(`Is FIFO: ${stats.isFIFO()}`)
-        this.debug(`Is socket: ${stats.isSocket()}`)
-        this.debug(`Is character device: ${stats.isCharacterDevice()}`)
-        this.debug(`Is block device: ${stats.isBlockDevice()}`)
-
-        if (
-          stats.isFile() &&
-          !stats.isDirectory() &&
-          !stats.isSymbolicLink() &&
-          !stats.isFIFO() &&
-          !stats.isSocket() &&
-          !stats.isCharacterDevice() &&
-          !stats.isBlockDevice()
-        ) {
-          const ensureCheck = await ensureConfigFileIsValid(filePath, undefined, false)
-
-          // Since the json at the desired path is valid, we save it!
-          await fs.outputJSON(configPath, ensureCheck.configFile, {spaces: 2})
-        } else {
-          this.error(`filePath is NOT VALID FAIL`)
-        }
-      } catch (error: any) {
-        // Handle error
-        if (error.code === 'ENOENT') {
-          this.error(`The input ${filePath} is not a valid file path`)
-          // eslint-disable-next-line no-negated-condition
-        } else if (typeof error.message !== 'undefined') {
-          this.error(error.message)
-        } else {
-          this.error(`Failed to load ${filePath}`)
-        }
-
-        this.exit()
-      }
-
-      this.exit()
-    }
-  }
-
-  async loadConfigJson(configPath: string, jsonString: string | undefined): Promise<void> {
-    // Check if config Json flag is empty
-    if (jsonString !== undefined) {
-      this.log(`checking jsonString input`)
-      const output = JSON.parse(jsonString)
-      await validateBeta1Schema(output)
-      this.log(output)
-      // Since the json at the desired path is valid, we save it!
-      await fs.outputJSON(configPath, output, {spaces: 2})
-      this.exit()
-    }
-  }
-
-  validateToAndFrom(defaultTo: string | undefined, defaultFrom: string | undefined): void {
-    // Make sure default from and to networks are not the same when using flags
-    if (defaultFrom !== undefined && defaultTo !== undefined) {
-      const isValidFromAndTo = isFromAndToNetworksTheSame(defaultFrom, defaultTo)
-      if (!isValidFromAndTo) {
-        this.log('The FROM and TO networks cannot be the same')
-        this.error('Networks cannot be the same')
-      }
-    }
-  }
-
+  /**
+   * Command Entry Point
+   */
   public async run(): Promise<void> {
     const {flags} = await this.parse(Config)
     let defaultFrom = flags.defaultFrom
@@ -370,5 +301,84 @@ export default class Config extends Command {
     }
 
     this.exit()
+  }
+
+  /**
+   * Load the config file from the path provided by the user
+   */
+  async loadConfigPath(configPath: string, filePath: string | undefined): Promise<void> {
+    // Check if config Dir flag is empty
+    if (filePath !== undefined) {
+      try {
+        const stats = fs.lstatSync(filePath)
+
+        this.debug(`Is file: ${stats.isFile()}`)
+        this.debug(`Is directory: ${stats.isDirectory()}`)
+        this.debug(`Is symbolic link: ${stats.isSymbolicLink()}`)
+        this.debug(`Is FIFO: ${stats.isFIFO()}`)
+        this.debug(`Is socket: ${stats.isSocket()}`)
+        this.debug(`Is character device: ${stats.isCharacterDevice()}`)
+        this.debug(`Is block device: ${stats.isBlockDevice()}`)
+
+        if (
+          stats.isFile() &&
+          !stats.isDirectory() &&
+          !stats.isSymbolicLink() &&
+          !stats.isFIFO() &&
+          !stats.isSocket() &&
+          !stats.isCharacterDevice() &&
+          !stats.isBlockDevice()
+        ) {
+          const ensureCheck = await ensureConfigFileIsValid(filePath, undefined, false)
+
+          // Since the json at the desired path is valid, we save it!
+          await fs.outputJSON(configPath, ensureCheck.configFile, {spaces: 2})
+        } else {
+          this.error(`filePath is NOT VALID FAIL`)
+        }
+      } catch (error: any) {
+        // Handle error
+        if (error.code === 'ENOENT') {
+          this.error(`The input ${filePath} is not a valid file path`)
+          // eslint-disable-next-line no-negated-condition
+        } else if (typeof error.message !== 'undefined') {
+          this.error(error.message)
+        } else {
+          this.error(`Failed to load ${filePath}`)
+        }
+      }
+
+      this.exit()
+    }
+  }
+
+  /**
+   * Load the config file from the JSON provided by the user
+   */
+  async loadConfigJson(configPath: string, jsonString: string | undefined): Promise<void> {
+    // Check if config Json flag is empty
+    if (jsonString !== undefined) {
+      this.log(`checking jsonString input`)
+      const output = JSON.parse(jsonString)
+      await validateBeta1Schema(output)
+      this.log(output)
+      // Since the json at the desired path is valid, we save it!
+      await fs.outputJSON(configPath, output, {spaces: 2})
+      this.exit()
+    }
+  }
+
+  /**
+   * Checks that the origin and destination networks are not the same
+   */
+  validateToAndFrom(defaultTo: string | undefined, defaultFrom: string | undefined): void {
+    // Make sure default from and to networks are not the same when using flags
+    if (defaultFrom !== undefined && defaultTo !== undefined) {
+      const isValidFromAndTo = isFromAndToNetworksTheSame(defaultFrom, defaultTo)
+      if (!isValidFromAndTo) {
+        this.log('The FROM and TO networks cannot be the same')
+        this.error('Networks cannot be the same')
+      }
+    }
   }
 }
