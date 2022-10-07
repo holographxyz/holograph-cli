@@ -11,10 +11,8 @@ env:
   #
   DEV_IMAGE_TAG: dev-2c03396e1514877fa9321b06ecded20679de932a #dev-${{ github.sha }}
   #######################################
-#  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.37
-  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.39 # without rinkeby
-#  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.30
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.31 # without rinkeby
+  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.39
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.31
   #######################################
   CLUSTER_NAME: staging
   #
@@ -25,7 +23,7 @@ env:
   #TODO - create new gh secret for prod. should be different from staging????
   STG_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
-  STG_HOLO_INDEXER_HOST: http://dev-nest-api.develop.svc.cluster.local:443
+  STG_HOLO_INDEXER_HOST: http://devel-holo-api.develop.svc.cluster.local:443
   #
   STG_HOLO_INDEXER_PASSWORD: ${{ secrets.DEV_HOLO_INDEXER_PASSWORD }}
   STG_HOLO_OPERATOR_PASSWORD: "sdfgsdfsdfgsdfgsdgfsdgsdgsdgfsdfsdgsdgsdgsdg" #"${{ secrets.DEV_HOLO_OPERATOR_PASSWORD }}
@@ -43,12 +41,10 @@ env:
   # INDEXER DEV rpc endpoints
   indexer_dev_fuji_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
   indexer_dev_mumbai_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }}
-  indexer_dev_rinkeby_rpc_url: ${{ secrets.INDEXER_DEV_RINKEBY_RPC_URL }}
   indexer_dev_goerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }}
   # OPERATOR DEV rpc endpoints
   operator_dev_fuji_rpc_url: ${{ secrets.OPERATOR_DEV_FUJI_RPC_URL }}
   operator_dev_mumbai_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }}
-  operator_dev_rinkeby_rpc_url: ${{ secrets.OPERATOR_DEV_RINKEBY_RPC_URL }}
   operator_dev_goerli_rpc_url: ${{ secrets.OPERATOR_DEV_GOERLI_RPC_URL }}
 
 # notice: the trigger
@@ -148,7 +144,6 @@ jobs:
             \
             --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
             --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \
-            --set dev_rpc_config_values.rinkeby_rpc_url=${{ env.indexer_dev_rinkeby_rpc_url }} \
             --set dev_rpc_config_values.goerli_rpc_url=${{ env.indexer_dev_goerli_rpc_url }} \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
@@ -204,7 +199,6 @@ jobs:
             \
             --set dev_rpc_config_values.fuji_rpc_url=${{ env.operator_dev_fuji_rpc_url }} \
             --set dev_rpc_config_values.mumbai_rpc_url=${{ env.operator_dev_mumbai_rpc_url }} \
-            --set dev_rpc_config_values.rinkeby_rpc_url=${{ env.operator_dev_rinkeby_rpc_url }} \
             --set dev_rpc_config_values.goerli_rpc_url=${{ env.operator_dev_goerli_rpc_url }} \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \

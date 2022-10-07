@@ -277,6 +277,9 @@ export class NetworkMonitor {
 
     Packet: '0xe8d23d927749ec8e512eb885679c2977d57068839d8cca1a85685dbbea0648f6',
     '0xe8d23d927749ec8e512eb885679c2977d57068839d8cca1a85685dbbea0648f6': 'Packet',
+
+    LzPacket: '0xe9bded5f24a4168e4f3bf44e00298c993b22376aad8c58c7dda9718a54cbea82',
+    '0xe9bded5f24a4168e4f3bf44e00298c993b22376aad8c58c7dda9718a54cbea82': 'LzPacket',
   }
 
   getProviderStatus() {
@@ -788,6 +791,10 @@ export class NetworkMonitor {
     'Packet(uint16 chainId, bytes payload)',
   )
 
+  static lzPacketEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
+    'Packet(bytes payload)',
+  )
+
   static erc20TransferEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
     'Transfer(address indexed _from, address indexed _to, uint256 _value)',
   )
@@ -816,6 +823,27 @@ export class NetworkMonitor {
           )[1] as string
           if (packetPayload.indexOf(toFind) > 0) {
             return ('0x' + packetPayload.split(this.operatorAddress.slice(2, 42).repeat(2))[1]).toLowerCase()
+          }
+        }
+      }
+    }
+
+    return undefined
+  }
+
+  decodeLzPacketEvent(receipt: TransactionReceipt): string | undefined {
+    const toFind = this.operatorAddress.slice(2, 42)
+    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+      for (let i = 0, l = receipt.logs.length; i < l; i++) {
+        const log = receipt.logs[i]
+        if (log.topics[0] === this.targetEvents.LzPacket) {
+          const packetPayload = NetworkMonitor.iface.decodeEventLog(
+            NetworkMonitor.lzPacketEventFragment,
+            log.data,
+            log.topics,
+          )[0] as string
+          if (packetPayload.indexOf(toFind) > 0) {
+            return ('0x' + packetPayload.split(toFind)[2]).toLowerCase()
           }
         }
       }
