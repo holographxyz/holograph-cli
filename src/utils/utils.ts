@@ -150,11 +150,11 @@ const rgbToHex = (rgb: number): string => {
   return hex.length === 1 ? `0${hex}` : hex
 }
 
-function networkRestruct(networkMap: any) {
+function networkRestructure(networkMap: any) {
   const keys = Object.keys(networkMap)
 
   // eslint-disable-next-line unicorn/no-array-reduce
-  const out = keys.reduce(
+  return keys.reduce(
     (prev: any, next: any) => {
       const chainId = networkMap[next].chain
       const holographId = networkMap[next].holographId
@@ -167,21 +167,20 @@ function networkRestruct(networkMap: any) {
     },
     {byChainId: {}, byHolographId: {}, byNetworkName: {}},
   )
-  return out
 }
 
-function getNetworkName(chainId: any) {
-  const dataMap = networkRestruct(networks)
+function getNetworkName(chainId: number): string {
+  const dataMap = networkRestructure(networks)
   return dataMap.byNetworkName[chainId]
 }
 
-function getChainId(holographId: any) {
-  const dataMap = networkRestruct(networks)
+function getChainId(holographId: number): string {
+  const dataMap = networkRestructure(networks)
   return dataMap.byHolographId[holographId]
 }
 
-function getHolographId(chainId: any) {
-  const dataMap = networkRestruct(networks)
+function getHolographId(chainId: number): string {
+  const dataMap = networkRestructure(networks)
   return dataMap.byChainId[chainId]
 }
 

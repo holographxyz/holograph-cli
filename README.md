@@ -1,24 +1,33 @@
-# oclif-hello-world
+<div align="center">
+  <a href="https://holograph.xyz"><img alt="Holograph" src="https://user-images.githubusercontent.com/21043504/188220186-9c7f55e0-143a-41b4-a6b8-90e8bd54bfd9.png" width=600></a>
+  <br />
+  <h1>Holograph CLI</h1>
+</div>
+<p align="center">
+</p>
 
-oclif example Hello World CLI
+
 
 [![oclif](https://img.shields.io/badge/cli-oclif-brightgreen.svg)](https://oclif.io)
-[![Version](https://img.shields.io/npm/v/oclif-hello-world.svg)](https://npmjs.org/package/oclif-hello-world)
-[![CircleCI](https://circleci.com/gh/oclif/hello-world/tree/main.svg?style=shield)](https://circleci.com/gh/oclif/hello-world/tree/main)
-[![Downloads/week](https://img.shields.io/npm/dw/oclif-hello-world.svg)](https://npmjs.org/package/oclif-hello-world)
+[![Version](https://img.shields.io/npm/v/oclif-hello-world.svg)](https://npmjs.org/package/holograph-cli)
+[![Downloads/week](https://img.shields.io/npm/dw/oclif-hello-world.svg)](https://npmjs.org/package/holograph-cli)
 [![License](https://img.shields.io/npm/l/oclif-hello-world.svg)](https://github.com/oclif/hello-world/blob/main/package.json)
 
-<!-- toc -->
 
-- [oclif-hello-world](#oclif-hello-world)
-- [Usage](#usage)
-- [Commands](#commands)
+
+Overview
+========
+
+This is a CLI is primarily for operators of the holograph network. The CLI includes tools to move NFTs between networks and view their status.
+
+<!-- toc -->
+* [Usage](#usage)
+* [Commands](#commands)
 <!-- tocstop -->
 
 # Usage
 
 <!-- usage -->
-
 ```sh-session
 $ npm install -g holograph-cli
 $ holograph COMMAND
@@ -30,63 +39,24 @@ USAGE
   $ holograph COMMAND
 ...
 ```
-
 <!-- usagestop -->
 
 # Commands
 
 <!-- commands -->
-
-- [`holograph analyze`](#holograph-analyze)
-- [`holograph bridge`](#holograph-bridge)
-- [`holograph bridge:contract`](#holograph-bridgecontract)
-- [`holograph bridge:nft`](#holograph-bridgenft)
-- [`holograph config`](#holograph-config)
-- [`holograph config:networks`](#holograph-confignetworks)
-- [`holograph config:user`](#holograph-configuser)
-- [`holograph config:view`](#holograph-configview)
-- [`holograph deploy`](#holograph-deploy)
-- [`holograph deploy:contract`](#holograph-deploycontract)
-- [`holograph help [COMMAND]`](#holograph-help-command)
-- [`holograph indexer`](#holograph-indexer)
-- [`holograph operator`](#holograph-operator)
-- [`holograph operator:recover`](#holograph-operatorrecover)
-- [`holograph plugins`](#holograph-plugins)
-- [`holograph plugins:install PLUGIN...`](#holograph-pluginsinstall-plugin)
-- [`holograph plugins:inspect PLUGIN...`](#holograph-pluginsinspect-plugin)
-- [`holograph plugins:install PLUGIN...`](#holograph-pluginsinstall-plugin-1)
-- [`holograph plugins:link PLUGIN`](#holograph-pluginslink-plugin)
-- [`holograph plugins:uninstall PLUGIN...`](#holograph-pluginsuninstall-plugin)
-- [`holograph plugins:uninstall PLUGIN...`](#holograph-pluginsuninstall-plugin-1)
-- [`holograph plugins:uninstall PLUGIN...`](#holograph-pluginsuninstall-plugin-2)
-- [`holograph plugins:update`](#holograph-pluginsupdate)
-- [`holograph propagator`](#holograph-propagator)
-- [`holograph status`](#holograph-status)
-- [`holograph status:contract`](#holograph-statuscontract)
-- [`holograph status:nft`](#holograph-statusnft)
-
-## `holograph analyze`
-
-Extract all operator jobs and get their status
-
-```
-USAGE
-  $ holograph analyze [--scope <value>] [--output <value>]
-
-FLAGS
-  --output=<value>    [default: ./analyze_results.json] specify a file to output the results to (ie
-                      "~/Desktop/analyze_results.json")
-  --scope=<value>...  single-line JSON object array of blocks to analyze "[{ network: string, startBlock: number,
-                      endBlock: number }]"
-
-DESCRIPTION
-  Extract all operator jobs and get their status
-
-EXAMPLES
-  $ holograph analyze --scope='[{"network":"goerli","startBlock":10857626,"endBlock":11138178},{"network":"mumbai","startBlock":26758573,"endBlock":27457918},{"network":"fuji","startBlock":11406945,"endBlock":12192217}]'
-```
-
-_See code: [dist/commands/analyze/index.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/analyze/index.ts)_
+* [`holograph bridge`](#holograph-bridge)
+* [`holograph bridge:contract`](#holograph-bridgecontract)
+* [`holograph bridge:nft`](#holograph-bridgenft)
+* [`holograph config`](#holograph-config)
+* [`holograph config:networks`](#holograph-confignetworks)
+* [`holograph config:user`](#holograph-configuser)
+* [`holograph config:view`](#holograph-configview)
+* [`holograph help [COMMAND]`](#holograph-help-command)
+* [`holograph operator`](#holograph-operator)
+* [`holograph operator:recover`](#holograph-operatorrecover)
+* [`holograph status`](#holograph-status)
+* [`holograph status:contract`](#holograph-statuscontract)
+* [`holograph status:nft`](#holograph-statusnft)
 
 ## `holograph bridge`
 
@@ -100,12 +70,16 @@ DESCRIPTION
   Make a bridge request
 
 EXAMPLES
-  $ holograph bridge
+  Learn how to bridge a Holographable contract
 
-  $ holograph bridge:contract
+    $ holograph bridge:contract --help
+
+  Learn how to bridge a Holographable NFT
+
+    $ holograph bridge:nft --help
 ```
 
-_See code: [dist/commands/bridge/index.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/bridge/index.ts)_
+_See code: [dist/commands/bridge/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/bridge/index.ts)_
 
 ## `holograph bridge:contract`
 
@@ -113,24 +87,34 @@ Bridge a Holographable contract from source chain to destination chain
 
 ```
 USAGE
-  $ holograph bridge:contract [--sourceNetwork <value>] [--destinationNetwork <value>] [--tx <value>] [--txNetwork
-    <value>] [--deploymentType <value>]
+  $ holograph bridge:contract [--sourceNetwork rinkeby|goerli|mumbai|fuji] [--destinationNetwork
+    rinkeby|goerli|mumbai|fuji] [--tx <value>] [--txNetwork rinkeby|goerli|mumbai|fuji] [--deploymentType <value>]
 
 FLAGS
-  --deploymentType=<value>      The type of deployment to use: [deployedTx, deploymentConfig]
-  --destinationNetwork=<value>  The name of destination network, where the bridge request is sent to
-  --sourceNetwork=<value>       The name of source network, from which to make the bridge request
-  --tx=<value>                  The hash of transaction that deployed the original collection
-  --txNetwork=<value>           The network on which the transaction was executed
+  --deploymentType=<value>       The type of deployment to use: [deployedTx, deploymentConfig]
+  --destinationNetwork=<option>  The name of destination network, where the bridge request is sent to
+                                 <options: rinkeby|goerli|mumbai|fuji>
+  --sourceNetwork=<option>       The name of source network, from which to make the bridge request
+                                 <options: rinkeby|goerli|mumbai|fuji>
+  --tx=<value>                   The hash of transaction that deployed the original collection
+  --txNetwork=<option>           The network on which the transaction was executed
+                                 <options: rinkeby|goerli|mumbai|fuji>
 
 DESCRIPTION
   Bridge a Holographable contract from source chain to destination chain
 
 EXAMPLES
-  $ holograph bridge:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"
+  Bridge a contract using bridge source and destination networks from the config
+
+    $ holograph bridge:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"
+
+  Bridge a contract and manually set the source and destination networks
+
+    $ holograph bridge:contract --sourceNetwork fuji --destinationNetwork goerli \
+      --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1
 ```
 
-_See code: [dist/commands/bridge/contract.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/bridge/contract.ts)_
+_See code: [dist/commands/bridge/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/bridge/contract.ts)_
 
 ## `holograph bridge:nft`
 
@@ -138,39 +122,49 @@ Bridge a Holographable NFT from source chain to destination chain
 
 ```
 USAGE
-  $ holograph bridge:nft [--sourceNetwork <value>] [--destinationNetwork <value>] [--address <value>] [--tokenId
-    <value>]
+  $ holograph bridge:nft [--sourceNetwork rinkeby|goerli|mumbai|fuji] [--destinationNetwork
+    rinkeby|goerli|mumbai|fuji] [--address <value>] [--tokenId <value>]
 
 FLAGS
-  --address=<value>             The address of the contract on the source chain
-  --destinationNetwork=<value>  The name of destination network, where the bridge request is sent to
-  --sourceNetwork=<value>       The name of source network, from which to make the bridge request
-  --tokenId=<value>             The ID of the NFT on the source chain (number or 32-byte hex string)
+  --address=<value>              The address of the contract on the source chain
+  --destinationNetwork=<option>  The name of destination network, where the bridge request is sent to
+                                 <options: rinkeby|goerli|mumbai|fuji>
+  --sourceNetwork=<option>       The name of source network, from which to make the bridge request
+                                 <options: rinkeby|goerli|mumbai|fuji>
+  --tokenId=<value>              The ID of the NFT on the source chain (number or 32-byte hex string)
 
 DESCRIPTION
   Bridge a Holographable NFT from source chain to destination chain
 
 EXAMPLES
-  $ holograph bridge:nft --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1
+  Bridge an NFT using bridge source and destination networks from the config
+
+    $ holograph bridge:nft --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1
+
+  Bridge an NFT and manually set the source and destination networks
+
+    $ holograph bridge:nft --sourceNetwork fuji --destinationNetwork goerli \
+      --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1
 ```
 
-_See code: [dist/commands/bridge/nft.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/bridge/nft.ts)_
+_See code: [dist/commands/bridge/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/bridge/nft.ts)_
 
 ## `holograph config`
 
-Initialize the Holograph command line to become an operator or to bridge collections and NFTs manually
+Initialize the Holograph CLI with a config file. If no flags are passed, the CLI will prompt you for the required information.
 
 ```
 USAGE
-  $ holograph config [--defaultFrom rinkeby|goerli|mumbai|fuji] [--defaultTo rinkeby|goerli|mumbai|fuji] [--url
-    <value> --network rinkeby|goerli|mumbai|fuji] [--privateKey <value>] [--fromFile <value>] [--fromJson <value>]
+  $ holograph config [--defaultFrom rinkeby|goerli|mumbai|fuji] [--defaultTo rinkeby|goerli|mumbai|fuji]
+    [--url <value> --network rinkeby|goerli|mumbai|fuji] [--privateKey <value>] [--fromFile <value>] [--fromJson
+    <value>]
 
 FLAGS
   --defaultFrom=<option>  Default network to bridge FROM (source network)
                           <options: rinkeby|goerli|mumbai|fuji>
   --defaultTo=<option>    Default network to bridge TO (destination network)
                           <options: rinkeby|goerli|mumbai|fuji>
-  --fromFile=<value>      Location of file to load config
+  --fromFile=<value>      Path to the config file to load
   --fromJson=<value>      JSON object to use as the config
   --network=<option>      Network to set
                           <options: rinkeby|goerli|mumbai|fuji>
@@ -178,21 +172,22 @@ FLAGS
   --url=<value>           Provider URL of network to set
 
 DESCRIPTION
-  Initialize the Holograph command line to become an operator or to bridge collections and NFTs manually
+  Initialize the Holograph CLI with a config file. If no flags are passed, the CLI will prompt you for the required
+  information.
 
 EXAMPLES
-  $ holograph --defaultFrom goerli
+  $ holograph config --defaultFrom goerli
 
-  $ holograph --defaultFrom goerli --defaultTo mumbai
+  $ holograph config --defaultFrom goerli --defaultTo mumbai
 
-  $ holograph --privateKey abc...def
+  $ holograph config --privateKey abc...def
 
-  $ holograph --fromFile ./config.json
+  $ holograph config --fromFile ./config.json
 
-  $ holograph --fromJson '{"version": "beta1", ...}
+  $ holograph config --fromJson '{"version": "beta1", ...}
 ```
 
-_See code: [dist/commands/config/index.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/config/index.ts)_
+_See code: [dist/commands/config/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/config/index.ts)_
 
 ## `holograph config:networks`
 
@@ -210,20 +205,20 @@ DESCRIPTION
   View the current network config
 
 EXAMPLES
-  $ holo:networks
+  $ holograph config:networks
 
-  $ holo:networks --output json
+  $ holograph config:networks --output json
 
-  $ holo:networks --output yaml
+  $ holograph config:networks --output yaml
 
-  $ holo:networks --output clean
+  $ holograph config:networks --output clean
 ```
 
-_See code: [dist/commands/config/networks.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/config/networks.ts)_
+_See code: [dist/commands/config/networks.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/config/networks.ts)_
 
 ## `holograph config:user`
 
-View the current user address
+View the current user information
 
 ```
 USAGE
@@ -234,19 +229,19 @@ FLAGS
                      <options: clean|json|yaml>
 
 DESCRIPTION
-  View the current user address
+  View the current user information
 
 EXAMPLES
-  $ holo:user
+  $ holograph config:user
 
-  $ holo:user --output json
+  $ holograph config:user --output json
 
-  $ holo:user --output yaml
+  $ holograph config:user --output yaml
 
-  $ holo:user --output clean
+  $ holograph config:user --output clean
 ```
 
-_See code: [dist/commands/config/user.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/config/user.ts)_
+_See code: [dist/commands/config/user.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/config/user.ts)_
 
 ## `holograph config:view`
 
@@ -264,61 +259,20 @@ DESCRIPTION
   View the current configuration state of the Holograph command line
 
 EXAMPLES
-  $ holo:view
+  $ holograph config:view
 
-  $ holo:view --output json
+  $ holograph config:view --output json
 
-  $ holo:view --output yaml
+  $ holograph config:view --output yaml
 
-  $ holo:view --output clean
+  $ holograph config:view --output clean
 ```
 
-_See code: [dist/commands/config/view.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/config/view.ts)_
-
-## `holograph deploy`
-
-Make a deploy request
-
-```
-USAGE
-  $ holograph deploy
-
-DESCRIPTION
-  Make a deploy request
-
-EXAMPLES
-  $ holograph deploy
-
-  $ holograph deploy:contract
-```
-
-_See code: [dist/commands/deploy/index.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/deploy/index.ts)_
-
-## `holograph deploy:contract`
-
-Deploy a Holographable contract
-
-```
-USAGE
-  $ holograph deploy:contract [--tx <value>] [--txNetwork <value>] [--deploymentType <value>]
-
-FLAGS
-  --deploymentType=<value>  The type of deployment to use: [deployedTx, deploymentConfig]
-  --tx=<value>              The hash of transaction that deployed the original collection
-  --txNetwork=<value>       The network on which the transaction was executed
-
-DESCRIPTION
-  Deploy a Holographable contract
-
-EXAMPLES
-  $ holograph deploy:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"
-```
-
-_See code: [dist/commands/deploy/contract.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/deploy/contract.ts)_
+_See code: [dist/commands/config/view.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/config/view.ts)_
 
 ## `holograph help [COMMAND]`
 
-Display help for holo.
+Display help for holograph.
 
 ```
 USAGE
@@ -331,35 +285,10 @@ FLAGS
   -n, --nested-commands  Include all nested commands in the output.
 
 DESCRIPTION
-  Display help for holo.
+  Display help for holograph.
 ```
 
 _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.1.12/src/commands/help.ts)_
-
-## `holograph indexer`
-
-Listen for EVM events and update database network status
-
-```
-USAGE
-  $ holograph indexer [-m listen|manual|auto] [-h <value>] [--healthCheck] [--networks <value>] [-w <value>]
-
-FLAGS
-  -h, --host=<value>     [default: http://localhost:9001] The host to listen on
-  -m, --mode=<option>    The mode in which to run the indexer
-                         <options: listen|manual|auto>
-  -w, --warp=<value>     Start from the beginning of the chain
-  --healthCheck          Launch server on http://localhost:6000 to make sure command is still running
-  --networks=<value>...  Comma separated list of networks to operate on
-
-DESCRIPTION
-  Listen for EVM events and update database network status
-
-EXAMPLES
-  $ holograph indexer --networks="goerli mumbai fuji" --mode=auto
-```
-
-_See code: [dist/commands/indexer/index.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/indexer/index.ts)_
 
 ## `holograph operator`
 
@@ -368,13 +297,14 @@ Listen for EVM events for jobs and process them
 ```
 USAGE
   $ holograph operator [-m listen|manual|auto] [--healthCheck] [--sync] [--unsafePassword <value>] [--networks
-    <value>]
+    rinkeby|goerli|mumbai|fuji]
 
 FLAGS
   -m, --mode=<option>       The mode in which to run the operator
                             <options: listen|manual|auto>
   --healthCheck             Launch server on http://localhost:6000 to make sure command is still running
-  --networks=<value>...     Comma separated list of networks to operate on
+  --networks=<option>...    Space separated list of networks to operate on
+                            <options: rinkeby|goerli|mumbai|fuji>
   --sync                    Start from last saved block position instead of latest block position
   --unsafePassword=<value>  Enter the plain text password for the wallet in the holograph cli config
 
@@ -385,7 +315,7 @@ EXAMPLES
   $ holograph operator --networks="goerli mumbai fuji" --mode=auto
 ```
 
-_See code: [dist/commands/operator/index.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/operator/index.ts)_
+_See code: [dist/commands/operator/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/operator/index.ts)_
 
 ## `holograph operator:recover`
 
@@ -393,20 +323,21 @@ Attempt to re-run/recover a particular Operator Job
 
 ```
 USAGE
-  $ holograph operator:recover [--network <value>] [--tx <value>]
+  $ holograph operator:recover [--network rinkeby|goerli|mumbai|fuji] [--tx <value>]
 
 FLAGS
-  --network=<value>  The network on which the transaction was executed
-  --tx=<value>       The hash of transaction that we want to attempt to execute
+  --network=<option>  The network on which the transaction was executed
+                      <options: rinkeby|goerli|mumbai|fuji>
+  --tx=<value>        The hash of transaction that we want to attempt to execute
 
 DESCRIPTION
   Attempt to re-run/recover a particular Operator Job
 
 EXAMPLES
-  $ holograph operator:recover --network="goerli" --tx="0x..."
+  $ holograph operator:recover--network="goerli" --tx="0x..."
 ```
 
-_See code: [dist/commands/operator/recover.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/operator/recover.ts)_
+_See code: [dist/commands/operator/recover.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/operator/recover.ts)_
 
 ## `holograph plugins`
 
@@ -426,281 +357,11 @@ EXAMPLES
   $ holograph plugins
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.0/src/commands/plugins/index.ts)_
-
-## `holograph plugins:install PLUGIN...`
-
-Installs a plugin into the CLI.
-
-```
-USAGE
-  $ holograph plugins:install PLUGIN...
-
-ARGUMENTS
-  PLUGIN  Plugin to install.
-
-FLAGS
-  -f, --force    Run yarn install with force flag.
-  -h, --help     Show CLI help.
-  -v, --verbose
-
-DESCRIPTION
-  Installs a plugin into the CLI.
-
-  Can be installed from npm or a git url.
-
-  Installation of a user-installed plugin will override a core plugin.
-
-  e.g. If you have a core plugin that has a 'hello' command, installing a user-installed plugin with a 'hello' command
-  will override the core plugin implementation. This is useful if a user needs to update core plugin functionality in
-  the CLI without the need to patch and update the whole CLI.
-
-ALIASES
-  $ holograph plugins:add
-
-EXAMPLES
-  $ holograph plugins:install myplugin
-
-  $ holograph plugins:install https://github.com/someuser/someplugin
-
-  $ holograph plugins:install someuser/someplugin
-```
-
-## `holograph plugins:inspect PLUGIN...`
-
-Displays installation properties of a plugin.
-
-```
-USAGE
-  $ holograph plugins:inspect PLUGIN...
-
-ARGUMENTS
-  PLUGIN  [default: .] Plugin to inspect.
-
-FLAGS
-  -h, --help     Show CLI help.
-  -v, --verbose
-
-DESCRIPTION
-  Displays installation properties of a plugin.
-
-EXAMPLES
-  $ holograph plugins:inspect myplugin
-```
-
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.0/src/commands/plugins/inspect.ts)_
-
-## `holograph plugins:install PLUGIN...`
-
-Installs a plugin into the CLI.
-
-```
-USAGE
-  $ holograph plugins:install PLUGIN...
-
-ARGUMENTS
-  PLUGIN  Plugin to install.
-
-FLAGS
-  -f, --force    Run yarn install with force flag.
-  -h, --help     Show CLI help.
-  -v, --verbose
-
-DESCRIPTION
-  Installs a plugin into the CLI.
-
-  Can be installed from npm or a git url.
-
-  Installation of a user-installed plugin will override a core plugin.
-
-  e.g. If you have a core plugin that has a 'hello' command, installing a user-installed plugin with a 'hello' command
-  will override the core plugin implementation. This is useful if a user needs to update core plugin functionality in
-  the CLI without the need to patch and update the whole CLI.
-
-ALIASES
-  $ holograph plugins:add
-
-EXAMPLES
-  $ holograph plugins:install myplugin
-
-  $ holograph plugins:install https://github.com/someuser/someplugin
-
-  $ holograph plugins:install someuser/someplugin
-```
-
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.0/src/commands/plugins/install.ts)_
-
-## `holograph plugins:link PLUGIN`
-
-Links a plugin into the CLI for development.
-
-```
-USAGE
-  $ holograph plugins:link PLUGIN
-
-ARGUMENTS
-  PATH  [default: .] path to plugin
-
-FLAGS
-  -h, --help     Show CLI help.
-  -v, --verbose
-
-DESCRIPTION
-  Links a plugin into the CLI for development.
-
-  Installation of a linked plugin will override a user-installed or core plugin.
-
-  e.g. If you have a user-installed or core plugin that has a 'hello' command, installing a linked plugin with a 'hello'
-  command will override the user-installed or core plugin implementation. This is useful for development work.
-
-EXAMPLES
-  $ holograph plugins:link myplugin
-```
-
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.0/src/commands/plugins/link.ts)_
-
-## `holograph plugins:uninstall PLUGIN...`
-
-Removes a plugin from the CLI.
-
-```
-USAGE
-  $ holograph plugins:uninstall PLUGIN...
-
-ARGUMENTS
-  PLUGIN  plugin to uninstall
-
-FLAGS
-  -h, --help     Show CLI help.
-  -v, --verbose
-
-DESCRIPTION
-  Removes a plugin from the CLI.
-
-ALIASES
-  $ holograph plugins:unlink
-  $ holograph plugins:remove
-```
-
-## `holograph plugins:uninstall PLUGIN...`
-
-Removes a plugin from the CLI.
-
-```
-USAGE
-  $ holograph plugins:uninstall PLUGIN...
-
-ARGUMENTS
-  PLUGIN  plugin to uninstall
-
-FLAGS
-  -h, --help     Show CLI help.
-  -v, --verbose
-
-DESCRIPTION
-  Removes a plugin from the CLI.
-
-ALIASES
-  $ holograph plugins:unlink
-  $ holograph plugins:remove
-```
-
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.0/src/commands/plugins/uninstall.ts)_
-
-## `holograph plugins:uninstall PLUGIN...`
-
-Removes a plugin from the CLI.
-
-```
-USAGE
-  $ holograph plugins:uninstall PLUGIN...
-
-ARGUMENTS
-  PLUGIN  plugin to uninstall
-
-FLAGS
-  -h, --help     Show CLI help.
-  -v, --verbose
-
-DESCRIPTION
-  Removes a plugin from the CLI.
-
-ALIASES
-  $ holograph plugins:unlink
-  $ holograph plugins:remove
-```
-
-## `holograph plugins:update`
-
-Update installed plugins.
-
-```
-USAGE
-  $ holograph plugins:update [-h] [-v]
-
-FLAGS
-  -h, --help     Show CLI help.
-  -v, --verbose
-
-DESCRIPTION
-  Update installed plugins.
-```
-
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.0/src/commands/plugins/update.ts)_
-
-## `holograph propagator`
-
-Listen for EVM events deploys collections to ther supported networks
-
-```
-USAGE
-  $ holograph propagator [-m listen|manual|auto] [--healthCheck] [--sync] [--unsafePassword <value>] [-w <value>]
-    [--networks <value>] [--recover <value>] [--recoverFile <value>]
-
-FLAGS
-  -m, --mode=<option>       The mode in which to run the propagator
-                            <options: listen|manual|auto>
-  -w, --warp=<value>        Start from the beginning of the chain
-  --healthCheck             Launch server on http://localhost:6000 to make sure command is still running
-  --networks=<value>...     Comma separated list of networks to operate on
-  --recover=<value>         [default: []] Provide a JSON array of RecoveryData objects to manually ensure propagation
-  --recoverFile=<value>     Filename reference to JSON array of RecoveryData objects to manually ensure propagation
-  --sync                    Start from last saved block position instead of latest block position
-  --unsafePassword=<value>  Enter the plain text password for the wallet in the holograph cli config
-
-DESCRIPTION
-  Listen for EVM events deploys collections to ther supported networks
-
-EXAMPLES
-  $ holograph propagator --networks="rinkeby mumbai fuji" --mode=auto
-```
-
-_See code: [dist/commands/propagator/index.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/propagator/index.ts)_
-
-## `holograph status`
-
-Get asset status
-
-```
-USAGE
-  $ holograph status
-
-DESCRIPTION
-  Get asset status
-
-EXAMPLES
-  $ holograph status
-
-  $ holograph status:contract
-
-  $ holograph status:nft
-```
-
-_See code: [dist/commands/status/index.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/status/index.ts)_
+_See code: [dist/commands/status/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/status/index.ts)_
 
 ## `holograph status:contract`
 
-Check the status of a contract across all enabled networks
+Check the status of a contract across all networks defined in the config
 
 ```
 USAGE
@@ -712,17 +373,17 @@ FLAGS
                      <options: csv|json|yaml|>
 
 DESCRIPTION
-  Check the status of a contract across all enabled networks
+  Check the status of a contract across all networks defined in the config
 
 EXAMPLES
   $ holograph status:contract --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78"
 ```
 
-_See code: [dist/commands/status/contract.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/status/contract.ts)_
+_See code: [dist/commands/status/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/status/contract.ts)_
 
 ## `holograph status:nft`
 
-Check the status of an nft across all enabled networks
+Check the status of an nft across all networks defined in the config
 
 ```
 USAGE
@@ -735,12 +396,102 @@ FLAGS
                      <options: csv|json|yaml|>
 
 DESCRIPTION
-  Check the status of an nft across all enabled networks
+  Check the status of an nft across all networks defined in the config
 
 EXAMPLES
   $ holograph status:nft --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78" --id=1
 ```
 
-_See code: [dist/commands/status/nft.ts](https://github.com/cxip-labs/holograph-cli/blob/v0.0.1/dist/commands/status/nft.ts)_
-
+_See code: [dist/commands/status/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/status/nft.ts)_
 <!-- commandsstop -->
+
+## Developing
+
+If you want to build the package directly, or if you want to help [contribute](#contributing) you can do the following:
+
+### Install Dependencies
+
+The required versions of `node` and `yarn` are in the `.tool-version` file.
+
+1. This project uses [asdf](https://asdf-vm.com/) for language/binary versions management. Install following plugins
+  - Install [asdf Node plugin](https://github.com/asdf-vm/asdf-nodejs): `asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git`
+  - Install [asdf yarn plugin](https://github.com/twuni/asdf-yarn): `asdf plugin-add yarn`
+2. Run `asdf install` to get the required `node` and `yarn` version in the .tool-versions file.
+3. Install dependencies with `yarn install`.
+
+### Working with the code
+
+Once everything is installed, you can run `./bin/dev COMMAND` and the respective command in the `/src/commands` file will be run. For example the command `./bin/dev status:nft` will run the file `./src/commands/status/nft.ts` 
+
+```
+src
+├── abi
+│  ├── develop: ABI for development purposes
+│  ├── experimental: ABI for breaking changes
+│  └── testnet: ABI for public testnets
+├── commands
+│  ├── bridge: Bridge commands
+│  ├── config: Config commands
+│  ├── operator: Operator commands
+│  └── status: Status command
+└── utils: General utility functions
+```
+
+### Branches
+
+| Branch                                                                     | Status                                                                            |
+|----------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| [mainnet](https://github.com/holographxyz/holograph-cli/tree/mainnet)      | Accepts PRs from `testnet` or `release/x.x.x` when we intend to deploy to mainnet. |
+| [testnet](https://github.com/holographxyz/holograph-cli/tree/testnet)      | Accepts PRs from `develop` that are ready to be deployed to testnet.              |
+| [develop](https://github.com/holographxyz/holograph-cli/tree/develop)      | Accepts PRs from `feature/xyz` branches that are experimental or in testing stage. |
+| [experimental](https://github.com/holographxyz/holograph-cli/tree/experimental) | Accepts PRs from `feature/xyz`                                                    |
+
+We generally follow [this Git branching model](https://nvie.com/posts/a-successful-git-branching-model/).
+Please read the linked post if you're planning to make frequent PRs into this repository.
+
+### The `mainnet` branch
+
+The `mainnet` branch contains the code for our latest "stable" mainnet releases.
+Updates from `mainnet` always come from the `testnet` branch.
+We only ever update the `mainnet` branch when we intend to deploy code that has been tested on testnets to all mainnet networks supported by the Holograph protocol.
+Our update process takes the form of a PR merging the `testnet` branch into the `mainnet` branch.
+
+### The `testnet` branch
+
+The `testnet` branch contains the code that is the latest stable testnet release for all supported testnet networks. This branch is deployed and circulated for beta users of the protocol. Updates are merged in from the `develop` branch once they're ready for broad usage.
+
+### The `develop` branch
+
+Our primary development branch is [`develop`](https://github.com/holographxyz/holograph-cli/tree/develop).
+`develop` contains the most up-to-date software that is being tested via experimental network deployments.
+
+
+### The `experimetnal` branch
+
+This branch is used for deep internal features [`experimental`](https://github.com/holographxyz/holograph-cli/tree/experimental).
+`experimetnal` contains experimental features.
+
+
+
+
+## Contributing
+
+### Bugs
+If you found a bug please create an issue and provide the required information. Please label your issue with the tag "Bug". We will triage the issues and incorporate fixes.
+
+### Suggestions / Desires
+We love that you have ideas! So do we! You can make a ticket in the issues tab and label it as 'enhancement'. You can also join our discord and talk to us directly. 
+
+### Pull Requests
+
+If you do write code and want it integrated in, we ask that you make all PRS into the develop branch. Please review the branch structure section to understand how features make move up the stack. 
+
+
+## Official Links
+
+- [Website](https://holograph.xyz)
+- [App](https://app.holograph.xyz)
+- [Docs](https://docs.holograph.xyz)
+- [Discord](https://discord.com/invite/holograph)
+- [Twitter](https://twitter.com/holographxyz)
+- [Mirror](https://mirror.xyz/holographxyz.eth)

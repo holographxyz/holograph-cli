@@ -15,7 +15,7 @@ import {
   getChainId,
 } from '../../utils/utils'
 import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
-import {startHealthcheckServer} from '../../utils/health-check-server'
+import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
 
 import dotenv from 'dotenv'
 import color from '@oclif/color'
@@ -53,20 +53,25 @@ interface BridgeTransactionArgs {
 }
 
 export default class Indexer extends Command {
+  static hidden = true
   static LAST_BLOCKS_FILE_NAME = 'indexer-blocks.json'
   static description = 'Listen for EVM events and update database network status'
-  static examples = ['$ holograph indexer --networks="goerli mumbai fuji" --mode=auto']
+  static examples = [
+    '$ <%= config.bin %> <%= command.id %> --networks="goerli mumbai fuji" --mode=auto'
+  ]
+
   static flags = {
     mode: Flags.string({
       description: 'The mode in which to run the indexer',
       options: ['listen', 'manual', 'auto'],
       char: 'm',
     }),
-    host: Flags.string({description: 'The host to listen on', char: 'h', default: 'http://localhost:9001'}),
-    healthCheck: Flags.boolean({
-      description: 'Launch server on http://localhost:6000 to make sure command is still running',
-      default: false,
+    host: Flags.string({
+      description: 'The host to send data to',
+      char: 'h',
+      default: 'http://localhost:9001'
     }),
+    ...healthcheckFlag,
     ...networkFlag,
     ...warpFlag,
   }
@@ -183,7 +188,7 @@ export default class Indexer extends Command {
         networkDependant: false,
       },
     ]
-    Promise.resolve()
+    return Promise.resolve()
   }
 
   async processDBJob(timestamp: number, job: DBJob): Promise<void> {
@@ -385,7 +390,7 @@ export default class Indexer extends Command {
 
         this.networkMonitor.structuredLog(
           network,
-          `Bridge-Out trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
+          `Bridge-Out transaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
         )
       }
     }
@@ -469,7 +474,7 @@ export default class Indexer extends Command {
 
           this.networkMonitor.structuredLog(
             network,
-            `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
+            `Bridge-In transaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
           )
         }
 
@@ -545,7 +550,7 @@ export default class Indexer extends Command {
 
         this.networkMonitor.structuredLog(
           network,
-          `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
+          `Bridge-In transaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
         )
       }
     }
@@ -587,7 +592,7 @@ export default class Indexer extends Command {
         deploymentAddress,
       ],
     })
-    Promise.resolve()
+    return Promise.resolve()
   }
 
   async updateDeployedCollection(
@@ -708,7 +713,7 @@ export default class Indexer extends Command {
         `collection ${contractAddress} and tokeId ${tokenId}`,
       ],
     })
-    Promise.resolve()
+    return Promise.resolve()
   }
 
   async updateMintedNFTCallback(
@@ -746,7 +751,7 @@ export default class Indexer extends Command {
         `collection ${contractAddress} and tokeId ${tokenId}`,
       ],
     })
-    Promise.resolve()
+    return Promise.resolve()
   }
 
   async updateMintedNFT(
@@ -886,10 +891,10 @@ export default class Indexer extends Command {
   ): Promise<void> {
     this.networkMonitor.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
 
-    // Get and convert the destination chain id from holograph id in the trasaction args
+    // Get and convert the destination chain id from holograph id in the transaction args
     const destinationChainid = getChainId(bridgeTransaction.args[0])
 
-    let data
+    let data = {};
     const params = {
       headers: {
         Authorization: `Bearer ${this.JWT}`,
@@ -1025,10 +1030,11 @@ export default class Indexer extends Command {
         break
       default:
         // Unknown cross-chain transaction type
+        this.networkMonitor.structuredLog(network, `Unknown cross chain type event ${crossChainTxType}. Will not process`)
         return
     }
 
-    Promise.resolve()
+    return Promise.resolve()
   }
 
   async getBlockTimestamp(network: string, blockNumber: number): Promise<number> {

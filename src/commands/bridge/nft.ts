@@ -12,15 +12,32 @@ import {supportedNetworks} from '../../utils/networks'
 export default class Contract extends Command {
   static description = 'Bridge a Holographable NFT from source chain to destination chain'
 
-  static examples = ['$ holograph bridge:nft --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1']
+  static examples = [
+    {
+      description: 'Bridge an NFT using bridge source and destination networks from the config',
+      command: '$ <%= config.bin %> <%= command.id %> --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1'
+    },
+    {
+      description: 'Bridge an NFT and manually set the source and destination networks',
+      command: '$ <%= config.bin %> <%= command.id %> --sourceNetwork fuji --destinationNetwork goerli --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1',
+    }
+  ]
 
   static flags = {
-    sourceNetwork: Flags.string({description: 'The name of source network, from which to make the bridge request'}),
+    sourceNetwork: Flags.string({
+      description: 'The name of source network, from which to make the bridge request',
+      options: supportedNetworks,
+    }),
     destinationNetwork: Flags.string({
       description: 'The name of destination network, where the bridge request is sent to',
+      options: supportedNetworks,
     }),
-    address: Flags.string({description: 'The address of the contract on the source chain'}),
-    tokenId: Flags.string({description: 'The ID of the NFT on the source chain (number or 32-byte hex string)'}),
+    address: Flags.string({
+      description: 'The address of the contract on the source chain'
+    }),
+    tokenId: Flags.string({
+      description: 'The ID of the NFT on the source chain (number or 32-byte hex string)'
+    }),
   }
 
   collectionAddress = ''
@@ -157,12 +174,6 @@ export default class Contract extends Command {
     CliUx.ux.action.stop()
     this.debug('Destination network', await destinationWallet.provider.getNetwork())
 
-    let remainingNetworks = supportedNetworks
-    this.debug(`remainingNetworks = ${remainingNetworks}`)
-    remainingNetworks = remainingNetworks.filter((item: string) => {
-      return item !== this.destinationNetwork
-    })
-
     // Check if the contract is deployed on the source chain and not on the destination chain
     CliUx.ux.action.start('Checking if the contract is deployed on both source and destination chains')
     await this.checkContractCode('source', sourceProvider, this.collectionAddress)
@@ -230,7 +241,7 @@ export default class Contract extends Command {
     CliUx.ux.action.start('Calculating gas amounts and prices')
     let gasLimit: ethers.BigNumber | undefined
 
-    // Don't modify lzFeeError. It is returned from LZ so we must check this exact string
+    // Don't modify lzFeeError. It is returned from LZ, so we must check this exact string
     const lzFeeError = 'execution reverted: LayerZero: not enough native for fees'
     let startingPayment = ethers.utils.parseUnits('0.000000001', 'ether')
     const powerOfTen = ethers.BigNumber.from(10)

@@ -18,6 +18,7 @@ import color from '@oclif/color'
 
 import {Environment, getEnvironment} from './environment'
 import {HOLOGRAPH_ADDRESSES} from './contracts'
+import {supportedNetworks} from './networks'
 
 export const warpFlag = {
   warp: Flags.integer({
@@ -28,7 +29,11 @@ export const warpFlag = {
 }
 
 export const networkFlag = {
-  networks: Flags.string({description: 'Comma separated list of networks to operate on', multiple: true}),
+  networks: Flags.string({
+    description: 'Space separated list of networks to operate on',
+    multiple: true,
+    options: supportedNetworks
+  }),
 }
 
 export enum OperatorMode {
@@ -613,7 +618,7 @@ export class NetworkMonitor {
           this.debug(`Closing websocket connection for ${network}`)
           this.debug(`Provider _websocket is: ${provider._websocket}`)
           provider._websocket.terminate().then(() => {
-            Promise.resolve()
+            return Promise.resolve()
           })
         } else {
           throw new Error(`Provider for ${network} is undefined`)
