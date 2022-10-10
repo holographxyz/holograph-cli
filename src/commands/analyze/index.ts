@@ -44,7 +44,7 @@ interface AvailableJob extends TransactionLog {
 export default class Analyze extends Command {
   static description = 'Extract all operator jobs and get their status'
   static examples = [
-    `$ holo analyze --scope='[{"network":"goerli","startBlock":10857626,"endBlock":11138178},{"network":"mumbai","startBlock":26758573,"endBlock":27457918},{"network":"fuji","startBlock":11406945,"endBlock":12192217}]'`,
+    `$ holograph analyze --scope='[{"network":"goerli","startBlock":10857626,"endBlock":11138178},{"network":"mumbai","startBlock":26758573,"endBlock":27457918},{"network":"fuji","startBlock":11406945,"endBlock":12192217}]'`,
   ]
 
   static flags = {
@@ -67,54 +67,9 @@ export default class Analyze extends Command {
   transactionLogs: (ContractDeployment | AvailableJob)[] = []
   networkMonitor!: NetworkMonitor
 
-  manageOperatorJobMaps(index: number, operatorJobHash: string, operatorJob: AvailableJob): void {
-    if (index >= 0) {
-      this.transactionLogs[index] = operatorJob
-      this.operatorJobCounterMap[operatorJobHash] = 1
-    } else {
-      this.operatorJobIndexMap[operatorJobHash] = this.transactionLogs.push(operatorJob) - 1
-      this.operatorJobCounterMap[operatorJobHash] += 1
-    }
-
-    if (this.operatorJobCounterMap[operatorJobHash] === 3) {
-      delete this.operatorJobIndexMap[operatorJobHash]
-      delete this.operatorJobCounterMap[operatorJobHash]
-    }
-  }
-
-  validateScope(scope: Scope, configFile: ConfigFile, networks: string[], scopeJobs: Scope[]): void {
-    if ('network' in scope && 'startBlock' in scope && 'endBlock' in scope) {
-      if (Object.keys(configFile.networks).includes(scope.network as string)) {
-        if (!networks.includes(scope.network as string)) {
-          networks.push(scope.network as string)
-        }
-
-        scopeJobs.push(scope)
-      } else {
-        this.log(`${scope.network} is not a supported network`)
-      }
-    } else {
-      this.log(`${scope} is an invalid Scope object`)
-    }
-  }
-
-  scopeItOut(configFile: ConfigFile, scopeFlags: string[]): {networks: string[]; scopeJobs: Scope[]} {
-    const networks: string[] = []
-    const scopeJobs: Scope[] = []
-    for (const scopeString of scopeFlags) {
-      try {
-        const scopeArray: Scope[] = JSON.parse(scopeString)
-        for (const scope of scopeArray) {
-          this.validateScope(scope, configFile, networks, scopeJobs)
-        }
-      } catch {
-        this.log(`${scopeString} is an invalid Scope[] JSON object`)
-      }
-    }
-
-    return {networks, scopeJobs}
-  }
-
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     const {flags} = await this.parse(Analyze)
     this.log('Loading user configurations...')
@@ -192,10 +147,70 @@ export default class Analyze extends Command {
     await this.networkMonitor.run(false, blockJobs, this.filterBuilder)
   }
 
+  /**
+   * Keeps track of the operator jobs
+   */
+  manageOperatorJobMaps(index: number, operatorJobHash: string, operatorJob: AvailableJob): void {
+    if (index >= 0) {
+      this.transactionLogs[index] = operatorJob
+      this.operatorJobCounterMap[operatorJobHash] = 1
+    } else {
+      this.operatorJobIndexMap[operatorJobHash] = this.transactionLogs.push(operatorJob) - 1
+      this.operatorJobCounterMap[operatorJobHash] += 1
+    }
+
+    if (this.operatorJobCounterMap[operatorJobHash] === 3) {
+      delete this.operatorJobIndexMap[operatorJobHash]
+      delete this.operatorJobCounterMap[operatorJobHash]
+    }
+  }
+
+  /**
+   * Validates that the input scope is valid and using a supported network
+   */
+  validateScope(scope: Scope, configFile: ConfigFile, networks: string[], scopeJobs: Scope[]): void {
+    if ('network' in scope && 'startBlock' in scope && 'endBlock' in scope) {
+      if (Object.keys(configFile.networks).includes(scope.network as string)) {
+        if (!networks.includes(scope.network as string)) {
+          networks.push(scope.network as string)
+        }
+
+        scopeJobs.push(scope)
+      } else {
+        this.log(`${scope.network} is not a supported network`)
+      }
+    } else {
+      this.log(`${scope} is an invalid Scope object`)
+    }
+  }
+
+  /**
+   * Checks all the input scopes and validates them
+   */
+  scopeItOut(configFile: ConfigFile, scopeFlags: string[]): {networks: string[]; scopeJobs: Scope[]} {
+    const networks: string[] = []
+    const scopeJobs: Scope[] = []
+    for (const scopeString of scopeFlags) {
+      try {
+        const scopeArray: Scope[] = JSON.parse(scopeString)
+        for (const scope of scopeArray) {
+          this.validateScope(scope, configFile, networks, scopeJobs)
+        }
+      } catch {
+        this.log(`${scopeString} is an invalid Scope[] JSON object`)
+      }
+    }
+
+    return {networks, scopeJobs}
+  }
+
   exitCallback(): void {
     fs.writeFileSync(this.outputFile, JSON.stringify(this.transactionLogs, undefined, 2))
   }
 
+  /**
+   * Build the filters to search for events via the network monitor
+   */
   async filterBuilder(): Promise<void> {
     this.networkMonitor.filters = [
       {
@@ -217,6 +232,9 @@ export default class Analyze extends Command {
     Promise.resolve()
   }
 
+  /**
+   * Process the transactions in each block job
+   */
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
@@ -247,6 +265,9 @@ export default class Analyze extends Command {
     }
   }
 
+  /**
+   * Finds bridge out events and keeps track of them
+   */
   async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
     const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
@@ -259,7 +280,8 @@ export default class Analyze extends Command {
     }
 
     if (receipt.status === 1) {
-      const operatorJobPayload = this.networkMonitor.decodePacketEvent(receipt) ?? this.networkMonitor.decodeLzPacketEvent(receipt)
+      const operatorJobPayload =
+        this.networkMonitor.decodePacketEvent(receipt) ?? this.networkMonitor.decodeLzPacketEvent(receipt)
       const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract cross-chain packet for ${transaction.hash}`)
@@ -309,6 +331,9 @@ export default class Analyze extends Command {
     }
   }
 
+  /**
+   * Finds bridge in events and keeps track of them
+   */
   async handleBridgeInEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
     const parsedTransaction: ethers.utils.TransactionDescription =
       this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
@@ -375,6 +400,9 @@ export default class Analyze extends Command {
     }
   }
 
+  /**
+   * Handle the AvailableOperatorJob event from the LayerZero contract when one is picked up while processing transactions
+   */
   async handleAvailableOperatorJobEvent(
     transaction: ethers.providers.TransactionResponse,
     network: string,
@@ -413,6 +441,9 @@ export default class Analyze extends Command {
     }
   }
 
+  /**
+   * Checks if the operator job is valid and has not already been executed
+   */
   async validateOperatorJob(transactionHash: string, network: string, payload: string): Promise<boolean> {
     const contract: ethers.Contract = this.networkMonitor.operatorContract.connect(
       this.networkMonitor.providers[network],

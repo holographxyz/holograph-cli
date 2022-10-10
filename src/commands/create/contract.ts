@@ -10,14 +10,21 @@ import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
 import {supportedNetworks} from '../../utils/networks'
 
 export default class Contract extends Command {
-  static description = 'Deploy a Holographable contract'
-
-  static examples = ['$ holo deploy:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"']
+  static description = 'Deploy a Holographable contract directly to another chain'
+  static examples = ['$ holograph create:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"']
 
   static flags = {
     ...deploymentFlags,
   }
 
+  targetEvents: Record<string, string> = {
+    BridgeableContractDeployed: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
+    '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b': 'BridgeableContractDeployed',
+  }
+
+  /**
+   * Command Entry Point
+   */
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
     const environment = getEnvironment()
@@ -32,7 +39,7 @@ export default class Contract extends Command {
     const destinationNetworkPrompt: any = await inquirer.prompt([
       {
         name: 'destinationNetwork',
-        message: 'select the network to which the contract will be deployed',
+        message: 'Select the network to which the contract will be deployed',
         type: 'list',
         choices: remainingNetworks,
       },
@@ -71,7 +78,7 @@ export default class Contract extends Command {
     )
     this.debug(deploymentConfig)
 
-    CliUx.ux.action.start('Retrieving HolographFactory contract')
+    CliUx.ux.action.start('Retrieving HolographFactory contract ABIs')
     const holographABI = await fs.readJson(`./src/abi/${environment}/Holograph.json`)
     const holograph = new ethers.ContractFactory(holographABI, '0x', destinationWallet).attach(
       HOLOGRAPH_ADDRESSES[environment],
@@ -134,10 +141,7 @@ export default class Contract extends Command {
       let collectionAddress
       for (let i = 0, l = deployReceipt.logs.length; i < l; i++) {
         const log = deployReceipt.logs[i]
-        if (
-          log.topics.length === 3 &&
-          log.topics[0] === '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b'
-        ) {
+        if (log.topics.length === 3 && log.topics[0] === this.targetEvents.BridgeableContractDeployed) {
           collectionAddress = '0x' + log.topics[1].slice(26)
           break
         }

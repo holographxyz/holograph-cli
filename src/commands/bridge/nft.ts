@@ -12,7 +12,7 @@ import {supportedNetworks} from '../../utils/networks'
 export default class Contract extends Command {
   static description = 'Bridge a Holographable NFT from source chain to destination chain'
 
-  static examples = ['$ holo bridge:nft --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1']
+  static examples = ['$ holograph bridge:nft --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1']
 
   static flags = {
     sourceNetwork: Flags.string({description: 'The name of source network, from which to make the bridge request'}),

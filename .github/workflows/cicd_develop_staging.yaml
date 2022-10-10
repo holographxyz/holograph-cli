@@ -7,12 +7,12 @@ permissions:
 env:
   AWS_REGION: us-west-2
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
-  ECR_REPOSITORY: holo-cli-dev # notice: the same for all 3 cli apps
+  ECR_REPOSITORY: holograph-cli-dev # notice: the same for all 3 cli apps
   #
   DEV_IMAGE_TAG: dev-${{ github.sha }}
   #######################################
-  STG_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.39
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.31
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.39
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.31
   #######################################
   CLUSTER_NAME: staging
   #
@@ -21,30 +21,32 @@ env:
   ALB_CERT_ARN: ${{ secrets.STG_ALB_CERT_ARN_FOR_CXIPCHAIN_XYZ }}
   #
   #TODO - create new gh secret for prod. should be different from staging????
-  STG_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
+  STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLOGRAPH_INDEXER_OPERATOR_API_KEY }}
   #
-  STG_HOLO_INDEXER_HOST: http://devel-holo-api.develop.svc.cluster.local:443
+  STG_HOLOGRAPH_INDEXER_HOST: http://dev-nest-api.develop.svc.cluster.local:443
   #
-  STG_HOLO_INDEXER_PASSWORD: ${{ secrets.DEV_HOLO_INDEXER_PASSWORD }}
-  STG_HOLO_OPERATOR_PASSWORD: ${{ secrets.DEV_HOLO_OPERATOR_PASSWORD }}
+  STG_HOLOGRAPH_INDEXER_PASSWORD: ${{ secrets.DEV_HOLOGRAPH_INDEXER_PASSWORD }}
+  STG_HOLOGRAPH_OPERATOR_PASSWORD: ${{ secrets.DEV_HOLOGRAPH_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
-  INDEXER_HOLO_CONFIG_FILE_DATA: dev-config-file
-  OPERATOR_HOLO_CONFIG_FILE_DATA: dev-config-file
+  INDEXER_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
+  OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
   #
   ABI_ENVIRONMENT: develop # same for all apps [indexer,operator]
   #
-  STG_DOMAIN: "cxipchain.xyz"
+  STG_DOMAIN: 'cxipchain.xyz'
   #
   STG_COMMON_NAMESPACE: holocli-dev # NOTICE <---
   #
   # INDEXER DEV rpc endpoints
   indexer_dev_fuji_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
   indexer_dev_mumbai_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }}
+  indexer_dev_rinkeby_rpc_url: ${{ secrets.INDEXER_DEV_RINKEBY_RPC_URL }}
   indexer_dev_goerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }}
   # OPERATOR DEV rpc endpoints
   operator_dev_fuji_rpc_url: ${{ secrets.OPERATOR_DEV_FUJI_RPC_URL }}
   operator_dev_mumbai_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }}
+  operator_dev_rinkeby_rpc_url: ${{ secrets.OPERATOR_DEV_RINKEBY_RPC_URL }}
   operator_dev_goerli_rpc_url: ${{ secrets.OPERATOR_DEV_GOERLI_RPC_URL }}
 
 # notice: the trigger
@@ -101,12 +103,12 @@ jobs:
       #
       #
       # NOTICE: --- INDEXER ---
-      - name: Pull the holo-indexer helm chart version x.x.x from ECR
+      - name: Pull the holograph-indexer helm chart version x.x.x from ECR
         shell: bash
         env:
           #
-          CHART_REPO: holo-indexer
-          CHART_VERSION: ${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}
+          CHART_REPO: holograph-indexer
+          CHART_VERSION: ${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }}
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
@@ -116,22 +118,22 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer-dev #notice
-          ENABLE_DEBUG: "true"
-          HEALTHCHECK : "true"
-          MODE        : "auto"
-          NETWORK     : "fuji mumbai goerli"
+          ENABLE_DEBUG: 'true'
+          HEALTHCHECK: 'true'
+          MODE: 'auto'
+          NETWORK: 'fuji mumbai goerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             helm upgrade --install $RELEASE_NAME \
-            holo-indexer-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
+            holograph-indexer-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.STG_COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
-            --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
-            --set holo_indexer_password=${{ env.STG_HOLO_INDEXER_PASSWORD }} \
-            --set HOLO_INDEXER_HOST=${{ env.STG_HOLO_INDEXER_HOST }} \
-            --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
+            --set config_file_data=${{ env.INDEXER_HOLOGRAPH_CONFIG_FILE_DATA }} \
+            --set holo_indexer_password=${{ env.STG_HOLOGRAPH_INDEXER_PASSWORD }} \
+            --set HOLOGRAPH_INDEXER_HOST=${{ env.STG_HOLOGRAPH_INDEXER_HOST }} \
+            --set OPERATOR_API_KEY=${{ env.STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
@@ -143,27 +145,28 @@ jobs:
             \
             --set dev_rpc_config_values.fuji_rpc_url=${{ env.indexer_dev_fuji_rpc_url }} \
             --set dev_rpc_config_values.mumbai_rpc_url=${{ env.indexer_dev_mumbai_rpc_url }} \
+            --set dev_rpc_config_values.rinkeby_rpc_url=${{ env.indexer_dev_rinkeby_rpc_url }} \
             --set dev_rpc_config_values.goerli_rpc_url=${{ env.indexer_dev_goerli_rpc_url }} \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-            --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
-            --set datadog_tags.version=chart-${{ env.STG_HOLO_INDEXER_HELM_CHART_VERSION }} \
+            --set datadog_tags.service=$RELEASE_NAME-holograph-indexer \
+            --set datadog_tags.version=chart-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }} \
             \
             --values .github/values_for_stg_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
+            --set ingress.target_svc_name=$RELEASE_NAME-holograph-indexer \
             --set ingress.blue_green_deployment=false
       #
       #
       # NOTICE: --- OPERATOR ---
-      - name: Pull the holo-operator helm chart version x.x.x from ECR
+      - name: Pull the holograph-operator helm chart version x.x.x from ECR
         shell: bash
         env:
           #
-          CHART_REPO: holo-operator
-          CHART_VERSION: ${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}
+          CHART_REPO: holograph-operator
+          CHART_VERSION: ${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
@@ -173,20 +176,20 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: operator-dev #notice
-          ENABLE_DEBUG: "true"
-          ENABLE_SYNC : "true"
-          HEALTHCHECK : "true"
-          MODE        : "auto"
+          ENABLE_DEBUG: 'true'
+          ENABLE_SYNC: 'true'
+          HEALTHCHECK: 'true'
+          MODE: 'auto'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             helm upgrade --install $RELEASE_NAME \
-            holo-operator-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
+            holograph-operator-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.STG_COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
-            --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
-            --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
+            --set config_file_data=${{ env.OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA }} \
+            --set holo_operator_password=${{ env.STG_HOLOGRAPH_OPERATOR_PASSWORD }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
@@ -198,16 +201,17 @@ jobs:
             \
             --set dev_rpc_config_values.fuji_rpc_url=${{ env.operator_dev_fuji_rpc_url }} \
             --set dev_rpc_config_values.mumbai_rpc_url=${{ env.operator_dev_mumbai_rpc_url }} \
+            --set dev_rpc_config_values.rinkeby_rpc_url=${{ env.operator_dev_rinkeby_rpc_url }} \
             --set dev_rpc_config_values.goerli_rpc_url=${{ env.operator_dev_goerli_rpc_url }} \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-            --set datadog_tags.version=chart-${{ env.STG_HOLO_OPERATOR_HELM_CHART_VERSION }} \
+            --set datadog_tags.version=chart-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }} \
             \
             --values .github/values_for_stg_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
+            --set ingress.target_svc_name=$RELEASE_NAME-holograph-operator \
             --set ingress.blue_green_deployment=false
 
       - name: -> Info for the new deployments

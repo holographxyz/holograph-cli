@@ -14,7 +14,7 @@ import {
   sleep,
   getChainId,
 } from '../../utils/utils'
-import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
+import {networksFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
 import dotenv from 'dotenv'
@@ -55,7 +55,7 @@ interface BridgeTransactionArgs {
 export default class Indexer extends Command {
   static LAST_BLOCKS_FILE_NAME = 'indexer-blocks.json'
   static description = 'Listen for EVM events and update database network status'
-  static examples = ['$ holo indexer --networks="goerli mumbai fuji" --mode=auto']
+  static examples = ['$ holograph indexer --networks="goerli mumbai fuji" --mode=auto']
   static flags = {
     mode: Flags.string({
       description: 'The mode in which to run the indexer',
@@ -67,22 +67,17 @@ export default class Indexer extends Command {
       description: 'Launch server on http://localhost:6000 to make sure command is still running',
       default: false,
     }),
-    ...networkFlag,
+    ...networksFlag,
     ...warpFlag,
   }
 
-  /**
-   * Indexer class variables
-   */
   // API Params
   BASE_URL!: string
   JWT!: string
   DELAY = 20_000
   apiColor = color.keyword('orange')
   errorColor = color.keyword('red')
-
   operatorMode: OperatorMode = OperatorMode.listen
-
   networkMonitor!: NetworkMonitor
   dbJobMap: DBJobMap = {}
 
@@ -99,6 +94,9 @@ export default class Indexer extends Command {
     return numbers
   }
 
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     this.log(`Operator command has begun!!!`)
     const {flags} = await this.parse(Indexer)
@@ -331,13 +329,14 @@ export default class Indexer extends Command {
       attempts: 10,
       canFail: true,
     })
+
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
 
     const transferInfo = this.networkMonitor.decodeErc721TransferEvent(receipt)
 
-    console.log(transaction, network, transferInfo)
+    this.debug(transaction, network, transferInfo)
     await this.updateMintedNFT(transaction, network, transferInfo as any[])
   }
 
@@ -354,7 +353,8 @@ export default class Indexer extends Command {
 
     if (receipt.status === 1) {
       this.networkMonitor.structuredLog(network, `Checking if a bridge request was made at tx: ${transaction.hash}`)
-      const operatorJobPayload = this.networkMonitor.decodePacketEvent(receipt) ?? this.networkMonitor.decodeLzPacketEvent(receipt)
+      const operatorJobPayload =
+        this.networkMonitor.decodePacketEvent(receipt) ?? this.networkMonitor.decodeLzPacketEvent(receipt)
       const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract cross-chain packet for ${transaction.hash}`)
@@ -756,7 +756,7 @@ export default class Indexer extends Command {
     network: string,
     transferInfo: any[],
   ): Promise<void> {
-    const tokenId = (transferInfo[2] as ethers.BigNumber).toString()
+    const tokenId = ethers.utils.hexZeroPad(transferInfo[2].toHexString(), 32)
     const contractAddress = transferInfo[3] as string
 
     this.networkMonitor.structuredLog(
@@ -770,7 +770,7 @@ export default class Indexer extends Command {
     this.networkMonitor.structuredLog(network, `Sending minted nft job to DBJobManager ${contractAddress}`)
 
     const job: DBJob = {
-      attempts: 0,
+      attempts: 3,
       network,
       timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
       query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
@@ -790,7 +790,7 @@ export default class Indexer extends Command {
     network: string,
     transferInfo: any[],
   ): Promise<void> {
-    const tokenId = (transferInfo[2] as ethers.BigNumber).toString()
+    const tokenId = ethers.utils.hexZeroPad(transferInfo[2].toHexString(), 32)
     const contractAddress = transferInfo[3] as string
 
     this.networkMonitor.structuredLog(
@@ -856,7 +856,7 @@ export default class Indexer extends Command {
     const jobHash = operatorJobHash
 
     const args: BridgeTransactionArgs = bridgeTransaction.args as unknown as BridgeTransactionArgs
-    const tokenId = args.tokenId.toString()
+    const tokenId = ethers.utils.hexZeroPad(args.tokenId.toHexString(), 32)
     const contractAddress = bridgeTransaction.args.collection.toLowerCase()
 
     this.networkMonitor.structuredLog(network, `Sending cross chain transaction job to DBJobManager ${contractAddress}`)
