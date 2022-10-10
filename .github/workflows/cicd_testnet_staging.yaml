@@ -23,7 +23,7 @@ env:
   #TODO - create new gh secret for prod. should be different from staging????
   STG_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
-  TESTNET_HOLO_INDEXER_HOST: http://olumpus-holo-api.main.svc.cluster.local:443
+  TESTNET_HOLO_INDEXER_HOST: https://api.holograph.xyz
   #
   # notice: all 3 have the same password
   STG_HOLO_INDEXER_PASSWORD  : ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
