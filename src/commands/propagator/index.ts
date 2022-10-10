@@ -23,7 +23,7 @@ type RecoveryData = {
 
 export default class Propagator extends Command {
   static description = 'Listen for EVM events deploys collections to ther supported networks'
-  static examples = ['$ holo propagator --networks="rinkeby mumbai fuji" --mode=auto']
+  static examples = ['$ holograph propagator --networks="rinkeby mumbai fuji" --mode=auto']
   static flags = {
     mode: Flags.string({
       description: 'The mode in which to run the propagator',
@@ -39,7 +39,7 @@ export default class Propagator extends Command {
       default: false,
     }),
     unsafePassword: Flags.string({
-      description: 'Enter the plain text password for the wallet in the holo cli config',
+      description: 'Enter the plain text password for the wallet in the holograph cli config',
     }),
     ...warpFlag,
     ...networksFlag,
@@ -53,14 +53,12 @@ export default class Propagator extends Command {
   }
 
   crossDeployments: string[] = []
-
-  /**
-   * Propagator class variables
-   */
   operatorMode: OperatorMode = OperatorMode.listen
-
   networkMonitor!: NetworkMonitor
 
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     const {flags} = await this.parse(Propagator)
 

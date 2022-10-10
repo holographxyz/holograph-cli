@@ -229,7 +229,7 @@ type NetworkMonitorOptions = {
   configFile: ConfigFile
   networks?: string[]
   debug: (...args: string[]) => void
-  processTransactions: (job: BlockJob, transactions: TransactionResponse[]) => Promise<void>
+  processTransactions: ((job: BlockJob, transactions: TransactionResponse[]) => Promise<void>) | undefined
   filters?: TransactionFilter[]
   userWallet?: ethers.Wallet
   lastBlockFilename?: string
@@ -243,7 +243,7 @@ export class NetworkMonitor {
   userWallet?: ethers.Wallet
   LAST_BLOCKS_FILE_NAME: string
   filters: TransactionFilter[] = []
-  processTransactions: (job: BlockJob, transactions: TransactionResponse[]) => Promise<void>
+  processTransactions: ((job: BlockJob, transactions: TransactionResponse[]) => Promise<void>) | undefined
   log: (message: string, ...args: any[]) => void
   warn: (message: string, ...args: any[]) => void
   debug: (...args: any[]) => void
@@ -333,7 +333,7 @@ export class NetworkMonitor {
       this.filters = options.filters
     }
 
-    this.processTransactions = options.processTransactions.bind(this.parent)
+    this.processTransactions = options.processTransactions?.bind(this.parent)
     if (options.userWallet !== undefined) {
       this.userWallet = options.userWallet
     }
@@ -769,7 +769,7 @@ export class NetworkMonitor {
 
       if (interestingTransactions.length > 0) {
         this.structuredLog(job.network, `Found ${interestingTransactions.length} interesting transactions`, job.block)
-        await this.processTransactions.bind(this.parent)(job, interestingTransactions)
+        await this.processTransactions?.bind(this.parent)(job, interestingTransactions)
         this.blockJobHandler(job.network, job)
       } else {
         this.blockJobHandler(job.network, job)
