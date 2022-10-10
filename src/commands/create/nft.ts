@@ -1,30 +1,3 @@
-/*
-
-User Story
-
-AA user
-
-IWT Mint an NFT
-
-STI can test collection and NFT
-
-Description
-
-We want to allow a user to deploy an NFT through the CLI.
-
-AC
-
-holo deploy:nft --collectionAddress ${COLLECRTION_ADDRESS} --file ${FILE} --network ${NETWORK} --unsafePasssword
-
-The file is { name: "", description: "", … }
-
-Check if file object has the right schema
-
-if file is missing provide a warning
-
-If unsafePassword is missing prompt the user
-
-*/
 import {CliUx, Command, Flags} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
@@ -70,7 +43,7 @@ export default class NFT extends Command {
   static description = 'Mint a Holographable NFT'
 
   static examples = [
-    '$ holo create:nft --network="goerli" --collectionAddress="0x70f5b2f4f7e31353d75ad069053906a72ce75467" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"',
+    '$ holograph create:nft --network="goerli" --collectionAddress="0x70f5b2f4f7e31353d75ad069053906a72ce75467" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"',
   ]
 
   static flags = {

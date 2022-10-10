@@ -3,7 +3,7 @@ import {ensureConfigFileIsValid} from '../../utils/config'
 
 export default class Create extends Command {
   static description = 'Create holographable contracts and assets'
-  static examples = ['$ holo create', '$ holo create:contract', '$ holo create:nft']
+  static examples = ['$ holograph create', '$ holo create:contract', '$ holo create:nft']
 
   async run(): Promise<void> {
     await ensureConfigFileIsValid(this.config.configDir, undefined, false)
