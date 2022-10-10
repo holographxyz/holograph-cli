@@ -14,7 +14,7 @@ import {
   sleep,
   getChainId,
 } from '../../utils/utils'
-import {networkFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
+import {networksFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
 import dotenv from 'dotenv'
@@ -67,7 +67,7 @@ export default class Indexer extends Command {
       description: 'Launch server on http://localhost:6000 to make sure command is still running',
       default: false,
     }),
-    ...networkFlag,
+    ...networksFlag,
     ...warpFlag,
   }
 
