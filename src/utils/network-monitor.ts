@@ -545,7 +545,7 @@ export class NetworkMonitor {
       this.providers[this.networks[0]],
     )
 
-    const holographInterfacesABI = await fs.readJson(`./src/abi/${this.environment}/Interfaces.json`)
+    const holographInterfacesABI = await fs.readJson(`./src/abi/${this.environment}/HolographInterfaces.json`)
     this.interfacesContract = new ethers.Contract(
       this.interfacesAddress,
       holographInterfacesABI,
