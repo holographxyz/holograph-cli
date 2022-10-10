@@ -10,16 +10,8 @@ import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
 import {supportedNetworks} from '../../utils/networks'
 
 export default class Contract extends Command {
-<<<<<<< HEAD:src/commands/create/contract.ts
-  static description = 'Deploy a Holographable contract'
-
-  static examples = ['$ holograph create:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"']
-=======
   static description = 'Deploy a Holographable contract directly to another chain'
-  static examples = [
-    '$ holograph deploy:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"',
-  ]
->>>>>>> 432a007e9b3663fb84168c83c914e8dc3a47540f:src/commands/deploy/contract.ts
+  static examples = ['$ holograph create:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"']
 
   static flags = {
     ...deploymentFlags,

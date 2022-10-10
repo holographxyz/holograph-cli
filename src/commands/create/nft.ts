@@ -41,7 +41,6 @@ const cleanTokenInput = async (input: string): Promise<string> => {
 
 export default class NFT extends Command {
   static description = 'Mint a Holographable NFT'
-
   static examples = [
     '$ holograph create:nft --network="goerli" --collectionAddress="0x70f5b2f4f7e31353d75ad069053906a72ce75467" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"',
   ]
