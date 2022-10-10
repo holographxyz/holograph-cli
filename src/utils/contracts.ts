@@ -5,6 +5,7 @@ const HOLOGRAPH_TESTNET_ADDRESS: string = '0xD11a467dF6C80835A1223473aB9A48bF72e
 const HOLOGRAPH_MAINNET_ADDRESS: string = '0x0000000000000000000000000000000000000000'.toLowerCase()
 
 export const HOLOGRAPH_ADDRESSES: {[key in Environment]: string} = {
+  [Environment.experimental]: HOLOGRAPH_DEVELOP_ADDRESS,
   [Environment.develop]: HOLOGRAPH_DEVELOP_ADDRESS,
   [Environment.testnet]: HOLOGRAPH_TESTNET_ADDRESS,
   [Environment.mainnet]: HOLOGRAPH_MAINNET_ADDRESS,

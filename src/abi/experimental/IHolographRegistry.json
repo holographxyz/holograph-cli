@@ -1,0 +1,188 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "hash",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "factoryDeployedHash",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "contractType",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getContractTypeAddress",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "chainId",
+        "type": "uint32"
+      }
+    ],
+    "name": "getHToken",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "hToken",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "hash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getHolographedHashAddress",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "smartContract",
+        "type": "address"
+      }
+    ],
+    "name": "isHolographedContract",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "hash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "isHolographedHashDeployed",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "referenceContractTypeAddress",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "contractType",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "contractAddress",
+        "type": "address"
+      }
+    ],
+    "name": "setContractTypeAddress",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "chainId",
+        "type": "uint32"
+      },
+      {
+        "internalType": "address",
+        "name": "hToken",
+        "type": "address"
+      }
+    ],
+    "name": "setHToken",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32[]",
+        "name": "hashes",
+        "type": "bytes32[]"
+      },
+      {
+        "internalType": "bool[]",
+        "name": "reserved",
+        "type": "bool[]"
+      }
+    ],
+    "name": "updateReservedContractTypes",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
