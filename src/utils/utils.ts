@@ -197,4 +197,5 @@ export {
   getHolographId,
   webSocketConfig,
   NETWORK_COLORS,
+  web3,
 }

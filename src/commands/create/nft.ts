@@ -6,12 +6,12 @@ import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {networkFlag, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {getEnvironment} from '../../utils/environment'
-import {validateContractAddress, validateTokenIdInput} from '../../utils/validation'
+import {validateContractAddress, validateTokenIdInput, checkContractAddressFlag, checkNetworkFlag} from '../../utils/validation'
 
 export enum TokenUriType {
-  unset, //  0
-  ipfs, //   1
-  https, //  2
+  unset, //   0
+  ipfs, //    1
+  https, //   2
   arweave, // 3
 }
 
@@ -26,7 +26,7 @@ export default class NFT extends Command {
       description: 'The address of the collection smart contract.',
       parse: validateContractAddress,
       multiple: false,
-      required: true,
+      required: false,
     }),
     tokenId: Flags.string({
       description: 'The token id to mint. By default the token id is 0, which mints the next available token id.',
@@ -71,23 +71,11 @@ export default class NFT extends Command {
     const {flags} = await this.parse(NFT)
     this.log('User configurations loaded.')
 
-    let network: string = flags.network as string
-    const collectionAddress: string = flags.collectionAddress as string
+    const network: string = await checkNetworkFlag(configFile.networks, flags.network, 'Select the network on which to mint the nft.')
+    const collectionAddress: string = await checkContractAddressFlag(flags.collectionAddress, 'Enter the address of the collection smart contract.')
     const tokenId: string = flags.tokenId as string
     const tokenUriType: TokenUriType = TokenUriType[flags.tokenUriType as string as keyof typeof TokenUriType]
     const tokenUri: string = flags.tokenUri as string
-
-    if (!Object.keys(configFile.networks).includes(network)) {
-      const networkPrompt: any = await inquirer.prompt([
-        {
-          name: 'network',
-          message: 'select the network on which to mint the nft',
-          type: 'list',
-          choices: Object.keys(configFile.networks),
-        },
-      ])
-      network = networkPrompt.network
-    }
 
     this.networkMonitor = new NetworkMonitor({
       parent: this,
@@ -144,6 +132,8 @@ export default class NFT extends Command {
           this.log(`NFT has been minted with token id #${logs[2].toString()}`)
         }
       }
+    } else {
+      this.log('NFT minting was canceled')
     }
 
     this.exit()
