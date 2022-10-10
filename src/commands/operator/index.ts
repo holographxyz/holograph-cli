@@ -5,7 +5,7 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
+import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
 export default class Operator extends Command {
@@ -28,7 +28,7 @@ export default class Operator extends Command {
     unsafePassword: Flags.string({
       description: 'Enter the plain text password for the wallet in the holo cli config',
     }),
-    ...networkFlag,
+    ...networksFlag,
   }
 
   /**

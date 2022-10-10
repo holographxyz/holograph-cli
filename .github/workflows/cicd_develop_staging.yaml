@@ -34,7 +34,7 @@ env:
   #
   ABI_ENVIRONMENT: develop # same for all apps [indexer,operator]
   #
-  STG_DOMAIN: "cxipchain.xyz"
+  STG_DOMAIN: 'cxipchain.xyz'
   #
   STG_COMMON_NAMESPACE: holocli-dev # NOTICE <---
   #
@@ -116,10 +116,10 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer-dev #notice
-          ENABLE_DEBUG: "true"
-          HEALTHCHECK : "true"
-          MODE        : "auto"
-          NETWORK     : "fuji mumbai goerli"
+          ENABLE_DEBUG: 'true'
+          HEALTHCHECK: 'true'
+          MODE: 'auto'
+          NETWORK: 'fuji mumbai goerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -173,10 +173,10 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: operator-dev #notice
-          ENABLE_DEBUG: "true"
-          ENABLE_SYNC : "true"
-          HEALTHCHECK : "true"
-          MODE        : "auto"
+          ENABLE_DEBUG: 'true'
+          ENABLE_SYNC: 'true'
+          HEALTHCHECK: 'true'
+          MODE: 'auto'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-

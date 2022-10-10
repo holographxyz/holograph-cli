@@ -12,7 +12,7 @@ import {supportedNetworks} from '../../utils/networks'
 export default class Contract extends Command {
   static description = 'Deploy a Holographable contract'
 
-  static examples = ['$ holo deploy:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"']
+  static examples = ['$ holo create:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"']
 
   static flags = {
     ...deploymentFlags,

@@ -8,7 +8,7 @@ import {ensureConfigFileIsValid} from '../../utils/config'
 
 import {decodeDeploymentConfigInput, capitalize, getNetworkName, DeploymentConfig} from '../../utils/utils'
 import {supportedNetworks} from '../../utils/networks'
-import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
+import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 
 type RecoveryData = {
@@ -42,7 +42,7 @@ export default class Propagator extends Command {
       description: 'Enter the plain text password for the wallet in the holo cli config',
     }),
     ...warpFlag,
-    ...networkFlag,
+    ...networksFlag,
     recover: Flags.string({
       description: 'Provide a JSON array of RecoveryData objects to manually ensure propagation',
       default: '[]',
