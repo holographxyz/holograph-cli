@@ -1,40 +1,18 @@
 import {CliUx, Command, Flags} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
-import {ethers, BigNumber} from 'ethers'
+import {ethers} from 'ethers'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {networkFlag, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {getEnvironment} from '../../utils/environment'
-import {addressValidator, numberValidator, tokenValidator} from '../../utils/validation'
+import {validateContractAddress, validateTokenIdInput} from '../../utils/validation'
 
 export enum TokenUriType {
   unset, //  0
   ipfs, //   1
   https, //  2
   arweave, // 3
-}
-
-const validateContractAddress = async (input: string): Promise<string> => {
-  const output: string = input.trim().toLowerCase()
-  if (addressValidator.test(output)) {
-    return output
-  }
-
-  throw new Error('Invalid contact address provided ' + output)
-}
-
-const validateTokenIdInput = async (input: string): Promise<string> => {
-  const output: string = input.trim()
-  if (tokenValidator.test(output)) {
-    if (numberValidator.test(output)) {
-      return BigNumber.from(output).toHexString()
-    }
-
-    return output
-  }
-
-  throw new Error('Invalid tokenId provided ' + output)
 }
 
 export default class NFT extends Command {
