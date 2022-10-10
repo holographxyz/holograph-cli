@@ -37,7 +37,7 @@ env:
   #
   TESTNET_DOMAIN: 'holograph.xyz'
   #
-  TESTNET_COMMON_NAMESPACE: feat-holo-448-env-separation # NOTICE <---
+  TESTNET_COMMON_NAMESPACE: testnet # NOTICE <---
   #
   # INDEXER PROD rpc endpoints
   indexer_prod_fuji_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
@@ -47,8 +47,6 @@ env:
   operator_prod_fuji_rpc_url: ${{ secrets.OPERATOR_PROD_FUJI_RPC_URL }}
   operator_prod_mumbai_rpc_url: ${{ secrets.OPERATOR_PROD_MUMBAI_RPC_URL }}
   operator_prod_goerli_rpc_url: ${{ secrets.OPERATOR_PROD_GOERLI_RPC_URL }}
-
-
 
 # notice: the trigger
 on:
