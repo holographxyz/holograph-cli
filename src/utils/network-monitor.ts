@@ -72,12 +72,14 @@ export type TransactionFilter = {
   networkDependant: boolean
 }
 
+const TIMEOUT_THRESHOLD = 20_000
+
 export const keepAlive = ({
   debug,
   provider,
   onDisconnect,
-  expectedPongBack = 10_000, // 10 seconds
-  checkInterval = 5000, // 5 seconds
+  expectedPongBack = TIMEOUT_THRESHOLD,
+  checkInterval = Math.round(TIMEOUT_THRESHOLD / 2),
 }: KeepAliveParams): void => {
   let pingTimeout: NodeJS.Timeout | null = null
   let keepAliveInterval: NodeJS.Timeout | null = null
@@ -263,7 +265,6 @@ export class NetworkMonitor {
   currentBlockHeight: {[key: string]: number} = {}
   blockJobs: {[key: string]: BlockJob[]} = {}
   exited = false
-  blockJobThreshold = 15_000 // 15 seconds
   lastBlockJobDone: {[key: string]: number} = {}
   blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
   holograph!: ethers.Contract
@@ -440,7 +441,7 @@ export class NetworkMonitor {
         throw new Error(`Provider for ${network} is undefined`)
       }
 
-      ;(this.providers[network] as ethers.providers.WebSocketProvider).destroy().then(() => {
+      const restart = () => {
         this.structuredLog(network, `WS connection was closed ${JSON.stringify(error)}`)
         this.lastBlockJobDone[network] = Date.now()
         this.providers[network] = this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
@@ -455,7 +456,16 @@ export class NetworkMonitor {
             })
           })
         }
-      })
+      }
+
+      const websocketProvider = this.providers[network] as ethers.providers.WebSocketProvider
+      if (websocketProvider === undefined) {
+        this.structuredLog(network, `Websocket was undefined in disconnectBuilder function`)
+        restart()
+      } else {
+        websocketProvider._websocket.terminate().then(restart)
+        //websocketProvider.destroy().then(restart)
+      }
     }
   }
 
@@ -652,9 +662,17 @@ export class NetworkMonitor {
         break
       case 'wss:':
         if (provider !== undefined && provider._websocket !== undefined) {
-          this.structuredLog(network, 'Closing websocket connection')
-          this.structuredLog(network, `Provider _websocket is: ${provider._websocket}`)
-          provider._websocket.terminate()
+          this.debug(`Closing websocket connection for ${network}`)
+          this.debug(`Provider _websocket is: ${provider._websocket}`)
+          const terminationPromise = provider._websocket.terminate()
+          if (terminationPromise === undefined) {
+            this.structuredLog(network, `Websocket was undefined in blockJobMonitor function`)
+            Promise.resolve()
+          } else {
+            terminationPromise.then(() => {
+              Promise.resolve()
+            })
+          }
         } else {
           throw new Error(`Provider for ${network} is undefined`)
         }
@@ -667,7 +685,7 @@ export class NetworkMonitor {
 
   blockJobMonitor = (network: string): Promise<void> => {
     return new Promise<void>(() => {
-      if (Date.now() - this.lastBlockJobDone[network] > this.blockJobThreshold) {
+      if (Date.now() - this.lastBlockJobDone[network] > TIMEOUT_THRESHOLD) {
         this.structuredLog(network, 'Block Job Handler has been inactive longer than threshold time. Restarting.', [])
         this.lastBlockJobDone[network] = Date.now()
         this.restartProvider(network)
