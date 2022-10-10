@@ -219,31 +219,31 @@ jobs:
             --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
             --set ingress.blue_green_deployment=false
 
-#      - name: -> Info for the new deployments
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          INDEXER_RELEASE_NAME: indexer-test
-#          OPERATOR_RELEASE_NAME: operator-test
-#          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            echo "------------------------- Last 5 Helm releases -------------------------"
-#            echo "--INDEXER--"
-#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.TESTNET_COMMON_NAMESPACE }} --max 3
-#            echo "--OPERATOR--"
-#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.TESTNET_COMMON_NAMESPACE }} --max 3
-#
-#            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
-#            echo "$TESTNET_IMAGE_TAG"
-#
-#            echo "------------------------ Healthchecks ------------------------"
-#            sleep 55
-#
-#            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-#
-#            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+      - name: -> Info for the new deployments
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          INDEXER_RELEASE_NAME: indexer-test
+          OPERATOR_RELEASE_NAME: operator-test
+          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            echo "------------------------- Last 5 Helm releases -------------------------"
+            echo "--INDEXER--"
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.TESTNET_COMMON_NAMESPACE }} --max 3
+            echo "--OPERATOR--"
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.TESTNET_COMMON_NAMESPACE }} --max 3
+
+            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+            echo "$TESTNET_IMAGE_TAG"
+
+            echo "------------------------ Healthchecks ------------------------"
+            sleep 55
+
+            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }}
+            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+
+            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }}
+            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
