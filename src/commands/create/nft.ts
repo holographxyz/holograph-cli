@@ -6,6 +6,7 @@ import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {networkFlag, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {getEnvironment} from '../../utils/environment'
+import {addressValidator, numberValidator, tokenValidator} from '../../utils/validation'
 
 export enum TokenUriType {
   unset, //  0
@@ -16,23 +17,20 @@ export enum TokenUriType {
 
 const validateContractAddress = async (input: string): Promise<string> => {
   const output: string = input.trim().toLowerCase()
-  if (/^0x[\da-f]{40}$/.test(output)) {
-    // we have a valid hex
+  if (addressValidator.test(output)) {
     return output
   }
 
   throw new Error('Invalid contact address provided ' + output)
 }
 
-const cleanTokenInput = async (input: string): Promise<string> => {
+const validateTokenIdInput = async (input: string): Promise<string> => {
   const output: string = input.trim()
-  if (/^\d+$/.test(output)) {
-    // we have a pure number
-    return BigNumber.from(output).toHexString()
-  }
+  if (tokenValidator.test(output)) {
+    if (numberValidator.test(output)) {
+      return BigNumber.from(output).toHexString()
+    }
 
-  if (/^(?:0x|)[\da-f]{1,64}$/.test(output)) {
-    // we have a valid hex
     return output
   }
 
@@ -55,7 +53,7 @@ export default class NFT extends Command {
     tokenId: Flags.string({
       description: 'The token id to mint. By default the token id is 0, which mints the next available token id.',
       default: '0',
-      parse: cleanTokenInput,
+      parse: validateTokenIdInput,
       multiple: false,
       required: false,
     }),
