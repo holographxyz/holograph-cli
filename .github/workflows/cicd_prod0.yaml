@@ -195,12 +195,12 @@ jobs:
             --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
-            --set dev_rpc_config_values.bridge_source="goerli" \
-            --set dev_rpc_config_values.bridge_destination="mumbai" \
+            --set prod_rpc_config_values.bridge_source="goerli" \
+            --set prod_rpc_config_values.bridge_destination="mumbai" \
             \
-            --set dev_rpc_config_values.fuji_rpc_url=${{ env.operator_prod_fuji_rpc_url }} \
-            --set dev_rpc_config_values.mumbai_rpc_url=${{ env.operator_prod_mumbai_rpc_url }} \
-            --set dev_rpc_config_values.goerli_rpc_url=${{ env.operator_prod_goerli_rpc_url }} \
+            --set prod_rpc_config_values.fuji_rpc_url=${{ env.operator_prod_fuji_rpc_url }} \
+            --set prod_rpc_config_values.mumbai_rpc_url=${{ env.operator_prod_mumbai_rpc_url }} \
+            --set prod_rpc_config_values.goerli_rpc_url=${{ env.operator_prod_goerli_rpc_url }} \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.version=chart-${{ env.PROD_HOLO_OPERATOR_HELM_CHART_VERSION }} \

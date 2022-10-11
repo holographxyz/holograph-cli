@@ -1,4 +1,4 @@
-name: Deploy holoclis to staging[testnet]
+name: Deploy holoclis to prod[testnet]
 
 permissions:
   id-token: write
@@ -14,20 +14,20 @@ env:
   TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.39
   TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.31
   #######################################
-  CLUSTER_NAME: staging
+  CLUSTER_NAME: prod0
   #
-  AWS_KEY_ID     : ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
-  AWS_ACCESS_KEY : ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
-  ALB_CERT_ARN: ${{ secrets.STG_ALB_CERT_ARN_FOR_CXIPCHAIN_XYZ }}
+  AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
+  AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
+  ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }}
   #
   #TODO - create new gh secret for prod. should be different from staging????
-  STG_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
+  TESTNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
-  TESTNET_HOLO_INDEXER_HOST: https://api.holograph.xyz
+  TESTNET_HOLO_INDEXER_HOST: https://api.holograph.xyz # TODO -> http://[release-name]-holo-api.main.svc.cluster.local:443
   #
-  # notice: all 3 have the same password
-  STG_HOLO_INDEXER_PASSWORD  : ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
-  STG_HOLO_OPERATOR_PASSWORD : ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
+  # TODO -> replace them with the PROD specific password <---------------------------
+  TESTNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
+  TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
   INDEXER_HOLO_CONFIG_FILE_DATA: prod-config-file
@@ -49,24 +49,24 @@ env:
   operator_prod_goerli_rpc_url: ${{ secrets.OPERATOR_PROD_GOERLI_RPC_URL }}
 
 # notice: the trigger
-#on:
-#  push:
-#    branches:
-#      - 'feat/holo-448-holocli-env-separation'
-#      # Excluded branches
-#      - '!develop'
-#      - '!main'
-#      - '!master'
-# notice: the trigger
 on:
-  pull_request:
+  push:
     branches:
-      - 'testnet'
-    types: [closed]
+      - 'feat/holo-448-holocli-env-separation'
+      # Excluded branches
+      - '!develop'
+      - '!main'
+      - '!master'
+## notice: the trigger
+#on:
+#  pull_request:
+#    branches:
+#      - 'testnet'
+#    types: [closed]
 
 jobs:
-  deploy-to-staging:
-    name: Deploy-to-staging[testnet]
+  deploy-to-prod0-testnet:
+    name: Deploy-to-prod0[testnet]
     runs-on: ubuntu-latest
 
     steps:
@@ -95,7 +95,7 @@ jobs:
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ env.AWS_KEY_ID }}     #notice: unique for each env
+          aws-access-key-id: ${{ env.AWS_KEY_ID }} #notice: unique for each env
           aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
           aws-region: ${{ env.AWS_REGION }}
 
@@ -118,8 +118,8 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-
-      - name: -> Deploy INDEXER cli in staging [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
+      ######
+      - name: -> Deploy INDEXER cli in prod [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer-test #notice
@@ -136,9 +136,9 @@ jobs:
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
-            --set holo_indexer_password=${{ env.STG_HOLO_INDEXER_PASSWORD }} \
+            --set holo_indexer_password=${{ env.TESTNET_HOLO_INDEXER_PASSWORD }} \
             --set HOLO_INDEXER_HOST=${{ env.TESTNET_HOLO_INDEXER_HOST }} \
-            --set OPERATOR_API_KEY=${{ env.STG_HOLO_INDEXER_OPERATOR_API_KEY }} \
+            --set OPERATOR_API_KEY=${{ env.TESTNET_HOLO_INDEXER_OPERATOR_API_KEY }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
@@ -156,7 +156,7 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
             --set datadog_tags.version=chart-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
             \
-            --values .github/values_for_stg_alb_ingress.yaml \
+            --values .github/values_for_prod_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
@@ -175,8 +175,8 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-
-      - name: -> Deploy OPERATOR cli in staging [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
+      ######
+      - name: -> Deploy OPERATOR cli in prod [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: operator-test #notice
@@ -193,24 +193,24 @@ jobs:
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
-            --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
+            --set holo_operator_password=${{ env.TESTNET_HOLO_OPERATOR_PASSWORD }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
-            --set dev_rpc_config_values.bridge_source="goerli" \
-            --set dev_rpc_config_values.bridge_destination="mumbai" \
+            --set prod_rpc_config_values.bridge_source="goerli" \
+            --set prod_rpc_config_values.bridge_destination="mumbai" \
             \
-            --set dev_rpc_config_values.fuji_rpc_url=${{ env.operator_prod_fuji_rpc_url }} \
-            --set dev_rpc_config_values.mumbai_rpc_url=${{ env.operator_prod_mumbai_rpc_url }} \
-            --set dev_rpc_config_values.goerli_rpc_url=${{ env.operator_prod_goerli_rpc_url }} \
+            --set prod_rpc_config_values.fuji_rpc_url=${{ env.operator_prod_fuji_rpc_url }} \
+            --set prod_rpc_config_values.mumbai_rpc_url=${{ env.operator_prod_mumbai_rpc_url }} \
+            --set prod_rpc_config_values.goerli_rpc_url=${{ env.operator_prod_goerli_rpc_url }} \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.version=chart-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             \
-            --values .github/values_for_stg_alb_ingress.yaml \
+            --values .github/values_for_prod_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
@@ -222,7 +222,7 @@ jobs:
         env:
           INDEXER_RELEASE_NAME: indexer-test
           OPERATOR_RELEASE_NAME: operator-test
-          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
+          LB_URL: 'https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
