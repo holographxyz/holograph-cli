@@ -9,7 +9,7 @@ env:
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli # notice: the same for all 3 cli apps
   #
-  TESTNET_IMAGE_TAG : main-98d451d57b26804fbc5e51e5f1cbd5bdc7bab98a #testnet-${{ github.sha }}
+  TESTNET_IMAGE_TAG : testnet-${{ github.sha }}
   #######################################
   TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.39
   TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.31
@@ -49,20 +49,20 @@ env:
   operator_prod_goerli_rpc_url: ${{ secrets.OPERATOR_PROD_GOERLI_RPC_URL }}
 
 # notice: the trigger
-on:
-  push:
-    branches:
-      - 'feat/holo-448-holocli-env-separation'
-      # Excluded branches
-      - '!develop'
-      - '!main'
-      - '!master'
-## notice: the trigger
 #on:
-#  pull_request:
+#  push:
 #    branches:
-#      - 'testnet'
-#    types: [closed]
+#      - 'feat/holo-448-holocli-env-separation'
+#      # Excluded branches
+#      - '!develop'
+#      - '!main'
+#      - '!master'
+## notice: the trigger
+on:
+  pull_request:
+    branches:
+      - 'testnet'
+    types: [closed]
 
 jobs:
   deploy-to-prod0-testnet:
@@ -83,13 +83,13 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-#      - name: Build image
-#        run: |
-#          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
-#          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.TESTNET_IMAGE_TAG }} .
-#
-#      - name: Push image
-#        run : docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.TESTNET_IMAGE_TAG }}
+      - name: Build image
+        run: |
+          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
+          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.TESTNET_IMAGE_TAG }} .
+
+      - name: Push image
+        run : docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.TESTNET_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
