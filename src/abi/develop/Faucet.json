@@ -34,26 +34,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_address",
-        "type": "address"
-      }
-    ],
-    "name": "getLastAccessTime",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_address",
+        "name": "address_",
         "type": "address"
       }
     ],
@@ -66,12 +47,12 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_address",
+        "name": "address_",
         "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "_amountWei",
+        "name": "amountWei_",
         "type": "uint256"
       }
     ],
@@ -84,7 +65,7 @@
     "inputs": [
       {
         "internalType": "bytes",
-        "name": "initPayload",
+        "name": "data",
         "type": "bytes"
       }
     ],
@@ -103,7 +84,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_address",
+        "name": "address_",
         "type": "address"
       }
     ],
@@ -141,21 +122,8 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "tokenAddress",
-        "type": "address"
-      }
-    ],
-    "name": "setToken",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "uint256",
-        "name": "_amountWei",
+        "name": "amountWei_",
         "type": "uint256"
       }
     ],
@@ -168,7 +136,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "_waitTimeSeconds",
+        "name": "waitTimeSeconds_",
         "type": "uint256"
       }
     ],
@@ -182,7 +150,7 @@
     "name": "token",
     "outputs": [
       {
-        "internalType": "contract HolographERC20Interface",
+        "internalType": "contract ERC20Holograph",
         "name": "",
         "type": "address"
       }
@@ -194,11 +162,16 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_receiver",
+        "name": "receiver_",
         "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amountWei_",
+        "type": "uint256"
       }
     ],
-    "name": "withdrawAllTokens",
+    "name": "withdrawTokens",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -207,13 +180,8 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_receiver",
+        "name": "receiver_",
         "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_amountWei",
-        "type": "uint256"
       }
     ],
     "name": "withdrawTokens",

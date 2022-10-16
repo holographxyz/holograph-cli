@@ -1,29 +1,172 @@
 import {ethers} from 'ethers'
 import * as inquirer from 'inquirer'
 import {CliUx, Flags} from '@oclif/core'
-import {decodeDeploymentConfigInput} from './utils'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
+import {validateTransactionHash, checkDeploymentTypeFlag} from './validation'
 
-export const deploymentFlags = {
-  tx: Flags.string({description: 'The hash of transaction that deployed the original collection'}),
-  txNetwork: Flags.string({description: 'The network on which the transaction was executed'}),
-  deploymentType: Flags.string({description: 'The type of deployment to use: [deployedTx, deploymentConfig]'}),
+import Web3 from 'web3'
+const web3 = new Web3()
+
+export enum DeploymentType {
+  deployedTx = 'deployedTx',
+  deploymentConfig = 'deploymentConfig',
+  createConfig = 'createConfig',
 }
-
-export const deploymentTypes = ['deployedTx', 'deploymentConfig']
 
 export const deploymentProcesses = [
   {
-    name: 'Extract deployment config from existing transaction',
-    value: 'deployedTx',
+    name: 'Extract deployment configuration from existing transaction',
+    value: DeploymentType.deployedTx,
     short: 'existing deployment',
   },
   {
-    name: 'Load custom deployment configuration',
-    value: 'deploymentConfig',
-    short: 'custom deployment',
+    name: 'Use existing deployment configuration',
+    value: DeploymentType.deploymentConfig,
+    short: 'existing deployment config',
+  },
+  {
+    name: 'Create deployment configuration',
+    value: DeploymentType.createConfig,
+    short: 'create deployment config',
   },
 ]
+
+export const deploymentFlags = {
+  tx: Flags.string({
+    description: 'The hash of transaction that deployed the original contract',
+    parse: validateTransactionHash,
+    multiple: false,
+    required: false,
+  }),
+  txNetwork: Flags.string({
+    description: 'The network on which the transaction was executed',
+    multiple: false,
+    required: false,
+  }),
+  targetNetwork: Flags.string({
+    description: 'The network on which the contract will be executed',
+    multiple: false,
+    required: false,
+  }),
+  deploymentType: Flags.string({
+    description: 'The type of deployment to use',
+    multiple: false,
+    options: Object.values(DeploymentType),
+    required: false,
+  }),
+  deploymentConfig: Flags.string({
+    description: 'The deployment config to use (single-line JSON string)',
+    multiple: false,
+    required: false,
+  }),
+  deploymentConfigFile: Flags.string({
+    description: 'The config file to use',
+    multiple: false,
+    required: false,
+  }),
+}
+
+export interface DeploymentConfig {
+  config: {
+    contractType: string
+    chainType: number
+    salt: string
+    byteCode: string
+    initCode: string
+  }
+  signature: {
+    r: string
+    s: string
+    v: number
+  }
+  signer: string
+}
+
+export const decodeDeploymentConfig = function (input: string): DeploymentConfig {
+  const decodedConfig = web3.eth.abi.decodeParameters(
+    [
+      {
+        components: [
+          {
+            internalType: 'bytes32',
+            name: 'contractType',
+            type: 'bytes32',
+          },
+          {
+            internalType: 'uint32',
+            name: 'chainType',
+            type: 'uint32',
+          },
+          {
+            internalType: 'bytes32',
+            name: 'salt',
+            type: 'bytes32',
+          },
+          {
+            internalType: 'bytes',
+            name: 'byteCode',
+            type: 'bytes',
+          },
+          {
+            internalType: 'bytes',
+            name: 'initCode',
+            type: 'bytes',
+          },
+        ],
+        internalType: 'struct DeploymentConfig',
+        name: 'config',
+        type: 'tuple',
+      },
+      {
+        components: [
+          {
+            internalType: 'bytes32',
+            name: 'r',
+            type: 'bytes32',
+          },
+          {
+            internalType: 'bytes32',
+            name: 's',
+            type: 'bytes32',
+          },
+          {
+            internalType: 'uint8',
+            name: 'v',
+            type: 'uint8',
+          },
+        ],
+        internalType: 'struct Verification',
+        name: 'signature',
+        type: 'tuple',
+      },
+      {
+        internalType: 'address',
+        name: 'signer',
+        type: 'address',
+      },
+    ],
+    input,
+  )
+  return {
+    config: {
+      contractType: decodedConfig.config.contractType,
+      chainType: decodedConfig.config.chainType,
+      salt: decodedConfig.config.salt,
+      byteCode: decodedConfig.config.byteCode,
+      initCode: decodedConfig.config.initCode,
+    },
+    signature: {
+      r: decodedConfig.signature.r,
+      s: decodedConfig.signature.s,
+      v: decodedConfig.signature.v,
+    },
+    signer: decodedConfig.signer,
+  }
+}
+
+export const decodeDeploymentConfigInput = function (input: string): DeploymentConfig {
+  return decodeDeploymentConfig('0x' + input.slice(10))
+}
 
 export const prepareDeploymentConfig = async function (
   configFile: ConfigFile,
@@ -31,26 +174,14 @@ export const prepareDeploymentConfig = async function (
   flags: Record<string, string | undefined>,
   supportedNetworks: string[],
 ): Promise<any> {
-  let deploymentType = flags.deploymentType
+  const deploymentType: DeploymentType = await checkDeploymentTypeFlag(flags.deploymentType, 'Select the type of deployment to use');
   let tx: string = flags.tx || ''
   let txNetwork: string = flags.txNetwork || ''
-  if (deploymentType === undefined) {
-    const prompt: any = await inquirer.prompt([
-      {
-        name: 'deploymentType',
-        message: 'Select the contract deployment process to use',
-        type: 'list',
-        choices: deploymentProcesses,
-        default: deploymentTypes[0],
-      },
-    ])
-    deploymentType = prompt.deploymentType
-  }
 
   let deploymentConfig
 
   switch (deploymentType) {
-    case 'deployedTx': {
+    case DeploymentType.deployedTx: {
       if (txNetwork === '' || !supportedNetworks.includes(txNetwork)) {
         const txNetworkPrompt: any = await inquirer.prompt([
           {
@@ -103,13 +234,8 @@ export const prepareDeploymentConfig = async function (
       break
     }
 
-    case 'deploymentConfig': {
-      throw new Error('Unsupported deployment type: ' + deploymentType + '... Still working on this one :(')
-      break
-    }
-
     default: {
-      throw new Error('Unsupported deployment type: ' + deploymentType)
+      throw new Error('Unsupported deployment type: ' + DeploymentType[deploymentType])
     }
   }
 

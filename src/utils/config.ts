@@ -5,6 +5,8 @@ import * as Joi from 'joi'
 import {ethers} from 'ethers'
 
 import AesEncryption from './aes-encryption'
+import {Environment, getEnvironment} from './environment'
+import {NetworkType, Network, Networks, networks} from '@holographxyz/networks'
 
 export const CONFIG_FILE_NAME = 'config.json'
 
@@ -19,8 +21,8 @@ export interface ConfigBridge {
 }
 
 export interface ConfigNetworks {
-  goerli: ConfigNetwork
-  rinkeby: ConfigNetwork
+  eth_goerli: ConfigNetwork
+  eth_rinkeby: ConfigNetwork
   fuji: ConfigNetwork
   mumbai: ConfigNetwork
 }
@@ -97,11 +99,45 @@ async function tryToUnlockWallet(
   return userWallet as ethers.Wallet
 }
 
+export function getSupportedNetworks(environment?: Environment): string[] {
+  if (environment === undefined) {
+    environment = getEnvironment()
+  }
+  let supportedNetworks: string[] = Object.keys(networks).filter((networkKey: string) => {
+    let network: Network = networks[networkKey]
+    switch (environment) {
+      case Environment.experimental:
+        if (network.type == NetworkType.testnet && network.active) {
+          return true
+        }
+        break
+      case Environment.develop:
+        if (network.type == NetworkType.testnet && network.active) {
+          return true
+        }
+        break
+      case Environment.testnet:
+        if (network.type == NetworkType.testnet && network.active) {
+          return true
+        }
+        break
+      case Environment.mainnet:
+        if (network.type == NetworkType.mainnet && network.active) {
+          return true
+        }
+        break
+      default:
+        return false
+    }
+  })
+  return supportedNetworks
+}
+
 export async function ensureConfigFileIsValid(
   configDir: string,
   unsafePassword: string | undefined,
   unlockWallet = false,
-): Promise<{userWallet: ethers.Wallet; configFile: ConfigFile}> {
+): Promise<{environment: Environment,  userWallet: ethers.Wallet; configFile: ConfigFile, supportedNetworks: string[]}> {
   let configPath = configDir
   try {
     await fs.pathExists(configDir)
@@ -119,12 +155,15 @@ export async function ensureConfigFileIsValid(
     throw new Error('Please run `holograph config` before running any other holograph command')
   }
 
+  const environment: Environment = getEnvironment()
+  const supportedNetworks: string[] = getSupportedNetworks(environment)
+
   try {
     const configFile = await fs.readJson(configPath)
     await validateBeta1Schema(configFile)
     const userWallet: ethers.Wallet = await tryToUnlockWallet(configFile as ConfigFile, unlockWallet, unsafePassword)
 
-    return {userWallet, configFile}
+    return {environment, userWallet, configFile, supportedNetworks}
   } catch (error: any) {
     const error_ = error.message
       ? error
@@ -141,10 +180,10 @@ export async function validateBeta1Schema(config: Record<string, unknown>): Prom
       destination: Joi.string().required(),
     }).required(),
     networks: Joi.object({
-      rinkeby: Joi.object({
+      eth_rinkeby: Joi.object({
         providerUrl: Joi.string().required(),
       }),
-      goerli: Joi.object({
+      eth_goerli: Joi.object({
         providerUrl: Joi.string().required(),
       }),
       fuji: Joi.object({

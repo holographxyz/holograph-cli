@@ -229,7 +229,7 @@ type NetworkMonitorOptions = {
   configFile: ConfigFile
   networks?: string[]
   debug: (...args: string[]) => void
-  processTransactions: ((job: BlockJob, transactions: TransactionResponse[]) => Promise<void>) | undefined
+  processTransactions?: ((job: BlockJob, transactions: TransactionResponse[]) => Promise<void>)
   filters?: TransactionFilter[]
   userWallet?: ethers.Wallet
   lastBlockFilename?: string
@@ -321,6 +321,14 @@ export class NetworkMonitor {
     return output
   }
 
+  async fakeProcessor(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
+    this.structuredLog(
+      job.network,
+      `This should not trigger: ${JSON.stringify(transactions, undefined, 2)}`,
+    )
+    Promise.resolve()
+  }
+
   constructor(options: NetworkMonitorOptions) {
     this.environment = getEnvironment()
     this.parent = options.parent
@@ -333,7 +341,7 @@ export class NetworkMonitor {
       this.filters = options.filters
     }
 
-    this.processTransactions = options.processTransactions?.bind(this.parent)
+    this.processTransactions = options.processTransactions === undefined ? this.fakeProcessor : options.processTransactions.bind(this.parent)
     if (options.userWallet !== undefined) {
       this.userWallet = options.userWallet
     }

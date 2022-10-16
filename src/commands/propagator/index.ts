@@ -6,7 +6,9 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {decodeDeploymentConfigInput, capitalize, getNetworkName, DeploymentConfig} from '../../utils/utils'
+import {capitalize, getNetworkName} from '../../utils/utils'
+import {DeploymentConfig, decodeDeploymentConfigInput} from '../../utils/contract-deployment'
+
 import {supportedNetworks} from '../../utils/networks'
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'

@@ -1,13 +1,16 @@
 [
   {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "contractType",
-        "type": "bytes32"
-      }
-    ],
-    "name": "getContractTypeAddress",
+    "inputs": [],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "stateMutability": "payable",
+    "type": "fallback"
+  },
+  {
+    "inputs": [],
+    "name": "admin",
     "outputs": [
       {
         "internalType": "address",
@@ -21,16 +24,93 @@
   {
     "inputs": [
       {
-        "internalType": "uint32",
+        "internalType": "address",
+        "name": "target",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
+      }
+    ],
+    "name": "adminCall",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getAdmin",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "adminAddress",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getBridge",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "bridge",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getChainId",
+    "outputs": [
+      {
+        "internalType": "uint256",
         "name": "chainId",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getFactory",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "factory",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getHolographChainId",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "holographChainId",
         "type": "uint32"
       }
     ],
-    "name": "getHToken",
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getInterfaces",
     "outputs": [
       {
         "internalType": "address",
-        "name": "",
+        "name": "interfaces",
         "type": "address"
       }
     ],
@@ -39,36 +119,12 @@
   },
   {
     "inputs": [],
-    "name": "getHolograph",
+    "name": "getOperator",
     "outputs": [
       {
         "internalType": "address",
-        "name": "holograph",
+        "name": "operator",
         "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "index",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "length",
-        "type": "uint256"
-      }
-    ],
-    "name": "getHolographableContracts",
-    "outputs": [
-      {
-        "internalType": "address[]",
-        "name": "contracts",
-        "type": "address[]"
       }
     ],
     "stateMutability": "view",
@@ -76,30 +132,11 @@
   },
   {
     "inputs": [],
-    "name": "getHolographableContractsLength",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "hash",
-        "type": "bytes32"
-      }
-    ],
-    "name": "getHolographedHashAddress",
+    "name": "getRegistry",
     "outputs": [
       {
         "internalType": "address",
-        "name": "",
+        "name": "registry",
         "type": "address"
       }
     ],
@@ -107,18 +144,12 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "contractType",
-        "type": "bytes32"
-      }
-    ],
-    "name": "getReservedContractTypeAddress",
+    "inputs": [],
+    "name": "getTreasury",
     "outputs": [
       {
         "internalType": "address",
-        "name": "contractTypeAddress",
+        "name": "treasury",
         "type": "address"
       }
     ],
@@ -141,55 +172,17 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "smartContract",
-        "type": "address"
+        "internalType": "bytes",
+        "name": "initPayload",
+        "type": "bytes"
       }
     ],
-    "name": "isHolographedContract",
+    "name": "init",
     "outputs": [
       {
-        "internalType": "bool",
+        "internalType": "bytes4",
         "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "hash",
-        "type": "bytes32"
-      }
-    ],
-    "name": "isHolographedHashDeployed",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "contractAddress",
-        "type": "address"
-      }
-    ],
-    "name": "referenceContractTypeAddress",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
+        "type": "bytes4"
       }
     ],
     "stateMutability": "nonpayable",
@@ -198,17 +191,51 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "contractType",
-        "type": "bytes32"
-      },
-      {
         "internalType": "address",
-        "name": "contractAddress",
+        "name": "adminAddress",
         "type": "address"
       }
     ],
-    "name": "setContractTypeAddress",
+    "name": "setAdmin",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "bridge",
+        "type": "address"
+      }
+    ],
+    "name": "setBridge",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "chainId",
+        "type": "uint256"
+      }
+    ],
+    "name": "setChainId",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "factory",
+        "type": "address"
+      }
+    ],
+    "name": "setFactory",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -217,16 +244,11 @@
     "inputs": [
       {
         "internalType": "uint32",
-        "name": "chainId",
+        "name": "holographChainId",
         "type": "uint32"
-      },
-      {
-        "internalType": "address",
-        "name": "hToken",
-        "type": "address"
       }
     ],
-    "name": "setHToken",
+    "name": "setHolographChainId",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -235,29 +257,24 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "holograph",
+        "name": "interfaces",
         "type": "address"
       }
     ],
-    "name": "setHolograph",
+    "name": "setInterfaces",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "hash",
-        "type": "bytes32"
-      },
       {
         "internalType": "address",
-        "name": "contractAddress",
+        "name": "operator",
         "type": "address"
       }
     ],
-    "name": "setHolographedHashAddress",
+    "name": "setOperator",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -265,17 +282,12 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "hash",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "bool",
-        "name": "reserved",
-        "type": "bool"
+        "internalType": "address",
+        "name": "registry",
+        "type": "address"
       }
     ],
-    "name": "setReservedContractTypeAddress",
+    "name": "setRegistry",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -283,17 +295,12 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32[]",
-        "name": "hashes",
-        "type": "bytes32[]"
-      },
-      {
-        "internalType": "bool[]",
-        "name": "reserved",
-        "type": "bool[]"
+        "internalType": "address",
+        "name": "treasury",
+        "type": "address"
       }
     ],
-    "name": "setReservedContractTypeAddresses",
+    "name": "setTreasury",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -310,5 +317,9 @@
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
+  },
+  {
+    "stateMutability": "payable",
+    "type": "receive"
   }
 ]

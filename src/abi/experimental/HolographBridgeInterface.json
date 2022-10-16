@@ -159,6 +159,45 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "toChain",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gasLimit",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gasPrice",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "crossChainPayload",
+        "type": "bytes"
+      }
+    ],
+    "name": "getMessageFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "hlgFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "msgFee",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "getOperator",
     "outputs": [

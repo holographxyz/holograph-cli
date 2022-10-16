@@ -55,14 +55,6 @@ export default class NFT extends Command {
    */
   networkMonitor!: NetworkMonitor
 
-  async fakeProcessor(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
-    this.networkMonitor.structuredLog(
-      job.network,
-      `This should not trigger: ${JSON.stringify(transactions, undefined, 2)}`,
-    )
-    Promise.resolve()
-  }
-
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
     const environment = getEnvironment()
@@ -71,8 +63,8 @@ export default class NFT extends Command {
     const {flags} = await this.parse(NFT)
     this.log('User configurations loaded.')
 
-    const network: string = await checkNetworkFlag(configFile.networks, flags.network, 'Select the network on which to mint the nft.')
-    const collectionAddress: string = await checkContractAddressFlag(flags.collectionAddress, 'Enter the address of the collection smart contract.')
+    const network: string = await checkNetworkFlag(configFile.networks, flags.network, 'Select the network on which to mint the nft')
+    const collectionAddress: string = await checkContractAddressFlag(flags.collectionAddress, 'Enter the address of the collection smart contract')
     const tokenId: string = flags.tokenId as string
     const tokenUriType: TokenUriType = TokenUriType[flags.tokenUriType as string as keyof typeof TokenUriType]
     const tokenUri: string = flags.tokenUri as string
@@ -82,7 +74,6 @@ export default class NFT extends Command {
       configFile,
       networks: [network],
       debug: this.debug,
-      processTransactions: this.fakeProcessor,
       userWallet,
     })
 

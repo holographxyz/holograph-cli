@@ -1,41 +1,206 @@
-import {CliUx, Command} from '@oclif/core'
+import {CliUx, Command, Flags} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
 import {ethers} from 'ethers'
+import {TransactionReceipt} from '@ethersproject/abstract-provider'
+import {BytecodeType, bytecodes} from '../../utils/bytecodes'
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {ConfigNetwork, ConfigNetworks} from '../../utils/config'
-import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-deployment'
-import {getEnvironment} from '../../utils/environment'
-import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
-import {supportedNetworks} from '../../utils/networks'
+import {networkFlag, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
+import {deploymentFlags, deploymentProcesses, DeploymentType, DeploymentConfig, decodeDeploymentConfig, decodeDeploymentConfigInput} from '../../utils/contract-deployment'
+import {validateContractAddress, validateTokenIdInput, validateTransactionHash, checkBytecodeFlag, checkBytecodeTypeFlag, checkContractAddressFlag, checkDeploymentTypeFlag, checkNetworkFlag, checkNumberFlag, checkOptionFlag, checkStringFlag, checkTokenIdFlag, checkTransactionHashFlag} from '../../utils/validation'
+import {NetworkType, Network, networks} from '@holographxyz/networks'
+
+enum HolographERC20Event {
+  bridgeIn = 1,
+  bridgeOut = 2,
+  afterApprove = 3,
+  beforeApprove = 4,
+  afterOnERC20Received = 5,
+  beforeOnERC20Received = 6,
+  afterBurn = 7,
+  beforeBurn = 8,
+  afterMint = 9,
+  beforeMint = 10,
+  afterSafeTransfer = 11,
+  beforeSafeTransfer = 12,
+  afterTransfer = 13,
+  beforeTransfer = 14,
+}
+
+enum HolographERC721Event {
+  bridgeIn = 1,
+  bridgeOut = 2,
+  afterApprove = 3,
+  beforeApprove = 4,
+  afterApprovalAll = 5,
+  beforeApprovalAll = 6,
+  afterBurn = 7,
+  beforeBurn = 8,
+  afterMint = 9,
+  beforeMint = 10,
+  afterSafeTransfer = 11,
+  beforeSafeTransfer = 12,
+  afterTransfer = 13,
+  beforeTransfer = 14,
+  beforeOnERC721Received = 15,
+  afterOnERC721Received = 16,
+}
 
 export default class Contract extends Command {
   static description = 'Deploy a Holographable contract directly to another chain'
-  static examples = ['$ holograph create:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"']
+  static examples = ['$ holograph create:contract --deploymentType="deployedTx" --tx="0xdb8b393dd18a71b386c8de75b87310c0c8ded0c57cf6b4c5bab52873d54d1e8a" --txNetwork="eth_goerli"']
 
   static flags = {
     ...deploymentFlags,
   }
 
-  targetEvents: Record<string, string> = {
-    BridgeableContractDeployed: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
-    '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b': 'BridgeableContractDeployed',
-  }
-
   /**
-   * Command Entry Point
+   * Contract class variables
    */
+  networkMonitor!: NetworkMonitor
+
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
-    const environment = getEnvironment()
-    const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
+    const {environment, userWallet, configFile, supportedNetworks} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
 
     const {flags} = await this.parse(Contract)
     this.log('User configurations loaded.')
 
-    let remainingNetworks = supportedNetworks
-    this.debug(`remainingNetworks = ${remainingNetworks}`)
+    let tx: string
+    let txNetwork: string | undefined
+    let deploymentConfig!: DeploymentConfig
+    let deploymentConfigJson: string | undefined
+    let deploymentConfigFile: string | undefined
 
+    const deploymentType: DeploymentType = await checkDeploymentTypeFlag(flags.deploymentType, 'Select the type of deployment to use');
+    switch (deploymentType) {
+      case DeploymentType.deployedTx:
+        txNetwork = await checkOptionFlag(supportedNetworks, flags.txNetwork, 'Select the network on which the transaction was executed')
+        tx = await checkTransactionHashFlag(flags.tx, 'Enter the hash of transaction that deployed the original contract')
+        break
+      case DeploymentType.deploymentConfig:
+        deploymentConfigJson = flags.deploymentConfig
+        deploymentConfigFile = flags.deploymentConfigFile
+        if (deploymentConfigJson !== undefined && deploymentConfigJson !== '') {
+          // a config json was provided
+          deploymentConfig = JSON.parse(deploymentConfigJson as string) as DeploymentConfig
+        } else if (deploymentConfigFile !== undefined && deploymentConfigFile !== '') {
+          if (await fs.pathExists(deploymentConfigFile as string)) {
+            deploymentConfig = (await fs.readJson(deploymentConfigFile as string)) as DeploymentConfig
+          } else {
+            throw new Error('The file "' + (deploymentConfigFile as string) + '" does not exist.')
+          }
+        } else {
+          throw new Error('You must include a "deploymentConfig" or "deploymentConfigFile" flag, to use the "deploymentConfig" deployment type.')
+        }
+        break
+      case DeploymentType.createConfig:
+        const chainType: string = await checkOptionFlag(supportedNetworks, undefined, 'Select the primary network of the contract (does not prepend chainId to tokenIds)')
+        txNetwork = chainType
+        const salt: string = await checkTokenIdFlag(undefined, 'Enter a bytes32 hash or number to use for salt hash')
+        const bytecodeType: BytecodeType = await checkBytecodeTypeFlag(undefined, 'Select the bytecode type to deploy')
+        const contractTypes: string[] = ['HolographERC20', 'HolographERC721']
+        const contractType = bytecodeType === BytecodeType.Custom ? await checkOptionFlag(contractTypes, undefined, 'Select the contract type to create') : bytecodeType === BytecodeType.SampleERC20 ? 'HolographERC20' : 'HolographERC721'
+        const byteCode: string = bytecodeType === BytecodeType.Custom ? await checkBytecodeFlag(undefined, 'Enter a hex encoded string of the bytecode you want to use') : bytecodes[bytecodeType]
+        let initCode!: string
+        switch (contractType) {
+          case 'HolographERC20':
+            const tokenName: string = await checkStringFlag(undefined, 'Enter the token name to use')
+            const tokenSymbol: string = await checkStringFlag(undefined, 'Enter the token symbol to use')
+            const domainSeperator: string = tokenName
+            const domainVersion: number = 1
+            const decimals: number = await checkNumberFlag(undefined, 'Enter the number of decimals [0-18] to use. The recommended number is 18.')
+            if (decimals > 18 || decimals < 0) {
+              throw new Error('Invalid decimals was provided: ' + decimals.toString())
+            }
+
+            await inquirer.prompt([
+              {
+                type: 'checkbox',
+                message: 'Select toppings',
+                name: 'toppings',
+                choices: [
+                  Object.values(HolographERC20Event)
+                ]
+              },
+            ])
+/*
+  eventConfig: BytesLike,
+*/
+            break
+          case 'HolographERC721':
+            const collectionName: string = await checkStringFlag(undefined, 'Enter the collection name to use')
+            const collectionSymbol: string = await checkStringFlag(undefined, 'Enter the collection symbol to use')
+            const royaltyBps: number = await checkNumberFlag(undefined, 'Enter the percentage of royalty to collect in basepoints. (1 = 0.01%, 10000 = 100%)')
+            if (royaltyBps > 10000 || royaltyBps < 0) {
+              throw new Error('Invalid royalty basepoints was provided: ' + royaltyBps.toString())
+            }
+
+            await inquirer.prompt([
+              {
+                type: 'checkbox',
+                message: 'Select toppings',
+                name: 'toppings',
+                choices: [
+                  Object.values(HolographERC20Event)
+                ]
+              },
+            ])
+/*
+  eventConfig: BytesLike,
+*/
+            break
+        }
+
+/*
+  config: {
+    contractType: string
+    chainType: number
+    salt: string
+    byteCode: string
+    initCode: string
+  }
+  signature: {
+    r: string
+    s: string
+    v: number
+  }
+  signer: string
+*/
+        this.log('createConfig')
+        break
+    }
+    const targetNetwork: string = await checkNetworkFlag(configFile.networks, flags.targetNetwork, 'Select the network on which the contract will be executed', txNetwork)
+
+
+  }
+}
+
+/*
+    const network: string = await checkNetworkFlag(configFile.networks, flags.network, 'Select the network on which to mint the nft.')
+    const collectionAddress: string = await checkContractAddressFlag(flags.collectionAddress, 'Enter the address of the collection smart contract.')
+    const tokenId: string = flags.tokenId as string
+    const tokenUriType: TokenUriType = TokenUriType[flags.tokenUriType as string as keyof typeof TokenUriType]
+    const tokenUri: string = flags.tokenUri as string
+
+    this.networkMonitor = new NetworkMonitor({
+      parent: this,
+      configFile,
+      networks: [network],
+      debug: this.debug,
+      userWallet,
+    })
+
+      deploymentType: Flags.string({
+    description: 'The type of deployment to use: [deployedTx, deploymentConfig]',
+    multiple: false,
+    options: ['deployedTx', 'deploymentConfig'],
+    required: false,
+  }),
+
+
+
+targetNetwork
     const destinationNetworkPrompt: any = await inquirer.prompt([
       {
         name: 'destinationNetwork',
@@ -155,3 +320,4 @@ export default class Contract extends Command {
     this.exit()
   }
 }
+*/

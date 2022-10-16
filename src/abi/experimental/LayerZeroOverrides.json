@@ -1,63 +1,46 @@
 [
   {
-    "inputs": [],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
         "internalType": "uint16",
-        "name": "_dstChainId",
+        "name": "destinationChainId",
+        "type": "uint16"
+      }
+    ],
+    "name": "defaultAppConfig",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "inboundProofLibraryVersion",
         "type": "uint16"
       },
       {
-        "indexed": false,
-        "internalType": "bytes",
-        "name": "_destination",
-        "type": "bytes"
+        "internalType": "uint64",
+        "name": "inboundBlockConfirmations",
+        "type": "uint64"
       },
       {
-        "indexed": false,
-        "internalType": "bytes",
-        "name": "_payload",
-        "type": "bytes"
-      }
-    ],
-    "name": "LzEvent",
-    "type": "event"
-  },
-  {
-    "inputs": [],
-    "name": "admin",
-    "outputs": [
+        "internalType": "address",
+        "name": "relayer",
+        "type": "address"
+      },
+      {
+        "internalType": "uint16",
+        "name": "outboundProofType",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint64",
+        "name": "outboundBlockConfirmations",
+        "type": "uint64"
+      },
       {
         "internalType": "address",
-        "name": "",
+        "name": "oracle",
         "type": "address"
       }
     ],
     "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "target",
-        "type": "address"
-      },
-      {
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      }
-    ],
-    "name": "adminCall",
-    "outputs": [],
-    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -77,12 +60,12 @@
     "inputs": [
       {
         "internalType": "uint16",
-        "name": "",
+        "name": "destinationChainId",
         "type": "uint16"
       },
       {
         "internalType": "uint16",
-        "name": "",
+        "name": "outboundProofType",
         "type": "uint16"
       }
     ],
@@ -104,14 +87,14 @@
         "type": "uint64"
       }
     ],
-    "stateMutability": "pure",
+    "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
       {
         "internalType": "uint16",
-        "name": "",
+        "name": "destinationChainId",
         "type": "uint16"
       }
     ],
@@ -128,34 +111,34 @@
         "type": "uint128"
       }
     ],
-    "stateMutability": "pure",
+    "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
       {
         "internalType": "uint16",
-        "name": "",
+        "name": "_dstChainId",
         "type": "uint16"
       },
       {
         "internalType": "address",
-        "name": "",
+        "name": "_userApplication",
         "type": "address"
       },
       {
         "internalType": "bytes",
-        "name": "",
+        "name": "_payload",
         "type": "bytes"
       },
       {
         "internalType": "bool",
-        "name": "",
+        "name": "_payInZRO",
         "type": "bool"
       },
       {
         "internalType": "bytes",
-        "name": "",
+        "name": "_adapterParam",
         "type": "bytes"
       }
     ],
@@ -172,19 +155,6 @@
         "type": "uint256"
       }
     ],
-    "stateMutability": "pure",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getAdmin",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "adminAddress",
-        "type": "address"
-      }
-    ],
     "stateMutability": "view",
     "type": "function"
   },
@@ -192,12 +162,12 @@
     "inputs": [
       {
         "internalType": "uint16",
-        "name": "",
+        "name": "destinationChainId",
         "type": "uint16"
       },
       {
         "internalType": "address",
-        "name": "",
+        "name": "userApplicationAddress",
         "type": "address"
       }
     ],
@@ -263,36 +233,23 @@
       },
       {
         "internalType": "address payable",
-        "name": "",
+        "name": "_refundAddress",
         "type": "address"
       },
       {
         "internalType": "address",
-        "name": "",
+        "name": "_zroPaymentAddress",
         "type": "address"
       },
       {
         "internalType": "bytes",
-        "name": "",
+        "name": "_adapterParams",
         "type": "bytes"
       }
     ],
     "name": "send",
     "outputs": [],
     "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "adminAddress",
-        "type": "address"
-      }
-    ],
-    "name": "setAdmin",
-    "outputs": [],
-    "stateMutability": "nonpayable",
     "type": "function"
   }
 ]

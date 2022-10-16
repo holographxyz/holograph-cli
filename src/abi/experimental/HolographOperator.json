@@ -44,12 +44,6 @@
         "internalType": "bytes32",
         "name": "jobHash",
         "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes",
-        "name": "revertReason",
-        "type": "bytes"
       }
     ],
     "name": "FailedOperatorJob",
@@ -117,7 +111,7 @@
     "inputs": [
       {
         "internalType": "bytes",
-        "name": "bridgeInRequesPayload",
+        "name": "bridgeInRequestPayload",
         "type": "bytes"
       }
     ],
@@ -130,7 +124,7 @@
     "inputs": [
       {
         "internalType": "bytes",
-        "name": "bridgeInRequesPayload",
+        "name": "bridgeInRequestPayload",
         "type": "bytes"
       }
     ],
@@ -147,6 +141,25 @@
         "internalType": "address",
         "name": "adminAddress",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      }
+    ],
+    "name": "getBondedAmount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -256,6 +269,45 @@
         "internalType": "struct OperatorJob",
         "name": "",
         "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "name": "getMessageFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -427,7 +479,7 @@
     "inputs": [
       {
         "internalType": "bytes",
-        "name": "bridgeInRequesPayload",
+        "name": "bridgeInRequestPayload",
         "type": "bytes"
       }
     ],
@@ -440,6 +492,62 @@
       }
     ],
     "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "msgSender",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes",
+        "name": "payload",
+        "type": "bytes"
+      }
+    ],
+    "name": "nonRevertingBridgeCall",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "blockTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "baseBondAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "podMultiplier",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "operatorThreshold",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "operatorThresholdStep",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "operatorThresholdDivisor",
+        "type": "uint256"
+      }
+    ],
+    "name": "resetOperator",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {

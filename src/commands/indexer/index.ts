@@ -7,13 +7,16 @@ import {Block} from '@ethersproject/abstract-provider'
 import {ensureConfigFileIsValid} from '../../utils/config'
 
 import {
-  DeploymentConfig,
-  decodeDeploymentConfig,
-  decodeDeploymentConfigInput,
   capitalize,
   sleep,
   getChainId,
 } from '../../utils/utils'
+import {
+  DeploymentConfig,
+  decodeDeploymentConfig,
+  decodeDeploymentConfigInput,
+} from '../../utils/contract-deployment'
+
 import {networksFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 

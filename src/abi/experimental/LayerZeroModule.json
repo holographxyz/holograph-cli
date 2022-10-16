@@ -54,12 +54,67 @@
   },
   {
     "inputs": [],
+    "name": "getBaseGas",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "baseGas",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "getBridge",
     "outputs": [
       {
         "internalType": "address",
         "name": "bridge",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getGasPerByte",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "gasPerByte",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "toChain",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gasLimit",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gasPrice",
+        "type": "uint256"
+      }
+    ],
+    "name": "getHlgFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "hlgFee",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -86,6 +141,45 @@
         "internalType": "address",
         "name": "lZEndpoint",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "toChain",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gasLimit",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gasPrice",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "crossChainPayload",
+        "type": "bytes"
+      }
+    ],
+    "name": "getMessageFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "hlgFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "msgFee",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -205,12 +299,38 @@
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "baseGas",
+        "type": "uint256"
+      }
+    ],
+    "name": "setBaseGas",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "bridge",
         "type": "address"
       }
     ],
     "name": "setBridge",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "gasPerByte",
+        "type": "uint256"
+      }
+    ],
+    "name": "setGasPerByte",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
