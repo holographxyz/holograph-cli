@@ -28,7 +28,7 @@ export const warpFlag = {
 }
 
 export const networksFlag = {
-  networks: Flags.string({description: 'Comma separated list of networks to operate on', multiple: true}),
+  networks: Flags.string({description: 'Multiple flags for networks to use', multiple: true}),
 }
 
 export const networkFlag = {
@@ -348,7 +348,6 @@ export class NetworkMonitor {
       this.warp = options.warp
     }
 
-    process.stdout.write('\n' + JSON.stringify(options.networks) + '\n')
     if (options.networks === undefined || '') {
       options.networks = Object.keys(this.configFile.networks)
     } else {

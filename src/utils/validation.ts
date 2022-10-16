@@ -3,6 +3,7 @@ import {BigNumber} from 'ethers'
 import {BytecodeType} from './bytecodes'
 import {ConfigNetworks} from './config'
 import {DeploymentType} from './contract-deployment'
+import {TokenUriType} from './asset-deployment'
 
 const addressValidator = /^0x[\da-f]{40}$/i
 
@@ -295,6 +296,37 @@ const checkTokenIdFlag = async (input: string | undefined, prompt: string): Prom
   return input as string
 }
 
+const checkTokenUriTypeFlag = async (
+  input: string | undefined,
+  prompt: string,
+  exclude?: string | undefined,
+): Promise<TokenUriType> => {
+  if (input !== undefined) {
+    input = input.trim()
+  }
+
+  let tokenUriTypeList: string[] = Object.values(TokenUriType)
+  if (exclude !== undefined) {
+    tokenUriTypeList = tokenUriTypeList.filter((element: string) => {
+      return !(element === exclude)
+    })
+  }
+
+  if (input === undefined || (input !== undefined && !tokenUriTypeList.includes(input))) {
+    const tokenUriTypePrompt: any = await inquirer.prompt([
+      {
+        name: 'tokenUriType',
+        message: prompt,
+        type: 'list',
+        choices: tokenUriTypeList,
+      },
+    ])
+    return TokenUriType[tokenUriTypePrompt.tokenUriType as string as keyof typeof TokenUriType]
+  }
+
+  return TokenUriType[input as string as keyof typeof TokenUriType]
+}
+
 const checkTransactionHashFlag = async (input: string | undefined, prompt: string): Promise<string> => {
   if (input === undefined) {
     const transactionHashPrompt: any = await inquirer.prompt([
@@ -336,5 +368,6 @@ export {
   checkOptionFlag,
   checkStringFlag,
   checkTokenIdFlag,
+  checkTokenUriTypeFlag,
   checkTransactionHashFlag,
 }

@@ -115,6 +115,7 @@ export default class Contract extends Command {
     let configHashBytes: number[]
     let sig: string
     let signature: Signature
+    let needToSign = false
 
     const deploymentType: DeploymentType = await checkDeploymentTypeFlag(
       flags.deploymentType,
@@ -289,15 +290,7 @@ export default class Contract extends Command {
             (deploymentConfig.signer as string).slice(2),
         )
         configHashBytes = web3.utils.hexToBytes(configHash)
-        sig = await userWallet.signMessage(configHashBytes)
-        signature = strictECDSA({
-          r: '0x' + sig.slice(2, 66),
-          s: '0x' + sig.slice(66, 130),
-          v: '0x' + sig.slice(130, 132),
-        } as Signature)
-        deploymentConfig.signature.r = signature.r
-        deploymentConfig.signature.s = signature.s
-        deploymentConfig.signature.v = Number.parseInt(signature.v, 16)
+        needToSign = true
         break
     }
 
@@ -307,6 +300,18 @@ export default class Contract extends Command {
       'Select the network on which the contract will be executed',
       txNetwork,
     )
+
+    if (needToSign) {
+      sig = await this.networkMonitor.wallets[targetNetwork].signMessage(configHashBytes!)
+      signature = strictECDSA({
+        r: '0x' + sig.slice(2, 66),
+        s: '0x' + sig.slice(66, 130),
+        v: '0x' + sig.slice(130, 132),
+      } as Signature)
+      deploymentConfig.signature.r = signature.r
+      deploymentConfig.signature.s = signature.s
+      deploymentConfig.signature.v = Number.parseInt(signature.v, 16)
+    }
 
     if (deploymentType === DeploymentType.deployedTx) {
       CliUx.ux.action.start('Retrieving transaction details from "' + (txNetwork as string) + '" network')

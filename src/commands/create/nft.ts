@@ -8,49 +8,46 @@ import {networkFlag, NetworkMonitor} from '../../utils/network-monitor'
 import {getEnvironment} from '../../utils/environment'
 import {
   validateContractAddress,
+  validateNonEmptyString,
   validateTokenIdInput,
   checkContractAddressFlag,
   checkNetworkFlag,
+  checkStringFlag,
+  checkTokenUriTypeFlag,
 } from '../../utils/validation'
-
-export enum TokenUriType {
-  unset, //   0
-  ipfs, //    1
-  https, //   2
-  arweave, // 3
-}
+import {TokenUriTypeIndex} from '../../utils/asset-deployment'
 
 export default class NFT extends Command {
   static description = 'Mint a Holographable NFT'
   static examples = [
-    '$ holograph create:nft --network="goerli" --collectionAddress="0x70f5b2f4f7e31353d75ad069053906a72ce75467" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"',
+    '$ holograph create:nft --network="eth_goerli" --collectionAddress="0xf90c33d5ef88a9d84d4d61f62c913ba192091fe7" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"',
   ]
 
   static flags = {
     collectionAddress: Flags.string({
-      description: 'The address of the collection smart contract.',
+      description: 'The address of the collection smart contract',
       parse: validateContractAddress,
       multiple: false,
       required: false,
     }),
     tokenId: Flags.string({
-      description: 'The token id to mint. By default the token id is 0, which mints the next available token id.',
+      description: 'The token id to mint. By default the token id is 0, which mints the next available token id',
       default: '0',
       parse: validateTokenIdInput,
       multiple: false,
       required: false,
     }),
     tokenUriType: Flags.string({
-      description: 'The token URI type.',
+      description: 'The token URI type',
       multiple: false,
       options: ['ipfs', 'https', 'arweave'],
-      default: 'ipfs',
       required: false,
     }),
     tokenUri: Flags.string({
-      description: 'The uri of the token, minus the prepend (ie "ipfs://").',
+      description: 'The uri of the token, minus the prepend (ie "ipfs://")',
       multiple: false,
-      required: true,
+      required: false,
+      parse: validateNonEmptyString,
     }),
     ...networkFlag,
   }
@@ -78,8 +75,14 @@ export default class NFT extends Command {
       'Enter the address of the collection smart contract',
     )
     const tokenId: string = flags.tokenId as string
-    const tokenUriType: TokenUriType = TokenUriType[flags.tokenUriType as string as keyof typeof TokenUriType]
-    const tokenUri: string = flags.tokenUri as string
+    const tokenUriType: TokenUriTypeIndex =
+      TokenUriTypeIndex[
+        await checkTokenUriTypeFlag(flags.tokenUriType, 'Select the uri of the token, minus the prepend (ie "ipfs://")')
+      ]
+    const tokenUri: string = await checkStringFlag(
+      flags.tokenUri,
+      'Enter the uri of the token, minus the prepend (ie "ipfs://")',
+    )
 
     this.networkMonitor = new NetworkMonitor({
       parent: this,
@@ -93,6 +96,21 @@ export default class NFT extends Command {
     await this.networkMonitor.initializeEthers()
     CliUx.ux.action.stop()
 
+    CliUx.ux.action.start('Checking that contract is already deployed and holographable on "' + network + '" network')
+    const isDeployed: boolean = await this.networkMonitor.registryContract
+      .connect(this.networkMonitor.providers[network])
+      .isHolographedContract(collectionAddress)
+    CliUx.ux.action.stop()
+    if (!isDeployed) {
+      throw new Error(
+        'Collection is either not deployed or not hologaphable at ' +
+          collectionAddress +
+          ' on "' +
+          network +
+          '" network',
+      )
+    }
+
     CliUx.ux.action.start('Retrieving collection smart contract')
     const collectionABI = await fs.readJson(`./src/abi/${environment}/CxipERC721.json`)
     const collection = new ethers.ContractFactory(collectionABI, this.networkMonitor.wallets[network].address).attach(
@@ -104,7 +122,7 @@ export default class NFT extends Command {
       {
         name: 'shouldContinue',
         message: `\nWould you like to mint the following NFT?\n\n${JSON.stringify(
-          {network, collectionAddress, tokenId, tokenUriType: TokenUriType[tokenUriType], tokenUri},
+          {network, collectionAddress, tokenId, tokenUriType: TokenUriTypeIndex[tokenUriType], tokenUri},
           undefined,
           2,
         )}\n`,
