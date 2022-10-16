@@ -38,8 +38,10 @@ const NETWORK_COLORS: Record<string, string> = {
   avax: '#ff0000',
   mumbai: '##B026FF ',
   polygon: '#B026FF ',
-  rinkeby: '##83EEFF',
-  goerli: '#83EEFF',
+  // eslint-disable-next-line camelcase
+  eth_rinkeby: '##83EEFF',
+  // eslint-disable-next-line camelcase
+  eth_goerli: '#83EEFF',
   eth: '##83EEFF',
 }
 
@@ -83,6 +85,20 @@ function getHolographId(chainId: any) {
   return dataMap.byChainId[chainId]
 }
 
+const zeroAddress: string = '0x' + '00'.repeat(20)
+
+function generateInitCode(vars: string[], vals: any[]): string {
+  return web3.eth.abi.encodeParameters(vars, vals)
+}
+
+function remove0x(input: string): string {
+  if (input.startsWith('0x')) {
+    return input.slice(2)
+  }
+
+  return input
+}
+
 export {
   sleep,
   capitalize,
@@ -94,4 +110,7 @@ export {
   webSocketConfig,
   NETWORK_COLORS,
   web3,
+  zeroAddress,
+  generateInitCode,
+  remove0x,
 }

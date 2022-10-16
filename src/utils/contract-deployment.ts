@@ -3,7 +3,7 @@ import * as inquirer from 'inquirer'
 import {CliUx, Flags} from '@oclif/core'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {validateTransactionHash, checkDeploymentTypeFlag} from './validation'
-
+import {BigNumberish, BytesLike, BigNumber} from 'ethers'
 import Web3 from 'web3'
 const web3 = new Web3()
 
@@ -11,6 +11,88 @@ export enum DeploymentType {
   deployedTx = 'deployedTx',
   deploymentConfig = 'deploymentConfig',
   createConfig = 'createConfig',
+}
+
+export interface Signature {
+  r: string
+  s: string
+  v: string
+}
+
+export const strictECDSA = function (signature: Signature): Signature {
+  const validator: BigNumber = BigNumber.from('0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0')
+  if (Number.parseInt(signature.v, 16) < 27) {
+    signature.v = '0x' + (27).toString(16).padStart(2, '0')
+  }
+
+  if (BigNumber.from(signature.s).gt(validator)) {
+    // we have an issue
+    signature.s = BigNumber.from('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141')
+      .sub(BigNumber.from(signature.s))
+      .toHexString()
+    let v = Number.parseInt(signature.v, 16)
+    v = v === 27 ? 28 : 27
+    signature.v = '0x' + v.toString(16).padStart(2, '0')
+  }
+
+  return signature
+}
+
+export const HolographERC20Event = [
+  {name: 'bridgeIn', value: 1},
+  {name: 'bridgeOut', value: 2},
+  {name: 'afterApprove', value: 3},
+  {name: 'beforeApprove', value: 4},
+  {name: 'afterOnERC20Received', value: 5},
+  {name: 'beforeOnERC20Received', value: 6},
+  {name: 'afterBurn', value: 7},
+  {name: 'beforeBurn', value: 8},
+  {name: 'afterMint', value: 9},
+  {name: 'beforeMint', value: 10},
+  {name: 'afterSafeTransfer', value: 11},
+  {name: 'beforeSafeTransfer', value: 12},
+  {name: 'afterTransfer', value: 13},
+  {name: 'beforeTransfer', value: 14},
+]
+
+export const HolographERC721Event = [
+  {name: 'bridgeIn', value: 1},
+  {name: 'bridgeOut', value: 2},
+  {name: 'afterApprove', value: 3},
+  {name: 'beforeApprove', value: 4},
+  {name: 'afterApprovalAll', value: 5},
+  {name: 'beforeApprovalAll', value: 6},
+  {name: 'afterBurn', value: 7},
+  {name: 'beforeBurn', value: 8},
+  {name: 'afterMint', value: 9},
+  {name: 'beforeMint', value: 10},
+  {name: 'afterSafeTransfer', value: 11},
+  {name: 'beforeSafeTransfer', value: 12},
+  {name: 'afterTransfer', value: 13},
+  {name: 'beforeTransfer', value: 14},
+  {name: 'beforeOnERC721Received', value: 15},
+  {name: 'afterOnERC721Received', value: 16},
+]
+
+export function allEventsEnabled(): string {
+  return '0x' + 'ff'.repeat(32)
+}
+
+export function configureEvents(config: number[]): string {
+  let binary: string = '0'.repeat(256)
+  for (let i = 0, l = config.length; i < l; i++) {
+    const num: number = config[i]
+    binary = binary.replace(new RegExp('(.{' + num + '}).{1}(.*)', 'gi'), '$11$2')
+  }
+
+  binary = [...binary].reverse().join('')
+  const byteArray: string[] = binary.match(/.{8}/g) || []
+  let hex = '0x'
+  for (let i = 0, l = byteArray.length; i < l; i++) {
+    hex += Number.parseInt(byteArray[i], 2).toString(16).padStart(2, '0')
+  }
+
+  return hex
 }
 
 export const deploymentProcesses = [
@@ -55,11 +137,6 @@ export const deploymentFlags = {
     required: false,
   }),
   deploymentConfig: Flags.string({
-    description: 'The deployment config to use (single-line JSON string)',
-    multiple: false,
-    required: false,
-  }),
-  deploymentConfigFile: Flags.string({
     description: 'The config file to use',
     multiple: false,
     required: false,
@@ -69,7 +146,7 @@ export const deploymentFlags = {
 export interface DeploymentConfig {
   config: {
     contractType: string
-    chainType: number
+    chainType: string
     salt: string
     byteCode: string
     initCode: string
@@ -80,6 +157,14 @@ export interface DeploymentConfig {
     v: number
   }
   signer: string
+}
+
+export type DeploymentConfigStruct = {
+  contractType: BytesLike
+  chainType: BigNumberish
+  salt: BytesLike
+  byteCode: BytesLike
+  initCode: BytesLike
 }
 
 export const decodeDeploymentConfig = function (input: string): DeploymentConfig {
@@ -174,7 +259,10 @@ export const prepareDeploymentConfig = async function (
   flags: Record<string, string | undefined>,
   supportedNetworks: string[],
 ): Promise<any> {
-  const deploymentType: DeploymentType = await checkDeploymentTypeFlag(flags.deploymentType, 'Select the type of deployment to use');
+  const deploymentType: DeploymentType = await checkDeploymentTypeFlag(
+    flags.deploymentType,
+    'Select the type of deployment to use',
+  )
   let tx: string = flags.tx || ''
   let txNetwork: string = flags.txNetwork || ''
 

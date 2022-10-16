@@ -229,7 +229,7 @@ type NetworkMonitorOptions = {
   configFile: ConfigFile
   networks?: string[]
   debug: (...args: string[]) => void
-  processTransactions?: ((job: BlockJob, transactions: TransactionResponse[]) => Promise<void>)
+  processTransactions?: (job: BlockJob, transactions: TransactionResponse[]) => Promise<void>
   filters?: TransactionFilter[]
   userWallet?: ethers.Wallet
   lastBlockFilename?: string
@@ -322,10 +322,7 @@ export class NetworkMonitor {
   }
 
   async fakeProcessor(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
-    this.structuredLog(
-      job.network,
-      `This should not trigger: ${JSON.stringify(transactions, undefined, 2)}`,
-    )
+    this.structuredLog(job.network, `This should not trigger: ${JSON.stringify(transactions, undefined, 2)}`)
     Promise.resolve()
   }
 
@@ -341,7 +338,8 @@ export class NetworkMonitor {
       this.filters = options.filters
     }
 
-    this.processTransactions = options.processTransactions === undefined ? this.fakeProcessor : options.processTransactions.bind(this.parent)
+    this.processTransactions =
+      options.processTransactions === undefined ? this.fakeProcessor : options.processTransactions.bind(this.parent)
     if (options.userWallet !== undefined) {
       this.userWallet = options.userWallet
     }
@@ -350,20 +348,16 @@ export class NetworkMonitor {
       this.warp = options.warp
     }
 
+    process.stdout.write('\n' + JSON.stringify(options.networks) + '\n')
     if (options.networks === undefined || '') {
       options.networks = Object.keys(this.configFile.networks)
     } else {
+      options.networks = options.networks.filter((network: string) => {
+        return network !== '' && Object.keys(this.configFile.networks).includes(network)
+      })
       for (let i = 0, l = options.networks.length; i < l; i++) {
         const network = options.networks[i]
-        if (Object.keys(this.configFile.networks).includes(network)) {
-          this.blockJobs[network] = []
-        } else {
-          this.structuredLog(network, `${network} is not a valid network and will be ignored`)
-          // If network is not supported remove it from the array
-          options.networks.splice(i, 1)
-          l--
-          i--
-        }
+        this.blockJobs[network] = []
       }
     }
 

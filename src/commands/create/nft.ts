@@ -4,9 +4,14 @@ import * as fs from 'fs-extra'
 import {ethers} from 'ethers'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {networkFlag, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
+import {networkFlag, NetworkMonitor} from '../../utils/network-monitor'
 import {getEnvironment} from '../../utils/environment'
-import {validateContractAddress, validateTokenIdInput, checkContractAddressFlag, checkNetworkFlag} from '../../utils/validation'
+import {
+  validateContractAddress,
+  validateTokenIdInput,
+  checkContractAddressFlag,
+  checkNetworkFlag,
+} from '../../utils/validation'
 
 export enum TokenUriType {
   unset, //   0
@@ -63,8 +68,15 @@ export default class NFT extends Command {
     const {flags} = await this.parse(NFT)
     this.log('User configurations loaded.')
 
-    const network: string = await checkNetworkFlag(configFile.networks, flags.network, 'Select the network on which to mint the nft')
-    const collectionAddress: string = await checkContractAddressFlag(flags.collectionAddress, 'Enter the address of the collection smart contract')
+    const network: string = await checkNetworkFlag(
+      configFile.networks,
+      flags.network,
+      'Select the network on which to mint the nft',
+    )
+    const collectionAddress: string = await checkContractAddressFlag(
+      flags.collectionAddress,
+      'Enter the address of the collection smart contract',
+    )
     const tokenId: string = flags.tokenId as string
     const tokenUriType: TokenUriType = TokenUriType[flags.tokenUriType as string as keyof typeof TokenUriType]
     const tokenUri: string = flags.tokenUri as string

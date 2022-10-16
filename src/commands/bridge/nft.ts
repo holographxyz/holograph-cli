@@ -5,12 +5,20 @@ import {ethers, BigNumber} from 'ethers'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {getEnvironment} from '../../utils/environment'
-import {validateContractAddress, validateTokenIdInput, checkContractAddressFlag, checkNetworkFlag, checkTokenIdFlag} from '../../utils/validation'
+import {
+  validateContractAddress,
+  validateTokenIdInput,
+  checkContractAddressFlag,
+  checkNetworkFlag,
+  checkTokenIdFlag,
+} from '../../utils/validation'
 import {web3} from '../../utils/utils'
 
 export default class BridgeNFT extends Command {
   static description = 'Beam a Holographable NFT from source chain to destination chain'
-  static examples = ['$ holograph bridge:nft --sourceNetwork="goerli" --destinationNetwork="fuji" --collectionAddress="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId="0x01"']
+  static examples = [
+    '$ holograph bridge:nft --sourceNetwork="goerli" --destinationNetwork="fuji" --collectionAddress="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId="0x01"',
+  ]
 
   static flags = {
     collectionAddress: Flags.string({
@@ -37,7 +45,12 @@ export default class BridgeNFT extends Command {
     }),
   }
 
-  async checkIfContractExists(network: string, provider: ethers.providers.Provider, contractAddress: string, throwError = true): Promise<boolean> {
+  async checkIfContractExists(
+    network: string,
+    provider: ethers.providers.Provider,
+    contractAddress: string,
+    throwError = true,
+  ): Promise<boolean> {
     const code: string = await provider.getCode(contractAddress)
     if (code === '0x' || code === '') {
       if (throwError) {
@@ -72,9 +85,21 @@ export default class BridgeNFT extends Command {
     const {flags} = await this.parse(BridgeNFT)
     this.log('User configurations loaded.')
 
-    const sourceNetwork: string = await checkNetworkFlag(configFile.networks, flags.sourceNetwork, 'Select the source network from which to beam.')
-    const destinationNetwork: string = await checkNetworkFlag(configFile.networks, flags.destinationNetwork, 'Select the destination network which to beam to.', sourceNetwork)
-    const collectionAddress: string = await checkContractAddressFlag(flags.collectionAddress, 'Enter the address of the collection smart contract.')
+    const sourceNetwork: string = await checkNetworkFlag(
+      configFile.networks,
+      flags.sourceNetwork,
+      'Select the source network from which to beam.',
+    )
+    const destinationNetwork: string = await checkNetworkFlag(
+      configFile.networks,
+      flags.destinationNetwork,
+      'Select the destination network which to beam to.',
+      sourceNetwork,
+    )
+    const collectionAddress: string = await checkContractAddressFlag(
+      flags.collectionAddress,
+      'Enter the address of the collection smart contract.',
+    )
     const tokenId: string = await checkTokenIdFlag(flags.tokenId, 'Enter the token ID of the NFT to beam.')
 
     this.networkMonitor = new NetworkMonitor({
@@ -92,8 +117,18 @@ export default class BridgeNFT extends Command {
 
     // Check if the contract is deployed on the source chain and not on the destination chain
     CliUx.ux.action.start('Checking if the collection is deployed on both source and destination networks')
-    const deployedOnSourceChain: boolean = await this.checkIfContractExists(sourceNetwork, this.networkMonitor.providers[sourceNetwork], collectionAddress, false)
-    const deployedOnDestinationChain: boolean = await this.checkIfContractExists(destinationNetwork, this.networkMonitor.providers[destinationNetwork], collectionAddress, false)
+    const deployedOnSourceChain: boolean = await this.checkIfContractExists(
+      sourceNetwork,
+      this.networkMonitor.providers[sourceNetwork],
+      collectionAddress,
+      false,
+    )
+    const deployedOnDestinationChain: boolean = await this.checkIfContractExists(
+      destinationNetwork,
+      this.networkMonitor.providers[destinationNetwork],
+      collectionAddress,
+      false,
+    )
     CliUx.ux.action.stop()
     if (!deployedOnSourceChain || !deployedOnDestinationChain) {
       this.log('You need to first deploy a collection on a network before you can beam from/to it.')
@@ -101,16 +136,24 @@ export default class BridgeNFT extends Command {
     }
 
     CliUx.ux.action.start('Checking if collection is holographed')
-    const holographedContract: boolean = await this.networkMonitor.registryContract.isHolographedContract(collectionAddress)
+    const holographedContract: boolean = await this.networkMonitor.registryContract.isHolographedContract(
+      collectionAddress,
+    )
     CliUx.ux.action.stop()
     if (!holographedContract) {
-      this.log('Collection is not an official holographed contract.\nYou cannot bridge it through this command.\nAlternatively, check if you are using the correct environment.')
+      this.log(
+        'Collection is not an official holographed contract.\nYou cannot bridge it through this command.\nAlternatively, check if you are using the correct environment.',
+      )
       this.exit()
     }
 
     CliUx.ux.action.start('Retrieving collection smart contract')
     const collectionABI = await fs.readJson(`./src/abi/${environment}/HolographERC721.json`)
-    const collection = new ethers.Contract(collectionAddress, collectionABI, this.networkMonitor.providers[sourceNetwork])
+    const collection = new ethers.Contract(
+      collectionAddress,
+      collectionABI,
+      this.networkMonitor.providers[sourceNetwork],
+    )
     CliUx.ux.action.stop()
 
     this.log(`tokenId is ${tokenId}`)
@@ -131,22 +174,37 @@ export default class BridgeNFT extends Command {
     const sourceProvider = this.networkMonitor.providers[sourceNetwork]
     const destinationProvider = this.networkMonitor.providers[destinationNetwork]
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const sourceChainId: string = (await interfaces.connect(sourceProvider).getChainId(1,(await sourceProvider.getNetwork()).chainId,2)).toHexString()
-    const destinationChainId: string = (await interfaces.connect(destinationProvider).getChainId(1,(await destinationProvider.getNetwork()).chainId,2)).toHexString()
+    const sourceChainId: string = (
+      await interfaces.connect(sourceProvider).getChainId(1, (await sourceProvider.getNetwork()).chainId, 2)
+    ).toHexString()
+    const destinationChainId: string = (
+      await interfaces.connect(destinationProvider).getChainId(1, (await destinationProvider.getNetwork()).chainId, 2)
+    ).toHexString()
     const wallet: string = this.networkMonitor.wallets[sourceNetwork].address
-    const erc721payload: string = web3.eth.abi.encodeParameters([wallet, wallet, tokenId], ['address', 'address', 'uint256']);
-
-    const estimatedPayload: string = await bridge.connect(sourceProvider).callStatic.getBridgeOutRequestPayload(
-      destinationChainId,
-      collectionAddress,
-      '0x' + 'ff'.repeat(32),
-      '0x' + 'ff'.repeat(32),
-      erc721payload
+    const erc721payload: string = web3.eth.abi.encodeParameters(
+      [wallet, wallet, tokenId],
+      ['address', 'address', 'uint256'],
     )
+
+    const estimatedPayload: string = await bridge
+      .connect(sourceProvider)
+      .callStatic.getBridgeOutRequestPayload(
+        destinationChainId,
+        collectionAddress,
+        '0x' + 'ff'.repeat(32),
+        '0x' + 'ff'.repeat(32),
+        erc721payload,
+      )
     CliUx.ux.action.stop()
     this.log(`estimatedPayload => ${estimatedPayload}`)
 
-    const estimatedGas: string = BigNumber.from('10000000').sub(await operator.connect(destinationProvider).callStatic.jobEstimator(estimatedPayload, {gasLimit: BigNumber.from('10000000')})).toHexString()
+    const estimatedGas: string = BigNumber.from('10000000')
+      .sub(
+        await operator
+          .connect(destinationProvider)
+          .callStatic.jobEstimator(estimatedPayload, {gasLimit: BigNumber.from('10000000')}),
+      )
+      .toHexString()
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const payload: string = await bridge.connect(sourceProvider).callStatic.getBridgeOutRequestPayload(
@@ -155,7 +213,7 @@ export default class BridgeNFT extends Command {
       estimatedGas,
       // NEED TO GET PROPER GAS PRICE ESTIMATES FOR DESTINATION NETWORK
       BigNumber.from('1'),
-      erc721payload
+      erc721payload,
     )
 
     // this.networkMonitor.bridgeContract
@@ -164,7 +222,7 @@ export default class BridgeNFT extends Command {
       we need to get lz fee
       we need to execute beam request and echo job hash to user
      */
-/*
+    /*
     CliUx.ux.action.start('Retrieving HolographFactory contract')
     const holographABI = await fs.readJson(`./src/abi/${environment}/Holograph.json`)
     const holograph = new ethers.ContractFactory(holographABI, '0x', sourceWallet).attach(
@@ -318,5 +376,3 @@ export default class BridgeNFT extends Command {
     this.exit()
   }
 }
-
-

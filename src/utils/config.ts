@@ -6,7 +6,7 @@ import {ethers} from 'ethers'
 
 import AesEncryption from './aes-encryption'
 import {Environment, getEnvironment} from './environment'
-import {NetworkType, Network, Networks, networks} from '@holographxyz/networks'
+import {NetworkType, Network, networks} from '@holographxyz/networks'
 
 export const CONFIG_FILE_NAME = 'config.json'
 
@@ -21,7 +21,9 @@ export interface ConfigBridge {
 }
 
 export interface ConfigNetworks {
+  // eslint-disable-next-line camelcase
   eth_goerli: ConfigNetwork
+  // eslint-disable-next-line camelcase
   eth_rinkeby: ConfigNetwork
   fuji: ConfigNetwork
   mumbai: ConfigNetwork
@@ -103,32 +105,37 @@ export function getSupportedNetworks(environment?: Environment): string[] {
   if (environment === undefined) {
     environment = getEnvironment()
   }
-  let supportedNetworks: string[] = Object.keys(networks).filter((networkKey: string) => {
-    let network: Network = networks[networkKey]
+
+  const supportedNetworks: string[] = Object.keys(networks).filter((networkKey: string) => {
+    const network: Network = networks[networkKey]
     switch (environment) {
       case Environment.experimental:
-        if (network.type == NetworkType.testnet && network.active) {
+        if (network.type === NetworkType.testnet && network.active) {
           return true
         }
+
         break
       case Environment.develop:
-        if (network.type == NetworkType.testnet && network.active) {
+        if (network.type === NetworkType.testnet && network.active) {
           return true
         }
+
         break
       case Environment.testnet:
-        if (network.type == NetworkType.testnet && network.active) {
+        if (network.type === NetworkType.testnet && network.active) {
           return true
         }
+
         break
       case Environment.mainnet:
-        if (network.type == NetworkType.mainnet && network.active) {
+        if (network.type === NetworkType.mainnet && network.active) {
           return true
         }
+
         break
-      default:
-        return false
     }
+
+    return false
   })
   return supportedNetworks
 }
@@ -137,7 +144,7 @@ export async function ensureConfigFileIsValid(
   configDir: string,
   unsafePassword: string | undefined,
   unlockWallet = false,
-): Promise<{environment: Environment,  userWallet: ethers.Wallet; configFile: ConfigFile, supportedNetworks: string[]}> {
+): Promise<{environment: Environment; userWallet: ethers.Wallet; configFile: ConfigFile; supportedNetworks: string[]}> {
   let configPath = configDir
   try {
     await fs.pathExists(configDir)
@@ -180,9 +187,11 @@ export async function validateBeta1Schema(config: Record<string, unknown>): Prom
       destination: Joi.string().required(),
     }).required(),
     networks: Joi.object({
+      // eslint-disable-next-line camelcase
       eth_rinkeby: Joi.object({
         providerUrl: Joi.string().required(),
       }),
+      // eslint-disable-next-line camelcase
       eth_goerli: Joi.object({
         providerUrl: Joi.string().required(),
       }),

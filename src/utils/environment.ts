@@ -25,6 +25,7 @@ const getEnvironment = (): Environment => {
   } else if (acceptableBranches.has(env)) {
     environment = Environment[env as keyof typeof Environment]
   }
+
   console.log(`Environment=${environment}`)
 
   return environment

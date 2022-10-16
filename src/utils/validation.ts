@@ -8,7 +8,7 @@ const addressValidator = /^0x[\da-f]{40}$/i
 
 const bytesValidator = /^0x[\da-f]+$/i
 
-const nonEmptyStringValidator = /^[\ \S]+$/i
+const nonEmptyStringValidator = /^[\S ]+$/i
 
 const numberValidator = /^\d{1,78}$/
 
@@ -93,7 +93,11 @@ const checkBytecodeFlag = async (input: string | undefined, prompt: string): Pro
   return input as string
 }
 
-const checkBytecodeTypeFlag = async (input: string | undefined, prompt: string, exclude?: string | undefined): Promise<BytecodeType> => {
+const checkBytecodeTypeFlag = async (
+  input: string | undefined,
+  prompt: string,
+  exclude?: string | undefined,
+): Promise<BytecodeType> => {
   if (input !== undefined) {
     input = input.trim()
   }
@@ -139,7 +143,11 @@ const checkContractAddressFlag = async (input: string | undefined, prompt: strin
   return input as string
 }
 
-const checkDeploymentTypeFlag = async (input: string | undefined, prompt: string, exclude?: string | undefined): Promise<DeploymentType> => {
+const checkDeploymentTypeFlag = async (
+  input: string | undefined,
+  prompt: string,
+  exclude?: string | undefined,
+): Promise<DeploymentType> => {
   if (input !== undefined) {
     input = input.trim()
   }
@@ -166,7 +174,12 @@ const checkDeploymentTypeFlag = async (input: string | undefined, prompt: string
   return DeploymentType[input as string as keyof typeof DeploymentType]
 }
 
-const checkNetworkFlag = async (networks: ConfigNetworks, input: string | undefined, prompt: string, exclude?: string | undefined): Promise<string> => {
+const checkNetworkFlag = async (
+  networks: ConfigNetworks,
+  input: string | undefined,
+  prompt: string,
+  exclude?: string | undefined,
+): Promise<string> => {
   if (input !== undefined) {
     input = input.trim().toLowerCase()
   }
@@ -206,18 +219,23 @@ const checkNumberFlag = async (input: string | undefined, prompt: string): Promi
         },
       },
     ])
-    return parseInt(await validateNonEmptyNumber(numberPrompt.numberString as string))
+    return Number.parseInt(await validateNonEmptyNumber(numberPrompt.numberString as string), 10)
   }
 
-  return parseInt(input as string)
+  return Number.parseInt(input as string, 10)
 }
 
-const checkOptionFlag = async (options: string[], input: string | undefined, prompt: string, exclude?: string | undefined): Promise<string> => {
+const checkOptionFlag = async (
+  options: string[],
+  input: string | undefined,
+  prompt: string,
+  exclude?: string | undefined,
+): Promise<string> => {
   if (input !== undefined) {
     input = input.trim()
   }
 
-  let list: string[] = options
+  let list: string[] = [...options]
   if (exclude !== undefined) {
     list = list.filter((element: string) => {
       return !(element === exclude)
@@ -296,4 +314,27 @@ const checkTransactionHashFlag = async (input: string | undefined, prompt: strin
   return input as string
 }
 
-export {addressValidator, bytesValidator, nonEmptyStringValidator, numberValidator, tokenValidator, transactionHashValidator, validateBytes, validateContractAddress, validateNonEmptyNumber, validateNonEmptyString, validateTokenIdInput, validateTransactionHash, checkBytecodeFlag, checkBytecodeTypeFlag, checkContractAddressFlag, checkDeploymentTypeFlag, checkNetworkFlag, checkNumberFlag, checkOptionFlag, checkStringFlag, checkTokenIdFlag, checkTransactionHashFlag}
+export {
+  addressValidator,
+  bytesValidator,
+  nonEmptyStringValidator,
+  numberValidator,
+  tokenValidator,
+  transactionHashValidator,
+  validateBytes,
+  validateContractAddress,
+  validateNonEmptyNumber,
+  validateNonEmptyString,
+  validateTokenIdInput,
+  validateTransactionHash,
+  checkBytecodeFlag,
+  checkBytecodeTypeFlag,
+  checkContractAddressFlag,
+  checkDeploymentTypeFlag,
+  checkNetworkFlag,
+  checkNumberFlag,
+  checkOptionFlag,
+  checkStringFlag,
+  checkTokenIdFlag,
+  checkTransactionHashFlag,
+}
