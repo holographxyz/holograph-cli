@@ -10,41 +10,41 @@ import {deploymentFlags, deploymentProcesses, DeploymentType, DeploymentConfig, 
 import {validateContractAddress, validateTokenIdInput, validateTransactionHash, checkBytecodeFlag, checkBytecodeTypeFlag, checkContractAddressFlag, checkDeploymentTypeFlag, checkNetworkFlag, checkNumberFlag, checkOptionFlag, checkStringFlag, checkTokenIdFlag, checkTransactionHashFlag} from '../../utils/validation'
 import {NetworkType, Network, networks} from '@holographxyz/networks'
 
-enum HolographERC20Event {
-  bridgeIn = 1,
-  bridgeOut = 2,
-  afterApprove = 3,
-  beforeApprove = 4,
-  afterOnERC20Received = 5,
-  beforeOnERC20Received = 6,
-  afterBurn = 7,
-  beforeBurn = 8,
-  afterMint = 9,
-  beforeMint = 10,
-  afterSafeTransfer = 11,
-  beforeSafeTransfer = 12,
-  afterTransfer = 13,
-  beforeTransfer = 14,
-}
+const HolographERC20Event = [
+  {name: 'bridgeIn', value: 1},
+  {name: 'bridgeOut', value: 2},
+  {name: 'afterApprove', value: 3},
+  {name: 'beforeApprove', value: 4},
+  {name: 'afterOnERC20Received', value: 5},
+  {name: 'beforeOnERC20Received', value: 6},
+  {name: 'afterBurn', value: 7},
+  {name: 'beforeBurn', value: 8},
+  {name: 'afterMint', value: 9},
+  {name: 'beforeMint', value: 10},
+  {name: 'afterSafeTransfer', value: 11},
+  {name: 'beforeSafeTransfer', value: 12},
+  {name: 'afterTransfer', value: 13},
+  {name: 'beforeTransfer', value: 14},
+]
 
-enum HolographERC721Event {
-  bridgeIn = 1,
-  bridgeOut = 2,
-  afterApprove = 3,
-  beforeApprove = 4,
-  afterApprovalAll = 5,
-  beforeApprovalAll = 6,
-  afterBurn = 7,
-  beforeBurn = 8,
-  afterMint = 9,
-  beforeMint = 10,
-  afterSafeTransfer = 11,
-  beforeSafeTransfer = 12,
-  afterTransfer = 13,
-  beforeTransfer = 14,
-  beforeOnERC721Received = 15,
-  afterOnERC721Received = 16,
-}
+const HolographERC721Event = [
+  {name: 'bridgeIn', value: 1},
+  {name: 'bridgeOut', value: 2},
+  {name: 'afterApprove', value: 3},
+  {name: 'beforeApprove', value: 4},
+  {name: 'afterApprovalAll', value: 5},
+  {name: 'beforeApprovalAll', value: 6},
+  {name: 'afterBurn', value: 7},
+  {name: 'beforeBurn', value: 8},
+  {name: 'afterMint', value: 9},
+  {name: 'beforeMint', value: 10},
+  {name: 'afterSafeTransfer', value: 11},
+  {name: 'beforeSafeTransfer', value: 12},
+  {name: 'afterTransfer', value: 13},
+  {name: 'beforeTransfer', value: 14},
+  {name: 'beforeOnERC721Received', value: 15},
+  {name: 'afterOnERC721Received', value: 16},
+]
 
 export default class Contract extends Command {
   static description = 'Deploy a Holographable contract directly to another chain'
@@ -119,9 +119,7 @@ export default class Contract extends Command {
                 type: 'checkbox',
                 message: 'Select toppings',
                 name: 'toppings',
-                choices: [
-                  Object.values(HolographERC20Event)
-                ]
+                choices: HolographERC20Event
               },
             ])
 /*
@@ -141,9 +139,7 @@ export default class Contract extends Command {
                 type: 'checkbox',
                 message: 'Select toppings',
                 name: 'toppings',
-                choices: [
-                  Object.values(HolographERC20Event)
-                ]
+                choices: HolographERC20Event
               },
             ])
 /*

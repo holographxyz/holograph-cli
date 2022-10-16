@@ -1,15 +1,15 @@
 {
-  "name": "holograph-cli",
+  "name": "holo-cli",
   "version": "0.0.1",
-  "description": "Holograph Operator CLI",
-  "author": "Holograph Team",
+  "description": "holograph operator cli",
+  "author": "sogoiii @sogoiii",
   "bin": {
     "holo": "./bin/run"
   },
-  "homepage": "https://github.com/holographxyz/holograph-cli",
+  "homepage": "https://github.com/cxip-labs/holo-cli",
   "license": "MIT",
   "main": "dist/index.js",
-  "repository": "https://github.com/holographxyz/holograph-cli",
+  "repository": "cxip-labs/holo-cli",
   "files": [
     "/bin",
     "/dist",
@@ -54,7 +54,7 @@
     "http": "^0.0.1-security",
     "https": "^1.0.0",
     "husky": "^8.0.1",
-    "inquirer": "^9.1.3",
+    "inquirer": "^8.0.0",
     "joi": "^17.6.0",
     "node-fetch": "^3.2.10",
     "supports-color": "^9.2.2",
@@ -91,18 +91,6 @@
     "bin": "holo",
     "dirname": "holo",
     "commands": "./dist/commands",
-    "npmRegistry": "https://registry.npmjs.org",
-    "macos": {
-      "identifier": "com.holograph.cli"
-    },
-    "update": {
-      "node": {
-        "version": "18.9.0"
-      },
-      "s3": {
-        "bucket": "holograph-cli"
-      }
-    },
     "plugins": [
       "@oclif/plugin-help",
       "@oclif/plugin-plugins"
@@ -115,15 +103,11 @@
     }
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=12.0.0"
   },
-  "bugs": "https://github.com/cxip-labs/holograph-cli/issues",
+  "bugs": "https://github.com/cxip-labs/holo-cli/issues",
   "keywords": [
-    "oclif",
-    "holo",
-    "holograph",
-    "operator",
-    "cli"
+    "oclif"
   ],
   "types": "dist/index.d.ts"
 }
