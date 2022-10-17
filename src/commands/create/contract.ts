@@ -12,13 +12,14 @@ import {
   DeploymentType,
   DeploymentConfig,
   decodeDeploymentConfigInput,
-  Signature,
-  strictECDSA,
+} from '../../utils/contract-deployment'
+import {Signature, strictECDSA} from '../../utils/signature'
+import {
   HolographERC20Event,
   HolographERC721Event,
   allEventsEnabled,
   configureEvents,
-} from '../../utils/contract-deployment'
+} from '../../utils/holograph-contract-events'
 import {
   validateBytes,
   checkBytecodeTypeFlag,

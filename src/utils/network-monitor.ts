@@ -859,6 +859,14 @@ export class NetworkMonitor {
     'BridgeableContractDeployed(address indexed contractAddress, bytes32 indexed hash)',
   )
 
+  static availableOperatorJobEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
+    'AvailableOperatorJob(bytes32 jobHash, bytes payload)',
+  )
+
+  static crossChainMessageSentEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
+    'CrossChainMessageSent(bytes32 messageHash)',
+  )
+
   decodePacketEvent(receipt: TransactionReceipt, target?: string): string | undefined {
     if (target !== undefined) {
       target = target.toLowerCase().trim()
@@ -991,6 +999,31 @@ export class NetworkMonitor {
     return undefined
   }
 
+  decodeAvailableOperatorJobEvent(receipt: TransactionReceipt, target?: string): string[] | undefined {
+    if (target !== undefined) {
+      target = target.toLowerCase().trim()
+    }
+
+    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+      for (let i = 0, l = receipt.logs.length; i < l; i++) {
+        const log = receipt.logs[i]
+        if (
+          log.topics[0] === this.targetEvents.AvailableOperatorJob &&
+          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
+        ) {
+          const output = NetworkMonitor.iface.decodeEventLog(
+            NetworkMonitor.availableOperatorJobEventFragment,
+            log.data,
+            log.topics,
+          )
+          return [(output[0] as string).toLowerCase(), (output[1] as string).toLowerCase()]
+        }
+      }
+    }
+
+    return undefined
+  }
+
   decodeBridgeableContractDeployedEvent(receipt: TransactionReceipt, target?: string): any[] | undefined {
     if (target !== undefined) {
       target = target.toLowerCase().trim()
@@ -1010,6 +1043,32 @@ export class NetworkMonitor {
               log.topics,
             ) as any[],
           )
+        }
+      }
+    }
+
+    return undefined
+  }
+
+  decodeCrossChainMessageSentEvent(receipt: TransactionReceipt, target?: string): string | undefined {
+    if (target !== undefined) {
+      target = target.toLowerCase().trim()
+    }
+
+    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+      for (let i = 0, l = receipt.logs.length; i < l; i++) {
+        const log = receipt.logs[i]
+        if (
+          log.topics[0] === this.targetEvents.CrossChainMessageSent &&
+          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
+        ) {
+          return (
+            NetworkMonitor.iface.decodeEventLog(
+              NetworkMonitor.crossChainMessageSentEventFragment,
+              log.data,
+              log.topics,
+            )[0] as string
+          ).toLowerCase()
         }
       }
     }

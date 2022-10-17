@@ -1,190 +1,171 @@
 import {CliUx, Command, Flags} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
-import {ethers} from 'ethers'
+import {ethers, BytesLike, BigNumber} from 'ethers'
+import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {ConfigNetwork, ConfigNetworks} from '../../utils/config'
-import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-deployment'
-import {getEnvironment} from '../../utils/environment'
-import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
-import {supportedNetworks} from '../../utils/networks'
+import {web3, zeroAddress, generateInitCode} from '../../utils/utils'
+import {NetworkMonitor} from '../../utils/network-monitor'
+import {DeploymentConfig} from '../../utils/contract-deployment'
+import {validateNetwork, validateNonEmptyString, checkOptionFlag, checkStringFlag} from '../../utils/validation'
+import {networks} from '@holographxyz/networks'
 
-export default class Contract extends Command {
-  static description = 'Bridge a Holographable contract from source chain to destination chain'
+export default class BridgeContract extends Command {
+  static description =
+    'Bridge a Holographable contract from source chain to destination chain. You need to have a deployment config JSON file. Use the "contract:create" command to create or extract one.'
+
   static examples = [
-    '$ holograph bridge:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"',
+    '$ holograph bridge:contract --sourceNetwork="eth_goerli" --destinationNetwork="fuji" --deploymentConfig="./MyContract.json"',
   ]
 
   static flags = {
-    sourceNetwork: Flags.string({description: 'The name of source network, from which to make the bridge request'}),
-    destinationNetwork: Flags.string({
-      description: 'The name of destination network, where the bridge request is sent to',
+    sourceNetwork: Flags.string({
+      description: 'The network from which contract deploy request will be sent',
+      parse: validateNetwork,
+      multiple: false,
+      required: false,
     }),
-    ...deploymentFlags,
+    destinationNetwork: Flags.string({
+      description: 'The network on which the contract will be deployed',
+      parse: validateNetwork,
+      multiple: false,
+      required: false,
+    }),
+    deploymentConfig: Flags.string({
+      description: 'The config file to use',
+      parse: validateNonEmptyString,
+      multiple: false,
+      required: false,
+    }),
   }
 
   /**
-   * Contract Entry Point
+   * Contract class variables
    */
+  networkMonitor!: NetworkMonitor
+
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
-    const environment = getEnvironment()
-    const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
-    const {flags} = await this.parse(Contract)
-    this.log('User configurations loaded.')
+    const {userWallet, configFile, supportedNetworks} = await ensureConfigFileIsValid(
+      this.config.configDir,
+      undefined,
+      true,
+    )
 
-    let sourceNetwork: string = flags.sourceNetwork || ''
-    if (sourceNetwork === '' || !(sourceNetwork in configFile.networks)) {
-      this.log(
-        'Source network not provided, or does not exist in the config file',
-        'Reverting to default "from" network from config',
-      )
-      sourceNetwork = configFile.bridge.source
+    const {flags} = await this.parse(BridgeContract)
+    this.log('User configurations loaded')
+
+    const sourceNetwork: string = await checkOptionFlag(
+      supportedNetworks,
+      flags.sourceNetwork,
+      'Select the network from which contract deploy request will be sent',
+    )
+    const destinationNetwork: string = await checkOptionFlag(
+      supportedNetworks,
+      flags.destinationNetwork,
+      'Select the network on which the contract will be deployed',
+      sourceNetwork,
+    )
+    let deploymentConfig!: DeploymentConfig
+    const deploymentConfigFile: string = await checkStringFlag(flags.deploymentConfig, 'Enter the config file to use')
+    if (await fs.pathExists(deploymentConfigFile as string)) {
+      deploymentConfig = (await fs.readJson(deploymentConfigFile as string)) as DeploymentConfig
+    } else {
+      throw new Error('The file "' + (deploymentConfigFile as string) + '" does not exist')
     }
 
-    let destinationNetwork: string = flags.destinationNetwork || ''
-    if (destinationNetwork === '' || !(destinationNetwork in configFile.networks)) {
-      this.log(
-        'Destination network not provided, or does not exist in the config file',
-        'reverting to default "to" network from config',
-      )
-      destinationNetwork = configFile.bridge.destination
-    }
+    const configHash: BytesLike = web3.utils.keccak256(
+      '0x' +
+        (deploymentConfig.config.contractType as string).slice(2) +
+        (deploymentConfig.config.chainType as string).slice(2) +
+        (deploymentConfig.config.salt as string).slice(2) +
+        web3.utils.keccak256(deploymentConfig.config.byteCode as string).slice(2) +
+        web3.utils.keccak256(deploymentConfig.config.initCode as string).slice(2) +
+        (deploymentConfig.signer as string).slice(2),
+    )
 
-    if (sourceNetwork === destinationNetwork) {
-      throw new Error('Cannot bridge to/from the same network')
-    }
-
-    CliUx.ux.action.start('Loading RPC providers')
-    const sourceProviderUrl: string = (configFile.networks[sourceNetwork as keyof ConfigNetworks] as ConfigNetwork)
-      .providerUrl
-    const sourceProtocol: string = new URL(sourceProviderUrl).protocol
-    let sourceProvider
-    switch (sourceProtocol) {
-      case 'https:':
-        sourceProvider = new ethers.providers.JsonRpcProvider(sourceProviderUrl)
-        break
-      case 'wss:':
-        sourceProvider = new ethers.providers.WebSocketProvider(sourceProviderUrl)
-        break
-      default:
-        throw new Error('Unsupported RPC URL protocol -> ' + sourceProtocol)
-    }
-
-    const sourceWallet = userWallet?.connect(sourceProvider)
-    this.debug('Source network', await sourceWallet?.provider.getNetwork())
-
-    const destinationProviderUrl: string = (
-      configFile.networks[destinationNetwork as keyof ConfigNetworks] as ConfigNetwork
-    ).providerUrl
-    const destinationProtocol: string = new URL(destinationProviderUrl).protocol
-    let destinationProvider
-    switch (destinationProtocol) {
-      case 'https:':
-        destinationProvider = new ethers.providers.JsonRpcProvider(destinationProviderUrl)
-        break
-      case 'wss:':
-        destinationProvider = new ethers.providers.WebSocketProvider(destinationProviderUrl)
-        break
-      default:
-        throw new Error('Unsupported RPC URL protocol -> ' + destinationProtocol)
-    }
-
-    const destinationWallet = userWallet?.connect(destinationProvider)
-    this.debug('Destination network', await destinationWallet?.provider.getNetwork())
-    CliUx.ux.action.stop()
-
-    let remainingNetworks: string[] = supportedNetworks
-    this.debug(`remainingNetworks = ${remainingNetworks}`)
-    remainingNetworks = remainingNetworks.filter((item: string) => {
-      return item !== destinationNetwork
+    this.networkMonitor = new NetworkMonitor({
+      parent: this,
+      configFile,
+      networks: [sourceNetwork, destinationNetwork],
+      debug: this.debug,
+      userWallet,
     })
 
-    const deploymentConfig = await prepareDeploymentConfig(
-      configFile,
-      userWallet!,
-      flags as Record<string, string | undefined>,
-      remainingNetworks,
-    )
-
-    this.debug(deploymentConfig)
+    CliUx.ux.action.start('Loading network RPC providers')
+    await this.networkMonitor.initializeEthers()
     CliUx.ux.action.stop()
 
-    CliUx.ux.action.start('Retrieving HolographFactory contract')
-    const holographABI = await fs.readJson(`./src/abi/${environment}/Holograph.json`)
-    const holograph = new ethers.ContractFactory(holographABI, '0x', sourceWallet).attach(
-      HOLOGRAPH_ADDRESSES[environment],
-    )
-
-    const holographInterfacesABI = await fs.readJson(`./src/abi/${environment}/Interfaces.json`)
-    const holographInterfaces = new ethers.ContractFactory(holographInterfacesABI, '0x', sourceWallet).attach(
-      await holograph.getInterfaces(),
-    )
-
-    const holographToChainId = await holographInterfaces.getChainId(
-      1,
-      (
-        await destinationProvider.getNetwork()
-      ).chainId,
-      2,
-    )
-    const holographBridgeABI = await fs.readJson(`./src/abi/${environment}/HolographBridge.json`)
-    const holographBridge = new ethers.ContractFactory(holographBridgeABI, '0x', sourceWallet).attach(
-      await holograph.getBridge(),
-    )
+    CliUx.ux.action.start('Checking that contract is not already deployed on "' + destinationNetwork + '" network')
+    const contractAddress: string = await this.networkMonitor.registryContract
+      .connect(this.networkMonitor.providers[destinationNetwork])
+      .getContractTypeAddress(configHash)
     CliUx.ux.action.stop()
-
-    CliUx.ux.action.start('Calculating gas amounts and prices')
-    let gasLimit: ethers.BigNumber | undefined
-
-    // Don't modify lzFeeError. It is returned from LZ so we must check this exact string
-    const lzFeeError = 'execution reverted: LayerZero: not enough native for fees'
-    let startingPayment = ethers.utils.parseUnits('0.000000001', 'ether')
-    const powerOfTen = ethers.BigNumber.from(10)
-    const calculateGas = async function () {
-      if (gasLimit === undefined) {
-        try {
-          gasLimit = await holographBridge.estimateGas.deployOut(
-            holographToChainId,
-            deploymentConfig.config,
-            deploymentConfig.signature,
-            deploymentConfig.signer,
-            {
-              value: startingPayment,
-            },
-          )
-        } catch (error: any) {
-          if (error.reason !== lzFeeError) {
-            throw new Error(error.reason)
-          }
-        }
-
-        startingPayment = startingPayment.mul(powerOfTen)
-        await calculateGas()
-      }
+    if (contractAddress !== zeroAddress) {
+      throw new Error('Contract already deployed at ' + contractAddress + ' on "' + destinationNetwork + '" network')
     }
 
-    try {
-      await calculateGas()
-    } catch (error: any) {
-      this.error(error)
-    }
-
-    if (gasLimit === undefined) {
-      this.error('Could not identify messaging costs')
-    }
-
-    const gasPriceBase = await sourceWallet!.provider.getGasPrice()
-    const gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
-    CliUx.ux.action.stop()
-    this.log(
-      'Transaction is estimated to cost a total of',
-      ethers.utils.formatUnits(gasLimit.mul(gasPrice!), 'ether'),
-      'native gas tokens (in ether).',
-      'And you will send a value of',
-      ethers.utils.formatEther(startingPayment),
-      'native gas tokens (in ether) for messaging protocol',
+    const data: BytesLike = generateInitCode(
+      ['tuple(bytes32,uint32,bytes32,bytes,bytes)', 'tuple(bytes32,bytes32,uint8)', 'address'],
+      [
+        [
+          deploymentConfig.config.contractType,
+          deploymentConfig.config.chainType,
+          deploymentConfig.config.salt,
+          deploymentConfig.config.byteCode,
+          deploymentConfig.config.initCode,
+        ],
+        [deploymentConfig.signature.r, deploymentConfig.signature.s, deploymentConfig.signature.v],
+        deploymentConfig.signer,
+      ],
     )
+
+    const TESTGASLIMIT: BigNumber = BigNumber.from('10000000')
+    const GASPRICE: BigNumber = await this.networkMonitor.providers[destinationNetwork].getGasPrice()
+
+    let payload: BytesLike = await this.networkMonitor.bridgeContract
+      .connect(this.networkMonitor.providers[sourceNetwork])
+      .callStatic.getBridgeOutRequestPayload(
+        networks[destinationNetwork].holographId,
+        this.networkMonitor.factoryAddress,
+        '0x' + 'ff'.repeat(32),
+        // allow LZ module to set gas price
+        // '0x' + '00'.repeat(32),
+        '0x' + 'ff'.repeat(32),
+        data as string,
+      )
+
+    let estimatedGas: BigNumber = TESTGASLIMIT.sub(
+      await this.networkMonitor.operatorContract
+        .connect(this.networkMonitor.providers[destinationNetwork])
+        .callStatic.jobEstimator(payload as string, {gasLimit: TESTGASLIMIT}),
+    )
+
+    payload = await this.networkMonitor.bridgeContract
+      .connect(this.networkMonitor.providers[sourceNetwork])
+      .callStatic.getBridgeOutRequestPayload(
+        networks[destinationNetwork].holographId,
+        this.networkMonitor.factoryAddress,
+        estimatedGas,
+        // allow LZ module to set gas price
+        // '0x' + '00'.repeat(32),
+        GASPRICE,
+        data as string,
+      )
+
+    const fees: BigNumber[] = await this.networkMonitor.bridgeContract
+      .connect(this.networkMonitor.providers[sourceNetwork])
+      .callStatic.getMessageFee(networks[destinationNetwork].holographId, estimatedGas, /* 0 */ GASPRICE, payload)
+    const total: BigNumber = fees[0].add(fees[1])
+    estimatedGas = TESTGASLIMIT.sub(
+      await this.networkMonitor.operatorContract
+        .connect(this.networkMonitor.providers[destinationNetwork])
+        .callStatic.jobEstimator(payload as string, {value: total, gasLimit: TESTGASLIMIT}),
+    )
+    // this.log('gas price', ethers.utils.formatUnits(fees[2], 'gwei'), 'GWEI')
+    this.log('hlg fee', ethers.utils.formatUnits(fees[0], 'ether'), 'ether')
+    this.log('lz fee', ethers.utils.formatUnits(fees[1], 'ether'), 'ether')
+    this.log('estimated gas usage', estimatedGas.toNumber())
 
     const blockchainPrompt: any = await inquirer.prompt([
       {
@@ -195,33 +176,41 @@ export default class Contract extends Command {
       },
     ])
     if (!blockchainPrompt.shouldContinue) {
-      this.error('Dropping command, no blockchain transactions executed')
+      this.log('Dropping command, no blockchain transactions executed')
+      this.exit()
     }
 
-    try {
-      CliUx.ux.action.start('Sending transaction to mempool')
-      const deployTx = await holographBridge.deployOut(
-        holographToChainId,
-        deploymentConfig.config,
-        deploymentConfig.signature,
-        deploymentConfig.signer,
-        {
-          gasPrice,
-          gasLimit,
-          value: startingPayment,
-        },
+    CliUx.ux.action.start('Making beam request...')
+    const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
+      network: sourceNetwork,
+      contract: this.networkMonitor.factoryContract.connect(this.networkMonitor.providers[destinationNetwork]),
+      methodName: 'bridgeOutRequest',
+      args: [
+        networks[destinationNetwork].holographId,
+        this.networkMonitor.factoryAddress,
+        estimatedGas,
+        GASPRICE,
+        data as string,
+        {value: total},
+      ],
+      waitForReceipt: true,
+    })
+    CliUx.ux.action.stop()
+
+    if (receipt === null) {
+      throw new Error('failed to confirm that the transaction was mined')
+    } else {
+      const jobHash: string | undefined = this.networkMonitor.decodeCrossChainMessageSentEvent(
+        receipt,
+        this.networkMonitor.operatorAddress,
       )
-      this.debug(deployTx)
-      CliUx.ux.action.stop('Transaction hash is ' + deployTx.hash)
+      if (jobHash === undefined) {
+        this.log('Failed to extract cross-chain job hash transaction receipt')
+      }
 
-      CliUx.ux.action.start('Waiting for transaction to be mined and confirmed')
-      const deployReceipt = await deployTx.wait()
-      this.debug(deployReceipt)
-
-      CliUx.ux.action.stop()
-      this.log('Transaction', deployTx.hash, 'confirmed')
-    } catch (error: any) {
-      this.error(error.error.reason)
+      this.log(
+        `Cross-chain beaming has started under job hash ${jobHash}, from ${sourceNetwork} network, to ${destinationNetwork} network.`,
+      )
     }
 
     this.exit()

@@ -1,3 +1,4 @@
+declare let global: any
 import * as fs from 'fs-extra'
 import dotenv from 'dotenv'
 dotenv.config()
@@ -10,6 +11,10 @@ enum Environment {
 }
 
 const getEnvironment = (): Environment => {
+  if (global.__companionNetwork) {
+    return global.__companionNetwork as Environment
+  }
+
   let environment = Environment.experimental
   const acceptableBranches: Set<string> = new Set<string>(Object.values(Environment))
   const head = './.git/HEAD'
@@ -28,6 +33,7 @@ const getEnvironment = (): Environment => {
 
   console.log(`Environment=${environment}`)
 
+  global.__environment = environment
   return environment
 }
 

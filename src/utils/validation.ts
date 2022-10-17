@@ -2,8 +2,9 @@ import * as inquirer from 'inquirer'
 import {BigNumber} from 'ethers'
 import {BytecodeType} from './bytecodes'
 import {ConfigNetworks} from './config'
-import {DeploymentType} from './contract-deployment'
+import {DeploymentType, deploymentProcesses} from './contract-deployment'
 import {TokenUriType} from './asset-deployment'
+import {getSupportedNetworks} from './config'
 
 const addressValidator = /^0x[\da-f]{40}$/i
 
@@ -33,6 +34,16 @@ const validateContractAddress = async (input: string): Promise<string> => {
   }
 
   throw new Error('Invalid contact address provided ' + output)
+}
+
+const validateNetwork = async (input: string): Promise<string> => {
+  const output: string = input.trim()
+  const supportedNetworks: string[] = getSupportedNetworks()
+  if (supportedNetworks.includes(output)) {
+    return output
+  }
+
+  throw new Error('Invalid/unsupported network provided ' + output)
 }
 
 const validateNonEmptyNumber = async (input: string): Promise<string> => {
@@ -166,7 +177,7 @@ const checkDeploymentTypeFlag = async (
         name: 'deploymentType',
         message: prompt,
         type: 'list',
-        choices: deploymentTypeList,
+        choices: deploymentProcesses,
       },
     ])
     return DeploymentType[deploymentTypePrompt.deploymentType as string as keyof typeof DeploymentType]
@@ -355,6 +366,7 @@ export {
   transactionHashValidator,
   validateBytes,
   validateContractAddress,
+  validateNetwork,
   validateNonEmptyNumber,
   validateNonEmptyString,
   validateTokenIdInput,
