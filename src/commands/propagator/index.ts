@@ -240,7 +240,10 @@ export default class Propagator extends Command {
         network,
         `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`,
       )
-      const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
+      const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(
+        receipt,
+        this.networkMonitor.factoryAddress,
+      )
       if (deploymentInfo === undefined) {
         this.networkMonitor.structuredLog(network, `BridgeableContractDeployed event not found in ${transaction.hash}`)
       } else {
@@ -292,6 +295,7 @@ export default class Propagator extends Command {
         )
         const deploymentInfo: any[] | undefined = this.networkMonitor.decodeBridgeableContractDeployedEvent(
           deployReceipt as ethers.providers.TransactionReceipt,
+          this.networkMonitor.factoryAddress,
         )
         if (deploymentInfo === undefined) {
           this.networkMonitor.structuredLog(

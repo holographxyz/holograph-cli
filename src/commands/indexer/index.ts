@@ -309,7 +309,10 @@ export default class Indexer extends Command {
         network,
         `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`,
       )
-      const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
+      const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(
+        receipt,
+        this.networkMonitor.factoryAddress,
+      )
 
       if (deploymentInfo !== undefined) {
         await this.updateDeployedCollection(transaction, network, deploymentInfo as any[])
@@ -423,7 +426,10 @@ export default class Indexer extends Command {
           })
           switch (bridgeTransaction.name) {
             case 'deployIn':
-              deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
+              deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(
+                receipt,
+                this.networkMonitor.factoryAddress,
+              )
               if (deploymentInfo !== undefined) {
                 await this.updateBridgedCollection(
                   transaction,
@@ -497,7 +503,10 @@ export default class Indexer extends Command {
         network,
         `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
       )
-      const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(receipt)
+      const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(
+        receipt,
+        this.networkMonitor.operatorAddress,
+      )
       const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract relayer available job for ${transaction.hash}`)
@@ -515,7 +524,10 @@ export default class Indexer extends Command {
 
         switch (bridgeTransaction.name) {
           case 'deployIn':
-            deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
+            deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(
+              receipt,
+              this.networkMonitor.factoryAddress,
+            )
             if (deploymentInfo !== undefined) {
               // cross-chain contract deployment completed
             }

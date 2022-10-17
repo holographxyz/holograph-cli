@@ -418,7 +418,10 @@ export default class Analyze extends Command {
     }
 
     if (receipt.status === 1) {
-      const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(receipt)
+      const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(
+        receipt,
+        this.networkMonitor.operatorAddress,
+      )
       const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract relayer available job for ${transaction.hash}`)

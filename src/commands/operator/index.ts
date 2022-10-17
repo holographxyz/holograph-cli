@@ -184,7 +184,10 @@ export default class Operator extends Command {
         `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
         tags,
       )
-      const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(receipt)
+      const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(
+        receipt,
+        this.networkMonitor.operatorAddress,
+      )
       const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(

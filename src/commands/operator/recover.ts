@@ -192,7 +192,10 @@ export default class Recover extends Command {
         network,
         `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
       )
-      const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(receipt)
+      const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(
+        receipt,
+        this.networkMonitor.operatorAddress,
+      )
       const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract relayer available job for ${transaction.hash}`)

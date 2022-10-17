@@ -24,7 +24,7 @@ export default class Contract extends Command {
   }
 
   /**
-   * Command Entry Point
+   * Contract Entry Point
    */
   public async run(): Promise<void> {
     this.log('Loading user configurations...')

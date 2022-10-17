@@ -146,7 +146,7 @@ export default class NFT extends Command {
       if (receipt === null) {
         throw new Error('failed to confirm that the transaction was mined')
       } else {
-        const logs: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(receipt)
+        const logs: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(receipt, collectionAddress)
         if (logs === undefined) {
           throw new Error('failed to extract transfer event from transaction receipt')
         } else {

@@ -20,7 +20,7 @@ import {
   configureEvents,
 } from '../../utils/contract-deployment'
 import {
-  checkBytecodeFlag,
+  validateBytes,
   checkBytecodeTypeFlag,
   checkDeploymentTypeFlag,
   checkNumberFlag,
@@ -30,6 +30,15 @@ import {
   checkTransactionHashFlag,
 } from '../../utils/validation'
 import {networks} from '@holographxyz/networks'
+
+async function getCodeFromFile(prompt: string): Promise<string> {
+  const codeFile: string = await checkStringFlag(undefined, prompt)
+  if (await fs.pathExists(codeFile as string)) {
+    return validateBytes(await fs.readFile(codeFile, 'utf8'))
+  }
+
+  throw new Error('The file "' + codeFile + '" does not exist.')
+}
 
 export default class Contract extends Command {
   static description = 'Deploy a Holographable contract directly to another chain'
@@ -168,7 +177,9 @@ export default class Contract extends Command {
         deploymentConfig.config.contractType = contractTypeHash
         byteCode =
           bytecodeType === BytecodeType.Custom
-            ? await checkBytecodeFlag(undefined, 'Enter a hex encoded string of the bytecode you want to use')
+            ? await getCodeFromFile(
+                'Provide the filename containing the hex encoded string of the bytecode you want to use',
+              )
             : bytecodes[bytecodeType]
         switch (contractType) {
           case 'HolographERC20':
@@ -201,7 +212,9 @@ export default class Contract extends Command {
                     ])
                   ).erc20events,
                 )
-                sourceInitCode = await checkBytecodeTypeFlag(undefined, 'Enter the custom initCode (in hex format)')
+                sourceInitCode = await getCodeFromFile(
+                  'Provide the filename containing the hex encoded string of the initCode you want to use',
+                )
                 break
             }
 
@@ -259,7 +272,9 @@ export default class Contract extends Command {
                     ])
                   ).erc721events,
                 )
-                sourceInitCode = await checkBytecodeTypeFlag(undefined, 'Enter the custom initCode (in hex format)')
+                sourceInitCode = await getCodeFromFile(
+                  'Provide the filename containing the hex encoded string of the initCode you want to use',
+                )
                 break
             }
 
@@ -332,6 +347,26 @@ export default class Contract extends Command {
         (deploymentConfig.signer as string).slice(2),
     )
 
+    if (deploymentType !== DeploymentType.deploymentConfig) {
+      const configFilePrompt: any = await inquirer.prompt([
+        {
+          name: 'shouldSave',
+          message: 'Would you like to export/save the deployment config file?',
+          type: 'confirm',
+          default: true,
+        },
+      ])
+      if (configFilePrompt.shouldSave) {
+        deploymentConfigFile = await checkStringFlag(
+          undefined,
+          'Enter the path and file where to save (ie ./deploymentConfig.json)',
+        )
+        await fs.ensureFile(deploymentConfigFile)
+        await fs.writeFile(deploymentConfigFile, JSON.stringify(deploymentConfig, undefined, 2), 'utf8')
+        this.log('File successfully saved to "' + deploymentConfigFile + '"')
+      }
+    }
+
     CliUx.ux.action.start('Checking that contract is not already deployed on "' + targetNetwork + '" network')
     const contractAddress: string = await this.networkMonitor.registryContract
       .connect(this.networkMonitor.providers[targetNetwork])
@@ -366,7 +401,10 @@ export default class Contract extends Command {
     if (receipt === null) {
       throw new Error('failed to confirm that the transaction was mined')
     } else {
-      const logs: any[] | undefined = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
+      const logs: any[] | undefined = this.networkMonitor.decodeBridgeableContractDeployedEvent(
+        receipt,
+        this.networkMonitor.factoryAddress,
+      )
       if (logs === undefined) {
         throw new Error('failed to extract transfer event from transaction receipt')
       } else {

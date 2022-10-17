@@ -859,12 +859,19 @@ export class NetworkMonitor {
     'BridgeableContractDeployed(address indexed contractAddress, bytes32 indexed hash)',
   )
 
-  decodePacketEvent(receipt: TransactionReceipt): string | undefined {
+  decodePacketEvent(receipt: TransactionReceipt, target?: string): string | undefined {
+    if (target !== undefined) {
+      target = target.toLowerCase().trim()
+    }
+
     const toFind = this.operatorAddress.slice(2, 42)
     if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
-        if (log.topics[0] === this.targetEvents.Packet) {
+        if (
+          log.topics[0] === this.targetEvents.Packet &&
+          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
+        ) {
           const packetPayload = NetworkMonitor.iface.decodeEventLog(
             NetworkMonitor.packetEventFragment,
             log.data,
@@ -880,12 +887,19 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeLzPacketEvent(receipt: TransactionReceipt): string | undefined {
+  decodeLzPacketEvent(receipt: TransactionReceipt, target?: string): string | undefined {
+    if (target !== undefined) {
+      target = target.toLowerCase().trim()
+    }
+
     const toFind = this.operatorAddress.slice(2, 42)
     if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
-        if (log.topics[0] === this.targetEvents.LzPacket) {
+        if (
+          log.topics[0] === this.targetEvents.LzPacket &&
+          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
+        ) {
           const packetPayload = NetworkMonitor.iface.decodeEventLog(
             NetworkMonitor.lzPacketEventFragment,
             log.data,
@@ -901,11 +915,18 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeErc20TransferEvent(receipt: TransactionReceipt): any[] | undefined {
+  decodeErc20TransferEvent(receipt: TransactionReceipt, target?: string): any[] | undefined {
+    if (target !== undefined) {
+      target = target.toLowerCase().trim()
+    }
+
     if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
-        if (log.topics[0] === this.targetEvents.Transfer) {
+        if (
+          log.topics[0] === this.targetEvents.Transfer &&
+          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
+        ) {
           const event: string[] = NetworkMonitor.iface.decodeEventLog(
             NetworkMonitor.erc20TransferEventFragment,
             log.data,
@@ -919,11 +940,18 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeErc721TransferEvent(receipt: TransactionReceipt): any[] | undefined {
+  decodeErc721TransferEvent(receipt: TransactionReceipt, target?: string): any[] | undefined {
+    if (target !== undefined) {
+      target = target.toLowerCase().trim()
+    }
+
     if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
-        if (log.topics[0] === this.targetEvents.Transfer) {
+        if (
+          log.topics[0] === this.targetEvents.Transfer &&
+          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
+        ) {
           const event: string[] = NetworkMonitor.iface.decodeEventLog(
             NetworkMonitor.erc721TransferEventFragment,
             log.data,
@@ -937,11 +965,18 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeAvailableJobEvent(receipt: TransactionReceipt): string | undefined {
+  decodeAvailableJobEvent(receipt: TransactionReceipt, target?: string): string | undefined {
+    if (target !== undefined) {
+      target = target.toLowerCase().trim()
+    }
+
     if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
-        if (log.address.toLowerCase() === this.operatorAddress && log.topics[0] === this.targetEvents.AvailableJob) {
+        if (
+          log.topics[0] === this.targetEvents.AvailableJob &&
+          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
+        ) {
           return (
             NetworkMonitor.iface.decodeEventLog(
               NetworkMonitor.availableJobEventFragment,
@@ -956,13 +991,17 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeBridgeableContractDeployedEvent(receipt: TransactionReceipt): any[] | undefined {
+  decodeBridgeableContractDeployedEvent(receipt: TransactionReceipt, target?: string): any[] | undefined {
+    if (target !== undefined) {
+      target = target.toLowerCase().trim()
+    }
+
     if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
         if (
-          log.address.toLowerCase() === this.factoryAddress &&
-          log.topics[0] === this.targetEvents.BridgeableContractDeployed
+          log.topics[0] === this.targetEvents.BridgeableContractDeployed &&
+          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
         ) {
           return this.lowerCaseAllStrings(
             NetworkMonitor.iface.decodeEventLog(
