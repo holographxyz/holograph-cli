@@ -442,7 +442,7 @@ export class NetworkMonitor {
       }
 
       const restart = () => {
-        this.structuredLog(network, `WS connection was closed ${JSON.stringify(error)}`)
+        this.structuredLog(network, `Error in websocket connection, restarting... ${error.message}`)
         this.lastBlockJobDone[network] = Date.now()
         this.providers[network] = this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
         if (this.userWallet !== undefined) {
@@ -460,11 +460,16 @@ export class NetworkMonitor {
 
       const websocketProvider = this.providers[network] as ethers.providers.WebSocketProvider
       if (websocketProvider === undefined) {
-        this.structuredLog(network, `Websocket was undefined in disconnectBuilder function`)
+        this.structuredLog(network, `Websocket is undefined. Restarting`)
+        restart()
+      } else if (websocketProvider) {
+        this.structuredLog(
+          network,
+          `Websocket is closed. Restarting connection for ${network} to ${websocketProvider.connection.url}`,
+        )
         restart()
       } else {
-        websocketProvider._websocket.terminate().then(restart)
-        //websocketProvider.destroy().then(restart)
+        this.structuredLog(network, `Unknown error with websocket. Restarting`)
       }
     }
   }
@@ -663,7 +668,7 @@ export class NetworkMonitor {
       case 'wss:':
         if (provider !== undefined && provider._websocket !== undefined) {
           this.debug(`Closing websocket connection for ${network}`)
-          this.debug(`Provider _websocket is: ${provider._websocket}`)
+          this.debug(`Provider _websocket is: ${JSON.stringify(provider._websocket)}`)
           const terminationPromise = provider._websocket.terminate()
           if (terminationPromise === undefined) {
             this.structuredLog(network, `Websocket was undefined in blockJobMonitor function`)
