@@ -11,7 +11,6 @@ import {NetworkType, Network, networks} from '@holographxyz/networks'
 export const CONFIG_FILE_NAME = 'config.json'
 
 export interface ConfigNetwork {
-  name: string
   providerUrl: string
 }
 
@@ -21,12 +20,7 @@ export interface ConfigBridge {
 }
 
 export interface ConfigNetworks {
-  // eslint-disable-next-line camelcase
-  eth_goerli: ConfigNetwork
-  // eslint-disable-next-line camelcase
-  eth_rinkeby: ConfigNetwork
-  fuji: ConfigNetwork
-  mumbai: ConfigNetwork
+  [k: string]: ConfigNetwork
 }
 
 export interface ConfigCredentials {
@@ -46,15 +40,17 @@ export interface ConfigFile {
   user: ConfigUser
 }
 
+const localhostConfig: ConfigFile = {version:'beta1',bridge:{source:'localhost',destination:'localhost2'},networks:{localhost:{providerUrl:'http://localhost:8545'},localhost2:{providerUrl:'http://localhost:9545'}},user:{credentials:{iv:'n6QP9:_vn=})',privateKey:'QDiDSbP9O0C58wm9rj41D1jqGgYT4+XBMuO6e8R1gc53IzbxKrHAjVeALxkSCkcFIx7MerWm4+ZVbJ0n51FbIPYz6OpnKRXXFGtDLq64mgU=',address:'0xdf5295149F367b1FBFD595bdA578BAd22e59f504'}}}
+
 async function tryToUnlockWallet(
   configFile: ConfigFile,
   unlockWallet: boolean,
-  unsafePassword: string | undefined,
+  unsafePassword?: string,
 ): Promise<ethers.Wallet> {
   let userWallet: ethers.Wallet | undefined
   if (unlockWallet) {
     // eslint-disable-next-line no-negated-condition
-    if (typeof unsafePassword !== 'undefined') {
+    if (unsafePassword !== undefined) {
       try {
         userWallet = new ethers.Wallet(
           new AesEncryption(unsafePassword, configFile.user.credentials.iv).decrypt(
@@ -109,6 +105,12 @@ export function getSupportedNetworks(environment?: Environment): string[] {
   const supportedNetworks: string[] = Object.keys(networks).filter((networkKey: string) => {
     const network: Network = networks[networkKey]
     switch (environment) {
+      case Environment.localhost:
+        if (network.type === NetworkType.local && network.active) {
+          return true
+        }
+
+        break
       case Environment.experimental:
         if (network.type === NetworkType.testnet && network.active) {
           return true
@@ -140,11 +142,19 @@ export function getSupportedNetworks(environment?: Environment): string[] {
   return supportedNetworks
 }
 
+export const supportedNetworks = getSupportedNetworks()
+
 export async function ensureConfigFileIsValid(
   configDir: string,
   unsafePassword: string | undefined,
   unlockWallet = false,
 ): Promise<{environment: Environment; userWallet: ethers.Wallet; configFile: ConfigFile; supportedNetworks: string[]}> {
+  const environment: Environment = getEnvironment()
+  if (environment === Environment.localhost) {
+    console.log(`Environment=${environment}`)
+    return {environment, userWallet: await tryToUnlockWallet(localhostConfig, unlockWallet), configFile: localhostConfig, supportedNetworks}
+  }
+
   let configPath = configDir
   try {
     await fs.pathExists(configDir)
@@ -162,14 +172,12 @@ export async function ensureConfigFileIsValid(
     throw new Error('Please run `holograph config` before running any other holograph command')
   }
 
-  const environment: Environment = getEnvironment()
-  const supportedNetworks: string[] = getSupportedNetworks(environment)
-
   try {
     const configFile = await fs.readJson(configPath)
     await validateBeta1Schema(configFile)
     const userWallet: ethers.Wallet = await tryToUnlockWallet(configFile as ConfigFile, unlockWallet, unsafePassword)
 
+    console.log(`Environment=${environment}`)
     return {environment, userWallet, configFile, supportedNetworks}
   } catch (error: any) {
     const error_ = error.message

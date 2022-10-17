@@ -1,5 +1,6 @@
 import Web3 from 'web3'
-import networks from './networks'
+import {networks} from '@holographxyz/networks'
+import {supportedNetworks} from './config'
 
 // Used for web3 utility functions
 const web3 = new Web3('ws://localhost:8545')
@@ -34,6 +35,8 @@ const webSocketConfig = {
 }
 
 const NETWORK_COLORS: Record<string, string> = {
+  localhost: '##83EEFF',
+  localhost2: '#ff0000',
   fuji: '#ff0000',
   avax: '#ff0000',
   mumbai: '##B026FF ',
@@ -50,14 +53,14 @@ const rgbToHex = (rgb: number): string => {
   return hex.length === 1 ? `0${hex}` : hex
 }
 
-function networkRestruct(networkMap: any) {
-  const keys = Object.keys(networkMap)
+function networkRestruct() {
+  const keys = supportedNetworks
 
   // eslint-disable-next-line unicorn/no-array-reduce
   const out = keys.reduce(
     (prev: any, next: any) => {
-      const chainId = networkMap[next].chain
-      const holographId = networkMap[next].holographId
+      const chainId = networks[next].chain
+      const holographId = networks[next].holographId
 
       prev.byChainId[chainId] = holographId
       prev.byHolographId[holographId] = chainId
@@ -71,17 +74,17 @@ function networkRestruct(networkMap: any) {
 }
 
 function getNetworkName(chainId: any) {
-  const dataMap = networkRestruct(networks)
+  const dataMap = networkRestruct()
   return dataMap.byNetworkName[chainId]
 }
 
 function getChainId(holographId: any) {
-  const dataMap = networkRestruct(networks)
+  const dataMap = networkRestruct()
   return dataMap.byHolographId[holographId]
 }
 
 function getHolographId(chainId: any) {
-  const dataMap = networkRestruct(networks)
+  const dataMap = networkRestruct()
   return dataMap.byChainId[chainId]
 }
 

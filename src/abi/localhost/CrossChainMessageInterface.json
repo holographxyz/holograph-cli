@@ -1,0 +1,108 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "toChain",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gasLimit",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gasPrice",
+        "type": "uint256"
+      }
+    ],
+    "name": "getHlgFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "hlgFee",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "toChain",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gasLimit",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gasPrice",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "crossChainPayload",
+        "type": "bytes"
+      }
+    ],
+    "name": "getMessageFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "hlgFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "msgFee",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "gasLimit",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gasPrice",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint32",
+        "name": "toChain",
+        "type": "uint32"
+      },
+      {
+        "internalType": "address",
+        "name": "msgSender",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "msgValue",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "crossChainPayload",
+        "type": "bytes"
+      }
+    ],
+    "name": "send",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  }
+]

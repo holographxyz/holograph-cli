@@ -3,8 +3,8 @@ import * as inquirer from 'inquirer'
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
-import {ensureConfigFileIsValid} from '../../utils/config'
-import networks from '../../utils/networks'
+import {ensureConfigFileIsValid, supportedNetworks} from '../../utils/config'
+import {networks} from '@holographxyz/networks'
 import {NetworkMonitor} from '../../utils/network-monitor'
 
 export default class Recover extends Command {
@@ -148,7 +148,7 @@ export default class Recover extends Command {
           )
         ).toNumber()
         let destinationNetwork: string | undefined
-        const networkNames: string[] = Object.keys(networks)
+        const networkNames: string[] = supportedNetworks
         for (let i = 0, l = networkNames.length; i < l; i++) {
           const n = networks[networkNames[i]]
           if ((n.chain as number) === chainId) {

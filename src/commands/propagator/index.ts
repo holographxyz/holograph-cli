@@ -4,12 +4,11 @@ import * as inquirer from 'inquirer'
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
-import {ensureConfigFileIsValid} from '../../utils/config'
+import {ensureConfigFileIsValid, supportedNetworks} from '../../utils/config'
 
 import {capitalize, getNetworkName} from '../../utils/utils'
 import {DeploymentConfig, decodeDeploymentConfigInput} from '../../utils/contract-deployment'
 
-import {supportedNetworks} from '../../utils/networks'
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
 

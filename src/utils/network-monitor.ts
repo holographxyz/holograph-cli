@@ -134,6 +134,9 @@ export type ExecuteTransactionParams = {
   contract: ethers.Contract
   methodName: string
   args: any[]
+  gasPrice?: BigNumber
+  gasLimit?: BigNumber | null
+  value?: BigNumber
   attempts?: number
   canFail?: boolean
   interval?: number
@@ -156,6 +159,7 @@ export type PopulateTransactionParams = {
   args: any[]
   gasPrice: BigNumber
   gasLimit: BigNumber
+  value: BigNumber
   nonce: number
   tags?: (string | number)[]
   attempts?: number
@@ -169,6 +173,8 @@ export type GasLimitParams = {
   contract: ethers.Contract
   methodName: string
   args: any[]
+  gasPrice?: BigNumber
+  value?: BigNumber
   attempts?: number
   canFail?: boolean
   interval?: number
@@ -254,6 +260,7 @@ export class NetworkMonitor {
   interfacesAddress!: string
   operatorAddress!: string
   registryAddress!: string
+  messagingModuleAddress!: string
   wallets: {[key: string]: ethers.Wallet} = {}
   walletNonces: {[key: string]: number} = {}
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
@@ -272,6 +279,7 @@ export class NetworkMonitor {
   interfacesContract!: ethers.Contract
   operatorContract!: ethers.Contract
   registryContract!: ethers.Contract
+  messagingModuleContract!: ethers.Contract
   HOLOGRAPH_ADDRESSES = HOLOGRAPH_ADDRESSES
 
   LAYERZERO_RECEIVERS: {[key: string]: string} = {
@@ -285,20 +293,26 @@ export class NetworkMonitor {
   warp = 0
 
   targetEvents: Record<string, string> = {
+    AvailableJob: '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11',
+    '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11': 'AvailableJob',
+
+    AvailableOperatorJob: '0x4422a85db963f113e500bc4ada8f9e9f1a7bcd57cbec6907fbb2bf6aaf5878ff',
+    '0x4422a85db963f113e500bc4ada8f9e9f1a7bcd57cbec6907fbb2bf6aaf5878ff': 'AvailableOperatorJob',
+
     BridgeableContractDeployed: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
     '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b': 'BridgeableContractDeployed',
 
-    Transfer: '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
-    '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef': 'Transfer',
+    CrossChainMessageSent: '0x0f5759b4182507dcfc771071166f98d7ca331262e5134eaa74b676adce2138b7',
+    '0x0f5759b4182507dcfc771071166f98d7ca331262e5134eaa74b676adce2138b7': 'CrossChainMessageSent',
 
-    AvailableJob: '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11',
-    '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11': 'AvailableJob',
+    LzPacket: '0xe9bded5f24a4168e4f3bf44e00298c993b22376aad8c58c7dda9718a54cbea82',
+    '0xe9bded5f24a4168e4f3bf44e00298c993b22376aad8c58c7dda9718a54cbea82': 'LzPacket',
 
     Packet: '0xe8d23d927749ec8e512eb885679c2977d57068839d8cca1a85685dbbea0648f6',
     '0xe8d23d927749ec8e512eb885679c2977d57068839d8cca1a85685dbbea0648f6': 'Packet',
 
-    LzPacket: '0xe9bded5f24a4168e4f3bf44e00298c993b22376aad8c58c7dda9718a54cbea82',
-    '0xe9bded5f24a4168e4f3bf44e00298c993b22376aad8c58c7dda9718a54cbea82': 'LzPacket',
+    Transfer: '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
+    '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef': 'Transfer',
   }
 
   getProviderStatus() {
@@ -385,6 +399,7 @@ export class NetworkMonitor {
     this.log(`Interfaces address: ${this.interfacesAddress}`)
     this.log(`Operator address: ${this.operatorAddress}`)
     this.log(`Registry address: ${this.registryAddress}`)
+    this.log(`Messaging Module address: ${this.messagingModuleAddress}`)
 
     if (blockJobs !== undefined) {
       this.blockJobs = blockJobs
@@ -490,6 +505,10 @@ export class NetworkMonitor {
           this.providers[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
 
           break
+        case 'http:':
+          this.providers[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
+
+          break
         case 'wss:':
           this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint, false)
           break
@@ -560,10 +579,19 @@ export class NetworkMonitor {
       this.providers[this.networks[0]],
     )
 
+    this.messagingModuleAddress = (await this.operatorContract.getMessagingModule()).toLowerCase()
+
     const holographRegistryABI = await fs.readJson(`./src/abi/${this.environment}/HolographRegistry.json`)
     this.registryContract = new ethers.Contract(
       this.registryAddress,
       holographRegistryABI,
+      this.providers[this.networks[0]],
+    )
+
+    const holographMessagingModuleABI = [...(await fs.readJson(`./src/abi/${this.environment}/CrossChainMessageInterface.json`)), ...(await fs.readJson(`./src/abi/${this.environment}/LayerZeroOverrides.json`))]
+    this.messagingModuleContract = new ethers.Contract(
+      this.messagingModuleAddress,
+      holographMessagingModuleABI,
       this.providers[this.networks[0]],
     )
   }
@@ -629,6 +657,10 @@ export class NetworkMonitor {
     const rpcEndpoint = (this.configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork).providerUrl
     const protocol = new URL(rpcEndpoint).protocol
     switch (protocol) {
+      case 'http:':
+        this.providers[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
+
+        break
       case 'https:':
         this.providers[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
 
@@ -648,6 +680,10 @@ export class NetworkMonitor {
     const provider = this.providers[network] as ethers.providers.WebSocketProvider
     switch (protocol) {
       case 'https:':
+        this.structuredLog(network, 'Restarting blockJob Handler since this is an HTTPS RPC connection')
+        this.blockJobHandler(network)
+        break
+      case 'http:':
         this.structuredLog(network, 'Restarting blockJob Handler since this is an HTTPS RPC connection')
         this.blockJobHandler(network)
         break
@@ -1358,6 +1394,8 @@ export class NetworkMonitor {
     args,
     network,
     tags = [] as (string | number)[],
+    gasPrice,
+    value,
     attempts = 10,
     canFail = false,
     interval = 1000,
@@ -1368,7 +1406,7 @@ export class NetworkMonitor {
       let calculateGasInterval: NodeJS.Timeout | null = null
       const calculateGas = async (): Promise<void> => {
         try {
-          const gasLimit: BigNumber | null = await contract.estimateGas[methodName](...args)
+          const gasLimit: BigNumber | null = await contract.estimateGas[methodName](...args, {gasPrice, value})
           if (gasLimit === null) {
             counter++
             if (canFail && counter > attempts) {
@@ -1546,6 +1584,7 @@ export class NetworkMonitor {
     args,
     gasPrice,
     gasLimit,
+    value,
     nonce,
     tags = [] as (string | number)[],
     attempts = 10,
@@ -1571,7 +1610,7 @@ export class NetworkMonitor {
       const populateTx = async (): Promise<void> => {
         let rawTx: PopulatedTransaction | null
         try {
-          rawTx = await contract.populateTransaction[methodName](...args, {gasPrice, gasLimit, nonce})
+          rawTx = await contract.populateTransaction[methodName](...args, {gasPrice, gasLimit, nonce, value})
           if (rawTx === null) {
             counter++
             if (canFail && counter > attempts) {
@@ -1605,6 +1644,9 @@ export class NetworkMonitor {
     contract,
     methodName,
     args,
+    gasPrice,
+    gasLimit,
+    value = BigNumber.from('0'),
     attempts = 10,
     canFail = false,
     interval = 500,
@@ -1616,20 +1658,28 @@ export class NetworkMonitor {
     // eslint-disable-next-line no-async-promise-executor
     return new Promise<TransactionReceipt | null>(async (topResolve, _topReject) => {
       contract = contract.connect(this.wallets[network])
-      const gasLimit: BigNumber | null = await this.getGasLimit({
-        network,
-        tags,
-        contract,
-        methodName,
-        args,
-        attempts,
-        canFail,
-        interval,
-      })
+      if (gasPrice === undefined) {
+        gasPrice = await contract.provider.getGasPrice()
+      }
+
+      if (gasLimit === undefined) {
+        gasLimit = await this.getGasLimit({
+          network,
+          tags,
+          contract,
+          methodName,
+          args,
+          gasPrice,
+          value,
+          attempts,
+          canFail,
+          interval,
+        })
+      }
+
       if (gasLimit === null) {
         topResolve(null)
       } else {
-        const gasPrice = await contract.provider.getGasPrice()
         const walletAddress: string = await this.wallets[network].getAddress()
         const balance: BigNumber | null = await this.getBalance({network, walletAddress, attempts, canFail, interval})
         this.structuredLog(network, `Wallet balance is ${ethers.utils.formatUnits(balance!, 'ether')}`, tags)
@@ -1664,6 +1714,7 @@ export class NetworkMonitor {
             args,
             gasPrice,
             gasLimit,
+            value,
             nonce: this.walletNonces[network],
             tags,
             attempts,

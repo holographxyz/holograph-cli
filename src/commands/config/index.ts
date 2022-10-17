@@ -11,9 +11,9 @@ import {
   randomASCII,
   CONFIG_FILE_NAME,
   validateBeta1Schema,
+  supportedNetworks,
 } from '../../utils/config'
 import AesEncryption from '../../utils/aes-encryption'
-import {supportedNetworks} from '../../utils/networks'
 
 export default class Config extends Command {
   static description =

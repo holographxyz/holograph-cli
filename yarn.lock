@@ -638,10 +638,10 @@
   dependencies:
     "@hapi/hoek" "^9.0.0"
 
-"@holographxyz/networks@^0.0.4":
-  version "0.0.4"
-  resolved "https://registry.yarnpkg.com/@holographxyz/networks/-/networks-0.0.4.tgz#14c4d544e0cf2959507c47405ef098b3ca217160"
-  integrity sha512-qc1UEWaNnWsatoEmkbB2wNqsntaN3o+9nZDsRoBIUeh+ZRPxe+HpA84Yh3gLltdSZBV5R3zf8qVU8jeyPC4Kag==
+"@holographxyz/networks@^0.0.5":
+  version "0.0.5"
+  resolved "https://registry.yarnpkg.com/@holographxyz/networks/-/networks-0.0.5.tgz#db9837a3b7e90fc18abba39b433d08e0e9b006c6"
+  integrity sha512-z3FLQtOhjxNAzdBXY2abzIArEuVF1mrn8K3PfltTMJUIX2v/xRtqwdlMFKA9kfn7uvagIYWRW/UlNQzsGmE0mw==
   dependencies:
     dotenv "^10.0.0"
     path "^0.12.7"

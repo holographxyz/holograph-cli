@@ -9,7 +9,7 @@ import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {addressValidator, tokenValidator} from '../../utils/validation'
 import {Environment, getEnvironment} from '../../utils/environment'
 import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
-import {blockExplorers} from '../../utils/networks'
+import {networks} from '@holographxyz/networks'
 
 export default class Nft extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
@@ -165,7 +165,7 @@ export default class Nft extends Command {
           if (d.exists) {
             // eslint-disable-next-line no-await-in-loop
             d.owner = await erc721.ownerOf(token.toHexString())
-            d.link = blockExplorers[network] + 'token/' + this.contractAddress + '?a=' + token.toString()
+            d.link = (networks[network].explorer || '') + '/token/' + this.contractAddress + '?a=' + token.toString()
           }
         }
       }

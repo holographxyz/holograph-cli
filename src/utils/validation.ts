@@ -4,7 +4,8 @@ import {BytecodeType} from './bytecodes'
 import {ConfigNetworks} from './config'
 import {DeploymentType, deploymentProcesses} from './contract-deployment'
 import {TokenUriType} from './asset-deployment'
-import {getSupportedNetworks} from './config'
+import {supportedNetworks} from './config'
+import {remove0x} from './utils'
 
 const addressValidator = /^0x[\da-f]{40}$/i
 
@@ -38,7 +39,6 @@ const validateContractAddress = async (input: string): Promise<string> => {
 
 const validateNetwork = async (input: string): Promise<string> => {
   const output: string = input.trim()
-  const supportedNetworks: string[] = getSupportedNetworks()
   if (supportedNetworks.includes(output)) {
     return output
   }
@@ -68,7 +68,7 @@ const validateTokenIdInput = async (input: string): Promise<string> => {
   const output: string = input.trim().toLowerCase()
   if (tokenValidator.test(output)) {
     if (numberValidator.test(output)) {
-      return BigNumber.from(output).toHexString()
+      return '0x' + remove0x(BigNumber.from(output).toHexString()).padStart(64, '0')
     }
 
     return output

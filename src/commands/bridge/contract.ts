@@ -183,7 +183,7 @@ export default class BridgeContract extends Command {
     CliUx.ux.action.start('Making beam request...')
     const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
       network: sourceNetwork,
-      contract: this.networkMonitor.factoryContract.connect(this.networkMonitor.providers[destinationNetwork]),
+      contract: this.networkMonitor.bridgeContract.connect(this.networkMonitor.providers[destinationNetwork]),
       methodName: 'bridgeOutRequest',
       args: [
         networks[destinationNetwork].holographId,
@@ -191,9 +191,10 @@ export default class BridgeContract extends Command {
         estimatedGas,
         GASPRICE,
         data as string,
-        {value: total},
       ],
       waitForReceipt: true,
+      value: total.mul(BigNumber.from('2')),
+      gasPrice: GASPRICE.mul(BigNumber.from('2')),
     })
     CliUx.ux.action.stop()
 
