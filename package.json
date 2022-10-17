@@ -1,15 +1,27 @@
 {
-  "name": "holo-cli",
+  "name": "@holographxyz/cli",
   "version": "0.0.1",
-  "description": "holograph operator cli",
-  "author": "sogoiii @sogoiii",
+  "license": "MIT",
+  "description": "Holograph operator CLI",
+  "author": "@holographxyz",
+  "homepage": "https://holograph.xyz",
+  "keywords": [
+    "holograph",
+    "holograph protocol",
+    "holograph cli"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/holographxyz/holograph-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/holographxyz/holograph-cli/issues"
+  },
   "bin": {
     "holo": "./bin/run"
   },
-  "homepage": "https://github.com/cxip-labs/holo-cli",
-  "license": "MIT",
   "main": "dist/index.js",
-  "repository": "cxip-labs/holo-cli",
+  "types": "dist/index.d.ts",
   "files": [
     "/bin",
     "/dist",
@@ -104,10 +116,5 @@
   },
   "engines": {
     "node": ">=12.0.0"
-  },
-  "bugs": "https://github.com/cxip-labs/holo-cli/issues",
-  "keywords": [
-    "oclif"
-  ],
-  "types": "dist/index.d.ts"
+  }
 }
