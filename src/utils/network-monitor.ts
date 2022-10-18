@@ -483,16 +483,15 @@ export class NetworkMonitor {
       const websocketProvider = this.providers[network] as ethers.providers.WebSocketProvider
       if (websocketProvider === undefined) {
         this.structuredLog(network, `Websocket is undefined. Restarting`)
-        restart()
       } else if (websocketProvider._websocket._req._closed === true) {
         this.structuredLog(
           network,
           `Websocket is closed. Restarting connection for ${network} to ${websocketProvider.connection.url}`,
         )
-        restart()
       } else {
         this.structuredLog(network, `Unknown error with websocket. Restarting`)
       }
+      restart()
     }
   }
 
