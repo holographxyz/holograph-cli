@@ -491,6 +491,7 @@ export class NetworkMonitor {
       } else {
         this.structuredLog(network, `Unknown error with websocket. Restarting`)
       }
+
       restart()
     }
   }
