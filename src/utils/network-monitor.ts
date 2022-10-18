@@ -464,7 +464,6 @@ export class NetworkMonitor {
         restart()
       } else {
         websocketProvider._websocket.terminate().then(restart)
-        //websocketProvider.destroy().then(restart)
       }
     }
   }
