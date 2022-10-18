@@ -6,7 +6,7 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid, supportedNetworks} from '../../utils/config'
 
-import {capitalize, getNetworkName} from '../../utils/utils'
+import {capitalize, getNetworkByChainId} from '../../utils/utils'
 import {DeploymentConfig, decodeDeploymentConfigInput} from '../../utils/contract-deployment'
 
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
@@ -143,7 +143,7 @@ export default class Propagator extends Command {
     if (recoveryData.length > 0) {
       this.log(`Manually running ${recoveryData.length} recovery jobs`)
       for (const data of recoveryData) {
-        let network: string = getNetworkName(data.chain_id)
+        let network: string = getNetworkByChainId(data.chain_id)
         const checkNetworks: string[] = supportedNetworks
         if (checkNetworks.includes(network)) {
           checkNetworks.splice(checkNetworks.indexOf(network), 1)

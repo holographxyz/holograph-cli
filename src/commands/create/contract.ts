@@ -5,7 +5,7 @@ import {BytesLike} from 'ethers'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {BytecodeType, bytecodes} from '../../utils/bytecodes'
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {web3, zeroAddress, generateInitCode, remove0x} from '../../utils/utils'
+import {web3, zeroAddress, generateInitCode, remove0x, sha3} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {
   deploymentFlags,
@@ -296,13 +296,13 @@ export default class Contract extends Command {
         deploymentConfig.config.byteCode = byteCode
         deploymentConfig.config.initCode = initCode
 
-        configHash = web3.utils.keccak256(
+        configHash = sha3(
           '0x' +
             (deploymentConfig.config.contractType as string).slice(2) +
             (deploymentConfig.config.chainType as string).slice(2) +
             (deploymentConfig.config.salt as string).slice(2) +
-            web3.utils.keccak256(deploymentConfig.config.byteCode as string).slice(2) +
-            web3.utils.keccak256(deploymentConfig.config.initCode as string).slice(2) +
+            sha3(deploymentConfig.config.byteCode as string).slice(2) +
+            sha3(deploymentConfig.config.initCode as string).slice(2) +
             (deploymentConfig.signer as string).slice(2),
         )
         configHashBytes = web3.utils.hexToBytes(configHash)
@@ -338,13 +338,13 @@ export default class Contract extends Command {
       CliUx.ux.action.stop()
     }
 
-    configHash = web3.utils.keccak256(
+    configHash = sha3(
       '0x' +
         (deploymentConfig.config.contractType as string).slice(2) +
         (deploymentConfig.config.chainType as string).slice(2) +
         (deploymentConfig.config.salt as string).slice(2) +
-        web3.utils.keccak256(deploymentConfig.config.byteCode as string).slice(2) +
-        web3.utils.keccak256(deploymentConfig.config.initCode as string).slice(2) +
+        sha3(deploymentConfig.config.byteCode as string).slice(2) +
+        sha3(deploymentConfig.config.initCode as string).slice(2) +
         (deploymentConfig.signer as string).slice(2),
     )
 

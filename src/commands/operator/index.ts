@@ -1,4 +1,3 @@
-import * as fs from 'fs-extra'
 import * as inquirer from 'inquirer'
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers, BigNumber} from 'ethers'
@@ -6,7 +5,7 @@ import {Environment} from '../../utils/environment'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
-import {web3, getChainId, getNetworkName} from '../../utils/utils'
+import {web3, getNetworkByHolographId} from '../../utils/utils'
 
 /**
  * Operator
@@ -39,11 +38,6 @@ export default class Operator extends Command {
   networkMonitor!: NetworkMonitor
   environment!: Environment
 
-  localhostWallets: {[key: string]: ethers.Wallet} = {}
-  static localhostPrivateKey = '0x13f46463f9079380515b26f04e42069760b34989cc23c5f082e7d3ed3757bb4a'
-  lzEndpointAddress: {[key: string]: string} = {}
-  lzEndpointContract: {[key: string]: ethers.Contract} = {}
-
   /**
    * Command Entry Point
    */
@@ -75,7 +69,7 @@ export default class Operator extends Command {
     this.log(`Operator mode: ${this.operatorMode}`)
 
     this.log('Loading user configurations...')
-    const {environment, userWallet, configFile, supportedNetworks} = await ensureConfigFileIsValid(
+    const {environment, userWallet, configFile} = await ensureConfigFileIsValid(
       this.config.configDir,
       unsafePassword,
       true,
@@ -125,29 +119,6 @@ export default class Operator extends Command {
     await this.networkMonitor.run(true, undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
-    if (this.environment === Environment.localhost) {
-      for (const network of supportedNetworks) {
-        this.localhostWallets[network] = new ethers.Wallet(Operator.localhostPrivateKey).connect(
-          this.networkMonitor.providers[network],
-        )
-        // since sample localhost deployer key is used, nonce is out of sync
-        // eslint-disable-next-line no-await-in-loop
-        this.networkMonitor.walletNonces[network] = await this.networkMonitor.wallets[network].getTransactionCount()
-        this.lzEndpointAddress[network] = (
-          await this.networkMonitor.messagingModuleContract // eslint-disable-line no-await-in-loop
-            .connect(this.networkMonitor.providers[network])
-            .getLZEndpoint()
-        ).toLowerCase()
-        // eslint-disable-next-line no-await-in-loop
-        const lzEndpointABI = await fs.readJson(`./src/abi/${this.environment}/MockLZEndpoint.json`)
-        this.lzEndpointContract[network] = new ethers.Contract(
-          this.lzEndpointAddress[network],
-          lzEndpointABI,
-          this.localhostWallets[network],
-        )
-      }
-    }
-
     // Start health check server on port 6000
     // Can be used to monitor that the operator is online and running
     if (enableHealthCheckServer) {
@@ -167,8 +138,6 @@ export default class Operator extends Command {
       },
     ]
     if (this.environment === Environment.localhost) {
-      this.networkMonitor.LAYERZERO_RECEIVERS.localhost = '0x830e22aa238b6aeD78087FaCea8Bb95c6b7A7E2a'.toLowerCase()
-      this.networkMonitor.LAYERZERO_RECEIVERS.localhost2 = '0x830e22aa238b6aeD78087FaCea8Bb95c6b7A7E2a'.toLowerCase()
       this.networkMonitor.filters.push({
         type: FilterType.to,
         match: this.networkMonitor.bridgeAddress,
@@ -241,11 +210,15 @@ export default class Operator extends Command {
           data: transaction.data,
           value: ethers.BigNumber.from('0'),
         })
-        const toChain: number = BigNumber.from(bridgeTransaction.args[0]).toNumber()
-        const args: any[] = this.networkMonitor.decodeLzEvent(receipt, this.lzEndpointAddress[network])!
+        const args: any[] = this.networkMonitor.decodeLzEvent(receipt, this.networkMonitor.lzEndpointAddress[network])!
         const jobHash: string = web3.utils.keccak256(args[2] as string)
         this.networkMonitor.structuredLog(network, `Bridge request found for job hash ${jobHash}`, tags)
-        await this.executeLzPayload(getNetworkName(getChainId(toChain)), jobHash, [args[0], args[1], 0, args[2]], tags)
+        await this.executeLzPayload(
+          getNetworkByHolographId(bridgeTransaction.args[0]),
+          jobHash,
+          [args[0], args[1], 0, args[2]],
+          tags,
+        )
       }
     }
   }
@@ -369,12 +342,12 @@ export default class Operator extends Command {
     if (operate) {
       const data: string = (
         await this.networkMonitor.messagingModuleContract
-          .connect(this.localhostWallets[network])
+          .connect(this.networkMonitor.localhostWallets[network])
           .populateTransaction.lzReceive(...args)
       ).data!
       let estimatedGas: BigNumber | undefined
       try {
-        estimatedGas = await this.lzEndpointContract[network].estimateGas.adminCall(
+        estimatedGas = await this.networkMonitor.lzEndpointContract[network].estimateGas.adminCall(
           this.networkMonitor.messagingModuleAddress,
           data,
         )
@@ -384,7 +357,10 @@ export default class Operator extends Command {
 
       if (estimatedGas !== undefined) {
         this.networkMonitor.structuredLog(network, 'Sending cross-chain message for ' + jobHash, tags)
-        const tx = await this.lzEndpointContract[network].adminCall(this.networkMonitor.messagingModuleAddress, data)
+        const tx = await this.networkMonitor.lzEndpointContract[network].adminCall(
+          this.networkMonitor.messagingModuleAddress,
+          data,
+        )
         const receipt = await tx.wait()
         if (receipt.status === 1) {
           this.networkMonitor.structuredLog(network, 'Sent cross-chain message for ' + jobHash, tags)

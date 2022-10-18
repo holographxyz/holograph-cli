@@ -13,7 +13,7 @@ import {Command, Flags} from '@oclif/core'
 
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 
-import {capitalize, NETWORK_COLORS} from './utils'
+import {capitalize, NETWORK_COLORS, zeroAddress} from './utils'
 import color from '@oclif/color'
 
 import {Environment, getEnvironment} from './environment'
@@ -52,12 +52,6 @@ export type KeepAliveParams = {
 export type BlockJob = {
   network: string
   block: number
-}
-
-export interface Scope {
-  network: string
-  startBlock: number
-  endBlock: number
 }
 
 export enum FilterType {
@@ -274,6 +268,7 @@ export class NetworkMonitor {
   lastBlockJobDone: {[key: string]: number} = {}
   blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
   holograph!: ethers.Contract
+  holographer!: ethers.Contract
   bridgeContract!: ethers.Contract
   factoryContract!: ethers.Contract
   interfacesContract!: ethers.Contract
@@ -282,7 +277,15 @@ export class NetworkMonitor {
   messagingModuleContract!: ethers.Contract
   HOLOGRAPH_ADDRESSES = HOLOGRAPH_ADDRESSES
 
+  // this is specifically for handling localhost-based CLI usage with holograph-protocol package
+  localhostWallets: {[key: string]: ethers.Wallet} = {}
+  static localhostPrivateKey = '0x13f46463f9079380515b26f04e42069760b34989cc23c5f082e7d3ed3757bb4a'
+  lzEndpointAddress: {[key: string]: string} = {}
+  lzEndpointContract: {[key: string]: ethers.Contract} = {}
+
   LAYERZERO_RECEIVERS: {[key: string]: string} = {
+    localhost: '0x830e22aa238b6aeD78087FaCea8Bb95c6b7A7E2a'.toLowerCase(),
+    localhost2: '0x830e22aa238b6aeD78087FaCea8Bb95c6b7A7E2a'.toLowerCase(),
     // eslint-disable-next-line camelcase
     eth_rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     // eslint-disable-next-line camelcase
@@ -554,6 +557,10 @@ export class NetworkMonitor {
       holographABI,
       this.providers[this.networks[0]],
     )
+
+    const holographerABI = await fs.readJson(`./src/abi/${this.environment}/Holographer.json`)
+    this.holographer = new ethers.Contract(zeroAddress, holographerABI, this.providers[this.networks[0]])
+
     this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
     this.factoryAddress = (await this.holograph.getFactory()).toLowerCase()
     this.interfacesAddress = (await this.holograph.getInterfaces()).toLowerCase()
@@ -599,6 +606,28 @@ export class NetworkMonitor {
       holographMessagingModuleABI,
       this.providers[this.networks[0]],
     )
+
+    for (let i = 0, l = this.networks.length; i < l; i++) {
+      const network = this.networks[i]
+      if (this.environment === Environment.localhost) {
+        this.localhostWallets[network] = new ethers.Wallet(NetworkMonitor.localhostPrivateKey).connect(
+          this.providers[network],
+        )
+        // since sample localhost deployer key is used, nonce is out of sync
+        this.lzEndpointAddress[network] = (
+          await this.messagingModuleContract // eslint-disable-line no-await-in-loop
+            .connect(this.providers[network])
+            .getLZEndpoint()
+        ).toLowerCase()
+        // eslint-disable-next-line no-await-in-loop
+        const lzEndpointABI = await fs.readJson(`./src/abi/${this.environment}/MockLZEndpoint.json`)
+        this.lzEndpointContract[network] = new ethers.Contract(
+          this.lzEndpointAddress[network],
+          lzEndpointABI,
+          this.localhostWallets[network],
+        )
+      }
+    }
   }
 
   exitCallback?: () => void
@@ -945,7 +974,7 @@ export class NetworkMonitor {
       target = target.toLowerCase().trim()
     }
 
-    const toFind = this.operatorAddress.slice(2, 42)
+    const toFind = this.messagingModuleAddress.slice(2, 42)
     if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
@@ -959,7 +988,10 @@ export class NetworkMonitor {
             log.topics,
           )[0] as string
           if (packetPayload.indexOf(toFind) > 0) {
-            return ('0x' + packetPayload.split(toFind)[2]).toLowerCase()
+            let index: number = packetPayload.indexOf(toFind)
+            // address + bytes2 + address
+            index += 40 + 4 + 40
+            return ('0x' + packetPayload.slice(Math.max(0, index))).toLowerCase()
           }
         }
       }

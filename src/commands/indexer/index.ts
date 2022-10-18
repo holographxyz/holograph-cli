@@ -1,16 +1,19 @@
 import axios from 'axios'
 
 import {CliUx, Command, Flags} from '@oclif/core'
-import {ethers} from 'ethers'
-import {Block} from '@ethersproject/abstract-provider'
+import {BigNumber} from 'ethers'
+import {TransactionDescription} from '@ethersproject/abi'
+import {Block, TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
+import {hexZeroPad} from '@ethersproject/bytes'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {capitalize, sleep, getChainId} from '../../utils/utils'
+import {capitalize, sleep, getNetworkByHolographId, sha3} from '../../utils/utils'
 import {DeploymentConfig, decodeDeploymentConfig, decodeDeploymentConfigInput} from '../../utils/contract-deployment'
 
 import {networksFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {startHealthcheckServer} from '../../utils/health-check-server'
+import {networks} from '@holographxyz/networks'
 
 import dotenv from 'dotenv'
 import color from '@oclif/color'
@@ -41,7 +44,7 @@ type PatchOptions = {
 
 interface BridgeTransactionArgs {
   toChain: number
-  tokenId: ethers.BigNumber
+  tokenId: BigNumber
   collection: string
   from: string
   to: string
@@ -245,7 +248,7 @@ export default class Indexer extends Command {
     }
   }
 
-  async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
+  async processTransactions(job: BlockJob, transactions: TransactionResponse[]): Promise<void> {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
@@ -293,8 +296,8 @@ export default class Indexer extends Command {
     }
   }
 
-  async handleContractDeployedEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+  async handleContractDeployedEvent(transaction: TransactionResponse, network: string): Promise<void> {
+    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
       attempts: 10,
@@ -320,8 +323,8 @@ export default class Indexer extends Command {
     }
   }
 
-  async handleMintEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+  async handleMintEvent(transaction: TransactionResponse, network: string): Promise<void> {
+    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
       attempts: 10,
@@ -338,8 +341,8 @@ export default class Indexer extends Command {
     await this.updateMintedNFT(transaction, network, transferInfo as any[])
   }
 
-  async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+  async handleBridgeOutEvent(transaction: TransactionResponse, network: string): Promise<void> {
+    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
       attempts: 10,
@@ -353,11 +356,11 @@ export default class Indexer extends Command {
       this.networkMonitor.structuredLog(network, `Checking if a bridge request was made at tx: ${transaction.hash}`)
       const operatorJobPayload =
         this.networkMonitor.decodePacketEvent(receipt) ?? this.networkMonitor.decodeLzPacketEvent(receipt)
-      const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
+      const operatorJobHash = operatorJobPayload === undefined ? undefined : sha3(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract cross-chain packet for ${transaction.hash}`)
       } else {
-        const bridgeTransaction: ethers.utils.TransactionDescription =
+        const bridgeTransaction: TransactionDescription =
           this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
 
         switch (bridgeTransaction.name) {
@@ -391,13 +394,13 @@ export default class Indexer extends Command {
     }
   }
 
-  async handleBridgeInEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const parsedTransaction: ethers.utils.TransactionDescription =
+  async handleBridgeInEvent(transaction: TransactionResponse, network: string): Promise<void> {
+    const parsedTransaction: TransactionDescription =
       this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
-    let bridgeTransaction: ethers.utils.TransactionDescription
+    let bridgeTransaction: TransactionDescription
     let operatorJobPayload: string
     let operatorJobHash: string
-    let receipt: ethers.providers.TransactionReceipt | null
+    let receipt: TransactionReceipt | null
     let deploymentInfo: any[] | undefined
     let transferInfo: any[] | undefined
     switch (parsedTransaction.name) {
@@ -418,11 +421,11 @@ export default class Indexer extends Command {
             `Bridge-In event captured: ${parsedTransaction.name} -->> ${parsedTransaction.args}`,
           )
           operatorJobPayload = parsedTransaction.args._payload
-          operatorJobHash = ethers.utils.keccak256(operatorJobPayload)
+          operatorJobHash = sha3(operatorJobPayload)
           this.networkMonitor.structuredLog(network, `Bridge-In transaction is for jobHash ${operatorJobHash}`)
           bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
             data: operatorJobPayload,
-            value: ethers.BigNumber.from('0'),
+            value: BigNumber.from('0'),
           })
           switch (bridgeTransaction.name) {
             case 'deployIn':
@@ -483,12 +486,9 @@ export default class Indexer extends Command {
     }
   }
 
-  async handleAvailableOperatorJobEvent(
-    transaction: ethers.providers.TransactionResponse,
-    network: string,
-  ): Promise<void> {
+  async handleAvailableOperatorJobEvent(transaction: TransactionResponse, network: string): Promise<void> {
     let deploymentInfo
-    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
       attempts: 10,
@@ -507,7 +507,7 @@ export default class Indexer extends Command {
         receipt,
         this.networkMonitor.operatorAddress,
       )
-      const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
+      const operatorJobHash = operatorJobPayload === undefined ? undefined : sha3(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract relayer available job for ${transaction.hash}`)
       } else {
@@ -519,7 +519,7 @@ export default class Indexer extends Command {
         )
         const bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
-          value: ethers.BigNumber.from('0'),
+          value: BigNumber.from('0'),
         })
 
         switch (bridgeTransaction.name) {
@@ -562,7 +562,7 @@ export default class Indexer extends Command {
 
   async updateCollectionCallback(
     responseData: any,
-    transaction: ethers.providers.TransactionResponse,
+    transaction: TransactionResponse,
     network: string,
     deploymentAddress: string,
     config: DeploymentConfig,
@@ -600,7 +600,7 @@ export default class Indexer extends Command {
   }
 
   async updateDeployedCollection(
-    transaction: ethers.providers.TransactionResponse,
+    transaction: TransactionResponse,
     network: string,
     deploymentInfo: any[],
   ): Promise<void> {
@@ -640,7 +640,7 @@ export default class Indexer extends Command {
   }
 
   async updateBridgedCollection(
-    transaction: ethers.providers.TransactionResponse,
+    transaction: TransactionResponse,
     network: string,
     deploymentInfo: any[],
     payload: string,
@@ -676,11 +676,7 @@ export default class Indexer extends Command {
     this.dbJobMap[job.timestamp].push(job)
   }
 
-  async updateBridgedERC20(
-    transaction: ethers.providers.TransactionResponse,
-    network: string,
-    transferInfo: any[],
-  ): Promise<void> {
+  async updateBridgedERC20(transaction: TransactionResponse, network: string, transferInfo: any[]): Promise<void> {
     this.networkMonitor.structuredLog(
       network,
       `${transaction.hash} for ERC20 not yet managed ${JSON.stringify(transferInfo, undefined, 2)}`,
@@ -689,7 +685,7 @@ export default class Indexer extends Command {
 
   async updateBridgedNFTCallback(
     responseData: any,
-    transaction: ethers.providers.TransactionResponse,
+    transaction: TransactionResponse,
     network: string,
     contractAddress: string,
     tokenId: string,
@@ -722,7 +718,7 @@ export default class Indexer extends Command {
 
   async updateMintedNFTCallback(
     responseData: any,
-    transaction: ethers.providers.TransactionResponse,
+    transaction: TransactionResponse,
     network: string,
     contractAddress: string,
     tokenId: string,
@@ -758,12 +754,8 @@ export default class Indexer extends Command {
     Promise.resolve()
   }
 
-  async updateMintedNFT(
-    transaction: ethers.providers.TransactionResponse,
-    network: string,
-    transferInfo: any[],
-  ): Promise<void> {
-    const tokenId = ethers.utils.hexZeroPad(transferInfo[2].toHexString(), 32)
+  async updateMintedNFT(transaction: TransactionResponse, network: string, transferInfo: any[]): Promise<void> {
+    const tokenId = hexZeroPad(transferInfo[2].toHexString(), 32)
     const contractAddress = transferInfo[3] as string
 
     this.networkMonitor.structuredLog(
@@ -792,12 +784,8 @@ export default class Indexer extends Command {
     this.dbJobMap[job.timestamp].push(job)
   }
 
-  async updateBridgedNFT(
-    transaction: ethers.providers.TransactionResponse,
-    network: string,
-    transferInfo: any[],
-  ): Promise<void> {
-    const tokenId = ethers.utils.hexZeroPad(transferInfo[2].toHexString(), 32)
+  async updateBridgedNFT(transaction: TransactionResponse, network: string, transferInfo: any[]): Promise<void> {
+    const tokenId = hexZeroPad(transferInfo[2].toHexString(), 32)
     const contractAddress = transferInfo[3] as string
 
     this.networkMonitor.structuredLog(
@@ -856,14 +844,14 @@ export default class Indexer extends Command {
   async updateCrossChainTransaction(
     crossChainTxType: string,
     network: string,
-    transaction: ethers.providers.TransactionResponse,
-    bridgeTransaction: ethers.utils.TransactionDescription,
+    transaction: TransactionResponse,
+    bridgeTransaction: TransactionDescription,
     operatorJobHash: string,
   ): Promise<void> {
     const jobHash = operatorJobHash
 
     const args: BridgeTransactionArgs = bridgeTransaction.args as unknown as BridgeTransactionArgs
-    const tokenId = ethers.utils.hexZeroPad(args.tokenId.toHexString(), 32)
+    const tokenId = hexZeroPad(args.tokenId.toHexString(), 32)
     const contractAddress = bridgeTransaction.args.collection.toLowerCase()
 
     this.networkMonitor.structuredLog(network, `Sending cross chain transaction job to DBJobManager ${contractAddress}`)
@@ -885,18 +873,18 @@ export default class Indexer extends Command {
 
   async updateCrossChainTransactionCallback(
     responseData: any,
-    transaction: ethers.providers.TransactionResponse,
+    transaction: TransactionResponse,
     network: string,
     contractAddress: string,
     tokenId: string,
     crossChainTxType: string,
-    bridgeTransaction: ethers.utils.TransactionDescription,
+    bridgeTransaction: TransactionDescription,
     jobHash: string,
   ): Promise<void> {
     this.networkMonitor.structuredLog(network, `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`)
 
     // Get and convert the destination chain id from holograph id in the trasaction args
-    const destinationChainid = getChainId(bridgeTransaction.args[0])
+    const destinationChainid = networks[getNetworkByHolographId(bridgeTransaction.args[0])].chain
 
     let data
     const params = {
