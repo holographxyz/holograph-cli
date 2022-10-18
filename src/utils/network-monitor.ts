@@ -440,7 +440,7 @@ export class NetworkMonitor {
   }
 
   async loadLastBlocks(configDir: string): Promise<{[key: string]: number}> {
-    const filePath = path.join(configDir, this.LAST_BLOCKS_FILE_NAME)
+    const filePath = path.join(configDir, this.environment + '.' + this.LAST_BLOCKS_FILE_NAME)
     let lastBlocks: {[key: string]: number} = {}
     if (await fs.pathExists(filePath)) {
       lastBlocks = await fs.readJson(filePath)
@@ -450,7 +450,7 @@ export class NetworkMonitor {
   }
 
   saveLastBlocks(configDir: string, lastBlocks: {[key: string]: number}): void {
-    const filePath = path.join(configDir, this.LAST_BLOCKS_FILE_NAME)
+    const filePath = path.join(configDir, this.environment + '.' + this.LAST_BLOCKS_FILE_NAME)
     fs.writeFileSync(filePath, JSON.stringify(lastBlocks), 'utf8')
   }
 
