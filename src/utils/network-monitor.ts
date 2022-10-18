@@ -283,8 +283,10 @@ export class NetworkMonitor {
   HOLOGRAPH_ADDRESSES = HOLOGRAPH_ADDRESSES
 
   LAYERZERO_RECEIVERS: {[key: string]: string} = {
-    rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
-    goerli: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
+    // eslint-disable-next-line camelcase
+    eth_rinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
+    // eslint-disable-next-line camelcase
+    eth_goerli: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     mumbai: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     fuji: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
   }
@@ -304,6 +306,9 @@ export class NetworkMonitor {
 
     CrossChainMessageSent: '0x0f5759b4182507dcfc771071166f98d7ca331262e5134eaa74b676adce2138b7',
     '0x0f5759b4182507dcfc771071166f98d7ca331262e5134eaa74b676adce2138b7': 'CrossChainMessageSent',
+
+    LzEvent: '0x138bae39f5887c9423d9c61fbf2cba537d68671ee69f2008423dbc28c8c41663',
+    '0x138bae39f5887c9423d9c61fbf2cba537d68671ee69f2008423dbc28c8c41663': 'LzEvent',
 
     LzPacket: '0xe9bded5f24a4168e4f3bf44e00298c993b22376aad8c58c7dda9718a54cbea82',
     '0xe9bded5f24a4168e4f3bf44e00298c993b22376aad8c58c7dda9718a54cbea82': 'LzPacket',
@@ -588,7 +593,7 @@ export class NetworkMonitor {
       this.providers[this.networks[0]],
     )
 
-    const holographMessagingModuleABI = [...(await fs.readJson(`./src/abi/${this.environment}/CrossChainMessageInterface.json`)), ...(await fs.readJson(`./src/abi/${this.environment}/LayerZeroOverrides.json`))]
+    const holographMessagingModuleABI = await fs.readJson(`./src/abi/${this.environment}/LayerZeroModule.json`)
     this.messagingModuleContract = new ethers.Contract(
       this.messagingModuleAddress,
       holographMessagingModuleABI,
@@ -880,6 +885,10 @@ export class NetworkMonitor {
 
   static lzPacketEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from('Packet(bytes payload)')
 
+  static lzEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
+    'LzEvent(uint16 _dstChainId, bytes _destination, bytes _payload)',
+  )
+
   static erc20TransferEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
     'Transfer(address indexed _from, address indexed _to, uint256 _value)',
   )
@@ -959,6 +968,31 @@ export class NetworkMonitor {
     return undefined
   }
 
+  decodeLzEvent(receipt: TransactionReceipt, target?: string): any[] | undefined {
+    if (target !== undefined) {
+      target = target.toLowerCase().trim()
+    }
+
+    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+      for (let i = 0, l = receipt.logs.length; i < l; i++) {
+        const log = receipt.logs[i]
+        if (
+          log.topics[0] === this.targetEvents.LzEvent &&
+          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
+        ) {
+          const event = NetworkMonitor.iface.decodeEventLog(
+            NetworkMonitor.lzEventFragment,
+            log.data,
+            log.topics,
+          ) as any[]
+          return this.lowerCaseAllStrings(event)
+        }
+      }
+    }
+
+    return undefined
+  }
+
   decodeErc20TransferEvent(receipt: TransactionReceipt, target?: string): any[] | undefined {
     if (target !== undefined) {
       target = target.toLowerCase().trim()
@@ -971,7 +1005,7 @@ export class NetworkMonitor {
           log.topics[0] === this.targetEvents.Transfer &&
           (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
         ) {
-          const event: string[] = NetworkMonitor.iface.decodeEventLog(
+          const event = NetworkMonitor.iface.decodeEventLog(
             NetworkMonitor.erc20TransferEventFragment,
             log.data,
             log.topics,
@@ -996,7 +1030,7 @@ export class NetworkMonitor {
           log.topics[0] === this.targetEvents.Transfer &&
           (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
         ) {
-          const event: string[] = NetworkMonitor.iface.decodeEventLog(
+          const event = NetworkMonitor.iface.decodeEventLog(
             NetworkMonitor.erc721TransferEventFragment,
             log.data,
             log.topics,
@@ -1047,12 +1081,12 @@ export class NetworkMonitor {
           log.topics[0] === this.targetEvents.AvailableOperatorJob &&
           (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
         ) {
-          const output = NetworkMonitor.iface.decodeEventLog(
+          const output: string[] = NetworkMonitor.iface.decodeEventLog(
             NetworkMonitor.availableOperatorJobEventFragment,
             log.data,
             log.topics,
-          )
-          return [(output[0] as string).toLowerCase(), (output[1] as string).toLowerCase()]
+          ) as string[]
+          return this.lowerCaseAllStrings(output) as string[]
         }
       }
     }
@@ -1406,7 +1440,9 @@ export class NetworkMonitor {
       let calculateGasInterval: NodeJS.Timeout | null = null
       const calculateGas = async (): Promise<void> => {
         try {
-          const gasLimit: BigNumber | null = await contract.estimateGas[methodName](...args, {gasPrice, value})
+          const gasLimit: BigNumber | null = await contract
+            .connect(this.wallets[network])
+            .estimateGas[methodName](...args, {gasPrice, value, from: this.wallets[network].address})
           if (gasLimit === null) {
             counter++
             if (canFail && counter > attempts) {
@@ -1487,6 +1523,7 @@ export class NetworkMonitor {
       let sent = false
       let sendTxInterval: NodeJS.Timeout | null = null
       const handleError = (error: any) => {
+        // process.stdout.write(JSON.stringify(error,undefined,2))
         counter++
         if (canFail && counter > attempts) {
           this.structuredLogError(network, error, tags)
@@ -1596,6 +1633,7 @@ export class NetworkMonitor {
       let sent = false
       let populateTxInterval: NodeJS.Timeout | null = null
       const handleError = (error: any) => {
+        // process.stdout.write(JSON.stringify(error,undefined,2))
         counter++
         if (canFail && counter > attempts) {
           this.structuredLogError(network, error, tags)
@@ -1610,7 +1648,13 @@ export class NetworkMonitor {
       const populateTx = async (): Promise<void> => {
         let rawTx: PopulatedTransaction | null
         try {
-          rawTx = await contract.populateTransaction[methodName](...args, {gasPrice, gasLimit, nonce, value})
+          rawTx = await contract.populateTransaction[methodName](...args, {
+            gasPrice,
+            gasLimit,
+            nonce,
+            value,
+            from: this.wallets[network].address,
+          })
           if (rawTx === null) {
             counter++
             if (canFail && counter > attempts) {

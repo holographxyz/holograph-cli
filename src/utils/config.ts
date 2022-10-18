@@ -40,7 +40,19 @@ export interface ConfigFile {
   user: ConfigUser
 }
 
-const localhostConfig: ConfigFile = {version:'beta1',bridge:{source:'localhost',destination:'localhost2'},networks:{localhost:{providerUrl:'http://localhost:8545'},localhost2:{providerUrl:'http://localhost:9545'}},user:{credentials:{iv:'n6QP9:_vn=})',privateKey:'QDiDSbP9O0C58wm9rj41D1jqGgYT4+XBMuO6e8R1gc53IzbxKrHAjVeALxkSCkcFIx7MerWm4+ZVbJ0n51FbIPYz6OpnKRXXFGtDLq64mgU=',address:'0xdf5295149F367b1FBFD595bdA578BAd22e59f504'}}}
+const localhostConfig: ConfigFile = {
+  version: 'beta1',
+  bridge: {source: 'localhost', destination: 'localhost2'},
+  networks: {localhost: {providerUrl: 'http://localhost:8545'}, localhost2: {providerUrl: 'http://localhost:9545'}},
+  user: {
+    credentials: {
+      iv: 'n6QP9:_vn=})',
+      privateKey:
+        'QDiDSbP9O0C58wm9rj41D1jqGgYT4+XBMuO6e8R1gc53IzbxKrHAjVeALxkSCkcFIx7MerWm4+ZVbJ0n51FbIPYz6OpnKRXXFGtDLq64mgU=',
+      address: '0xdf5295149F367b1FBFD595bdA578BAd22e59f504',
+    },
+  },
+}
 
 async function tryToUnlockWallet(
   configFile: ConfigFile,
@@ -152,7 +164,12 @@ export async function ensureConfigFileIsValid(
   const environment: Environment = getEnvironment()
   if (environment === Environment.localhost) {
     console.log(`Environment=${environment}`)
-    return {environment, userWallet: await tryToUnlockWallet(localhostConfig, unlockWallet), configFile: localhostConfig, supportedNetworks}
+    return {
+      environment,
+      userWallet: await tryToUnlockWallet(localhostConfig, unlockWallet),
+      configFile: localhostConfig,
+      supportedNetworks,
+    }
   }
 
   let configPath = configDir
