@@ -17,7 +17,7 @@ export interface Networks {
   [key: string]: Network
 }
 
-export const supportedNetworks: string[] = ['rinkeby', 'goerli', 'mumbai', 'fuji']
+export const supportedNetworks: string[] = ['goerli', 'mumbai', 'fuji']
 export const blockExplorers: {[key: string]: string} = {
   rinkeby: 'https://rinkeby.etherscan.io/',
   goerli: 'https://goerli.etherscan.io/',
