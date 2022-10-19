@@ -67,11 +67,24 @@
   },
   {
     "inputs": [],
-    "name": "getHolograph",
+    "name": "getInterfaces",
     "outputs": [
       {
         "internalType": "address",
-        "name": "holograph",
+        "name": "interfaces",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getLZEndpoint",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "lZEndpoint",
         "type": "address"
       }
     ],
@@ -85,19 +98,6 @@
       {
         "internalType": "address",
         "name": "operator",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getRegistry",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "registry",
         "type": "address"
       }
     ],
@@ -121,6 +121,72 @@
       }
     ],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      },
+      {
+        "internalType": "bytes",
+        "name": "_srcAddress",
+        "type": "bytes"
+      },
+      {
+        "internalType": "uint64",
+        "name": "",
+        "type": "uint64"
+      },
+      {
+        "internalType": "bytes",
+        "name": "_payload",
+        "type": "bytes"
+      }
+    ],
+    "name": "lzReceive",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint32",
+        "name": "toChain",
+        "type": "uint32"
+      },
+      {
+        "internalType": "address",
+        "name": "msgSender",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "msgValue",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "crossChainPayload",
+        "type": "bytes"
+      }
+    ],
+    "name": "send",
+    "outputs": [],
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -153,11 +219,24 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "holograph",
+        "name": "interfaces",
         "type": "address"
       }
     ],
-    "name": "setHolograph",
+    "name": "setInterfaces",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "lZEndpoint",
+        "type": "address"
+      }
+    ],
+    "name": "setLZEndpoint",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -171,19 +250,6 @@
       }
     ],
     "name": "setOperator",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "registry",
-        "type": "address"
-      }
-    ],
-    "name": "setRegistry",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
