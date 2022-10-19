@@ -79,6 +79,25 @@ export type TransactionFilter = {
 
 const TIMEOUT_THRESHOLD = 20_000
 
+const webSocketErrorCodes: {[key: string]: string} = {
+  '1000': 'Normal Closure',
+  '1001': 'Going Away',
+  '1002': 'Protocol Error',
+  '1003': 'Unsupported Data',
+  '1004': '(For future)',
+  '1005': 'No Status Received',
+  '1006': 'Abnormal Closure',
+  '1007': 'Invalid frame payload data',
+  '1008': 'Policy Violation',
+  '1009': 'Message too big',
+  '1010': 'Missing Extension',
+  '1011': 'Internal Error',
+  '1012': 'Service Restart',
+  '1013': 'Try Again Later',
+  '1014': 'Bad Gateway',
+  '1015': 'TLS Handshake',
+}
+
 export const keepAlive = ({
   debug,
   provider,
@@ -447,7 +466,10 @@ export class NetworkMonitor {
       }
 
       const restart = () => {
-        this.structuredLog(network, `WS connection was closed ${JSON.stringify(error)}`)
+        this.structuredLog(
+          network,
+          `Error in websocket connection, restarting... ${webSocketErrorCodes[error as string]}`,
+        )
         this.lastBlockJobDone[network] = Date.now()
         this.providers[network] = this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
         if (this.userWallet !== undefined) {
@@ -465,12 +487,17 @@ export class NetworkMonitor {
 
       const websocketProvider = this.providers[network] as ethers.providers.WebSocketProvider
       if (websocketProvider === undefined) {
-        this.structuredLog(network, `Websocket was undefined in disconnectBuilder function`)
-        restart()
+        this.structuredLog(network, `Websocket is undefined. Restarting`)
+      } else if (websocketProvider._websocket._req._closed === true) {
+        this.structuredLog(
+          network,
+          `Websocket is closed. Restarting connection for ${network} to ${websocketProvider.connection.url}`,
+        )
       } else {
-        websocketProvider._websocket.terminate().then(restart)
-        // websocketProvider.destroy().then(restart)
+        this.structuredLog(network, `Unknown error with websocket. Restarting`)
       }
+
+      restart()
     }
   }
 
@@ -668,7 +695,7 @@ export class NetworkMonitor {
       case 'wss:':
         if (provider !== undefined && provider._websocket !== undefined) {
           this.debug(`Closing websocket connection for ${network}`)
-          this.debug(`Provider _websocket is: ${provider._websocket}`)
+          this.debug(`Provider _websocket is: ${JSON.stringify(provider._websocket)}`)
           const terminationPromise = provider._websocket.terminate()
           if (terminationPromise === undefined) {
             this.structuredLog(network, `Websocket was undefined in blockJobMonitor function`)
