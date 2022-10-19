@@ -1,8 +1,5 @@
 # System excludes
 .git
-npm-debug.log
-yarn-error.log
-.vscode
 .idea
 
 # Project excludes

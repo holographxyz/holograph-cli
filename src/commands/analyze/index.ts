@@ -42,9 +42,10 @@ interface AvailableJob extends TransactionLog {
 }
 
 export default class Analyze extends Command {
+  static hidden = true
   static description = 'Extract all operator jobs and get their status'
   static examples = [
-    `$ holograph analyze --scope='[{"network":"goerli","startBlock":10857626,"endBlock":11138178},{"network":"mumbai","startBlock":26758573,"endBlock":27457918},{"network":"fuji","startBlock":11406945,"endBlock":12192217}]'`,
+    `$ <%= config.bin %> <%= command.id %> --scope='[{"network":"goerli","startBlock":10857626,"endBlock":11138178},{"network":"mumbai","startBlock":26758573,"endBlock":27457918},{"network":"fuji","startBlock":11406945,"endBlock":12192217}]'`,
   ]
 
   static flags = {
@@ -229,7 +230,7 @@ export default class Analyze extends Command {
         networkDependant: false,
       },
     ]
-    Promise.resolve()
+    return Promise.resolve()
   }
 
   /**
@@ -389,7 +390,7 @@ export default class Analyze extends Command {
           this.manageOperatorJobMaps(index, operatorJobHash, operatorJob)
           this.networkMonitor.structuredLog(
             network,
-            `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
+            `Bridge-In transaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
           )
         }
 

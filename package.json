@@ -107,11 +107,7 @@
       "@oclif/plugin-plugins"
     ],
     "topicSeparator": ":",
-    "topics": {
-      "hello": {
-        "description": "Say hello to the world and others"
-      }
-    }
+    "topics": {}
   },
   "engines": {
     "node": ">=18.0.0"

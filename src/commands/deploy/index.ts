@@ -2,8 +2,14 @@ import {Command} from '@oclif/core'
 import {ensureConfigFileIsValid} from '../../utils/config'
 
 export default class Deploy extends Command {
-  static description = 'Make a deploy request'
-  static examples = ['$ holograph deploy', '$ holograph deploy:contract']
+  static hidden = true
+  static description = 'Make a deploy request to another network'
+  static examples = [
+    {
+      description: 'Learn how to deploy a contract',
+      command: '<%= config.bin %> deploy:contract --help',
+    }
+  ]
 
   /**
    * Command Entry Point
