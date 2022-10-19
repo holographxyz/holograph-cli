@@ -3,6 +3,7 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 enum Environment {
+  localhost = 'localhost',
   experimental = 'experimental',
   develop = 'develop',
   testnet = 'testnet',

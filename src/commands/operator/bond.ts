@@ -133,7 +133,7 @@ export default class Bond extends Command {
           message: `Enter the amount of tokens to deposit (Units in Ether)`,
           type: 'number',
           validate: async (input: number) => {
-            if (typeof input === 'number' && input > 0 && input > parseFloat(formatEther(podBoundAmounts.current))) {
+            if (typeof input === 'number' && input > 0 && input >= parseFloat(formatEther(podBoundAmounts.current))) {
               return true
             }
 
@@ -161,26 +161,26 @@ export default class Bond extends Command {
       this.error(error.reason)
     }
 
-    // const gasPriceBase = await destinationWallet!.provider.getGasPrice()
-    // const gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
+    const gasPriceBase = await destinationWallet!.provider.getGasPrice()
+    const gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
 
-    // CliUx.ux.action.stop()
-    // this.log(
-    //   'Transaction is estimated to cost a total of',
-    //   ethers.utils.formatUnits(gasLimit.mul(gasPrice), 'ether'),
-    //   'native gas tokens (in Ether)',
-    // )
+    CliUx.ux.action.stop()
+    this.log(
+      'Transaction is estimated to cost a total of',
+      ethers.utils.formatUnits(gasLimit.mul(gasPrice), 'ether'),
+      'native gas tokens (in Ether)',
+    )
 
-    // const blockchainPrompt: any = await inquirer.prompt([
-    //   {
-    //     name: 'shouldContinue',
-    //     message: 'Next steps submit the transaction, would you like to proceed?',
-    //     type: 'confirm',
-    //     default: true,
-    //   },
-    // ])
-    // if (!blockchainPrompt.shouldContinue) {
-    //   this.error('Dropping command, no blockchain transactions executed')
-    // }
+    const blockchainPrompt: any = await inquirer.prompt([
+      {
+        name: 'shouldContinue',
+        message: 'Next steps submit the transaction, would you like to proceed?',
+        type: 'confirm',
+        default: true,
+      },
+    ])
+    if (!blockchainPrompt.shouldContinue) {
+      this.error('Dropping command, no blockchain transactions executed')
+    }
   }
 }
