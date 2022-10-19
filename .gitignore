@@ -1,3 +1,6 @@
+# ignore any file by prepending "ignore." to it
+ignore.*
+
 ## oclif
 /.nyc_output
 /dist
