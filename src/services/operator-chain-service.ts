@@ -6,12 +6,12 @@ import {GasFee} from '../types/interfaces'
 class OperatorChainService extends CoreChainService {
   operator: Contract
   constructor(
-    library: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider,
+    provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider,
     wallet: ethers.Wallet,
     chainId: SupportedChainIds,
     contract: Contract,
   ) {
-    super(library, wallet, chainId)
+    super(provider, wallet, chainId)
     this.operator = contract
   }
 

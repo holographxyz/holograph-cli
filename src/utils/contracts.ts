@@ -2,6 +2,7 @@ import {BigNumber, BigNumberish} from 'ethers'
 import {formatEther} from 'ethers/lib/utils'
 import * as fs from 'fs-extra'
 import {Environment} from './environment'
+import networks from './networks'
 
 export const toShort18Str = (num: string): string => {
   return formatEther(num)
@@ -45,7 +46,7 @@ export const getABIs = async (environment: string) => {
   }
 }
 
-export const SUPPORTED_CHAIN_IDS = [1, 3, 4, 5, 42, 1337]
+export const SUPPORTED_CHAIN_IDS = [networks.goerli.chain, networks.fuji.chain, networks.mumbai.chain]
 
 declare global {
   type ChainIds = keyof typeof CHAIN_NAMES

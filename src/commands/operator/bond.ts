@@ -3,14 +3,13 @@ import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
 import {ConfigNetwork, ConfigNetworks, ensureConfigFileIsValid} from '../../utils/config'
-
-import {networksFlag} from '../../utils/network-monitor'
 import networks, {supportedNetworks} from '../../utils/networks'
 import {toShort18} from '../../utils/contracts'
 import {formatEther} from 'ethers/lib/utils'
 import {PodBondAmounts} from '../../types/holograph-operator'
 import CoreChainService from '../../services/core-chain-service'
 import OperatorChainService from '../../services/operator-chain-service'
+import color from '@oclif/color'
 
 /**
  * Start
@@ -18,7 +17,7 @@ import OperatorChainService from '../../services/operator-chain-service'
  */
 export default class Bond extends Command {
   static description = 'Start an operator up into a pod'
-  static examples = ['$ holo operator:start --network <string> --pod <number> --amount <number> --unsafePassword']
+  static examples = ['$ holo operator:start --network <string> --pod <number> --amount <number>']
   static flags = {
     network: Flags.string({
       description: 'The network to connect to',
@@ -31,10 +30,6 @@ export default class Bond extends Command {
     amount: Flags.integer({
       description: 'Amount of tokens to deposit',
     }),
-    unsafePassword: Flags.string({
-      description: 'Enter the plain text password for the wallet in the holograph cli config',
-    }),
-    ...networksFlag,
   }
 
   /**
@@ -42,12 +37,30 @@ export default class Bond extends Command {
    */
   async run(): Promise<void> {
     const {flags} = await this.parse(Bond)
+    let {network, pod, amount} = flags
+    let prompt: any
 
-    // Check the flags
-    let network = flags.network
-    let pod = flags.pod
-    let amount = flags.amount
-    // const unsafePassword = flags.unsafePassword
+    this.log(
+      color.red(
+        'WARNING: To bond you must first have an operator running with the same wallet on the chain you are bonding to. Failure to do so will result in a loss of funds.',
+      ),
+    )
+    if (!network) {
+      prompt = await inquirer.prompt([
+        {
+          name: 'continue',
+          message:
+            'Do you have the operator with the wallet you are bonding from running on the network and are ready to proceed?',
+          type: 'confirm',
+          default: false,
+        },
+      ])
+      if (!prompt.continue) {
+        this.log('Operator is not ready to bond, please start an operator first.')
+        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+        this.exit()
+      }
+    }
 
     this.log('Loading user configurations...')
     const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
@@ -89,8 +102,18 @@ export default class Bond extends Command {
         throw new Error('Unsupported RPC URL protocol -> ' + networkProtocol)
     }
 
-    const wallet = userWallet?.connect(provider)
     CliUx.ux.action.stop()
+
+    CliUx.ux.action.start('Checking RPC connection')
+    const listening = await provider.send('net_listening', [])
+    CliUx.ux.action.stop()
+    if (!listening) {
+      throw new Error('RPC connection failed')
+    }
+
+    this.log('RPC connection successful')
+
+    const wallet = userWallet?.connect(provider)
 
     // Setup the contract and chain services
     const coreChainService = new CoreChainService(provider, wallet, networks[network as string].chain)
@@ -99,11 +122,45 @@ export default class Bond extends Command {
     const operatorChainService = new OperatorChainService(provider, wallet, networks[network as string].chain, contract)
     const operator = operatorChainService.operator
 
+    if ((await operator.getBondedAmount(wallet.address)) > 0) {
+      prompt = await inquirer.prompt([
+        {
+          name: 'continue',
+          message: 'You are already bonded on this network. Would you like to unbond?',
+          type: 'confirm',
+          default: true,
+        },
+      ])
+      if (!prompt.continue) {
+        this.log('You are already bonded on this network. Please unbond first.')
+        this.exit()
+      }
+
+      CliUx.ux.action.start(`Unbonding operator ${wallet.address} from network: ${network}`)
+      const tx = await operator.unbondUtilityToken(wallet.address, wallet.address)
+      await tx.wait()
+      CliUx.ux.action.stop()
+
+      prompt = await inquirer.prompt([
+        {
+          name: 'continue',
+          message: 'Would you like to rebond?',
+          type: 'confirm',
+          default: true,
+        },
+      ])
+      if (!prompt.continue) {
+        this.log('Thank you. Come again.')
+        this.exit()
+      }
+    }
+
+    this.log('Checking pods available...')
     const totalPods = await operator.getTotalPods()
     this.log(`Total Pods: ${totalPods}`)
 
     if (!pod) {
-      const prompt: any = await inquirer.prompt([
+      prompt = await inquirer.prompt([
         {
           name: 'pod',
           message: 'Enter the pod number to join',
@@ -125,7 +182,7 @@ export default class Bond extends Command {
     this.log(`Enter an amount greater or equal to: ${formatEther(podBoundAmounts.current)} to bond.`)
 
     if (!amount) {
-      const prompt: any = await inquirer.prompt([
+      prompt = await inquirer.prompt([
         {
           name: 'amount',
           message: `Enter the amount of tokens to deposit (Units in Ether)`,
@@ -167,16 +224,17 @@ export default class Bond extends Command {
       'native gas tokens (in Ether)',
     )
 
-    const blockchainPrompt: any = await inquirer.prompt([
+    prompt = await inquirer.prompt([
       {
-        name: 'shouldContinue',
+        name: 'continue',
         message: 'Next steps submit the transaction, would you like to proceed?',
         type: 'confirm',
         default: true,
       },
     ])
-    if (!blockchainPrompt.shouldContinue) {
-      this.error('Dropping command, no blockchain transactions executed')
+    if (!prompt.continue) {
+      this.log('Dropping command, no blockchain transactions executed')
+      this.exit()
     }
 
     try {
