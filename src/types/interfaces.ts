@@ -70,7 +70,7 @@ interface Signature {
   v: string
 }
 
-interface GasFee {
+export interface GasFee {
   gasPrice: BigNumberish
   gasLimit: BigNumberish
   gas: BigNumberish

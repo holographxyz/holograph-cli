@@ -6,11 +6,13 @@ import {BigNumber, BigNumberish, ethers} from 'ethers'
 import {ConfigNetwork, ConfigNetworks, ensureConfigFileIsValid} from '../../utils/config'
 
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
-import {supportedNetworks} from '../../utils/networks'
+import networks, {supportedNetworks} from '../../utils/networks'
 import {getEnvironment} from '../../utils/environment'
 import {HOLOGRAPH_ADDRESSES, HOLOGRAPH_OPERATOR_ADDRESSES} from '../../utils/contracts'
 import {formatEther, formatUnits} from 'ethers/lib/utils'
 import {PodBondAmounts} from '../../types/HolographOperator'
+import CoreChainService from '../../services/CoreChainService'
+import OperatorChainService from '../../services/OperatorChainService'
 
 /**
  * Start
@@ -95,12 +97,25 @@ export default class Bond extends Command {
     const destinationWallet = userWallet?.connect(destinationNetworkProvider)
     CliUx.ux.action.stop()
 
-    const holographOperatorABI = await fs.readJson(`./src/abi/${environment}/HolographOperator.json`)
-    const operator = new ethers.Contract(
-      HOLOGRAPH_OPERATOR_ADDRESSES[environment],
-      holographOperatorABI,
-      destinationWallet,
+    // const holographOperatorABI = await fs.readJson(`./src/abi/${environment}/HolographOperator.json`)
+    // const operator = new ethers.Contract(
+    //   HOLOGRAPH_OPERATOR_ADDRESSES[environment],
+    //   holographOperatorABI,
+    //   destinationWallet,
+    // )
+
+    const coreChainService = new CoreChainService(
+      destinationNetworkProvider,
+      networks[destinationNetwork as string].chain,
     )
+    const contract = await coreChainService.getOperator()
+    const operatorChainService = new OperatorChainService(
+      destinationNetworkProvider,
+      networks[network as string].chain,
+      contract,
+    )
+
+    const operator = operatorChainService.operator
 
     const totalPods = await operator.getTotalPods()
     this.log(`Total Pods: ${totalPods}`)

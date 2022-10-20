@@ -1,7 +1,7 @@
 import {Contract} from '@ethersproject/contracts'
 import {StaticJsonRpcProvider, JsonRpcProvider, Web3Provider} from '@ethersproject/providers'
 import {FeeData, TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
-import {BigNumber, BigNumberish} from '@ethersproject/bignumber'
+import {BigNumber} from '@ethersproject/bignumber'
 
 import {
   CHAIN_IDS,
@@ -106,7 +106,7 @@ class CoreChainService {
     return new Contract(HLG_FAUCET_ADDRESS, abis.FaucetABI, this.provider?.getSigner())
   }
 
-  getBalance = async (account: string): Promise<BigNumberish> => {
+  getBalance = async (account: string): Promise<BigNumber> => {
     return this.provider.getBalance(account)
   }
 
@@ -114,7 +114,7 @@ class CoreChainService {
     return this.provider.getSigner().getAddress()
   }
 
-  adjustGasPrice = async (): Promise<BigNumberish> => {
+  adjustGasPrice = async (): Promise<BigNumber> => {
     const gasPrice = BigNumber.from(await this.getChainGasPrice())
     if (this.chainId === CHAIN_IDS.mumbai && gasPrice.lt(MUMBAI_GAS_PRICE)) {
       return MUMBAI_GAS_PRICE

@@ -1,6 +1,7 @@
 import {JsonRpcProvider, StaticJsonRpcProvider, TransactionReceipt, Web3Provider} from '@ethersproject/providers'
-import {BigNumberish, Contract} from 'ethers'
+import {BigNumber, Contract} from 'ethers'
 import CoreChainService from './CoreChainService'
+import {GasFee} from '../types/Interfaces'
 
 class OperatorChainService extends CoreChainService {
   operator: Contract
@@ -17,29 +18,29 @@ class OperatorChainService extends CoreChainService {
     return this.operator.getPodOperators(pod)
   }
 
-  getPodBondAmounts = async (pod: number): Promise<{base: BigNumberish; current: BigNumberish}> => {
+  getPodBondAmounts = async (pod: number): Promise<{base: BigNumber; current: BigNumber}> => {
     return this.operator.getPodBondAmounts(pod)
   }
 
-  getBondedPod = async (operator: string): Promise<BigNumberish> => {
+  getBondedPod = async (operator: string): Promise<BigNumber> => {
     return this.operator.getBondedPod(operator)
   }
 
-  getTotalPods = async (): Promise<BigNumberish> => {
+  getTotalPods = async (): Promise<BigNumber> => {
     return this.operator.getTotalPods()
   }
 
-  getBondedAmount = async (account: string): Promise<BigNumberish> => {
+  getBondedAmount = async (account: string): Promise<BigNumber> => {
     return this.operator.getBondedAmount(account)
   }
 
-  bondUtilityToken = async (operator: string, amount: BigNumberish, pod: number): Promise<TransactionReceipt> => {
+  bondUtilityToken = async (operator: string, amount: BigNumber, pod: number): Promise<TransactionReceipt> => {
     const tx = await this.operator.bondUtilityToken(operator, amount, pod)
     await tx.wait()
     return tx
   }
 
-  getBondUtilityTokenFee = async (operator: string, amount: BigNumberish, pod: number): Promise<GasFee> => {
+  getBondUtilityTokenFee = async (operator: string, amount: BigNumber, pod: number): Promise<GasFee> => {
     const gasPrice = await this.getChainGasPrice()
     const gasLimit = await this.operator.estimateGas.bondUtilityToken(operator, amount, pod)
 
