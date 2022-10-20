@@ -1,16 +1,14 @@
 declare type BigNumberish = import('@ethersproject/bignumber').BigNumberish
 declare type BytesLike = import('@ethersproject/bytes').BytesLike
-declare type TransactionReceipt = import('@ethersproject/abstract-provider').TransactionReceipt
-declare type TransactionResponse = import('@ethersproject/providers').TransactionResponse
 
-interface CreateERC721Payload {
+export interface CreateERC721Payload {
   address: string
   name: string
   symbol: string
   royalty: string
 }
 
-interface CreateERC721Request {
+export interface CreateERC721Request {
   salt: string
   address: string
   verification: unknown | {r: BytesLike; s: BytesLike; v: BigNumberish}
@@ -25,13 +23,13 @@ interface CreateERC721Request {
       }
 }
 
-interface SignatureBody {
+export interface SignatureBody {
   r: BytesLike
   s: BytesLike
   v: BigNumberish
 }
 
-interface ERC721CollectionBody {
+export interface ERC721CollectionBody {
   name: BytesLike
   name2: BytesLike
   symbol: BytesLike
@@ -39,7 +37,7 @@ interface ERC721CollectionBody {
   bps: BigNumberish
 }
 
-interface ERC721NFTBody {
+export interface ERC721NFTBody {
   payloadHash: BytesLike
   payloadSignature: SignatureBody
   creator: string
@@ -57,14 +55,14 @@ type DeploymentConfigStruct = {
   initCode: BytesLike
 }
 
-interface Erc721Config {
+export interface Erc721Config {
   erc721Config: DeploymentConfigStruct
   erc721ConfigHash: BytesLike
   erc721ConfigHashBytes: Uint8Array
   erc721FutureAddress: BytesLike
 }
 
-interface Signature {
+export interface Signature {
   r: string
   s: string
   v: string

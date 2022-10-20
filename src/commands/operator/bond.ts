@@ -1,18 +1,16 @@
 import * as inquirer from 'inquirer'
-import * as fs from 'fs-extra'
 import {CliUx, Command, Flags} from '@oclif/core'
-import {BigNumber, BigNumberish, ethers} from 'ethers'
+import {ethers} from 'ethers'
 
 import {ConfigNetwork, ConfigNetworks, ensureConfigFileIsValid} from '../../utils/config'
 
 import {networksFlag} from '../../utils/network-monitor'
 import networks, {supportedNetworks} from '../../utils/networks'
-import {getEnvironment} from '../../utils/environment'
 import {toShort18} from '../../utils/contracts'
 import {formatEther} from 'ethers/lib/utils'
-import {PodBondAmounts} from '../../types/HolographOperator'
-import CoreChainService from '../../services/CoreChainService'
-import OperatorChainService from '../../services/OperatorChainService'
+import {PodBondAmounts} from '../../types/holograph-operator'
+import CoreChainService from '../../services/core-chain-service'
+import OperatorChainService from '../../services/operator-chain-service'
 
 /**
  * Start
@@ -49,10 +47,9 @@ export default class Bond extends Command {
     let network = flags.network
     let pod = flags.pod
     let amount = flags.amount
-    const unsafePassword = flags.unsafePassword
+    // const unsafePassword = flags.unsafePassword
 
     this.log('Loading user configurations...')
-    const environment = getEnvironment()
     const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
 
     let remainingNetworks = supportedNetworks
@@ -111,6 +108,7 @@ export default class Bond extends Command {
           name: 'pod',
           message: 'Enter the pod number to join',
           type: 'list',
+          // eslint-disable-next-line unicorn/new-for-builtins
           choices: [...Array(totalPods.toNumber() + 1).keys()].slice(1),
         },
       ])
@@ -133,7 +131,11 @@ export default class Bond extends Command {
           message: `Enter the amount of tokens to deposit (Units in Ether)`,
           type: 'number',
           validate: async (input: number) => {
-            if (typeof input === 'number' && input > 0 && input >= parseFloat(formatEther(podBoundAmounts.current))) {
+            if (
+              typeof input === 'number' &&
+              input > 0 &&
+              input >= Number.parseFloat(formatEther(podBoundAmounts.current))
+            ) {
               return true
             }
 

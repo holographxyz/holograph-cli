@@ -1,8 +1,7 @@
 import {BigNumber, BigNumberish} from 'ethers'
 import {formatEther} from 'ethers/lib/utils'
 import * as fs from 'fs-extra'
-import {Environment, getEnvironment} from './environment'
-import networks, {Networks, supportedNetworks} from './networks'
+import {Environment} from './environment'
 
 export const toShort18Str = (num: string): string => {
   return formatEther(num)
@@ -23,17 +22,16 @@ export const generateRandomSalt = () => {
 export const utf8ToBytes32 = (str: string) => {
   return (
     '0x' +
-    Array.from(str)
+    [...str]
       .map(c =>
-        c.charCodeAt(0) < 128 ? c.charCodeAt(0).toString(16) : encodeURIComponent(c).replace(/\%/g, '').toLowerCase(),
+        c.charCodeAt(0) < 128 ? c.charCodeAt(0).toString(16) : encodeURIComponent(c).replace(/%/g, '').toLowerCase(),
       )
       .join('')
       .padStart(64, '0')
   )
 }
 
-export const getABIs = async () => {
-  const environment = getEnvironment()
+export const getABIs = async (environment: string) => {
   return {
     HolographABI: await fs.readJson(`./src/abi/${environment}/Holograph.json`),
     HolographFactoryABI: await fs.readJson(`./src/abi/${environment}/HolographFactory.json`),
@@ -108,10 +106,10 @@ export const CHAIN_IDS: {[key in string]: number} = {
   mainnet: 1,
   goerli: 5,
   polygon: 137,
-  mumbai: 80001,
+  mumbai: 80_001,
   bsc: 56,
-  avalanche: 43114,
-  fuji: 43113,
+  avalanche: 43_114,
+  fuji: 43_113,
   fantom: 250,
 } as const
 

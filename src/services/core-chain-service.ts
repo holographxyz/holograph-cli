@@ -14,8 +14,9 @@ import {
 import {getEnvironment} from '../utils/environment'
 import {BigNumber, ethers} from 'ethers'
 
-const HOLOGRAPH_ADDRESS = HOLOGRAPH_ADDRESSES[getEnvironment()]
-const HLG_FAUCET_ADDRESS = FAUCET_ADDRESSES[getEnvironment()]
+const ENVIRONMENT = getEnvironment()
+const HOLOGRAPH_ADDRESS = HOLOGRAPH_ADDRESSES[ENVIRONMENT]
+const HLG_FAUCET_ADDRESS = FAUCET_ADDRESSES[ENVIRONMENT]
 
 class CoreChainService {
   provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider
@@ -34,8 +35,9 @@ class CoreChainService {
     this.wallet = wallet
   }
 
+  // NOTE: This must be called on instantiation!
   async initialize() {
-    this.abis = await getABIs()
+    this.abis = await getABIs(ENVIRONMENT)
     this.holograph = new Contract(HOLOGRAPH_ADDRESS, this.abis.HolographABI, this.wallet)
   }
 
@@ -91,11 +93,11 @@ class CoreChainService {
   }
 
   getTransaction = async (txHash: string): Promise<TransactionResponse> => {
-    return await this.provider.getTransaction(txHash)
+    return this.provider.getTransaction(txHash)
   }
 
   waitForTransaction = async (txHash: string): Promise<TransactionReceipt> => {
-    return await this.provider.waitForTransaction(txHash)
+    return this.provider.waitForTransaction(txHash)
   }
 
   getCxipNFT = (collection: string): Contract => {

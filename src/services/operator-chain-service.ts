@@ -1,7 +1,7 @@
 import {JsonRpcProvider, StaticJsonRpcProvider, TransactionReceipt, Web3Provider} from '@ethersproject/providers'
 import {BigNumberish, Contract, ethers} from 'ethers'
-import CoreChainService from './CoreChainService'
-import {GasFee} from '../types/Interfaces'
+import CoreChainService from './core-chain-service'
+import {GasFee} from '../types/interfaces'
 
 class OperatorChainService extends CoreChainService {
   operator: Contract
@@ -15,7 +15,7 @@ class OperatorChainService extends CoreChainService {
     this.operator = contract
   }
 
-  getPodOperators = async (pod: number): Promise<String[]> => {
+  getPodOperators = async (pod: number): Promise<string[]> => {
     return this.operator.getPodOperators(pod)
   }
 
