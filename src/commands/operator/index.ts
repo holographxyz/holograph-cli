@@ -7,6 +7,7 @@ import {ensureConfigFileIsValid} from '../../utils/config'
 
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
+import {portValidator} from '../../utils/validation'
 
 /**
  * Operator
@@ -14,9 +15,7 @@ import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-
  */
 export default class Operator extends Command {
   static description = 'Listen for EVM events for jobs and process them'
-  static examples = [
-    '$ <%= config.bin %> <%= command.id %> --networks="goerli mumbai fuji" --mode=auto'
-  ]
+  static examples = ['$ <%= config.bin %> <%= command.id %> --networks="goerli mumbai fuji" --mode=auto']
 
   static flags = {
     mode: Flags.string({
@@ -46,8 +45,13 @@ export default class Operator extends Command {
 
     // Check the flags
     const enableHealthCheckServer = flags.healthCheck
+    const healthCheckPort = flags.healthCheckPort
     const syncFlag = flags.sync
     const unsafePassword = flags.unsafePassword
+
+    if (healthCheckPort && !portValidator(healthCheckPort)) {
+      this.error('The port should be in the [3000, 65535] range.')
+    }
 
     // Have the user input the mode if it's not provided
     let mode: string | undefined = flags.mode
@@ -117,7 +121,7 @@ export default class Operator extends Command {
     // Start health check server on port 6000
     // Can be used to monitor that the operator is online and running
     if (enableHealthCheckServer) {
-      startHealthcheckServer({networkMonitor: this.networkMonitor})
+      startHealthcheckServer({networkMonitor: this.networkMonitor, healthCheckPort})
     }
   }
 
