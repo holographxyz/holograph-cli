@@ -11,8 +11,8 @@ env:
   #
   TESTNET_IMAGE_TAG : testnet-${{ github.sha }}
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.39
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.31
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.40
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.36
   #######################################
   CLUSTER_NAME: prod0
   #
@@ -30,39 +30,45 @@ env:
   TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
-  INDEXER_HOLO_CONFIG_FILE_DATA: prod-config-file
-  OPERATOR_HOLO_CONFIG_FILE_DATA: prod-config-file
+  INDEXER_HOLO_CONFIG_FILE_DATA: testnet-config-file
+  OPERATOR_HOLO_CONFIG_FILE_DATA: testnet-config-file
   #
   ABI_ENVIRONMENT: testnet # same for all apps [indexer,operator]
   #
   TESTNET_DOMAIN: 'holograph.xyz'
   #
-  TESTNET_COMMON_NAMESPACE: testnet # NOTICE <---
+  TESTNET_COMMON_NAMESPACE: testholo #testnet # NOTICE <---
   #
-  # INDEXER PROD rpc endpoints
-  indexer_prod_fuji_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
-  indexer_prod_mumbai_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
-  indexer_prod_goerli_rpc_url: ${{ secrets.INDEXER_PROD_GOERLI_RPC_URL }}
-  # OPERATOR PROD rpc endpoints
-  operator_prod_fuji_rpc_url: ${{ secrets.OPERATOR_PROD_FUJI_RPC_URL }}
-  operator_prod_mumbai_rpc_url: ${{ secrets.OPERATOR_PROD_MUMBAI_RPC_URL }}
-  operator_prod_goerli_rpc_url: ${{ secrets.OPERATOR_PROD_GOERLI_RPC_URL }}
+  # INDEXER TESTNET
+  indexer_testnet_fuji_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
+  indexer_testnet_mumbai_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
+  indexer_testnet_goerli_rpc_url: ${{ secrets.INDEXER_PROD_GOERLI_RPC_URL }}
+  #
+  indexer_testnet_private_key: ${{ secrets.INDEXER_PROD_PRIVATE_KEY }}
+  indexer_testnet_address: ${{ secrets.INDEXER_PROD_ADDRESS }}
+  # OPERATOR TESTNET
+  operator_testnet_fuji_rpc_url: ${{ secrets.OPERATOR_PROD_FUJI_RPC_URL }}
+  operator_testnet_mumbai_rpc_url: ${{ secrets.OPERATOR_PROD_MUMBAI_RPC_URL }}
+  operator_testnet_goerli_rpc_url: ${{ secrets.OPERATOR_PROD_GOERLI_RPC_URL }}
+  #
+  operator_testnet_private_key: ${{ secrets.OPERATOR_PROD_PRIVATE_KEY }}
+  operator_testnet_address: ${{ secrets.OPERATOR_PROD_ADDRESS }}
 
 # notice: the trigger
-#on:
-#  push:
-#    branches:
-#      - 'feat/holo-448-holocli-env-separation'
-#      # Excluded branches
-#      - '!develop'
-#      - '!main'
-#      - '!master'
-## notice: the trigger
 on:
-  pull_request:
+  push:
     branches:
-      - 'testnet'
-    types: [closed]
+      - 'feat/holo-448-holocli-env-separation'
+      # Excluded branches
+      - '!develop'
+      - '!main'
+      - '!master'
+## notice: the trigger
+#on:
+#  pull_request:
+#    branches:
+#      - 'testnet'
+#    types: [closed]
 
 jobs:
   deploy-to-prod0-testnet:
@@ -122,7 +128,7 @@ jobs:
       - name: -> Deploy INDEXER cli in prod [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: indexer-test #notice
+          RELEASE_NAME: indexer-testnet #notice
           ENABLE_DEBUG: "true"
           HEALTHCHECK : "true"
           MODE        : "auto"
@@ -145,12 +151,16 @@ jobs:
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
             --set NETWORK="${NETWORK}" \
-            --set prod_rpc_config_values.bridge_source="goerli" \
-            --set prod_rpc_config_values.bridge_destination="mumbai" \
             \
-            --set prod_rpc_config_values.fuji_rpc_url=${{ env.indexer_prod_fuji_rpc_url }} \
-            --set prod_rpc_config_values.mumbai_rpc_url=${{ env.indexer_prod_mumbai_rpc_url }} \
-            --set prod_rpc_config_values.goerli_rpc_url=${{ env.indexer_prod_goerli_rpc_url }} \
+            --set testnet_rpc_config_values.bridge_source="goerli" \
+            --set testnet_rpc_config_values.bridge_destination="mumbai" \
+            \
+            --set testnet_rpc_config_values.fuji_rpc_url=${{ env.indexer_testnet_fuji_rpc_url }} \
+            --set testnet_rpc_config_values.mumbai_rpc_url=${{ env.indexer_testnet_mumbai_rpc_url }} \
+            --set testnet_rpc_config_values.goerli_rpc_url=${{ env.indexer_testnet_goerli_rpc_url }} \
+            \
+            --set testnet_rpc_config_values.private_key=${{ env.indexer_testnet_private_key }} \
+            --set testnet_rpc_config_values.address=${{ env.indexer_testnet_address }} \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
@@ -179,7 +189,7 @@ jobs:
       - name: -> Deploy OPERATOR cli in prod [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: operator-test #notice
+          RELEASE_NAME: operator-testnet #notice
           ENABLE_DEBUG: "true"
           ENABLE_SYNC : "true"
           HEALTHCHECK : "true"
@@ -200,12 +210,16 @@ jobs:
             --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
-            --set prod_rpc_config_values.bridge_source="goerli" \
-            --set prod_rpc_config_values.bridge_destination="mumbai" \
             \
-            --set prod_rpc_config_values.fuji_rpc_url=${{ env.operator_prod_fuji_rpc_url }} \
-            --set prod_rpc_config_values.mumbai_rpc_url=${{ env.operator_prod_mumbai_rpc_url }} \
-            --set prod_rpc_config_values.goerli_rpc_url=${{ env.operator_prod_goerli_rpc_url }} \
+            --set testnet_rpc_config_values.bridge_source="goerli" \
+            --set testnet_rpc_config_values.bridge_destination="mumbai" \
+            \
+            --set testnet_rpc_config_values.fuji_rpc_url=${{ env.operator_testnet_fuji_rpc_url }} \
+            --set testnet_rpc_config_values.mumbai_rpc_url=${{ env.operator_testnet_mumbai_rpc_url }} \
+            --set testnet_rpc_config_values.goerli_rpc_url=${{ env.operator_testnet_goerli_rpc_url }} \
+            \
+            --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
+            --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.version=chart-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
