@@ -37,7 +37,7 @@ env:
   #
   TESTNET_DOMAIN: 'holograph.xyz'
   #
-  TESTNET_COMMON_NAMESPACE: testholo #testnet # NOTICE <---
+  TESTNET_COMMON_NAMESPACE: testnet # NOTICE <---
   #
   # INDEXER TESTNET
   indexer_testnet_fuji_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
@@ -55,20 +55,20 @@ env:
   operator_testnet_address: ${{ secrets.OPERATOR_PROD_ADDRESS }}
 
 # notice: the trigger
-on:
-  push:
-    branches:
-      - 'feat/holo-448-holocli-env-separation'
-      # Excluded branches
-      - '!develop'
-      - '!main'
-      - '!master'
-## notice: the trigger
 #on:
-#  pull_request:
+#  push:
 #    branches:
-#      - 'testnet'
-#    types: [closed]
+#      - 'feat/holo-448-holocli-env-separation'
+#      # Excluded branches
+#      - '!develop'
+#      - '!main'
+#      - '!master'
+## notice: the trigger
+on:
+  pull_request:
+    branches:
+      - 'testnet'
+    types: [closed]
 
 jobs:
   deploy-to-prod0-testnet:

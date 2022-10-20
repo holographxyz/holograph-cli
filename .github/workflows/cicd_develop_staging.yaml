@@ -36,7 +36,7 @@ env:
   #
   STG_DOMAIN: "cxipchain.xyz"
   #
-  STG_COMMON_NAMESPACE: develop # NOTICE <---
+  STG_COMMON_NAMESPACE: testholo #develop # NOTICE <---
   #
   # INDEXER DEV rpc endpoints
   indexer_dev_fuji_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
@@ -57,8 +57,7 @@ env:
 on:
   push:
     branches:
-      - "dsfsd"
-#      - 'feat/holo-448-holocli-env-separation'
+      - 'feat/holo-448-holocli-env-separation'
 #      - 'develop'
       # Excluded branches
       - '!testnet'
