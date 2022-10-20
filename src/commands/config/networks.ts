@@ -3,10 +3,10 @@ import ConfigView from './view'
 export default class ConfigNetworks extends ConfigView {
   static description = 'View the current network config'
   static examples = [
-    '$ holo:networks',
-    '$ holo:networks --output json',
-    '$ holo:networks --output yaml',
-    '$ holo:networks --output clean',
+    '$ <%= config.bin %> <%= command.id %>',
+    '$ <%= config.bin %> <%= command.id %> --output json',
+    '$ <%= config.bin %> <%= command.id %> --output yaml',
+    '$ <%= config.bin %> <%= command.id %> --output clean',
   ]
 
   /**

@@ -3,11 +3,19 @@ import * as inquirer from 'inquirer'
 import {CliUx, Flags} from '@oclif/core'
 import {decodeDeploymentConfigInput} from './utils'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
+import {supportedNetworks} from './networks'
 
 export const deploymentFlags = {
-  tx: Flags.string({description: 'The hash of transaction that deployed the original collection'}),
-  txNetwork: Flags.string({description: 'The network on which the transaction was executed'}),
-  deploymentType: Flags.string({description: 'The type of deployment to use: [deployedTx, deploymentConfig]'}),
+  tx: Flags.string({
+    description: 'The hash of transaction that deployed the original collection'
+  }),
+  txNetwork: Flags.string({
+    description: 'The network on which the transaction was executed',
+    options: supportedNetworks
+  }),
+  deploymentType: Flags.string({
+    description: 'The type of deployment to use: [deployedTx, deploymentConfig]'
+  }),
 }
 
 export const deploymentTypes = ['deployedTx', 'deploymentConfig']
@@ -105,7 +113,6 @@ export const prepareDeploymentConfig = async function (
 
     case 'deploymentConfig': {
       throw new Error('Unsupported deployment type: ' + deploymentType + '... Still working on this one :(')
-      break
     }
 
     default: {

@@ -25,7 +25,6 @@ lerna-debug.log*
 
 # Tests
 /coverage
-/.nyc_output
 
 # env
 .env
@@ -38,7 +37,7 @@ lerna-debug.log*
 blocks.json
 
 # IDEs and editors
-/.idea
+.idea
 .project
 .classpath
 .c9/

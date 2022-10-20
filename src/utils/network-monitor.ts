@@ -18,6 +18,7 @@ import color from '@oclif/color'
 
 import {Environment, getEnvironment} from './environment'
 import {HOLOGRAPH_ADDRESSES} from './contracts'
+import {supportedNetworks} from './networks'
 
 export const warpFlag = {
   warp: Flags.integer({
@@ -28,7 +29,11 @@ export const warpFlag = {
 }
 
 export const networksFlag = {
-  networks: Flags.string({description: 'Comma separated list of networks to operate on', multiple: true}),
+  networks: Flags.string({
+    description: 'Space separated list of networks to operate on',
+    multiple: true,
+    options: supportedNetworks
+  }),
 }
 
 export const networkFlag = {

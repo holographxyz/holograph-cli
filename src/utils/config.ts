@@ -125,10 +125,9 @@ export async function ensureConfigFileIsValid(
 
     return {userWallet, configFile}
   } catch (error: any) {
-    const error_ = error.message
+    throw error.message
       ? error
       : new Error(`Config file is no longer valid, please delete it before continuing ${error.message}`)
-    throw error_
   }
 }
 

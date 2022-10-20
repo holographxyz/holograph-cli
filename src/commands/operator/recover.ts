@@ -4,15 +4,20 @@ import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
-import networks from '../../utils/networks'
+import networks, {supportedNetworks} from '../../utils/networks'
 import {NetworkMonitor} from '../../utils/network-monitor'
 
 export default class Recover extends Command {
   static description = 'Attempt to re-run/recover a particular Operator Job'
-  static examples = ['$ holograph operator:recover --network="goerli" --tx="0x..."']
+  static examples = ['$ <%= config.bin %> <%= command.id %>--network="goerli" --tx="0x..."']
   static flags = {
-    network: Flags.string({description: 'The network on which the transaction was executed'}),
-    tx: Flags.string({description: 'The hash of transaction that we want to attempt to execute'}),
+    network: Flags.string({
+      description: 'The network on which the transaction was executed',
+      options: supportedNetworks
+    }),
+    tx: Flags.string({
+      description: 'The hash of transaction that we want to attempt to execute'
+    }),
   }
 
   networkMonitor!: NetworkMonitor
@@ -163,7 +168,7 @@ export default class Recover extends Command {
 
         this.networkMonitor.structuredLog(
           network,
-          `Bridge-Out trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
+          `Bridge-Out transaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
         )
         await this.executePayload(destinationNetwork, operatorJobPayload!)
       }
@@ -207,7 +212,7 @@ export default class Recover extends Command {
         })
         this.networkMonitor.structuredLog(
           network,
-          `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
+          `Bridge-In transaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
         )
         await this.executePayload(network, operatorJobPayload!)
       }

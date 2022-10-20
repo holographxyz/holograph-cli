@@ -12,13 +12,24 @@ import {supportedNetworks} from '../../utils/networks'
 export default class Contract extends Command {
   static description = 'Bridge a Holographable contract from source chain to destination chain'
   static examples = [
-    '$ holograph bridge:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"',
+    {
+      description: 'Bridge a contract using bridge source and destination networks from the config',
+      command: '$ <%= config.bin %> <%= command.id %> --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"'
+    },
+    {
+      description: 'Bridge a contract and manually set the source and destination networks',
+      command: '$ <%= config.bin %> <%= command.id %> --sourceNetwork fuji --destinationNetwork goerli --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1',
+    }
   ]
 
   static flags = {
-    sourceNetwork: Flags.string({description: 'The name of source network, from which to make the bridge request'}),
+    sourceNetwork: Flags.string({
+      description: 'The name of source network, from which to make the bridge request',
+      options: supportedNetworks,
+    }),
     destinationNetwork: Flags.string({
       description: 'The name of destination network, where the bridge request is sent to',
+      options: supportedNetworks,
     }),
     ...deploymentFlags,
   }
@@ -137,7 +148,7 @@ export default class Contract extends Command {
     CliUx.ux.action.start('Calculating gas amounts and prices')
     let gasLimit: ethers.BigNumber | undefined
 
-    // Don't modify lzFeeError. It is returned from LZ so we must check this exact string
+    // Don't modify lzFeeError. It is returned from LZ, so we must check this exact string
     const lzFeeError = 'execution reverted: LayerZero: not enough native for fees'
     let startingPayment = ethers.utils.parseUnits('0.000000001', 'ether')
     const powerOfTen = ethers.BigNumber.from(10)
