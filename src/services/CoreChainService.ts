@@ -1,7 +1,7 @@
 import {Contract} from '@ethersproject/contracts'
 import {StaticJsonRpcProvider, JsonRpcProvider, Web3Provider} from '@ethersproject/providers'
 import {FeeData, TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
-import {BigNumber} from '@ethersproject/bignumber'
+import {BigNumberish} from '@ethersproject/bignumber'
 
 import {
   CHAIN_IDS,
@@ -12,27 +12,31 @@ import {
   getABIs,
 } from '../utils/contracts'
 import {getEnvironment} from '../utils/environment'
+import {BigNumber, ethers} from 'ethers'
 
 const HOLOGRAPH_ADDRESS = HOLOGRAPH_ADDRESSES[getEnvironment()]
 const HLG_FAUCET_ADDRESS = FAUCET_ADDRESSES[getEnvironment()]
 
-let abis: {[key: string]: any} = {}
-
 class CoreChainService {
   provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider
-  holograph: Contract
+  wallet: ethers.Wallet
+  holograph: Contract | undefined
   chainId: SupportedChainIds
+  abis: {[key: string]: any} = {}
 
-  constructor(library: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider, chainId: SupportedChainIds) {
-    this.provider = library
-    this.holograph = new Contract(HOLOGRAPH_ADDRESS, abis.HolographABI, library?.getSigner())
+  constructor(
+    provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider,
+    wallet: ethers.Wallet,
+    chainId: SupportedChainIds,
+  ) {
+    this.provider = provider
     this.chainId = chainId
-
-    this.init()
+    this.wallet = wallet
   }
 
-  async init() {
-    abis = await getABIs()
+  async initialize() {
+    this.abis = await getABIs()
+    this.holograph = new Contract(HOLOGRAPH_ADDRESS, this.abis.HolographABI, this.wallet)
   }
 
   getProviderGasPrice = async (): Promise<BigNumber> => {
@@ -54,32 +58,32 @@ class CoreChainService {
   }
 
   getFactory = async (): Promise<Contract> => {
-    const address = await this.holograph.getFactory()
-    return new Contract(address, abis.HolographFactoryABI, this.provider?.getSigner())
+    const address = await this.holograph?.getFactory()
+    return new Contract(address, this.abis.HolographFactoryABI, this.wallet)
   }
 
   getBridge = async (): Promise<Contract> => {
-    const address = await this.holograph.getBridge()
-    return new Contract(address, abis.HolographBridgeABI, this.provider?.getSigner())
+    const address = await this.holograph?.getBridge()
+    return new Contract(address, this.abis.HolographBridgeABI, this.wallet)
   }
 
   getInterfaces = async (): Promise<Contract> => {
-    const address = await this.holograph.getInterfaces()
-    return new Contract(address, abis.HolographInterfacesABI, this.provider?.getSigner())
+    const address = await this.holograph?.getInterfaces()
+    return new Contract(address, this.abis.HolographInterfacesABI, this.wallet)
   }
 
   getOperator = async (): Promise<Contract> => {
-    const address = await this.holograph.getOperator()
-    return new Contract(address, abis.HolographOperatorABI, this.provider?.getSigner())
+    const address = await this.holograph?.getOperator()
+    return new Contract(address, this.abis.HolographOperatorABI, this.wallet)
   }
 
   getUtilityToken = async (): Promise<Contract> => {
-    const address = await this.holograph.getUtilityToken()
-    return new Contract(address, abis.HolographERC20ABI, this.provider?.getSigner())
+    const address = await this.holograph?.getUtilityToken()
+    return new Contract(address, this.abis.HolographERC20ABI, this.wallet)
   }
 
   getRegistryAddress = async (): Promise<string> => {
-    return this.holograph.getRegistry()
+    return this.holograph?.getRegistry()
   }
 
   getChainGasPrice = async (): Promise<BigNumber> => {
@@ -95,18 +99,18 @@ class CoreChainService {
   }
 
   getCxipNFT = (collection: string): Contract => {
-    return new Contract(collection, abis.CxipNFTABI, this.provider?.getSigner())
+    return new Contract(collection, this.abis.CxipNFTABI, this.wallet)
   }
 
   getLZ = (): Contract => {
-    return new Contract(LZ_RELAYER_ADDRESSES[this.chainId], abis.LayerZeroABI, this.provider?.getSigner())
+    return new Contract(LZ_RELAYER_ADDRESSES[this.chainId], this.abis.LayerZeroABI, this.wallet)
   }
 
   getFaucet = (): Contract => {
-    return new Contract(HLG_FAUCET_ADDRESS, abis.FaucetABI, this.provider?.getSigner())
+    return new Contract(HLG_FAUCET_ADDRESS, this.abis.FaucetABI, this.wallet)
   }
 
-  getBalance = async (account: string): Promise<BigNumber> => {
+  getBalance = async (account: string): Promise<BigNumberish> => {
     return this.provider.getBalance(account)
   }
 
@@ -114,7 +118,7 @@ class CoreChainService {
     return this.provider.getSigner().getAddress()
   }
 
-  adjustGasPrice = async (): Promise<BigNumber> => {
+  adjustGasPrice = async (): Promise<BigNumberish> => {
     const gasPrice = BigNumber.from(await this.getChainGasPrice())
     if (this.chainId === CHAIN_IDS.mumbai && gasPrice.lt(MUMBAI_GAS_PRICE)) {
       return MUMBAI_GAS_PRICE

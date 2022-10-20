@@ -1,7 +1,36 @@
-import {BigNumber} from 'ethers'
+import {BigNumber, BigNumberish} from 'ethers'
+import {formatEther} from 'ethers/lib/utils'
 import * as fs from 'fs-extra'
 import {Environment, getEnvironment} from './environment'
 import networks, {Networks, supportedNetworks} from './networks'
+
+export const toShort18Str = (num: string): string => {
+  return formatEther(num)
+}
+
+export const toShort18 = (num: BigNumberish): BigNumberish => {
+  return BigNumber.from(num).div(BigNumber.from('10').pow(18))
+}
+
+export const toLong18 = (num: string): BigNumberish => {
+  return BigNumber.from(num).mul(BigNumber.from('10').pow(18))
+}
+
+export const generateRandomSalt = () => {
+  return '0x' + Date.now().toString(16).padStart(64, '0')
+}
+
+export const utf8ToBytes32 = (str: string) => {
+  return (
+    '0x' +
+    Array.from(str)
+      .map(c =>
+        c.charCodeAt(0) < 128 ? c.charCodeAt(0).toString(16) : encodeURIComponent(c).replace(/\%/g, '').toLowerCase(),
+      )
+      .join('')
+      .padStart(64, '0')
+  )
+}
 
 export const getABIs = async () => {
   const environment = getEnvironment()
@@ -9,9 +38,9 @@ export const getABIs = async () => {
     HolographABI: await fs.readJson(`./src/abi/${environment}/Holograph.json`),
     HolographFactoryABI: await fs.readJson(`./src/abi/${environment}/HolographFactory.json`),
     HolographBridgeABI: await fs.readJson(`./src/abi/${environment}/HolographBridge.json`),
-    HolographInterfacesABI: await fs.readJson(`./src/abi/${environment}/Interfaces.json`),
-    LayerZeroABI: await fs.readJson(`./src/abi/${environment}/LayerZero.json`),
-    CxipNFTABI: await fs.readJson(`./src/abi/${environment}/CxipNFT.json`),
+    HolographInterfacesABI: await fs.readJson(`./src/abi/${environment}/HolographInterfaces.json`),
+    LayerZeroABI: await fs.readJson(`./src/abi/${environment}/LayerZeroEndpointInterface.json`),
+    CxipNFTABI: await fs.readJson(`./src/abi/${environment}/CxipERC721.json`),
     FaucetABI: await fs.readJson(`./src/abi/${environment}/Faucet.json`),
     HolographERC20ABI: await fs.readJson(`./src/abi/${environment}/HolographERC20.json`),
     HolographOperatorABI: await fs.readJson(`./src/abi/${environment}/HolographOperator.json`),

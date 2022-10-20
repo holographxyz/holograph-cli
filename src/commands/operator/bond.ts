@@ -5,11 +5,11 @@ import {BigNumber, BigNumberish, ethers} from 'ethers'
 
 import {ConfigNetwork, ConfigNetworks, ensureConfigFileIsValid} from '../../utils/config'
 
-import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
+import {networksFlag} from '../../utils/network-monitor'
 import networks, {supportedNetworks} from '../../utils/networks'
 import {getEnvironment} from '../../utils/environment'
-import {HOLOGRAPH_ADDRESSES, HOLOGRAPH_OPERATOR_ADDRESSES} from '../../utils/contracts'
-import {formatEther, formatUnits} from 'ethers/lib/utils'
+import {toShort18} from '../../utils/contracts'
+import {formatEther} from 'ethers/lib/utils'
 import {PodBondAmounts} from '../../types/HolographOperator'
 import CoreChainService from '../../services/CoreChainService'
 import OperatorChainService from '../../services/OperatorChainService'
@@ -58,63 +58,48 @@ export default class Bond extends Command {
     let remainingNetworks = supportedNetworks
     this.debug(`remainingNetworks = ${remainingNetworks}`)
 
-    let destinationNetwork = flags.network
     if (!network) {
-      const destinationNetworkPrompt: any = await inquirer.prompt([
+      const networkPrompt: any = await inquirer.prompt([
         {
-          name: 'destinationNetwork',
+          name: 'network',
           message: 'Enter network to bond to',
           type: 'list',
           choices: remainingNetworks,
         },
       ])
-      destinationNetwork = destinationNetworkPrompt.destinationNetwork
+      network = networkPrompt.network
 
       remainingNetworks = remainingNetworks.filter((item: string) => {
-        return item !== destinationNetwork
+        return item !== network
       })
     }
 
-    this.log(`Joining network: ${destinationNetwork}`)
+    this.log(`Joining network: ${network}`)
 
     CliUx.ux.action.start('Loading destination network RPC provider')
-    const destinationProviderUrl: string = (
-      configFile.networks[destinationNetwork as keyof ConfigNetworks] as ConfigNetwork
-    ).providerUrl
-    const destinationNetworkProtocol: string = new URL(destinationProviderUrl).protocol
-    let destinationNetworkProvider
-    switch (destinationNetworkProtocol) {
+    const destinationProviderUrl: string = (configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork)
+      .providerUrl
+    const networkProtocol: string = new URL(destinationProviderUrl).protocol
+    let provider
+    switch (networkProtocol) {
       case 'https:':
-        destinationNetworkProvider = new ethers.providers.JsonRpcProvider(destinationProviderUrl)
+        provider = new ethers.providers.JsonRpcProvider(destinationProviderUrl)
         break
       case 'wss:':
-        destinationNetworkProvider = new ethers.providers.WebSocketProvider(destinationProviderUrl)
+        provider = new ethers.providers.WebSocketProvider(destinationProviderUrl)
         break
       default:
-        throw new Error('Unsupported RPC URL protocol -> ' + destinationNetworkProtocol)
+        throw new Error('Unsupported RPC URL protocol -> ' + networkProtocol)
     }
 
-    const destinationWallet = userWallet?.connect(destinationNetworkProvider)
+    const wallet = userWallet?.connect(provider)
     CliUx.ux.action.stop()
 
-    // const holographOperatorABI = await fs.readJson(`./src/abi/${environment}/HolographOperator.json`)
-    // const operator = new ethers.Contract(
-    //   HOLOGRAPH_OPERATOR_ADDRESSES[environment],
-    //   holographOperatorABI,
-    //   destinationWallet,
-    // )
-
-    const coreChainService = new CoreChainService(
-      destinationNetworkProvider,
-      networks[destinationNetwork as string].chain,
-    )
+    // Setup the contract and chain services
+    const coreChainService = new CoreChainService(provider, wallet, networks[network as string].chain)
+    await coreChainService.initialize()
     const contract = await coreChainService.getOperator()
-    const operatorChainService = new OperatorChainService(
-      destinationNetworkProvider,
-      networks[network as string].chain,
-      contract,
-    )
-
+    const operatorChainService = new OperatorChainService(provider, wallet, networks[network as string].chain, contract)
     const operator = operatorChainService.operator
 
     const totalPods = await operator.getTotalPods()
@@ -160,23 +145,17 @@ export default class Bond extends Command {
       this.log(`Depositing ${amount} tokens`)
     }
 
-    this.log(
-      `Bonding from ${destinationWallet.address} to pod ${pod} on network ${destinationNetwork} for ${amount} tokens`,
-    )
+    this.log(`Bonding from ${wallet.address} to pod ${pod} on network ${network} for ${amount} tokens`)
 
     CliUx.ux.action.start('Calculating gas amounts and prices')
     let gasLimit
     try {
-      gasLimit = await operator.estimateGas.bondUtilityToken(
-        destinationWallet.address,
-        BigNumber.from(amount).mul(BigNumber.from('10').pow(18)),
-        pod,
-      )
+      gasLimit = await operator.estimateGas.bondUtilityToken(wallet.address, toShort18(amount as number), pod)
     } catch (error: any) {
       this.error(error.reason)
     }
 
-    const gasPriceBase = await destinationWallet!.provider.getGasPrice()
+    const gasPriceBase = await wallet!.provider.getGasPrice()
     const gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
 
     CliUx.ux.action.stop()
@@ -197,5 +176,22 @@ export default class Bond extends Command {
     if (!blockchainPrompt.shouldContinue) {
       this.error('Dropping command, no blockchain transactions executed')
     }
+
+    try {
+      CliUx.ux.action.start('Sending transaction to mempool')
+      const tx = await operator.bondUtilityToken(wallet.address, toShort18(amount as number), pod)
+      this.debug(tx)
+      CliUx.ux.action.stop('Transaction hash is ' + tx.hash)
+
+      CliUx.ux.action.start('Waiting for transaction to be mined and confirmed')
+      const receipt = await tx.wait()
+      this.debug(receipt)
+      console.log(receipt)
+      CliUx.ux.action.stop(`Transaction mined and confirmed. Transaction hash is ${receipt.transactionHash}`)
+    } catch (error: any) {
+      this.error(error.error.reason)
+    }
+
+    this.exit()
   }
 }
