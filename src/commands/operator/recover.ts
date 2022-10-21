@@ -196,8 +196,8 @@ export default class Recover extends Command {
         receipt,
         this.networkMonitor.operatorAddress,
       )
-      const operatorJobPayload: string | undefined = operatorJobEvent === undefined ? undefined : operatorJobEvent![0]
-      const operatorJobHash: string | undefined = operatorJobPayload === undefined ? undefined : operatorJobEvent![1]
+      const operatorJobPayload: string | undefined = operatorJobEvent === undefined ? undefined : operatorJobEvent![1]
+      const operatorJobHash: string | undefined = operatorJobPayload === undefined ? undefined : operatorJobEvent![0]
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract relayer available job for ${transaction.hash}`)
       } else {
