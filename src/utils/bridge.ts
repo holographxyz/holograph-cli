@@ -1,4 +1,4 @@
-import {BigNumberish, BytesLike, BigNumber} from 'ethers'
+import {BigNumber} from 'ethers'
 import Web3 from 'web3'
 const web3 = new Web3()
 
