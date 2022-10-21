@@ -1,6 +1,7 @@
 import * as inquirer from 'inquirer'
 import {CliUx, Command, Flags} from '@oclif/core'
-import {ethers, BigNumber} from 'ethers'
+import {BigNumber} from 'ethers'
+import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
 import {Environment} from '../../utils/environment'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
@@ -151,7 +152,7 @@ export default class Operator extends Command {
   /**
    * Process the transactions in each block job
    */
-  async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
+  async processTransactions(job: BlockJob, transactions: TransactionResponse[]): Promise<void> {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
@@ -175,11 +176,11 @@ export default class Operator extends Command {
   }
 
   async handleBridgeOutEvent(
-    transaction: ethers.providers.TransactionResponse,
+    transaction: TransactionResponse,
     network: string,
     tags: (string | number)[],
   ): Promise<void> {
-    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
       attempts: 10,
@@ -208,7 +209,7 @@ export default class Operator extends Command {
       } else {
         const bridgeTransaction = await this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: transaction.data,
-          value: ethers.BigNumber.from('0'),
+          value: BigNumber.from('0'),
         })
         const args: any[] = this.networkMonitor.decodeLzEvent(receipt, this.networkMonitor.lzEndpointAddress[network])!
         const jobHash: string = web3.utils.keccak256(args[2] as string)
@@ -227,11 +228,11 @@ export default class Operator extends Command {
    * Handle the AvailableOperatorJob event from the LayerZero contract when one is picked up while processing transactions
    */
   async handleAvailableOperatorJobEvent(
-    transaction: ethers.providers.TransactionResponse,
+    transaction: TransactionResponse,
     network: string,
     tags: (string | number)[],
   ): Promise<void> {
-    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
       attempts: 30,
@@ -269,7 +270,7 @@ export default class Operator extends Command {
         )
         const bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
-          value: ethers.BigNumber.from('0'),
+          value: BigNumber.from('0'),
         })
         this.networkMonitor.structuredLog(
           network,

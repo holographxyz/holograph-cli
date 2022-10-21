@@ -1,11 +1,13 @@
 import * as inquirer from 'inquirer'
 
 import {CliUx, Command, Flags} from '@oclif/core'
-import {ethers} from 'ethers'
-
+import {BigNumber} from 'ethers'
+import {TransactionResponse, TransactionReceipt} from '@ethersproject/abstract-provider'
+import {TransactionDescription} from '@ethersproject/abi'
 import {ensureConfigFileIsValid, supportedNetworks} from '../../utils/config'
-import {networks} from '@holographxyz/networks'
 import {NetworkMonitor} from '../../utils/network-monitor'
+import {sha3} from '../../utils/utils'
+import {networks} from '@holographxyz/networks'
 
 export default class Recover extends Command {
   static description = 'Attempt to re-run/recover a particular Operator Job'
@@ -90,7 +92,7 @@ export default class Recover extends Command {
   /**
    * Process a transaction and attempt to either handle the bridge out or bridge in depending on the event emitted
    */
-  async processTransaction(network: string, transaction: ethers.providers.TransactionResponse): Promise<void> {
+  async processTransaction(network: string, transaction: TransactionResponse): Promise<void> {
     this.networkMonitor.structuredLog(
       network,
       `Processing transaction ${transaction.hash} at block ${transaction.blockNumber}`,
@@ -119,8 +121,8 @@ export default class Recover extends Command {
   /**
    * Handles the event emitted by the bridge contract when a token is bridged out
    */
-  async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+  async handleBridgeOutEvent(transaction: TransactionResponse, network: string): Promise<void> {
+    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
       attempts: 30,
@@ -134,18 +136,14 @@ export default class Recover extends Command {
       this.networkMonitor.structuredLog(network, `Checking if a bridge request was made at tx: ${transaction.hash}`)
       const operatorJobPayload =
         this.networkMonitor.decodePacketEvent(receipt) ?? this.networkMonitor.decodeLzPacketEvent(receipt)
-      const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
+      const operatorJobHash = operatorJobPayload === undefined ? undefined : sha3(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract cross-chain packet for ${transaction.hash}`)
       } else {
-        const bridgeTransaction: ethers.utils.TransactionDescription =
+        const bridgeTransaction: TransactionDescription =
           this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
         const chainId: number = (
-          await this.networkMonitor.interfacesContract.getChainId(
-            2,
-            ethers.BigNumber.from(bridgeTransaction.args.toChain),
-            1,
-          )
+          await this.networkMonitor.interfacesContract.getChainId(2, BigNumber.from(bridgeTransaction.args.toChain), 1)
         ).toNumber()
         let destinationNetwork: string | undefined
         const networkNames: string[] = supportedNetworks
@@ -173,11 +171,8 @@ export default class Recover extends Command {
   /**
    * Handles the event emitted by the operator contract when a job is available and can be executed
    */
-  async handleAvailableOperatorJobEvent(
-    transaction: ethers.providers.TransactionResponse,
-    network: string,
-  ): Promise<void> {
-    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+  async handleAvailableOperatorJobEvent(transaction: TransactionResponse, network: string): Promise<void> {
+    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
       attempts: 30,
@@ -196,7 +191,7 @@ export default class Recover extends Command {
         receipt,
         this.networkMonitor.operatorAddress,
       )
-      const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
+      const operatorJobHash = operatorJobPayload === undefined ? undefined : sha3(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract relayer available job for ${transaction.hash}`)
       } else {
@@ -206,7 +201,7 @@ export default class Recover extends Command {
         )
         const bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
-          value: ethers.BigNumber.from('0'),
+          value: BigNumber.from('0'),
         })
         this.networkMonitor.structuredLog(
           network,

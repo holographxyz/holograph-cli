@@ -60,6 +60,13 @@ export enum FilterType {
   functionSig,
 }
 
+export enum TransactionType {
+  unknown = 'unknown',
+  erc20 = 'erc20',
+  erc721 = 'erc721',
+  deploy = 'deploy',
+}
+
 export type TransactionFilter = {
   type: FilterType
   match: string | {[key: string]: string}
@@ -1126,7 +1133,7 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeBridgeableContractDeployedEvent(receipt: TransactionReceipt, target?: string): any[] | undefined {
+  decodeBridgeableContractDeployedEvent(receipt: TransactionReceipt, target?: string): string[] | undefined {
     if (target !== undefined) {
       target = target.toLowerCase().trim()
     }
@@ -1143,7 +1150,7 @@ export class NetworkMonitor {
               NetworkMonitor.bridgeableContractDeployedEventFragment,
               log.data,
               log.topics,
-            ) as any[],
+            ) as string[],
           )
         }
       }

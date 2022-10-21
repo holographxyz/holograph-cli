@@ -14,11 +14,6 @@ export interface ConfigNetwork {
   providerUrl: string
 }
 
-export interface ConfigBridge {
-  source: string
-  destination: string
-}
-
 export interface ConfigNetworks {
   [k: string]: ConfigNetwork
 }
@@ -35,14 +30,12 @@ export interface ConfigUser {
 
 export interface ConfigFile {
   version: string
-  bridge: ConfigBridge
   networks: ConfigNetworks
   user: ConfigUser
 }
 
 const localhostConfig: ConfigFile = {
-  version: 'beta1',
-  bridge: {source: 'localhost', destination: 'localhost2'},
+  version: 'beta2',
   networks: {localhost: {providerUrl: 'http://localhost:8545'}, localhost2: {providerUrl: 'http://localhost:9545'}},
   user: {
     credentials: {
@@ -191,7 +184,7 @@ export async function ensureConfigFileIsValid(
 
   try {
     const configFile = await fs.readJson(configPath)
-    await validateBeta1Schema(configFile)
+    await validateBeta2Schema(configFile)
     const userWallet: ethers.Wallet = await tryToUnlockWallet(configFile as ConfigFile, unlockWallet, unsafePassword)
 
     console.log(`Environment=${environment}`)
@@ -204,13 +197,9 @@ export async function ensureConfigFileIsValid(
   }
 }
 
-export async function validateBeta1Schema(config: Record<string, unknown>): Promise<void> {
-  const beta1Schema = Joi.object({
-    version: Joi.string().valid('beta1').required(),
-    bridge: Joi.object({
-      source: Joi.string().required(),
-      destination: Joi.string().required(),
-    }).required(),
+export async function validateBeta2Schema(config: Record<string, unknown>): Promise<void> {
+  const beta2Schema = Joi.object({
+    version: Joi.string().valid('beta2').required(),
     networks: Joi.object({
       // eslint-disable-next-line camelcase
       eth_rinkeby: Joi.object({
@@ -238,7 +227,7 @@ export async function validateBeta1Schema(config: Record<string, unknown>): Prom
     .required()
     .unknown(false)
 
-  await beta1Schema.validateAsync(config)
+  await beta2Schema.validateAsync(config)
 }
 
 export function randomASCII(bytes: number): string {
@@ -276,8 +265,4 @@ export function isStringAValidURL(s: string): boolean {
   } catch {
     return false
   }
-}
-
-export function isFromAndToNetworksTheSame(from: string | undefined, to: string | undefined): boolean {
-  return from !== to
 }

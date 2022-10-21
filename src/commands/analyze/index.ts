@@ -8,18 +8,11 @@ import {ensureConfigFileIsValid, supportedNetworks} from '../../utils/config'
 import {Environment, getEnvironment} from '../../utils/environment'
 import {toAscii, getNetworkByHolographId, sha3, storageSlot} from '../../utils/utils'
 
-import {FilterType, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
+import {FilterType, BlockJob, NetworkMonitor, TransactionType} from '../../utils/network-monitor'
 
 enum LogType {
   ContractDeployment = 'ContractDeployment',
   AvailableJob = 'AvailableJob',
-}
-
-enum TransactionType {
-  unknown = 'unknown',
-  erc20 = 'erc20',
-  erc721 = 'erc721',
-  deploy = 'deploy',
 }
 
 type TransactionLog = {
@@ -477,10 +470,11 @@ export default class Analyze extends Command {
             if (holographableContractAddress === this.networkMonitor.factoryAddress) {
               beam.jobType = TransactionType.deploy
             } else {
-              const holographerContract: Contract = this.networkMonitor.holographer.connect(
-                this.networkMonitor.providers[network],
+              const slot: string = await this.networkMonitor.providers[network].getStorageAt(
+                holographableContractAddress,
+                storageSlot('eip1967.Holograph.contractType'),
               )
-              const contractType: string = toAscii(await holographerContract.getContractType())
+              const contractType: string = toAscii(slot)
               if (contractType === 'HolographERC20') {
                 beam.jobType = TransactionType.erc20
               } else if (contractType === 'HolographERC721' || contractType === 'CxipERC721') {

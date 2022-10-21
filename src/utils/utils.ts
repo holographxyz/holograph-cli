@@ -137,6 +137,10 @@ export function sha3(input: string | undefined): string {
   return web3.utils.keccak256(input)
 }
 
+export function functionSignature(input: string | undefined): string {
+  return sha3(input).slice(0, 10)
+}
+
 export function storageSlot(input: string): string {
   return (
     '0x' +
