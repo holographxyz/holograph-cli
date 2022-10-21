@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-import {CliUx, Command, Flags} from '@oclif/core'
+import {CliUx, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 import {Block} from '@ethersproject/abstract-provider'
 

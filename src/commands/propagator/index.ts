@@ -1,7 +1,7 @@
 import * as fs from 'fs-extra'
 import * as inquirer from 'inquirer'
 
-import {CliUx, Command, Flags} from '@oclif/core'
+import {CliUx, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
@@ -9,7 +9,7 @@ import {ensureConfigFileIsValid} from '../../utils/config'
 import {decodeDeploymentConfigInput, capitalize, getNetworkName, DeploymentConfig} from '../../utils/utils'
 import {supportedNetworks} from '../../utils/networks'
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
-import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
+import {BaseCommand} from '../../base-commands/base-command'
 
 type RecoveryData = {
   // eslint-disable-next-line camelcase
@@ -21,12 +21,10 @@ type RecoveryData = {
   contract_address: string
 }
 
-export default class Propagator extends Command {
+export default class Propagator extends BaseCommand {
   static hidden = true
   static description = 'Listen for EVM events deploys collections to the supported networks'
-  static examples = [
-    '$ <%= config.bin %> <%= command.id %> --networks="rinkeby mumbai fuji" --mode=auto'
-  ]
+  static examples = ['$ <%= config.bin %> <%= command.id %> --networks="rinkeby mumbai fuji" --mode=auto']
 
   static flags = {
     mode: Flags.string({
@@ -34,7 +32,6 @@ export default class Propagator extends Command {
       options: ['listen', 'manual', 'auto'],
       char: 'm',
     }),
-    ...healthcheckFlag,
     sync: Flags.boolean({
       description: 'Start from last saved block position instead of latest block position',
       default: false,
@@ -51,6 +48,7 @@ export default class Propagator extends Command {
     recoverFile: Flags.string({
       description: 'Filename reference to JSON array of RecoveryData objects to manually ensure propagation',
     }),
+    ...BaseCommand.flags,
   }
 
   crossDeployments: string[] = []
@@ -64,6 +62,7 @@ export default class Propagator extends Command {
     const {flags} = await this.parse(Propagator)
 
     const enableHealthCheckServer = flags.healthCheck
+    const healthCheckPort = flags.healthCheckPort
     const syncFlag = flags.sync
     const unsafePassword = flags.unsafePassword
 
@@ -185,9 +184,10 @@ export default class Propagator extends Command {
       this.log('Done running recovery jobs')
     }
 
-    // Start server
+    // Start health check server on port 6000 or healthCheckPort
+    // Can be used to monitor that the operator is online and running
     if (enableHealthCheckServer) {
-      startHealthcheckServer({networkMonitor: this.networkMonitor})
+      await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, healthCheckPort})
     }
   }
 

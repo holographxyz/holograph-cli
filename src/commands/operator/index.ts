@@ -1,6 +1,6 @@
 import * as inquirer from 'inquirer'
 
-import {CliUx, Command, Flags} from '@oclif/core'
+import {CliUx, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
