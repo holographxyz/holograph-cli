@@ -10,7 +10,7 @@ import {capitalize, getNetworkByChainId} from '../../utils/utils'
 import {DeploymentConfig, decodeDeploymentConfigInput} from '../../utils/contract-deployment'
 
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
-import {startHealthcheckServer} from '../../utils/health-check-server'
+import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
 
 type RecoveryData = {
   // eslint-disable-next-line camelcase
@@ -23,18 +23,17 @@ type RecoveryData = {
 }
 
 export default class Propagator extends Command {
-  static description = 'Listen for EVM events deploys collections to ther supported networks'
-  static examples = ['$ holograph propagator --networks="rinkeby mumbai fuji" --mode=auto']
+  static hidden = true
+  static description = 'Listen for EVM events deploys collections to the supported networks'
+  static examples = ['$ <%= config.bin %> <%= command.id %> --networks="rinkeby mumbai fuji" --mode=auto']
+
   static flags = {
     mode: Flags.string({
       description: 'The mode in which to run the propagator',
       options: ['listen', 'manual', 'auto'],
       char: 'm',
     }),
-    healthCheck: Flags.boolean({
-      description: 'Launch server on http://localhost:6000 to make sure command is still running',
-      default: false,
-    }),
+    ...healthcheckFlag,
     sync: Flags.boolean({
       description: 'Start from last saved block position instead of latest block position',
       default: false,
@@ -199,7 +198,7 @@ export default class Propagator extends Command {
         networkDependant: false,
       },
     ]
-    Promise.resolve()
+    return Promise.resolve()
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {

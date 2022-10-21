@@ -3,7 +3,16 @@ import {ensureConfigFileIsValid} from '../../utils/config'
 
 export default class Bridge extends Command {
   static description = 'Make a bridge request'
-  static examples = ['$ holograph bridge', '$ holograph bridge:contract']
+  static examples = [
+    {
+      description: 'Learn how to bridge a Holographable contract',
+      command: '<%= config.bin %> bridge:contract --help',
+    },
+    {
+      description: 'Learn how to bridge a Holographable NFT',
+      command: '<%= config.bin %> bridge:nft --help',
+    },
+  ]
 
   /**
    * Command Entry Point

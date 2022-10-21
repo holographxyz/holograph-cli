@@ -1,12 +1,12 @@
 import ConfigView from './view'
 
 export default class ConfigUser extends ConfigView {
-  static description = 'View the current user address'
+  static description = 'View the current user information'
   static examples = [
-    '$ holo:user',
-    '$ holo:user --output json',
-    '$ holo:user --output yaml',
-    '$ holo:user --output clean',
+    '$ <%= config.bin %> <%= command.id %>',
+    '$ <%= config.bin %> <%= command.id %> --output json',
+    '$ <%= config.bin %> <%= command.id %> --output yaml',
+    '$ <%= config.bin %> <%= command.id %> --output clean',
   ]
 
   /**

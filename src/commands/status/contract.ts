@@ -13,10 +13,13 @@ import {networks} from '@holographxyz/networks'
 
 export default class Contract extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
-  static description = 'Check the status of a contract across all enabled networks'
-  static examples = ['$ holograph status:contract --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78"']
+  static description = 'Check the status of a contract across all networks defined in the config'
+  static examples = ['$ <%= config.bin %> <%= command.id %> --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78"']
+
   static flags = {
-    address: Flags.string({description: 'The address of contract to check status of'}),
+    address: Flags.string({
+      description: 'The address of contract to check status of',
+    }),
     output: Flags.string({
       options: ['csv', 'json', 'yaml', ''],
       description: 'Define table output type',

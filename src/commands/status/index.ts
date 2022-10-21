@@ -2,8 +2,17 @@ import {Command} from '@oclif/core'
 import {ensureConfigFileIsValid} from '../../utils/config'
 
 export default class Status extends Command {
-  static description = 'Get asset status'
-  static examples = ['$ holograph status', '$ holograph status:contract', '$ holograph status:nft']
+  static description = 'Get the status of a contract or NFT'
+  static examples = [
+    {
+      description: 'Learn how to get the status of a contract',
+      command: '<%= config.bin %> status:contract --help',
+    },
+    {
+      description: 'Learn how to get the status of an NFT',
+      command: '<%= config.bin %> status:nft --help',
+    },
+  ]
 
   /**
    * Command Entry Point

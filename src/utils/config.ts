@@ -190,10 +190,9 @@ export async function ensureConfigFileIsValid(
     console.log(`Environment=${environment}`)
     return {environment, userWallet, configFile, supportedNetworks}
   } catch (error: any) {
-    const error_ = error.message
+    throw error.message
       ? error
       : new Error(`Config file is no longer valid, please delete it before continuing ${error.message}`)
-    throw error_
   }
 }
 

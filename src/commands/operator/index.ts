@@ -5,7 +5,7 @@ import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-p
 import {Environment} from '../../utils/environment'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
-import {startHealthcheckServer} from '../../utils/health-check-server'
+import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
 import {web3, getNetworkByHolographId} from '../../utils/utils'
 
 /**
@@ -14,17 +14,15 @@ import {web3, getNetworkByHolographId} from '../../utils/utils'
  */
 export default class Operator extends Command {
   static description = 'Listen for EVM events for jobs and process them'
-  static examples = ['$ holograph operator --networks="goerli mumbai fuji" --mode=auto']
+  static examples = ['$ <%= config.bin %> <%= command.id %> --networks="goerli mumbai fuji" --mode=auto']
+
   static flags = {
     mode: Flags.string({
       description: 'The mode in which to run the operator',
       options: ['listen', 'manual', 'auto'],
       char: 'm',
     }),
-    healthCheck: Flags.boolean({
-      description: 'Launch server on http://localhost:6000 to make sure command is still running',
-      default: false,
-    }),
+    ...healthcheckFlag,
     sync: Flags.boolean({
       description: 'Start from last saved block position instead of latest block position',
       default: false,
@@ -145,8 +143,6 @@ export default class Operator extends Command {
         networkDependant: false,
       })
     }
-
-    Promise.resolve()
   }
 
   /**
@@ -274,7 +270,7 @@ export default class Operator extends Command {
         })
         this.networkMonitor.structuredLog(
           network,
-          `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
+          `Bridge-In transaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
           tags,
         )
         if (this.operatorMode !== OperatorMode.listen) {

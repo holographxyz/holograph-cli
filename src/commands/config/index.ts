@@ -19,9 +19,9 @@ export default class Config extends Command {
     'Initialize the Holograph CLI with a config file. If no flags are passed, the CLI will prompt you for the required information.'
 
   static examples = [
-    '$ holograph --privateKey abc...def',
-    '$ holograph --fromFile ./config.json',
-    '$ holograph --fromJson \'{"version": "beta2", ...}',
+    '$ <%= config.bin %> <%= command.id %> --privateKey abc...def',
+    '$ <%= config.bin %> <%= command.id %> --fromFile ./config.json',
+    '$ <%= config.bin %> <%= command.id %> --fromJson \'{"version": "beta2", ...}',
   ]
 
   static flags = {
@@ -34,7 +34,7 @@ export default class Config extends Command {
       dependsOn: ['network'],
     }),
     privateKey: Flags.string({description: 'Default account to use when sending all transactions'}),
-    fromFile: Flags.string({description: 'Location of file to load config'}),
+    fromFile: Flags.string({description: 'Path to the config file to load'}),
     fromJson: Flags.string({description: 'JSON object to use as the config'}),
   }
 
@@ -120,7 +120,7 @@ export default class Config extends Command {
               return true
             }
 
-            return 'Please select at least 2 networks to operate on. Use the arrow keys and spacebar to select.'
+            return 'Please select at least 2 networks to operate on. Use the arrow keys and space-bar to select.'
           },
         },
       ])

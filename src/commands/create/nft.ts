@@ -20,7 +20,7 @@ import {TokenUriTypeIndex} from '../../utils/asset-deployment'
 export default class NFT extends Command {
   static description = 'Mint a Holographable NFT'
   static examples = [
-    '$ holograph create:nft --network="eth_goerli" --collectionAddress="0xf90c33d5ef88a9d84d4d61f62c913ba192091fe7" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"',
+    '$ <%= config.bin %> <%= command.id %> --network="eth_goerli" --collectionAddress="0xf90c33d5ef88a9d84d4d61f62c913ba192091fe7" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"',
   ]
 
   static flags = {

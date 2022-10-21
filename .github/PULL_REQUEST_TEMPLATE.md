@@ -1,6 +1,6 @@
 ## Describe Changes
 
-I made this more better by doing ...
+I made this better by doing ...
 
 - Change A
 - Change B
