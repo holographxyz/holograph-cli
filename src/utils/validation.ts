@@ -7,19 +7,19 @@ import {TokenUriType} from './asset-deployment'
 import {supportedNetworks} from './config'
 import {remove0x} from './utils'
 
-const addressValidator = /^0x[\da-f]{40}$/i
+export const addressValidator = /^0x[\da-f]{40}$/i
 
-const bytesValidator = /^0x[\da-f]+$/i
+export const bytesValidator = /^0x[\da-f]+$/i
 
-const nonEmptyStringValidator = /^[\S ]+$/i
+export const nonEmptyStringValidator = /^[\S ]+$/i
 
-const numberValidator = /^\d{1,78}$/
+export const numberValidator = /^\d{1,78}$/
 
-const tokenValidator = /^((0x[\da-f]{1,64})|(\d{1,78}))$/i
+export const tokenValidator = /^((0x[\da-f]{1,64})|(\d{1,78}))$/i
 
-const transactionHashValidator = /^0x[\da-f]{64}$/i
+export const transactionHashValidator = /^0x[\da-f]{64}$/i
 
-const validateBytes = async (input: string): Promise<string> => {
+export const validateBytes = async (input: string): Promise<string> => {
   const output: string = input.trim().toLowerCase()
   if (bytesValidator.test(output)) {
     return output
@@ -28,7 +28,7 @@ const validateBytes = async (input: string): Promise<string> => {
   throw new Error('Invalid bytes provided ' + output)
 }
 
-const validateContractAddress = async (input: string): Promise<string> => {
+export const validateContractAddress = async (input: string): Promise<string> => {
   const output: string = input.trim().toLowerCase()
   if (addressValidator.test(output)) {
     return output
@@ -37,7 +37,7 @@ const validateContractAddress = async (input: string): Promise<string> => {
   throw new Error('Invalid contact address provided ' + output)
 }
 
-const validateNetwork = async (input: string): Promise<string> => {
+export const validateNetwork = async (input: string): Promise<string> => {
   const output: string = input.trim()
   if (supportedNetworks.includes(output)) {
     return output
@@ -46,7 +46,7 @@ const validateNetwork = async (input: string): Promise<string> => {
   throw new Error('Invalid/unsupported network provided ' + output)
 }
 
-const validateNonEmptyNumber = async (input: string): Promise<string> => {
+export const validateNonEmptyNumber = async (input: string): Promise<string> => {
   const output: string = input.trim()
   if (numberValidator.test(output)) {
     return output
@@ -55,7 +55,7 @@ const validateNonEmptyNumber = async (input: string): Promise<string> => {
   throw new Error('Invalid number provided ' + output)
 }
 
-const validateNonEmptyString = async (input: string): Promise<string> => {
+export const validateNonEmptyString = async (input: string): Promise<string> => {
   const output: string = input.trim()
   if (nonEmptyStringValidator.test(output)) {
     return output
@@ -64,7 +64,7 @@ const validateNonEmptyString = async (input: string): Promise<string> => {
   throw new Error('Invalid bytes provided ' + output)
 }
 
-const validateTokenIdInput = async (input: string): Promise<string> => {
+export const validateTokenIdInput = async (input: string): Promise<string> => {
   const output: string = input.trim().toLowerCase()
   if (tokenValidator.test(output)) {
     if (numberValidator.test(output)) {
@@ -77,7 +77,7 @@ const validateTokenIdInput = async (input: string): Promise<string> => {
   throw new Error('Invalid tokenId provided ' + output)
 }
 
-const validateTransactionHash = async (input: string): Promise<string> => {
+export const validateTransactionHash = async (input: string): Promise<string> => {
   const output: string = input.trim().toLowerCase()
   if (transactionHashValidator.test(output)) {
     return output
@@ -86,7 +86,7 @@ const validateTransactionHash = async (input: string): Promise<string> => {
   throw new Error('Invalid transaction hash provided ' + output)
 }
 
-const checkBytecodeFlag = async (input: string | undefined, prompt: string): Promise<string> => {
+export const checkBytecodeFlag = async (input: string | undefined, prompt: string): Promise<string> => {
   if (input === undefined) {
     const bytecodePrompt: any = await inquirer.prompt([
       {
@@ -105,7 +105,7 @@ const checkBytecodeFlag = async (input: string | undefined, prompt: string): Pro
   return input as string
 }
 
-const checkBytecodeTypeFlag = async (
+export const checkBytecodeTypeFlag = async (
   input: string | undefined,
   prompt: string,
   exclude?: string | undefined,
@@ -136,7 +136,7 @@ const checkBytecodeTypeFlag = async (
   return BytecodeType[input as string as keyof typeof BytecodeType]
 }
 
-const checkContractAddressFlag = async (input: string | undefined, prompt: string): Promise<string> => {
+export const checkContractAddressFlag = async (input: string | undefined, prompt: string): Promise<string> => {
   if (input === undefined) {
     const contractAddressPrompt: any = await inquirer.prompt([
       {
@@ -155,7 +155,7 @@ const checkContractAddressFlag = async (input: string | undefined, prompt: strin
   return input as string
 }
 
-const checkDeploymentTypeFlag = async (
+export const checkDeploymentTypeFlag = async (
   input: string | undefined,
   prompt: string,
   exclude?: string | undefined,
@@ -186,7 +186,7 @@ const checkDeploymentTypeFlag = async (
   return DeploymentType[input as string as keyof typeof DeploymentType]
 }
 
-const checkNetworkFlag = async (
+export const checkNetworkFlag = async (
   networks: ConfigNetworks,
   input: string | undefined,
   prompt: string,
@@ -218,7 +218,7 @@ const checkNetworkFlag = async (
   return input as string
 }
 
-const checkNumberFlag = async (input: string | undefined, prompt: string): Promise<number> => {
+export const checkNumberFlag = async (input: string | undefined, prompt: string): Promise<number> => {
   if (input === undefined) {
     const numberPrompt: any = await inquirer.prompt([
       {
@@ -237,7 +237,7 @@ const checkNumberFlag = async (input: string | undefined, prompt: string): Promi
   return Number.parseInt(input as string, 10)
 }
 
-const checkOptionFlag = async (
+export const checkOptionFlag = async (
   options: string[],
   input: string | undefined,
   prompt: string,
@@ -269,7 +269,7 @@ const checkOptionFlag = async (
   return input as string
 }
 
-const checkStringFlag = async (input: string | undefined, prompt: string): Promise<string> => {
+export const checkStringFlag = async (input: string | undefined, prompt: string): Promise<string> => {
   if (input === undefined) {
     const stringPrompt: any = await inquirer.prompt([
       {
@@ -288,7 +288,7 @@ const checkStringFlag = async (input: string | undefined, prompt: string): Promi
   return input as string
 }
 
-const checkTokenIdFlag = async (input: string | undefined, prompt: string): Promise<string> => {
+export const checkTokenIdFlag = async (input: string | undefined, prompt: string): Promise<string> => {
   if (input === undefined) {
     const tokenIdPrompt: any = await inquirer.prompt([
       {
@@ -307,7 +307,7 @@ const checkTokenIdFlag = async (input: string | undefined, prompt: string): Prom
   return input as string
 }
 
-const checkTokenUriTypeFlag = async (
+export const checkTokenUriTypeFlag = async (
   input: string | undefined,
   prompt: string,
   exclude?: string | undefined,
@@ -338,7 +338,7 @@ const checkTokenUriTypeFlag = async (
   return TokenUriType[input as string as keyof typeof TokenUriType]
 }
 
-const checkTransactionHashFlag = async (input: string | undefined, prompt: string): Promise<string> => {
+export const checkTransactionHashFlag = async (input: string | undefined, prompt: string): Promise<string> => {
   if (input === undefined) {
     const transactionHashPrompt: any = await inquirer.prompt([
       {
@@ -355,31 +355,4 @@ const checkTransactionHashFlag = async (input: string | undefined, prompt: strin
   }
 
   return input as string
-}
-
-export {
-  addressValidator,
-  bytesValidator,
-  nonEmptyStringValidator,
-  numberValidator,
-  tokenValidator,
-  transactionHashValidator,
-  validateBytes,
-  validateContractAddress,
-  validateNetwork,
-  validateNonEmptyNumber,
-  validateNonEmptyString,
-  validateTokenIdInput,
-  validateTransactionHash,
-  checkBytecodeFlag,
-  checkBytecodeTypeFlag,
-  checkContractAddressFlag,
-  checkDeploymentTypeFlag,
-  checkNetworkFlag,
-  checkNumberFlag,
-  checkOptionFlag,
-  checkStringFlag,
-  checkTokenIdFlag,
-  checkTokenUriTypeFlag,
-  checkTransactionHashFlag,
 }

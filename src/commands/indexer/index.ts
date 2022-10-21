@@ -16,9 +16,14 @@ import {
   functionSignature,
   storageSlot,
   toAscii,
-  zeroAddress,
 } from '../../utils/utils'
-import {DeploymentConfig, decodeDeploymentConfig, decodeDeploymentConfigInput} from '../../utils/contract-deployment'
+import {
+  DeploymentConfig,
+  decodeDeploymentConfig,
+  decodeDeploymentConfigInput,
+  deploymentConfigHash,
+  create2address,
+} from '../../utils/contract-deployment'
 
 import {networksFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {
@@ -31,7 +36,6 @@ import {
   BridgeOutArgs,
   BridgeOutErc20Args,
   BridgeOutErc721Args,
-  decodeBridgeOut,
   decodeBridgeOutErc20Args,
   decodeBridgeOutErc721Args,
 } from '../../utils/bridge'
@@ -117,34 +121,38 @@ export default class Indexer extends Command {
     this.BASE_URL = flags.host
     const enableHealthCheckServer = flags.healthCheck
 
-    this.log(this.apiColor(`API: Authenticating with ${this.BASE_URL}`))
-    let res
-    try {
-      res = await axios.post(`${this.BASE_URL}/v1/auth/operator`, {
-        hash: process.env.OPERATOR_API_KEY,
-      })
-      this.debug(JSON.stringify(res.data))
-    } catch (error: any) {
-      this.error(error.message)
-    }
-
-    this.JWT = res!.data.accessToken
-
-    if (typeof this.JWT === 'undefined') {
-      this.error('Failed to authorize as an operator')
-    }
-
-    this.debug(`process.env.OPERATOR_API_KEY = ${process.env.OPERATOR_API_KEY}`)
-    this.debug(`this.JWT = ${this.JWT}`)
-
-    // Indexer always runs in listen mode
-    this.log(`Indexer mode: ${this.operatorMode}`)
-
     this.log('Loading user configurations...')
     const {environment, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
     this.log('User configurations loaded.')
 
     this.environment = environment
+
+    // Indexer always runs in listen mode
+    this.log(`Indexer mode: ${this.operatorMode}`)
+
+    if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
+      this.log(`Skiping API authentication for ${Environment[this.environment]} environment`)
+    } else {
+      this.log(this.apiColor(`API: Authenticating with ${this.BASE_URL}`))
+      let res
+      try {
+        res = await axios.post(`${this.BASE_URL}/v1/auth/operator`, {
+          hash: process.env.OPERATOR_API_KEY,
+        })
+        this.debug(JSON.stringify(res.data))
+      } catch (error: any) {
+        this.error(error.message)
+      }
+
+      this.JWT = res!.data.accessToken
+
+      if (typeof this.JWT === 'undefined') {
+        this.error('Failed to authorize as an operator')
+      }
+
+      this.debug(`process.env.OPERATOR_API_KEY = ${process.env.OPERATOR_API_KEY}`)
+      this.debug(`this.JWT = ${this.JWT}`)
+    }
 
     this.networkMonitor = new NetworkMonitor({
       parent: this,
@@ -354,7 +362,16 @@ export default class Indexer extends Command {
       )
       if (deploymentEvent !== undefined) {
         const deploymentConfig: DeploymentConfig = decodeDeploymentConfigInput(transaction.data)
-        const contractAddress = deploymentEvent[0]
+        const deploymentHash: string = deploymentConfigHash(deploymentConfig)
+        const contractAddress = create2address(deploymentConfig, this.networkMonitor.factoryAddress)
+        if (deploymentHash !== deploymentEvent[1]) {
+          throw new Error(`Deployment config hashes ${deploymentHash} and ${deploymentEvent[1]} do not match!`)
+        }
+
+        if (contractAddress !== deploymentEvent[0]) {
+          throw new Error(`Deployment addresses ${contractAddress} and ${deploymentEvent[0]} do not match!`)
+        }
+
         await this.updateDeployedContract(
           transaction,
           network,
@@ -395,8 +412,8 @@ export default class Indexer extends Command {
       await this.updateMintedERC721(
         transaction,
         network,
-        holographableContractAddress,
         contractType,
+        holographableContractAddress,
         erc721TransferEvent,
         tags,
       )
@@ -436,7 +453,7 @@ export default class Indexer extends Command {
           } else {
             const bridgeIn: BridgeInArgs = bridgeTransaction.args as unknown as BridgeInArgs
             const fromNetwork: string = getNetworkByHolographId(bridgeIn.fromChain)
-            const bridgeInPayload: string = decodeBridgeIn(bridgeIn.bridgeInPayload).payload
+            const bridgeInPayload: string = bridgeIn.bridgeInPayload
             const holographableContractAddress: string = bridgeIn.holographableContract.toLowerCase()
             if (holographableContractAddress === this.networkMonitor.factoryAddress) {
               // BRIDGE IN CONTRACT DEPLOYMENT
@@ -452,7 +469,16 @@ export default class Indexer extends Command {
                 )
               } else {
                 const deploymentConfig: DeploymentConfig = decodeDeploymentConfig(bridgeInPayload)
-                const contractAddress = deploymentEvent[0]
+                const deploymentHash: string = deploymentConfigHash(deploymentConfig)
+                const contractAddress = create2address(deploymentConfig, this.networkMonitor.factoryAddress)
+                if (deploymentHash !== deploymentEvent[1]) {
+                  throw new Error(`Deployment config hashes ${deploymentHash} and ${deploymentEvent[1]} do not match!`)
+                }
+
+                if (contractAddress !== deploymentEvent[0]) {
+                  throw new Error(`Deployment addresses ${contractAddress} and ${deploymentEvent[0]} do not match!`)
+                }
+
                 await this.updateBridgedContract(
                   'in',
                   transaction,
@@ -598,20 +624,21 @@ export default class Indexer extends Command {
         if (bridgeTransaction.name === 'bridgeOutRequest') {
           const bridgeOut: BridgeOutArgs = bridgeTransaction.args as unknown as BridgeOutArgs
           const toNetwork: string = getNetworkByHolographId(bridgeOut.toChain)
-          const bridgeOutPayload: string = decodeBridgeOut(bridgeOut.bridgeOutPayload).payload
+          const bridgeOutPayload: string = bridgeOut.bridgeOutPayload
           const holographableContractAddress: string = bridgeOut.holographableContract.toLowerCase()
-
           if (holographableContractAddress === this.networkMonitor.factoryAddress) {
             // BRIDGE OUT CONTRACT DEPLOYMENT
             const deploymentConfig: DeploymentConfig = decodeDeploymentConfig(bridgeOutPayload)
-            const contractAddress = zeroAddress
+            const deploymentHash: string = deploymentConfigHash(deploymentConfig)
+            const contractAddress = create2address(deploymentConfig, this.networkMonitor.factoryAddress)
+            const deploymentEvent: string[] = [contractAddress, deploymentHash]
             await this.updateBridgedContract(
               'out',
               transaction,
               network,
               toNetwork,
               contractAddress,
-              [] as any[],
+              deploymentEvent,
               deploymentConfig,
               operatorJobHash,
               tags,
@@ -740,14 +767,16 @@ export default class Indexer extends Command {
           if (holographableContractAddress === this.networkMonitor.factoryAddress) {
             // BRIDGE OUT CONTRACT DEPLOYMENT
             const deploymentConfig: DeploymentConfig = decodeDeploymentConfig(bridgeOutPayload)
-            const contractAddress = zeroAddress
+            const deploymentHash: string = deploymentConfigHash(deploymentConfig)
+            const contractAddress = create2address(deploymentConfig, this.networkMonitor.factoryAddress)
+            const deploymentEvent: string[] = [contractAddress, deploymentHash]
             await this.updateBridgedContract(
               'msg',
               transaction,
               network,
               toNetwork,
               contractAddress,
-              [] as any[],
+              deploymentEvent,
               deploymentConfig,
               operatorJobHash,
               tags,
@@ -1034,8 +1063,8 @@ export default class Indexer extends Command {
     transaction: TransactionResponse,
     network: string,
     fromNetwork: string,
-    contractAddress: string,
     contractType: string,
+    contractAddress: string,
     erc721TransferEvent: any[],
     erc721BeamInfo: BridgeInErc721Args | BridgeOutErc721Args,
     operatorJobHash: string,
@@ -1094,8 +1123,8 @@ export default class Indexer extends Command {
   async updateMintedERC721(
     transaction: TransactionResponse,
     network: string,
-    contractAddress: string,
     contractType: string,
+    contractAddress: string,
     erc721TransferEvent: any[],
     tags: (string | number)[],
   ): Promise<void> {

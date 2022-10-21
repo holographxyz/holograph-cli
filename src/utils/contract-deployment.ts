@@ -1,8 +1,13 @@
 import {Flags} from '@oclif/core'
-import {validateNetwork, validateNonEmptyString, validateTransactionHash} from './validation'
-import {BigNumberish, BytesLike} from 'ethers'
+
+import {BigNumber, BigNumberish, BytesLike} from 'ethers'
 import Web3 from 'web3'
-const web3 = new Web3()
+
+import {bytecodes, BytecodeType} from './bytecodes'
+import {remove0x, sha3} from './utils'
+import {validateNetwork, validateNonEmptyString, validateTransactionHash} from './validation'
+
+export const web3 = new Web3()
 
 export enum DeploymentType {
   deployedTx = 'deployedTx',
@@ -169,4 +174,30 @@ export const decodeDeploymentConfig = function (input: string): DeploymentConfig
 
 export const decodeDeploymentConfigInput = function (input: string): DeploymentConfig {
   return decodeDeploymentConfig('0x' + input.slice(10))
+}
+
+export const deploymentConfigHash = function (deploymentConfig: DeploymentConfig): string {
+  const configHash: string = sha3(
+    (
+      '0x' +
+      remove0x(BigNumber.from(deploymentConfig.config.contractType).toHexString()).padStart(64, '0') +
+      remove0x(BigNumber.from(deploymentConfig.config.chainType).toHexString()).padStart(8, '0') +
+      remove0x(BigNumber.from(deploymentConfig.config.salt).toHexString()).padStart(64, '0') +
+      remove0x(sha3(deploymentConfig.config.byteCode)) +
+      remove0x(sha3(deploymentConfig.config.initCode)) +
+      remove0x(BigNumber.from(deploymentConfig.signer).toHexString()).padStart(40, '0')
+    ).toLowerCase(),
+  )
+  return configHash
+}
+
+export const create2address = function (deploymentConfig: DeploymentConfig, factoryAddress: string): string {
+  const configHash: string = deploymentConfigHash(deploymentConfig)
+  // TODO: replace HolographerOld with Holographer once new deployments are up
+  const futureAddress: string =
+    '0x' +
+    sha3(
+      '0xff' + remove0x(factoryAddress) + remove0x(configHash) + remove0x(sha3(bytecodes[BytecodeType.HolographerOld])),
+    ).slice(26)
+  return futureAddress
 }
