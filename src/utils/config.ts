@@ -5,23 +5,17 @@ import * as Joi from 'joi'
 import {ethers} from 'ethers'
 
 import AesEncryption from './aes-encryption'
+import {Environment, getEnvironment} from './environment'
+import {NetworkType, Network, networks} from '@holographxyz/networks'
 
 export const CONFIG_FILE_NAME = 'config.json'
 
 export interface ConfigNetwork {
-  name: string
   providerUrl: string
 }
 
-export interface ConfigBridge {
-  source: string
-  destination: string
-}
-
 export interface ConfigNetworks {
-  goerli: ConfigNetwork
-  fuji: ConfigNetwork
-  mumbai: ConfigNetwork
+  [k: string]: ConfigNetwork
 }
 
 export interface ConfigCredentials {
@@ -36,20 +30,32 @@ export interface ConfigUser {
 
 export interface ConfigFile {
   version: string
-  bridge: ConfigBridge
   networks: ConfigNetworks
   user: ConfigUser
+}
+
+const localhostConfig: ConfigFile = {
+  version: 'beta3',
+  networks: {localhost: {providerUrl: 'http://localhost:8545'}, localhost2: {providerUrl: 'http://localhost:9545'}},
+  user: {
+    credentials: {
+      iv: 'n6QP9:_vn=})',
+      privateKey:
+        'QDiDSbP9O0C58wm9rj41D1jqGgYT4+XBMuO6e8R1gc53IzbxKrHAjVeALxkSCkcFIx7MerWm4+ZVbJ0n51FbIPYz6OpnKRXXFGtDLq64mgU=',
+      address: '0xdf5295149F367b1FBFD595bdA578BAd22e59f504',
+    },
+  },
 }
 
 async function tryToUnlockWallet(
   configFile: ConfigFile,
   unlockWallet: boolean,
-  unsafePassword: string | undefined,
+  unsafePassword?: string,
 ): Promise<ethers.Wallet> {
   let userWallet: ethers.Wallet | undefined
   if (unlockWallet) {
     // eslint-disable-next-line no-negated-condition
-    if (typeof unsafePassword !== 'undefined') {
+    if (unsafePassword !== undefined) {
       try {
         userWallet = new ethers.Wallet(
           new AesEncryption(unsafePassword, configFile.user.credentials.iv).decrypt(
@@ -96,11 +102,69 @@ async function tryToUnlockWallet(
   return userWallet as ethers.Wallet
 }
 
+export function getSupportedNetworks(environment?: Environment): string[] {
+  if (environment === undefined) {
+    environment = getEnvironment()
+  }
+
+  const supportedNetworks: string[] = Object.keys(networks).filter((networkKey: string) => {
+    const network: Network = networks[networkKey]
+    switch (environment) {
+      case Environment.localhost:
+        if (network.type === NetworkType.local && network.active) {
+          return true
+        }
+
+        break
+      case Environment.experimental:
+        if (network.type === NetworkType.testnet && network.active) {
+          return true
+        }
+
+        break
+      case Environment.develop:
+        if (network.type === NetworkType.testnet && network.active) {
+          return true
+        }
+
+        break
+      case Environment.testnet:
+        if (network.type === NetworkType.testnet && network.active) {
+          return true
+        }
+
+        break
+      case Environment.mainnet:
+        if (network.type === NetworkType.mainnet && network.active) {
+          return true
+        }
+
+        break
+    }
+
+    return false
+  })
+  return supportedNetworks
+}
+
+export const supportedNetworks = getSupportedNetworks()
+
 export async function ensureConfigFileIsValid(
   configDir: string,
   unsafePassword: string | undefined,
   unlockWallet = false,
-): Promise<{userWallet: ethers.Wallet; configFile: ConfigFile}> {
+): Promise<{environment: Environment; userWallet: ethers.Wallet; configFile: ConfigFile; supportedNetworks: string[]}> {
+  const environment: Environment = getEnvironment()
+  if (environment === Environment.localhost) {
+    console.log(`Environment=${environment}`)
+    return {
+      environment,
+      userWallet: await tryToUnlockWallet(localhostConfig, unlockWallet),
+      configFile: localhostConfig,
+      supportedNetworks,
+    }
+  }
+
   let configPath = configDir
   try {
     await fs.pathExists(configDir)
@@ -120,10 +184,11 @@ export async function ensureConfigFileIsValid(
 
   try {
     const configFile = await fs.readJson(configPath)
-    await validateBeta1Schema(configFile)
+    await validateBeta3Schema(configFile)
     const userWallet: ethers.Wallet = await tryToUnlockWallet(configFile as ConfigFile, unlockWallet, unsafePassword)
 
-    return {userWallet, configFile}
+    console.log(`Environment=${environment}`)
+    return {environment, userWallet, configFile, supportedNetworks}
   } catch (error: any) {
     throw error.message
       ? error
@@ -131,21 +196,20 @@ export async function ensureConfigFileIsValid(
   }
 }
 
-export async function validateBeta1Schema(config: Record<string, unknown>): Promise<void> {
-  const beta1Schema = Joi.object({
-    version: Joi.string().valid('beta1').required(),
-    bridge: Joi.object({
-      source: Joi.string().required(),
-      destination: Joi.string().required(),
-    }).required(),
+export async function validateBeta3Schema(config: Record<string, unknown>): Promise<void> {
+  const beta3Schema = Joi.object({
+    version: Joi.string().valid('beta3').required(),
     networks: Joi.object({
-      goerli: Joi.object({
+      ethereumTestnetRinkeby: Joi.object({
         providerUrl: Joi.string().required(),
       }),
-      fuji: Joi.object({
+      ethereumTestnetGoerli: Joi.object({
         providerUrl: Joi.string().required(),
       }),
-      mumbai: Joi.object({
+      avalancheTestnet: Joi.object({
+        providerUrl: Joi.string().required(),
+      }),
+      polygonTestnet: Joi.object({
         providerUrl: Joi.string().required(),
       }),
     }).required(),
@@ -160,7 +224,7 @@ export async function validateBeta1Schema(config: Record<string, unknown>): Prom
     .required()
     .unknown(false)
 
-  await beta1Schema.validateAsync(config)
+  await beta3Schema.validateAsync(config)
 }
 
 export function randomASCII(bytes: number): string {
@@ -198,8 +262,4 @@ export function isStringAValidURL(s: string): boolean {
   } catch {
     return false
   }
-}
-
-export function isFromAndToNetworksTheSame(from: string | undefined, to: string | undefined): boolean {
-  return from !== to
 }

@@ -7,10 +7,11 @@ export default class Status extends Command {
     {
       description: 'Learn how to get the status of a contract',
       command: '<%= config.bin %> status:contract --help',
-    }, {
+    },
+    {
       description: 'Learn how to get the status of an NFT',
       command: '<%= config.bin %> status:nft --help',
-    }
+    },
   ]
 
   /**

@@ -8,7 +8,7 @@ class OperatorChainService extends CoreChainService {
   constructor(
     provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider,
     wallet: ethers.Wallet,
-    chainId: SupportedChainIds,
+    chainId: number,
     contract: Contract,
   ) {
     super(provider, wallet, chainId)

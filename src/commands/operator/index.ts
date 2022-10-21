@@ -1,12 +1,12 @@
 import * as inquirer from 'inquirer'
-
 import {CliUx, Command, Flags} from '@oclif/core'
-import {ethers} from 'ethers'
-
+import {BigNumber} from 'ethers'
+import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
+import {Environment} from '../../utils/environment'
 import {ensureConfigFileIsValid} from '../../utils/config'
-
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
+import {web3, getNetworkByHolographId} from '../../utils/utils'
 
 /**
  * Operator
@@ -15,7 +15,7 @@ import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-
 export default class Operator extends Command {
   static description = 'Listen for EVM events for jobs and process them'
   static examples = [
-    '$ <%= config.bin %> <%= command.id %> --networks="goerli mumbai fuji" --mode=auto'
+    '$ <%= config.bin %> <%= command.id %> --networks ethereumTestnetGoerli polygonTestnet avalancheTestnet --mode=auto',
   ]
 
   static flags = {
@@ -37,6 +37,7 @@ export default class Operator extends Command {
 
   operatorMode: OperatorMode = OperatorMode.listen
   networkMonitor!: NetworkMonitor
+  environment!: Environment
 
   /**
    * Command Entry Point
@@ -69,7 +70,12 @@ export default class Operator extends Command {
     this.log(`Operator mode: ${this.operatorMode}`)
 
     this.log('Loading user configurations...')
-    const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, unsafePassword, true)
+    const {environment, userWallet, configFile} = await ensureConfigFileIsValid(
+      this.config.configDir,
+      unsafePassword,
+      true,
+    )
+    this.environment = environment
     this.log('User configurations loaded.')
 
     this.networkMonitor = new NetworkMonitor({
@@ -132,20 +138,29 @@ export default class Operator extends Command {
         networkDependant: true,
       },
     ]
-    return Promise.resolve()
+    if (this.environment === Environment.localhost) {
+      this.networkMonitor.filters.push({
+        type: FilterType.to,
+        match: this.networkMonitor.bridgeAddress,
+        networkDependant: false,
+      })
+    }
   }
 
   /**
    * Process the transactions in each block job
    */
-  async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
+  async processTransactions(job: BlockJob, transactions: TransactionResponse[]): Promise<void> {
     /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
         const tags: (string | number)[] = []
         tags.push(transaction.blockNumber as number, this.networkMonitor.randomTag())
+        const to: string | undefined = transaction.to?.toLowerCase()
         const from: string | undefined = transaction.from?.toLowerCase()
-        if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
+        if (to === this.networkMonitor.bridgeAddress) {
+          await this.handleBridgeOutEvent(transaction, job.network, tags)
+        } else if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
           await this.handleAvailableOperatorJobEvent(transaction, job.network, tags)
         } else {
           this.networkMonitor.structuredLog(
@@ -158,15 +173,64 @@ export default class Operator extends Command {
     }
   }
 
+  async handleBridgeOutEvent(
+    transaction: TransactionResponse,
+    network: string,
+    tags: (string | number)[],
+  ): Promise<void> {
+    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
+    if (receipt === null) {
+      throw new Error(`Could not get receipt for ${transaction.hash}`)
+    }
+
+    if (receipt.status === 1) {
+      this.networkMonitor.structuredLog(
+        network,
+        `Checking if a bridge request was made at tx: ${transaction.hash}`,
+        tags,
+      )
+      const operatorJobHash: string | undefined = this.networkMonitor.decodeCrossChainMessageSentEvent(
+        receipt,
+        this.networkMonitor.operatorAddress,
+      )
+      if (operatorJobHash === undefined) {
+        this.networkMonitor.structuredLog(
+          network,
+          `Failed to extract job details from ${transaction.hash} receipt`,
+          tags,
+        )
+      } else {
+        const bridgeTransaction = await this.networkMonitor.bridgeContract.interface.parseTransaction({
+          data: transaction.data,
+          value: BigNumber.from('0'),
+        })
+        const args: any[] = this.networkMonitor.decodeLzEvent(receipt, this.networkMonitor.lzEndpointAddress[network])!
+        const jobHash: string = web3.utils.keccak256(args[2] as string)
+        this.networkMonitor.structuredLog(network, `Bridge request found for job hash ${jobHash}`, tags)
+        await this.executeLzPayload(
+          getNetworkByHolographId(bridgeTransaction.args[0]),
+          jobHash,
+          [args[0], args[1], 0, args[2]],
+          tags,
+        )
+      }
+    }
+  }
+
   /**
    * Handle the AvailableOperatorJob event from the LayerZero contract when one is picked up while processing transactions
    */
   async handleAvailableOperatorJobEvent(
-    transaction: ethers.providers.TransactionResponse,
+    transaction: TransactionResponse,
     network: string,
     tags: (string | number)[],
   ): Promise<void> {
-    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
       attempts: 30,
@@ -184,8 +248,12 @@ export default class Operator extends Command {
         `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
         tags,
       )
-      const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(receipt)
-      const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
+      const operatorJobPayloadData = this.networkMonitor.decodeAvailableOperatorJobEvent(
+        receipt,
+        this.networkMonitor.operatorAddress,
+      )
+      const operatorJobHash = operatorJobPayloadData === undefined ? undefined : operatorJobPayloadData[0]
+      const operatorJobPayload = operatorJobPayloadData === undefined ? undefined : operatorJobPayloadData[1]
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(
           network,
@@ -200,7 +268,7 @@ export default class Operator extends Command {
         )
         const bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
-          value: ethers.BigNumber.from('0'),
+          value: BigNumber.from('0'),
         })
         this.networkMonitor.structuredLog(
           network,
@@ -218,6 +286,8 @@ export default class Operator extends Command {
    * Execute the payload on the destination network
    */
   async executePayload(network: string, payload: string, tags: (string | number)[]): Promise<void> {
+    this.networkMonitor.walletNonces[network] = await this.networkMonitor.wallets[network].getTransactionCount()
+
     // If the operator is in listen mode, payloads will not be executed
     // If the operator is in manual mode, the payload must be manually executed
     // If the operator is in auto mode, the payload will be executed automatically
@@ -228,7 +298,7 @@ export default class Operator extends Command {
           name: 'shouldContinue',
           message: `A transaction appeared on ${network} for execution, would you like to operate?\n`,
           type: 'confirm',
-          default: false,
+          default: true,
         },
       ])
       operate = operatorPrompt.shouldContinue
@@ -242,6 +312,61 @@ export default class Operator extends Command {
         methodName: 'executeJob',
         args: [payload],
       })
+    } else {
+      this.networkMonitor.structuredLog(network, 'Dropped potential payload to execute', tags)
+    }
+  }
+
+  /**
+   * Execute the lz message payload on the destination network
+   */
+  async executeLzPayload(network: string, jobHash: string, args: any[], tags: (string | number)[]): Promise<void> {
+    this.networkMonitor.walletNonces[network] = await this.networkMonitor.wallets[network].getTransactionCount()
+    // If the operator is in listen mode, payloads will not be executed
+    // If the operator is in manual mode, the payload must be manually executed
+    // If the operator is in auto mode, the payload will be executed automatically
+    let operate = this.operatorMode === OperatorMode.auto
+    if (this.operatorMode === OperatorMode.manual) {
+      const operatorPrompt: any = await inquirer.prompt([
+        {
+          name: 'shouldContinue',
+          message: `A transaction appeared on ${network} for execution, would you like to operate?\n`,
+          type: 'confirm',
+          default: true,
+        },
+      ])
+      operate = operatorPrompt.shouldContinue
+    }
+
+    if (operate) {
+      const data: string = (
+        await this.networkMonitor.messagingModuleContract
+          .connect(this.networkMonitor.localhostWallets[network])
+          .populateTransaction.lzReceive(...args)
+      ).data!
+      let estimatedGas: BigNumber | undefined
+      try {
+        estimatedGas = await this.networkMonitor.lzEndpointContract[network].estimateGas.adminCall(
+          this.networkMonitor.messagingModuleAddress,
+          data,
+        )
+      } catch {
+        this.networkMonitor.structuredLog(network, 'Job is not valid/available for ' + jobHash, tags)
+      }
+
+      if (estimatedGas !== undefined) {
+        this.networkMonitor.structuredLog(network, 'Sending cross-chain message for ' + jobHash, tags)
+        const tx = await this.networkMonitor.lzEndpointContract[network].adminCall(
+          this.networkMonitor.messagingModuleAddress,
+          data,
+        )
+        const receipt = await tx.wait()
+        if (receipt.status === 1) {
+          this.networkMonitor.structuredLog(network, 'Sent cross-chain message for ' + jobHash, tags)
+        } else {
+          this.networkMonitor.structuredLog(network, 'Failed sending cross-chain message for ' + jobHash, tags)
+        }
+      }
     } else {
       this.networkMonitor.structuredLog(network, 'Dropped potential payload to execute', tags)
     }

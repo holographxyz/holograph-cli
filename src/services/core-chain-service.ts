@@ -3,14 +3,7 @@ import {StaticJsonRpcProvider, JsonRpcProvider, Web3Provider} from '@ethersproje
 import {FeeData, TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
 import {BigNumberish} from '@ethersproject/bignumber'
 
-import {
-  CHAIN_IDS,
-  MUMBAI_GAS_PRICE,
-  FAUCET_ADDRESSES,
-  HOLOGRAPH_ADDRESSES,
-  LZ_RELAYER_ADDRESSES,
-  getABIs,
-} from '../utils/contracts'
+import {FAUCET_ADDRESSES, HOLOGRAPH_ADDRESSES, LZ_RELAYER_ADDRESSES, getABIs} from '../utils/contracts'
 import {getEnvironment} from '../utils/environment'
 import {BigNumber, ethers} from 'ethers'
 
@@ -22,13 +15,13 @@ class CoreChainService {
   provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider
   wallet: ethers.Wallet
   holograph: Contract | undefined
-  chainId: SupportedChainIds
+  chainId: number
   abis: {[key: string]: any} = {}
 
   constructor(
     provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider,
     wallet: ethers.Wallet,
-    chainId: SupportedChainIds,
+    chainId: number,
   ) {
     this.provider = provider
     this.chainId = chainId
@@ -120,14 +113,6 @@ class CoreChainService {
     return this.provider.getSigner().getAddress()
   }
 
-  adjustGasPrice = async (): Promise<BigNumberish> => {
-    const gasPrice = BigNumber.from(await this.getChainGasPrice())
-    if (this.chainId === CHAIN_IDS.mumbai && gasPrice.lt(MUMBAI_GAS_PRICE)) {
-      return MUMBAI_GAS_PRICE
-    }
-
-    return gasPrice
-  }
 }
 
 export default CoreChainService

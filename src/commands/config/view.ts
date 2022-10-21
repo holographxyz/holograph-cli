@@ -18,7 +18,7 @@ export default class ConfigView extends Command {
   static flags = {
     output: Flags.string({
       description: 'Output format',
-      options: supportedFormats
+      options: supportedFormats,
     }),
   }
 

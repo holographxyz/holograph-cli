@@ -6,28 +6,25 @@
 <p align="center">
 </p>
 
-
-
 [![oclif](https://img.shields.io/badge/cli-oclif-brightgreen.svg)](https://oclif.io)
 [![Version](https://img.shields.io/npm/v/oclif-hello-world.svg)](https://npmjs.org/package/holograph-cli)
 [![Downloads/week](https://img.shields.io/npm/dw/oclif-hello-world.svg)](https://npmjs.org/package/holograph-cli)
 [![License](https://img.shields.io/npm/l/oclif-hello-world.svg)](https://github.com/oclif/hello-world/blob/main/package.json)
 
-
-
-Overview
-========
+# Overview
 
 This is a CLI is primarily for operators of the holograph network. The CLI includes tools to move NFTs between networks and view their status.
 
 <!-- toc -->
-* [Usage](#usage)
-* [Commands](#commands)
+
+- [Usage](#usage)
+- [Commands](#commands)
 <!-- tocstop -->
 
 # Usage
 
 <!-- usage -->
+
 ```sh-session
 $ npm install -g holograph-cli
 $ holograph COMMAND
@@ -39,24 +36,26 @@ USAGE
   $ holograph COMMAND
 ...
 ```
+
 <!-- usagestop -->
 
 # Commands
 
 <!-- commands -->
-* [`holograph bridge`](#holograph-bridge)
-* [`holograph bridge:contract`](#holograph-bridgecontract)
-* [`holograph bridge:nft`](#holograph-bridgenft)
-* [`holograph config`](#holograph-config)
-* [`holograph config:networks`](#holograph-confignetworks)
-* [`holograph config:user`](#holograph-configuser)
-* [`holograph config:view`](#holograph-configview)
-* [`holograph help [COMMAND]`](#holograph-help-command)
-* [`holograph operator`](#holograph-operator)
-* [`holograph operator:recover`](#holograph-operatorrecover)
-* [`holograph status`](#holograph-status)
-* [`holograph status:contract`](#holograph-statuscontract)
-* [`holograph status:nft`](#holograph-statusnft)
+
+- [`holograph bridge`](#holograph-bridge)
+- [`holograph bridge:contract`](#holograph-bridgecontract)
+- [`holograph bridge:nft`](#holograph-bridgenft)
+- [`holograph config`](#holograph-config)
+- [`holograph config:networks`](#holograph-confignetworks)
+- [`holograph config:user`](#holograph-configuser)
+- [`holograph config:view`](#holograph-configview)
+- [`holograph help [COMMAND]`](#holograph-help-command)
+- [`holograph operator`](#holograph-operator)
+- [`holograph operator:recover`](#holograph-operatorrecover)
+- [`holograph status`](#holograph-status)
+- [`holograph status:contract`](#holograph-statuscontract)
+- [`holograph status:nft`](#holograph-statusnft)
 
 ## `holograph bridge`
 
@@ -403,6 +402,7 @@ EXAMPLES
 ```
 
 _See code: [dist/commands/status/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/status/nft.ts)_
+
 <!-- commandsstop -->
 
 ## Developing
@@ -414,14 +414,16 @@ If you want to build the package directly, or if you want to help [contribute](#
 The required versions of `node` and `yarn` are in the `.tool-version` file.
 
 1. This project uses [asdf](https://asdf-vm.com/) for language/binary versions management. Install following plugins
-  - Install [asdf Node plugin](https://github.com/asdf-vm/asdf-nodejs): `asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git`
-  - Install [asdf yarn plugin](https://github.com/twuni/asdf-yarn): `asdf plugin-add yarn`
+
+- Install [asdf Node plugin](https://github.com/asdf-vm/asdf-nodejs): `asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git`
+- Install [asdf yarn plugin](https://github.com/twuni/asdf-yarn): `asdf plugin-add yarn`
+
 2. Run `asdf install` to get the required `node` and `yarn` version in the .tool-versions file.
 3. Install dependencies with `yarn install`.
 
 ### Working with the code
 
-Once everything is installed, you can run `./bin/dev COMMAND` and the respective command in the `/src/commands` file will be run. For example the command `./bin/dev status:nft` will run the file `./src/commands/status/nft.ts` 
+Once everything is installed, you can run `./bin/dev COMMAND` and the respective command in the `/src/commands` file will be run. For example the command `./bin/dev status:nft` will run the file `./src/commands/status/nft.ts`
 
 ```
 src
@@ -439,12 +441,12 @@ src
 
 ### Branches
 
-| Branch                                                                     | Status                                                                            |
-|----------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
-| [mainnet](https://github.com/holographxyz/holograph-cli/tree/mainnet)      | Accepts PRs from `testnet` or `release/x.x.x` when we intend to deploy to mainnet. |
-| [testnet](https://github.com/holographxyz/holograph-cli/tree/testnet)      | Accepts PRs from `develop` that are ready to be deployed to testnet.              |
-| [develop](https://github.com/holographxyz/holograph-cli/tree/develop)      | Accepts PRs from `feature/xyz` branches that are experimental or in testing stage. |
-| [experimental](https://github.com/holographxyz/holograph-cli/tree/experimental) | Accepts PRs from `feature/xyz`                                                    |
+| Branch                                                                          | Status                                                                             |
+| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| [mainnet](https://github.com/holographxyz/holograph-cli/tree/mainnet)           | Accepts PRs from `testnet` or `release/x.x.x` when we intend to deploy to mainnet. |
+| [testnet](https://github.com/holographxyz/holograph-cli/tree/testnet)           | Accepts PRs from `develop` that are ready to be deployed to testnet.               |
+| [develop](https://github.com/holographxyz/holograph-cli/tree/develop)           | Accepts PRs from `feature/xyz` branches that are experimental or in testing stage. |
+| [experimental](https://github.com/holographxyz/holograph-cli/tree/experimental) | Accepts PRs from `feature/xyz`                                                     |
 
 We generally follow [this Git branching model](https://nvie.com/posts/a-successful-git-branching-model/).
 Please read the linked post if you're planning to make frequent PRs into this repository.
@@ -465,27 +467,24 @@ The `testnet` branch contains the code that is the latest stable testnet release
 Our primary development branch is [`develop`](https://github.com/holographxyz/holograph-cli/tree/develop).
 `develop` contains the most up-to-date software that is being tested via experimental network deployments.
 
-
 ### The `experimetnal` branch
 
 This branch is used for deep internal features [`experimental`](https://github.com/holographxyz/holograph-cli/tree/experimental).
 `experimetnal` contains experimental features.
 
-
-
-
 ## Contributing
 
 ### Bugs
+
 If you found a bug please create an issue and provide the required information. Please label your issue with the tag "Bug". We will triage the issues and incorporate fixes.
 
 ### Suggestions / Desires
-We love that you have ideas! So do we! You can make a ticket in the issues tab and label it as 'enhancement'. You can also join our discord and talk to us directly. 
+
+We love that you have ideas! So do we! You can make a ticket in the issues tab and label it as 'enhancement'. You can also join our discord and talk to us directly.
 
 ### Pull Requests
 
-If you do write code and want it integrated in, we ask that you make all PRS into the develop branch. Please review the branch structure section to understand how features make move up the stack. 
-
+If you do write code and want it integrated in, we ask that you make all PRS into the develop branch. Please review the branch structure section to understand how features make move up the stack.
 
 ## Official Links
 
