@@ -8,12 +8,13 @@ import {ensureConfigFileIsValid} from '../../utils/config'
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
 import {portValidator} from '../../utils/validation'
+import {BaseCommand} from '../../base-commands/base-command'
 
 /**
  * Operator
  * Description: The primary command for operating jobs on the Holograph network.
  */
-export default class Operator extends Command {
+export default class Operator extends BaseCommand {
   static description = 'Listen for EVM events for jobs and process them'
   static examples = ['$ <%= config.bin %> <%= command.id %> --networks="goerli mumbai fuji" --mode=auto']
 
@@ -23,7 +24,7 @@ export default class Operator extends Command {
       options: ['listen', 'manual', 'auto'],
       char: 'm',
     }),
-    ...healthcheckFlag,
+    // ...healthcheckFlag,
     sync: Flags.boolean({
       description: 'Start from last saved block position instead of latest block position',
       default: false,
@@ -32,6 +33,7 @@ export default class Operator extends Command {
       description: 'Enter the plain text password for the wallet in the holograph cli config',
     }),
     ...networksFlag,
+    ...BaseCommand.flags,
   }
 
   operatorMode: OperatorMode = OperatorMode.listen
@@ -41,6 +43,7 @@ export default class Operator extends Command {
    * Command Entry Point
    */
   async run(): Promise<void> {
+    await super.run()
     const {flags} = await this.parse(Operator)
 
     // Check the flags
@@ -49,9 +52,9 @@ export default class Operator extends Command {
     const syncFlag = flags.sync
     const unsafePassword = flags.unsafePassword
 
-    if (healthCheckPort && !portValidator(healthCheckPort)) {
-      this.error('The port should be in the [3000, 65535] range.')
-    }
+    // if (healthCheckPort && !portValidator(healthCheckPort)) {
+    //   this.error('The port should be in the [3000, 65535] range.')
+    // }
 
     // Have the user input the mode if it's not provided
     let mode: string | undefined = flags.mode
@@ -120,8 +123,11 @@ export default class Operator extends Command {
 
     // Start health check server on port 6000
     // Can be used to monitor that the operator is online and running
+    // if (enableHealthCheckServer) {
+    //   startHealthcheckServer({networkMonitor: this.networkMonitor, healthCheckPort})
+    // }
     if (enableHealthCheckServer) {
-      startHealthcheckServer({networkMonitor: this.networkMonitor, healthCheckPort})
+      await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, healthCheckPort})
     }
   }
 

@@ -90,6 +90,9 @@
     "bin": "holo",
     "dirname": "holo",
     "commands": "./dist/commands",
+    "hooks": {
+      "healthCheck": "./dist/hooks/healthCheck"
+    },
     "npmRegistry": "https://registry.npmjs.org",
     "macos": {
       "identifier": "com.holograph.cli"
