@@ -6,8 +6,6 @@ import {ethers} from 'ethers'
 import {ensureConfigFileIsValid} from '../../utils/config'
 
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
-import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
-import {portValidator} from '../../utils/validation'
 import {BaseCommand} from '../../base-commands/base-command'
 
 /**
@@ -121,11 +119,8 @@ export default class Operator extends BaseCommand {
     await this.networkMonitor.run(true, undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
-    // Start health check server on port 6000
+    // Start health check server on port 6000 or healthCheckPort
     // Can be used to monitor that the operator is online and running
-    // if (enableHealthCheckServer) {
-    //   startHealthcheckServer({networkMonitor: this.networkMonitor, healthCheckPort})
-    // }
     if (enableHealthCheckServer) {
       await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, healthCheckPort})
     }

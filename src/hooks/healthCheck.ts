@@ -12,6 +12,7 @@ type startHealthCheckServerProps = {
 
 class HealthCheck {
   private static _instance?: HealthCheck
+  private readonly server: http.Server
 
   private constructor(options: startHealthCheckServerProps) {
     const {networkMonitor, healthCheckPort} = options
@@ -19,7 +20,7 @@ class HealthCheck {
     const host = '0.0.0.0'
     const port = healthCheckPort ? healthCheckPort : 6000
 
-    const server = http.createServer(function (req: IncomingMessage, res: ServerResponse) {
+    this.server = http.createServer(function (req: IncomingMessage, res: ServerResponse) {
       res.setHeader('Content-Type', 'application/json')
       if (req.url === '/healthcheck') {
         const providerStatus = networkMonitor.getProviderStatus()
@@ -31,7 +32,7 @@ class HealthCheck {
       }
     })
 
-    server.listen(port, host, () => {
+    this.server.listen(port, host, () => {
       console.log(`Server is running on http://${host}:${port}`)
     })
   }

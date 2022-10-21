@@ -15,10 +15,10 @@ import {
   getChainId,
 } from '../../utils/utils'
 import {networksFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
-import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
 
 import dotenv from 'dotenv'
 import color from '@oclif/color'
+import {BaseCommand} from '../../base-commands/base-command'
 dotenv.config()
 
 type DBJob = {
@@ -52,13 +52,11 @@ interface BridgeTransactionArgs {
   to: string
 }
 
-export default class Indexer extends Command {
+export default class Indexer extends BaseCommand {
   static hidden = true
   static LAST_BLOCKS_FILE_NAME = 'indexer-blocks.json'
   static description = 'Listen for EVM events and update database network status'
-  static examples = [
-    '$ <%= config.bin %> <%= command.id %> --networks="goerli mumbai fuji" --mode=auto'
-  ]
+  static examples = ['$ <%= config.bin %> <%= command.id %> --networks="goerli mumbai fuji" --mode=auto']
 
   static flags = {
     mode: Flags.string({
@@ -69,11 +67,11 @@ export default class Indexer extends Command {
     host: Flags.string({
       description: 'The host to send data to',
       char: 'h',
-      default: 'http://localhost:9001'
+      default: 'http://localhost:9001',
     }),
     ...networksFlag,
-    ...healthcheckFlag,
     ...warpFlag,
+    ...BaseCommand.flags,
   }
 
   // API Params
@@ -107,6 +105,7 @@ export default class Indexer extends Command {
     const {flags} = await this.parse(Indexer)
     this.BASE_URL = flags.host
     const enableHealthCheckServer = flags.healthCheck
+    const healthCheckPort = flags.healthCheckPort
 
     this.log(this.apiColor(`API: Authenticating with ${this.BASE_URL}`))
     let res
@@ -152,9 +151,10 @@ export default class Indexer extends Command {
     await this.networkMonitor.run(!(flags.warp > 0), undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
-    // Start server
+    // Start health check server on port 6000 or healthCheckPort
+    // Can be used to monitor that the operator is online and running
     if (enableHealthCheckServer) {
-      startHealthcheckServer({networkMonitor: this.networkMonitor})
+      await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, healthCheckPort})
     }
 
     this.processDBJobs()
@@ -896,7 +896,7 @@ export default class Indexer extends Command {
     // Get and convert the destination chain id from holograph id in the transaction args
     const destinationChainid = getChainId(bridgeTransaction.args[0])
 
-    let data = {};
+    let data = {}
     const params = {
       headers: {
         Authorization: `Bearer ${this.JWT}`,
@@ -1032,7 +1032,10 @@ export default class Indexer extends Command {
         break
       default:
         // Unknown cross-chain transaction type
-        this.networkMonitor.structuredLog(network, `Unknown cross chain type event ${crossChainTxType}. Will not process`)
+        this.networkMonitor.structuredLog(
+          network,
+          `Unknown cross chain type event ${crossChainTxType}. Will not process`,
+        )
         return
     }
 
