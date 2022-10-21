@@ -32,7 +32,7 @@ export const networksFlag = {
   networks: Flags.string({
     description: 'Space separated list of networks to operate on',
     multiple: true,
-    options: supportedNetworks
+    options: supportedNetworks,
   }),
 }
 
@@ -227,6 +227,14 @@ export type TransactionParams = {
   interval?: number
 }
 
+enum NetworkStatus {
+  NOT_CONFIGURED = 'NOT_CONFIGURED',
+  NOT_ENABLED = 'NOT_ENABLED',
+  CONNECTED = 'CONNECTED',
+  RECONNECTING = 'RECONNECTING',
+  DISCONNECTED = 'DISCONNECTED',
+}
+
 const cleanTags = (tagIds?: string | number | (number | string)[]): string => {
   if (tagIds === undefined) {
     return ''
@@ -326,23 +334,36 @@ export class NetworkMonitor {
     '0xe9bded5f24a4168e4f3bf44e00298c993b22376aad8c58c7dda9718a54cbea82': 'LzPacket',
   }
 
-  getProviderStatus() {
+  async getProviderStatus() {
     const outputNetworks = Object.keys(this.configFile.networks)
-    const output = {} as any
+    const output: {[key: string]: NetworkStatus} = {}
 
-    for (const n of outputNetworks) {
-      if (this.providers[n]) {
-        const current = this.providers[n] as ethers.providers.WebSocketProvider
-        if (current._wsReady && current._websocket._socket.readyState === 'open') {
-          output[n] = 'CONNECTED'
+    for (const net of outputNetworks) {
+      if (this.providers[net]) {
+        if (this.providers[net] instanceof ethers.providers.WebSocketProvider) {
+          const wssProvider = this.providers[net] as ethers.providers.WebSocketProvider
+
+          if (wssProvider._wsReady && wssProvider._websocket._socket.readyState === 'open') {
+            output[net] = NetworkStatus.CONNECTED
+          }
+        } else {
+          const rpcProvider = this.providers[net] as ethers.providers.JsonRpcProvider
+
+          try {
+            await rpcProvider.getBlockNumber()
+            output[net] = NetworkStatus.CONNECTED
+          } catch (error: any) {
+            output[net] = NetworkStatus.DISCONNECTED
+            console.error(error)
+          }
         }
       } else {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
-        output[n] = this.configFile.networks[n].providerUrl ? 'DISCONNECTED' : 'NOT_CONFIGURED'
+        output[net] = this.configFile.networks[n].providerUrl
+          ? NetworkStatus.DISCONNECTED
+          : NetworkStatus.NOT_CONFIGURED
       }
     }
-
     return output
   }
 
