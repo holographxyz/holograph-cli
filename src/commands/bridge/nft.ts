@@ -244,7 +244,6 @@ export default class BridgeNFT extends Command {
       args: [networks[destinationNetwork].holographId, collectionAddress, estimatedGas, GASPRICE, data as string],
       waitForReceipt: true,
       value: total.mul(BigNumber.from('2')),
-      gasPrice: GASPRICE.mul(BigNumber.from('2')),
     })
     CliUx.ux.action.stop()
 
