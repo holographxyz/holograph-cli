@@ -38,15 +38,15 @@ export const webSocketConfig = {
 export const NETWORK_COLORS: Record<string, string> = {
   localhost: '##83EEFF',
   localhost2: '#ff0000',
-  fuji: '#ff0000',
-  avax: '#ff0000',
-  mumbai: '##B026FF ',
+  avalancheTestnet: '#ff0000',
+  avalanche: '#ff0000',
+  binanceSmartChain: '#f0b90b',
+  binanceSmartChainTestnet: '#f0b90b',
+  polygonTestnet: '##B026FF ',
   polygon: '#B026FF ',
-  // eslint-disable-next-line camelcase
-  eth_rinkeby: '##83EEFF',
-  // eslint-disable-next-line camelcase
-  eth_goerli: '#83EEFF',
-  eth: '##83EEFF',
+  ethereumTestnetRinkeby: '##83EEFF',
+  ethereumTestnetGoerli: '#83EEFF',
+  etheterum: '##83EEFF',
 }
 
 export const rgbToHex = (rgb: number): string => {

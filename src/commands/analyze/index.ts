@@ -49,7 +49,7 @@ export default class Analyze extends Command {
   static hidden = true
   static description = 'Extract all operator jobs and get their status'
   static examples = [
-    `$ <%= config.bin %> <%= command.id %> --scope='{"network":"eht_goerli","startBlock":10857626,"endBlock":11138178}' --scope='{"network":"mumbai","startBlock":26758573,"endBlock":27457918}' --scope='{"network":"fuji","startBlock":11406945,"endBlock":12192217}'`,
+    `$ <%= config.bin %> <%= command.id %> --scope='{"network":"ethereumTestnetGoerli","startBlock":10857626,"endBlock":11138178}' --scope='{"network":"polygonTestnet","startBlock":26758573,"endBlock":27457918}' --scope='{"network":"avalancheTestnet","startBlock":11406945,"endBlock":12192217}'`,
   ]
 
   static flags = {

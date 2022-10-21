@@ -14,7 +14,9 @@ import {web3, getNetworkByHolographId} from '../../utils/utils'
  */
 export default class Operator extends Command {
   static description = 'Listen for EVM events for jobs and process them'
-  static examples = ['$ <%= config.bin %> <%= command.id %> --networks="goerli mumbai fuji" --mode=auto']
+  static examples = [
+    '$ <%= config.bin %> <%= command.id %> --networks ethereumTestnetGoerli polygonTestnet avalancheTestnet --mode=auto',
+  ]
 
   static flags = {
     mode: Flags.string({

@@ -45,7 +45,7 @@ export default class Contract extends Command {
   static hidden = true
   static description = 'Deploy a Holographable contract directly to another chain'
   static examples = [
-    '$ <%= config.bin %> <%= command.id %> --deploymentType="deployedTx" --tx="0xdb8b393dd18a71b386c8de75b87310c0c8ded0c57cf6b4c5bab52873d54d1e8a" --txNetwork="eth_goerli"',
+    '$ <%= config.bin %> <%= command.id %> --deploymentType="deployedTx" --tx="0xdb8b393dd18a71b386c8de75b87310c0c8ded0c57cf6b4c5bab52873d54d1e8a" --txNetwork="ethereumTestnetGoerli"',
   ]
 
   static flags = {

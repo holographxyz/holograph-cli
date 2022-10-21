@@ -11,7 +11,7 @@ import {networks} from '@holographxyz/networks'
 
 export default class Recover extends Command {
   static description = 'Attempt to re-run/recover a particular Operator Job'
-  static examples = ['$ <%= config.bin %> <%= command.id %>--network="goerli" --tx="0x..."']
+  static examples = ['$ <%= config.bin %> <%= command.id %> --network="ethereumTestnetGoerli" --tx="0x..."']
   static flags = {
     network: Flags.string({
       description: 'The network on which the transaction was executed',

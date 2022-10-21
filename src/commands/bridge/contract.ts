@@ -15,7 +15,7 @@ export default class BridgeContract extends Command {
     'Bridge a Holographable contract from source chain to destination chain. You need to have a deployment config JSON file. Use the "contract:create" command to create or extract one.'
 
   static examples = [
-    '$ <%= config.bin %> <%= command.id %> --sourceNetwork="eth_goerli" --destinationNetwork="fuji" --deploymentConfig="./MyContract.json"',
+    '$ <%= config.bin %> <%= command.id %> --sourceNetwork="ethereumTestnetGoerli" --destinationNetwork="avalancheTestnet" --deploymentConfig="./MyContract.json"',
   ]
 
   static flags = {

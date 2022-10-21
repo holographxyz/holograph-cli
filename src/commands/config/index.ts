@@ -9,7 +9,7 @@ import {
   isStringAValidURL,
   randomASCII,
   CONFIG_FILE_NAME,
-  validateBeta2Schema,
+  validateBeta3Schema,
   supportedNetworks,
 } from '../../utils/config'
 import AesEncryption from '../../utils/aes-encryption'
@@ -21,7 +21,7 @@ export default class Config extends Command {
   static examples = [
     '$ <%= config.bin %> <%= command.id %> --privateKey abc...def',
     '$ <%= config.bin %> <%= command.id %> --fromFile ./config.json',
-    '$ <%= config.bin %> <%= command.id %> --fromJson \'{"version": "beta2", ...}',
+    '$ <%= config.bin %> <%= command.id %> --fromJson \'{"version": "beta3", ...}',
   ]
 
   static flags = {
@@ -62,7 +62,7 @@ export default class Config extends Command {
     const isConfigExist: boolean = await checkFileExists(configPath)
 
     let userConfigTemplate: any = {
-      version: 'beta2',
+      version: 'beta3',
       networks: {},
       user: {
         credentials: {
@@ -299,7 +299,7 @@ export default class Config extends Command {
     if (jsonString !== undefined) {
       this.log(`checking jsonString input`)
       const output = JSON.parse(jsonString)
-      await validateBeta2Schema(output)
+      await validateBeta3Schema(output)
       this.log(output)
       // Since the json at the desired path is valid, we save it!
       await fs.outputJSON(configPath, output, {spaces: 2})

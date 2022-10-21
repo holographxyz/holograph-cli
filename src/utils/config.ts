@@ -35,7 +35,7 @@ export interface ConfigFile {
 }
 
 const localhostConfig: ConfigFile = {
-  version: 'beta2',
+  version: 'beta3',
   networks: {localhost: {providerUrl: 'http://localhost:8545'}, localhost2: {providerUrl: 'http://localhost:9545'}},
   user: {
     credentials: {
@@ -184,7 +184,7 @@ export async function ensureConfigFileIsValid(
 
   try {
     const configFile = await fs.readJson(configPath)
-    await validateBeta2Schema(configFile)
+    await validateBeta3Schema(configFile)
     const userWallet: ethers.Wallet = await tryToUnlockWallet(configFile as ConfigFile, unlockWallet, unsafePassword)
 
     console.log(`Environment=${environment}`)
@@ -196,22 +196,20 @@ export async function ensureConfigFileIsValid(
   }
 }
 
-export async function validateBeta2Schema(config: Record<string, unknown>): Promise<void> {
-  const beta2Schema = Joi.object({
-    version: Joi.string().valid('beta2').required(),
+export async function validateBeta3Schema(config: Record<string, unknown>): Promise<void> {
+  const beta3Schema = Joi.object({
+    version: Joi.string().valid('beta3').required(),
     networks: Joi.object({
-      // eslint-disable-next-line camelcase
-      eth_rinkeby: Joi.object({
+      ethereumTestnetRinkeby: Joi.object({
         providerUrl: Joi.string().required(),
       }),
-      // eslint-disable-next-line camelcase
-      eth_goerli: Joi.object({
+      ethereumTestnetGoerli: Joi.object({
         providerUrl: Joi.string().required(),
       }),
-      fuji: Joi.object({
+      avalancheTestnet: Joi.object({
         providerUrl: Joi.string().required(),
       }),
-      mumbai: Joi.object({
+      polygonTestnet: Joi.object({
         providerUrl: Joi.string().required(),
       }),
     }).required(),
@@ -226,7 +224,7 @@ export async function validateBeta2Schema(config: Record<string, unknown>): Prom
     .required()
     .unknown(false)
 
-  await beta2Schema.validateAsync(config)
+  await beta3Schema.validateAsync(config)
 }
 
 export function randomASCII(bytes: number): string {

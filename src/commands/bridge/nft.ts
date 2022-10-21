@@ -19,7 +19,7 @@ import {networks} from '@holographxyz/networks'
 export default class BridgeNFT extends Command {
   static description = 'Beam a Holographable NFT from source chain to destination chain.'
   static examples = [
-    '$ <%= config.bin %> <%= command.id %> --sourceNetwork="goerli" --destinationNetwork="fuji" --collectionAddress="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId="0x01"',
+    '$ <%= config.bin %> <%= command.id %> --sourceNetwork="ethereumTestnetGoerli" --destinationNetwork="avalancheTestnet" --collectionAddress="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId="0x01"',
   ]
 
   static flags = {

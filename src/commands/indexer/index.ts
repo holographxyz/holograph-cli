@@ -73,7 +73,9 @@ export default class Indexer extends Command {
   static hidden = true
   static LAST_BLOCKS_FILE_NAME = 'indexer-blocks.json'
   static description = 'Listen for EVM events and update database network status'
-  static examples = ['$ <%= config.bin %> <%= command.id %> --networks="goerli mumbai fuji" --mode=auto']
+  static examples = [
+    '$ <%= config.bin %> <%= command.id %> --networks ethereumTestnetGoerli polygonTestnet avalancheTestnet --mode=auto',
+  ]
 
   static flags = {
     mode: Flags.string({
