@@ -2,14 +2,14 @@ import * as inquirer from 'inquirer'
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
-import {ConfigNetwork, ConfigNetworks, ensureConfigFileIsValid} from '../../utils/config'
-import networks, {supportedNetworks} from '../../utils/networks'
-import {toShort18} from '../../utils/contracts'
+import {ConfigNetwork, ConfigNetworks, ensureConfigFileIsValid, supportedNetworks} from '../../utils/config'
+import {toLong18} from '../../utils/contracts'
 import {formatEther} from 'ethers/lib/utils'
 import {PodBondAmounts} from '../../types/holograph-operator'
 import CoreChainService from '../../services/core-chain-service'
 import OperatorChainService from '../../services/operator-chain-service'
 import color from '@oclif/color'
+import {networks} from '@holographxyz/networks'
 
 /**
  * Start
@@ -201,15 +201,19 @@ export default class Bond extends Command {
         },
       ])
       amount = prompt.amount
+      process.stdout.write('\n\n' + JSON.stringify(amount) + '\n\n')
       this.log(`Depositing ${amount} tokens`)
     }
+
+    process.stdout.write('\n\n' + JSON.stringify(amount) + '\n\n')
+    process.stdout.write('\n\n' + JSON.stringify(toLong18(amount as number)) + '\n\n')
 
     this.log(`Bonding from ${wallet.address} to pod ${pod} on network ${network} for ${amount} tokens`)
 
     CliUx.ux.action.start('Calculating gas amounts and prices')
     let gasLimit
     try {
-      gasLimit = await operator.estimateGas.bondUtilityToken(wallet.address, toShort18(amount as number), pod)
+      gasLimit = await operator.estimateGas.bondUtilityToken(wallet.address, toLong18(amount as number), pod)
     } catch (error: any) {
       this.error(error.reason)
     }
@@ -239,7 +243,7 @@ export default class Bond extends Command {
 
     try {
       CliUx.ux.action.start('Sending transaction to mempool')
-      const tx = await operator.bondUtilityToken(wallet.address, toShort18(amount as number), pod)
+      const tx = await operator.bondUtilityToken(wallet.address, toLong18(amount as number), pod)
       this.debug(tx)
       CliUx.ux.action.stop('Transaction hash is ' + tx.hash)
 
