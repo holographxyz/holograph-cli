@@ -61,7 +61,11 @@ export default class Bond extends Command {
     }
 
     this.log('Loading user configurations...')
-    const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
+    const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
+      this.config.configDir,
+      undefined,
+      true,
+    )
 
     const network: string = await checkOptionFlag(
       supportedNetworksOptions,

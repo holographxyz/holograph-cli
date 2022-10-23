@@ -60,7 +60,11 @@ export default class NFT extends Command {
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
     const environment = getEnvironment()
-    const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
+    const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
+      this.config.configDir,
+      undefined,
+      true,
+    )
 
     const {flags} = await this.parse(NFT)
     this.log('User configurations loaded.')

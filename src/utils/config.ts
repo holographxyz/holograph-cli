@@ -107,10 +107,10 @@ function generateSupportedNetworksOptions(configNetworks?: ConfigNetworks): Sele
   const options: SelectOption[] = []
   for (const key of supportedNetworks) {
     if (configNetworks === undefined) {
-      options.push({ name: networks[key].shortKey, value: networks[key].key } as SelectOption)
+      options.push({name: networks[key].shortKey, value: networks[key].key} as SelectOption)
     } else if (key in configNetworks) {
-        options.push({ name: networks[key].shortKey, value: networks[key].key } as SelectOption)
-      }
+      options.push({name: networks[key].shortKey, value: networks[key].key} as SelectOption)
+    }
   }
 
   return options
@@ -120,7 +120,12 @@ export async function ensureConfigFileIsValid(
   configDir: string,
   unsafePassword: string | undefined,
   unlockWallet = false,
-): Promise<{environment: Environment; userWallet: ethers.Wallet; configFile: ConfigFile; supportedNetworksOptions: SelectOption[]}> {
+): Promise<{
+  environment: Environment
+  userWallet: ethers.Wallet
+  configFile: ConfigFile
+  supportedNetworksOptions: SelectOption[]
+}> {
   const environment: Environment = getEnvironment()
   if (environment === Environment.localhost) {
     console.log(`Environment=${environment}`)
@@ -155,7 +160,12 @@ export async function ensureConfigFileIsValid(
     const userWallet: ethers.Wallet = await tryToUnlockWallet(configFile as ConfigFile, unlockWallet, unsafePassword)
 
     console.log(`Environment=${environment}`)
-    return {environment, userWallet, configFile, supportedNetworksOptions: generateSupportedNetworksOptions(configFile.networks)}
+    return {
+      environment,
+      userWallet,
+      configFile,
+      supportedNetworksOptions: generateSupportedNetworksOptions(configFile.networks),
+    }
   } catch (error: any) {
     throw error.message
       ? error

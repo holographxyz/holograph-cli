@@ -6,7 +6,12 @@ import {TransactionDescription} from '@ethersproject/abi'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {Environment, getEnvironment} from '@holographxyz/environment'
-import {getNetworkByHolographId, supportedNetworks, supportedShortNetworks, getNetworkByShortKey} from '@holographxyz/networks'
+import {
+  getNetworkByHolographId,
+  supportedNetworks,
+  supportedShortNetworks,
+  getNetworkByShortKey,
+} from '@holographxyz/networks'
 import {toAscii, sha3, storageSlot} from '../../utils/utils'
 
 import {FilterType, BlockJob, NetworkMonitor, TransactionType} from '../../utils/network-monitor'

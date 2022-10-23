@@ -9,14 +9,7 @@ import {hexZeroPad} from '@ethersproject/bytes'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {Environment} from '@holographxyz/environment'
 import {getNetworkByHolographId} from '@holographxyz/networks'
-import {
-  capitalize,
-  sleep,
-  sha3,
-  functionSignature,
-  storageSlot,
-  toAscii,
-} from '../../utils/utils'
+import {capitalize, sleep, sha3, functionSignature, storageSlot, toAscii} from '../../utils/utils'
 import {
   DeploymentConfig,
   decodeDeploymentConfig,

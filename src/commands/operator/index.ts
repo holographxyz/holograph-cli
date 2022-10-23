@@ -223,7 +223,7 @@ export default class Operator extends Command {
     }
   }
 
-/*
+  /*
 
   struct OperatorJob {
     uint8 pod;
@@ -236,7 +236,7 @@ export default class Operator extends Command {
 
 */
 
-//  async decodeOperatorJob(network: string, operatorJobHash: string)
+  //  async decodeOperatorJob(network: string, operatorJobHash: string)
 
   /**
    * Handle the AvailableOperatorJob event from the LayerZero contract when one is picked up while processing transactions

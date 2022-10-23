@@ -18,11 +18,7 @@ class CoreChainService {
   chainId: number
   abis: {[key: string]: any} = {}
 
-  constructor(
-    provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider,
-    wallet: Wallet,
-    chainId: number,
-  ) {
+  constructor(provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider, wallet: Wallet, chainId: number) {
     this.provider = provider
     this.chainId = chainId
     this.wallet = wallet
@@ -112,7 +108,6 @@ class CoreChainService {
   getSignerAddress = async (): Promise<string> => {
     return this.provider.getSigner().getAddress()
   }
-
 }
 
 export default CoreChainService

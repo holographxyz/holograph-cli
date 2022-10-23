@@ -48,7 +48,7 @@ export const validateNetwork = async (input: string): Promise<string> => {
     return output
   }
 
- if (supportedShortNetworks.includes(output)) {
+  if (supportedShortNetworks.includes(output)) {
     return getNetworkByShortKey(output).key
   }
 
@@ -262,9 +262,8 @@ export const checkOptionFlag = async (
       if (typeof element === 'string') {
         return !(element === exclude)
       }
- 
-        return !(element.name === exclude || element.value === exclude)
-      
+
+      return !(element.name === exclude || element.value === exclude)
     })
   }
 

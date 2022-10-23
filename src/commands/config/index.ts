@@ -3,12 +3,7 @@ import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import {ethers} from 'ethers'
-import {
-  checkFileExists,
-  ensureConfigFileIsValid,
-  CONFIG_FILE_NAME,
-  validateBeta3Schema,
-} from '../../utils/config'
+import {checkFileExists, ensureConfigFileIsValid, CONFIG_FILE_NAME, validateBeta3Schema} from '../../utils/config'
 import {isStringAValidURL, randomASCII} from '../../utils/utils'
 import {supportedNetworks} from '@holographxyz/networks'
 import AesEncryption from '../../utils/aes-encryption'
