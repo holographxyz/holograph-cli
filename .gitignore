@@ -57,3 +57,6 @@ blocks.json
 
 # config
 config.json
+
+# BBEdit
+editor.bbprojectd
