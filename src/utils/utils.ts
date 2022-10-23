@@ -1,10 +1,6 @@
 import Web3 from 'web3'
-import {BigNumber} from 'ethers'
-import {networks} from '@holographxyz/networks'
-import {supportedNetworks} from './config'
 
-// Used for web3 utility functions
-export const web3 = new Web3('ws://localhost:8545')
+export const web3 = new Web3()
 
 export function randomNumber(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min)) + min
@@ -52,48 +48,6 @@ export const NETWORK_COLORS: Record<string, string> = {
 export const rgbToHex = (rgb: number): string => {
   const hex = Number(rgb).toString(16)
   return hex.length === 1 ? `0${hex}` : hex
-}
-
-interface NetworkMap {
-  [key: number]: string
-}
-
-interface NetworkHelper {
-  byChainId: NetworkMap
-  byHolographId: NetworkMap
-  byLzId: NetworkMap
-}
-
-function networkHelperConstructor(): NetworkHelper {
-  const helper: NetworkHelper = {byChainId: {}, byHolographId: {}, byLzId: {}} as NetworkHelper
-  for (const networkName of supportedNetworks) {
-    const network = networks[networkName]
-    const chainId: number = network.chain
-    const holographId: number = network.holographId
-    const lzId: number = network.lzId
-
-    helper.byChainId[chainId] = networkName
-    helper.byHolographId[holographId] = networkName
-    if (network.lzId > 0) {
-      helper.byLzId[lzId] = networkName
-    }
-  }
-
-  return helper
-}
-
-const networkHelper: NetworkHelper = networkHelperConstructor()
-
-export function getNetworkByChainId(chainId: BigNumber | string | number): string {
-  return networkHelper.byChainId[BigNumber.from(chainId).toNumber()]
-}
-
-export function getNetworkByHolographId(holographId: BigNumber | string | number): string {
-  return networkHelper.byHolographId[BigNumber.from(holographId).toNumber()]
-}
-
-export function getNetworkByLzId(lzId: BigNumber | string | number): string {
-  return networkHelper.byLzId[BigNumber.from(lzId).toNumber()]
 }
 
 export const zeroAddress: string = '0x' + '00'.repeat(20)
@@ -146,4 +100,23 @@ export function storageSlot(input: string): string {
     '0x' +
     remove0x(web3.utils.toHex(web3.utils.toBN(web3.utils.keccak256(input)).sub(web3.utils.toBN(1)))).padStart(64, '0')
   )
+}
+
+export function randomASCII(bytes: number): string {
+  let text = ''
+  for (let i = 0; i < bytes; i++) {
+    text += (32 + Math.floor(Math.random() * 94)).toString(16).padStart(2, '0')
+  }
+
+  return Buffer.from(text, 'hex').toString()
+}
+
+export function isStringAValidURL(s: string): boolean {
+  const protocols = ['http', 'https', 'wss']
+  try {
+    const result = new URL(s)
+    return result.protocol ? protocols.map(x => `${x.toLowerCase()}:`).includes(result.protocol) : false
+  } catch {
+    return false
+  }
 }

@@ -1,7 +1,7 @@
 import {BigNumber, BigNumberish} from 'ethers'
 import {formatEther} from 'ethers/lib/utils'
 import * as fs from 'fs-extra'
-import {Environment} from './environment'
+import {Environment} from '@holographxyz/environment'
 
 export const toShort18Str = (num: string): string => {
   return formatEther(num)

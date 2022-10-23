@@ -4,9 +4,10 @@ import {BigNumber, Contract} from 'ethers'
 import {TransactionResponse, TransactionReceipt} from '@ethersproject/abstract-provider'
 import {TransactionDescription} from '@ethersproject/abi'
 
-import {ensureConfigFileIsValid, supportedNetworks} from '../../utils/config'
-import {Environment, getEnvironment} from '../../utils/environment'
-import {toAscii, getNetworkByHolographId, sha3, storageSlot} from '../../utils/utils'
+import {ensureConfigFileIsValid} from '../../utils/config'
+import {Environment, getEnvironment} from '@holographxyz/environment'
+import {getNetworkByHolographId, supportedNetworks, supportedShortNetworks, getNetworkByShortKey} from '@holographxyz/networks'
+import {toAscii, sha3, storageSlot} from '../../utils/utils'
 
 import {FilterType, BlockJob, NetworkMonitor, TransactionType} from '../../utils/network-monitor'
 
@@ -175,6 +176,10 @@ export default class Analyze extends Command {
    */
   validateScope(scope: Scope, networks: string[], scopeJobs: Scope[]): void {
     if ('network' in scope && 'startBlock' in scope && 'endBlock' in scope) {
+      if (supportedShortNetworks.includes(scope.network)) {
+        scope.network = getNetworkByShortKey(scope.network).key
+      }
+
       if (supportedNetworks.includes(scope.network)) {
         if (!networks.includes(scope.network)) {
           networks.push(scope.network as string)
@@ -341,7 +346,7 @@ export default class Analyze extends Command {
         if (parsedTransaction === null) {
           beam.jobType = TransactionType.unknown
         } else {
-          const toNetwork: string = getNetworkByHolographId(parsedTransaction.args[0])
+          const toNetwork: string = getNetworkByHolographId(parsedTransaction.args[0]).key
           beam.messageNetwork = toNetwork
           beam.operatorNetwork = toNetwork
           const holographableContractAddress: string = (parsedTransaction.args[1] as string).toLowerCase()
@@ -465,7 +470,7 @@ export default class Analyze extends Command {
           if (parsedTransaction === null) {
             beam.jobType = TransactionType.unknown
           } else {
-            const fromNetwork: string = getNetworkByHolographId(bridgeTransaction.args[1])
+            const fromNetwork: string = getNetworkByHolographId(bridgeTransaction.args[1]).key
             beam.bridgeNetwork = fromNetwork
             const holographableContractAddress: string = (bridgeTransaction.args[2] as string).toLowerCase()
             if (holographableContractAddress === this.networkMonitor.factoryAddress) {

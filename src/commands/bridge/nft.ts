@@ -76,7 +76,7 @@ export default class BridgeNFT extends Command {
 
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
-    const {environment, userWallet, configFile, supportedNetworks} = await ensureConfigFileIsValid(
+    const {environment, userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
       this.config.configDir,
       undefined,
       true,
@@ -85,12 +85,12 @@ export default class BridgeNFT extends Command {
     this.log('User configurations loaded')
 
     const sourceNetwork: string = await checkOptionFlag(
-      supportedNetworks,
+      supportedNetworksOptions,
       flags.sourceNetwork,
       'Select the source network from which to beam',
     )
     const destinationNetwork: string = await checkOptionFlag(
-      supportedNetworks,
+      supportedNetworksOptions,
       flags.destinationNetwork,
       'Select the destination network which to beam to',
       sourceNetwork,

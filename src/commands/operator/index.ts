@@ -2,11 +2,12 @@ import * as inquirer from 'inquirer'
 import {CliUx, Command, Flags} from '@oclif/core'
 import {BigNumber} from 'ethers'
 import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
-import {Environment} from '../../utils/environment'
+import {Environment} from '@holographxyz/environment'
+import {getNetworkByHolographId} from '@holographxyz/networks'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
-import {web3, getNetworkByHolographId} from '../../utils/utils'
+import {web3} from '../../utils/utils'
 
 /**
  * Operator
@@ -213,7 +214,7 @@ export default class Operator extends Command {
         const jobHash: string = web3.utils.keccak256(args[2] as string)
         this.networkMonitor.structuredLog(network, `Bridge request found for job hash ${jobHash}`, tags)
         await this.executeLzPayload(
-          getNetworkByHolographId(bridgeTransaction.args[0]),
+          getNetworkByHolographId(bridgeTransaction.args[0]).key,
           jobHash,
           [args[0], args[1], 0, args[2]],
           tags,
@@ -221,6 +222,21 @@ export default class Operator extends Command {
       }
     }
   }
+
+/*
+
+  struct OperatorJob {
+    uint8 pod;
+    uint16 blockTimes;
+    address operator;
+    uint40 startBlock;
+    uint64 startTimestamp;
+    uint16[5] fallbackOperators;
+  }
+
+*/
+
+//  async decodeOperatorJob(network: string, operatorJobHash: string)
 
   /**
    * Handle the AvailableOperatorJob event from the LayerZero contract when one is picked up while processing transactions

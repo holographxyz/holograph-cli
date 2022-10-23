@@ -6,12 +6,11 @@ import {ethers} from 'ethers'
 import {
   checkFileExists,
   ensureConfigFileIsValid,
-  isStringAValidURL,
-  randomASCII,
   CONFIG_FILE_NAME,
   validateBeta3Schema,
-  supportedNetworks,
 } from '../../utils/config'
+import {isStringAValidURL, randomASCII} from '../../utils/utils'
+import {supportedNetworks} from '@holographxyz/networks'
 import AesEncryption from '../../utils/aes-encryption'
 
 export default class Config extends Command {

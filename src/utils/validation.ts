@@ -4,8 +4,13 @@ import {BytecodeType} from './bytecodes'
 import {ConfigNetworks} from './config'
 import {DeploymentType, deploymentProcesses} from './contract-deployment'
 import {TokenUriType} from './asset-deployment'
-import {supportedNetworks} from './config'
+import {supportedNetworks, supportedShortNetworks, getNetworkByShortKey} from '@holographxyz/networks'
 import {remove0x} from './utils'
+
+export interface SelectOption {
+  name: string
+  value: string
+}
 
 export const addressValidator = /^0x[\da-f]{40}$/i
 
@@ -41,6 +46,10 @@ export const validateNetwork = async (input: string): Promise<string> => {
   const output: string = input.trim()
   if (supportedNetworks.includes(output)) {
     return output
+  }
+
+ if (supportedShortNetworks.includes(output)) {
+    return getNetworkByShortKey(output).key
   }
 
   throw new Error('Invalid/unsupported network provided ' + output)
@@ -238,7 +247,7 @@ export const checkNumberFlag = async (input: string | undefined, prompt: string)
 }
 
 export const checkOptionFlag = async (
-  options: string[],
+  options: (string | SelectOption)[],
   input: string | undefined,
   prompt: string,
   exclude?: string | undefined,
@@ -247,10 +256,15 @@ export const checkOptionFlag = async (
     input = input.trim()
   }
 
-  let list: string[] = [...options]
+  let list: (string | SelectOption)[] = [...options]
   if (exclude !== undefined) {
-    list = list.filter((element: string) => {
-      return !(element === exclude)
+    list = list.filter((element: string | SelectOption) => {
+      if (typeof element === 'string') {
+        return !(element === exclude)
+      }
+ 
+        return !(element.name === exclude || element.value === exclude)
+      
     })
   }
 

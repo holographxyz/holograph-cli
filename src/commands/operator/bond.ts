@@ -2,14 +2,15 @@ import * as inquirer from 'inquirer'
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
-import {ConfigNetwork, ConfigNetworks, ensureConfigFileIsValid, supportedNetworks} from '../../utils/config'
+import {ConfigNetwork, ConfigNetworks, ensureConfigFileIsValid} from '../../utils/config'
 import {toLong18} from '../../utils/contracts'
 import {formatEther} from 'ethers/lib/utils'
 import {PodBondAmounts} from '../../types/holograph-operator'
 import CoreChainService from '../../services/core-chain-service'
 import OperatorChainService from '../../services/operator-chain-service'
 import color from '@oclif/color'
-import {networks} from '@holographxyz/networks'
+import {getNetworkByKey} from '@holographxyz/networks'
+import {checkOptionFlag} from '../../utils/validation'
 
 /**
  * Start
@@ -20,8 +21,7 @@ export default class Bond extends Command {
   static examples = ['$ holo operator:start --network <string> --pod <number> --amount <number>']
   static flags = {
     network: Flags.string({
-      description: 'The network to connect to',
-      options: supportedNetworks,
+      description: 'The network to bond to',
       char: 'n',
     }),
     pod: Flags.integer({
@@ -37,7 +37,7 @@ export default class Bond extends Command {
    */
   async run(): Promise<void> {
     const {flags} = await this.parse(Bond)
-    let {network, pod, amount} = flags
+    let {pod, amount} = flags
     let prompt: any
 
     this.log(
@@ -45,46 +45,31 @@ export default class Bond extends Command {
         'WARNING: To bond you must first have an operator running with the same wallet on the chain you are bonding to. Failure to do so will result in a loss of funds.',
       ),
     )
-    if (!network) {
-      prompt = await inquirer.prompt([
-        {
-          name: 'continue',
-          message:
-            'Do you have the operator with the wallet you are bonding from running on the network and are ready to proceed?',
-          type: 'confirm',
-          default: false,
-        },
-      ])
-      if (!prompt.continue) {
-        this.log('Operator is not ready to bond, please start an operator first.')
-        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
-        this.exit()
-      }
+    prompt = await inquirer.prompt([
+      {
+        name: 'continue',
+        message:
+          'Do you have the operator with the wallet you are bonding from running on the network and are ready to proceed?',
+        type: 'confirm',
+        default: false,
+      },
+    ])
+    if (!prompt.continue) {
+      this.log('Operator is not ready to bond, please start an operator first.')
+      // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+      this.exit()
     }
 
     this.log('Loading user configurations...')
-    const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
+    const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
 
-    let remainingNetworks = supportedNetworks
-    this.debug(`remainingNetworks = ${remainingNetworks}`)
+    const network: string = await checkOptionFlag(
+      supportedNetworksOptions,
+      flags.network,
+      'Select the network to bond to',
+    )
 
-    if (!network) {
-      const networkPrompt: any = await inquirer.prompt([
-        {
-          name: 'network',
-          message: 'Enter network to bond to',
-          type: 'list',
-          choices: remainingNetworks,
-        },
-      ])
-      network = networkPrompt.network
-
-      remainingNetworks = remainingNetworks.filter((item: string) => {
-        return item !== network
-      })
-    }
-
-    this.log(`Joining network: ${network}`)
+    this.log(`Joining network: ${getNetworkByKey(network).shortKey}`)
 
     CliUx.ux.action.start('Loading destination network RPC provider')
     const destinationProviderUrl: string = (configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork)
@@ -116,10 +101,10 @@ export default class Bond extends Command {
     const wallet = userWallet?.connect(provider)
 
     // Setup the contract and chain services
-    const coreChainService = new CoreChainService(provider, wallet, networks[network as string].chain)
+    const coreChainService = new CoreChainService(provider, wallet, getNetworkByKey(network).chain)
     await coreChainService.initialize()
     const contract = await coreChainService.getOperator()
-    const operatorChainService = new OperatorChainService(provider, wallet, networks[network as string].chain, contract)
+    const operatorChainService = new OperatorChainService(provider, wallet, getNetworkByKey(network).chain, contract)
     const operator = operatorChainService.operator
 
     if ((await operator.getBondedAmount(wallet.address)) > 0) {

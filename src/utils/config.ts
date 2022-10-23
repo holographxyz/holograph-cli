@@ -5,8 +5,9 @@ import * as Joi from 'joi'
 import {ethers} from 'ethers'
 
 import AesEncryption from './aes-encryption'
-import {Environment, getEnvironment} from './environment'
-import {NetworkType, Network, networks} from '@holographxyz/networks'
+import {Environment, getEnvironment} from '@holographxyz/environment'
+import {NetworkKeys, supportedNetworks, networks} from '@holographxyz/networks'
+import {SelectOption} from './validation'
 
 export const CONFIG_FILE_NAME = 'config.json'
 
@@ -15,7 +16,7 @@ export interface ConfigNetwork {
 }
 
 export interface ConfigNetworks {
-  [k: string]: ConfigNetwork
+  [k: NetworkKeys]: ConfigNetwork
 }
 
 export interface ConfigCredentials {
@@ -102,58 +103,24 @@ async function tryToUnlockWallet(
   return userWallet as ethers.Wallet
 }
 
-export function getSupportedNetworks(environment?: Environment): string[] {
-  if (environment === undefined) {
-    environment = getEnvironment()
+function generateSupportedNetworksOptions(configNetworks?: ConfigNetworks): SelectOption[] {
+  const options: SelectOption[] = []
+  for (const key of supportedNetworks) {
+    if (configNetworks === undefined) {
+      options.push({ name: networks[key].shortKey, value: networks[key].key } as SelectOption)
+    } else if (key in configNetworks) {
+        options.push({ name: networks[key].shortKey, value: networks[key].key } as SelectOption)
+      }
   }
 
-  const supportedNetworks: string[] = Object.keys(networks).filter((networkKey: string) => {
-    const network: Network = networks[networkKey]
-    switch (environment) {
-      case Environment.localhost:
-        if (network.type === NetworkType.local && network.active) {
-          return true
-        }
-
-        break
-      case Environment.experimental:
-        if (network.type === NetworkType.testnet && network.active) {
-          return true
-        }
-
-        break
-      case Environment.develop:
-        if (network.type === NetworkType.testnet && network.active) {
-          return true
-        }
-
-        break
-      case Environment.testnet:
-        if (network.type === NetworkType.testnet && network.active) {
-          return true
-        }
-
-        break
-      case Environment.mainnet:
-        if (network.type === NetworkType.mainnet && network.active) {
-          return true
-        }
-
-        break
-    }
-
-    return false
-  })
-  return supportedNetworks
+  return options
 }
-
-export const supportedNetworks = getSupportedNetworks()
 
 export async function ensureConfigFileIsValid(
   configDir: string,
   unsafePassword: string | undefined,
   unlockWallet = false,
-): Promise<{environment: Environment; userWallet: ethers.Wallet; configFile: ConfigFile; supportedNetworks: string[]}> {
+): Promise<{environment: Environment; userWallet: ethers.Wallet; configFile: ConfigFile; supportedNetworksOptions: SelectOption[]}> {
   const environment: Environment = getEnvironment()
   if (environment === Environment.localhost) {
     console.log(`Environment=${environment}`)
@@ -161,7 +128,7 @@ export async function ensureConfigFileIsValid(
       environment,
       userWallet: await tryToUnlockWallet(localhostConfig, unlockWallet),
       configFile: localhostConfig,
-      supportedNetworks,
+      supportedNetworksOptions: generateSupportedNetworksOptions(),
     }
   }
 
@@ -188,7 +155,7 @@ export async function ensureConfigFileIsValid(
     const userWallet: ethers.Wallet = await tryToUnlockWallet(configFile as ConfigFile, unlockWallet, unsafePassword)
 
     console.log(`Environment=${environment}`)
-    return {environment, userWallet, configFile, supportedNetworks}
+    return {environment, userWallet, configFile, supportedNetworksOptions: generateSupportedNetworksOptions(configFile.networks)}
   } catch (error: any) {
     throw error.message
       ? error
@@ -197,22 +164,16 @@ export async function ensureConfigFileIsValid(
 }
 
 export async function validateBeta3Schema(config: Record<string, unknown>): Promise<void> {
+  const networkObjects: {[k: string]: any} = {} as {[k: string]: any}
+  for (const network of supportedNetworks) {
+    networkObjects[network] = Joi.object({
+      providerUrl: Joi.string().required(),
+    })
+  }
+
   const beta3Schema = Joi.object({
     version: Joi.string().valid('beta3').required(),
-    networks: Joi.object({
-      ethereumTestnetRinkeby: Joi.object({
-        providerUrl: Joi.string().required(),
-      }),
-      ethereumTestnetGoerli: Joi.object({
-        providerUrl: Joi.string().required(),
-      }),
-      avalancheTestnet: Joi.object({
-        providerUrl: Joi.string().required(),
-      }),
-      polygonTestnet: Joi.object({
-        providerUrl: Joi.string().required(),
-      }),
-    }).required(),
+    networks: Joi.object(networkObjects).required().unknown(false),
     user: Joi.object({
       credentials: Joi.object({
         iv: Joi.string(),
@@ -225,15 +186,6 @@ export async function validateBeta3Schema(config: Record<string, unknown>): Prom
     .unknown(false)
 
   await beta3Schema.validateAsync(config)
-}
-
-export function randomASCII(bytes: number): string {
-  let text = ''
-  for (let i = 0; i < bytes; i++) {
-    text += (32 + Math.floor(Math.random() * 94)).toString(16).padStart(2, '0')
-  }
-
-  return Buffer.from(text, 'hex').toString()
 }
 
 export async function checkFileExists(configPath: string): Promise<boolean> {
@@ -251,15 +203,5 @@ export async function readConfig(configPath: string): Promise<any> {
   } catch (error) {
     console.debug(error)
     return undefined
-  }
-}
-
-export function isStringAValidURL(s: string): boolean {
-  const protocols = ['https', 'wss']
-  try {
-    const result = new URL(s)
-    return result.protocol ? protocols.map(x => `${x.toLowerCase()}:`).includes(result.protocol) : false
-  } catch {
-    return false
   }
 }

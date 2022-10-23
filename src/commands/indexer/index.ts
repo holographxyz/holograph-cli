@@ -7,11 +7,11 @@ import {Block, TransactionReceipt, TransactionResponse} from '@ethersproject/abs
 import {hexZeroPad} from '@ethersproject/bytes'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {Environment} from '../../utils/environment'
+import {Environment} from '@holographxyz/environment'
+import {getNetworkByHolographId} from '@holographxyz/networks'
 import {
   capitalize,
   sleep,
-  getNetworkByHolographId,
   sha3,
   functionSignature,
   storageSlot,
@@ -457,7 +457,7 @@ export default class Indexer extends Command {
             this.networkMonitor.structuredLog(network, `Could not decode Bridge function for ${transaction.hash}`, tags)
           } else {
             const bridgeIn: BridgeInArgs = bridgeTransaction.args as unknown as BridgeInArgs
-            const fromNetwork: string = getNetworkByHolographId(bridgeIn.fromChain)
+            const fromNetwork: string = getNetworkByHolographId(bridgeIn.fromChain).key
             const bridgeInPayload: string = bridgeIn.bridgeInPayload
             const holographableContractAddress: string = bridgeIn.holographableContract.toLowerCase()
             if (holographableContractAddress === this.networkMonitor.factoryAddress) {
@@ -628,7 +628,7 @@ export default class Indexer extends Command {
           this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
         if (bridgeTransaction.name === 'bridgeOutRequest') {
           const bridgeOut: BridgeOutArgs = bridgeTransaction.args as unknown as BridgeOutArgs
-          const toNetwork: string = getNetworkByHolographId(bridgeOut.toChain)
+          const toNetwork: string = getNetworkByHolographId(bridgeOut.toChain).key
           const bridgeOutPayload: string = bridgeOut.bridgeOutPayload
           const holographableContractAddress: string = bridgeOut.holographableContract.toLowerCase()
           if (holographableContractAddress === this.networkMonitor.factoryAddress) {
@@ -765,7 +765,7 @@ export default class Indexer extends Command {
         )
         if (bridgeTransaction.name === 'bridgeOutRequest') {
           const bridgeOut: BridgeOutArgs = bridgeTransaction.args as unknown as BridgeOutArgs
-          const toNetwork: string = getNetworkByHolographId(bridgeOut.toChain)
+          const toNetwork: string = getNetworkByHolographId(bridgeOut.toChain).key
           const bridgeOutPayload: string = decodeBridgeIn(bridgeOut.bridgeOutPayload).payload
           const holographableContractAddress: string = bridgeOut.holographableContract.toLowerCase()
 

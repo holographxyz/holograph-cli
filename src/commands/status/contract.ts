@@ -7,7 +7,7 @@ import {ethers} from 'ethers'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {addressValidator} from '../../utils/validation'
-import {Environment, getEnvironment} from '../../utils/environment'
+import {Environment, getEnvironment} from '@holographxyz/environment'
 import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
 import {networks} from '@holographxyz/networks'
 

@@ -4,10 +4,10 @@ import {CliUx, Command, Flags} from '@oclif/core'
 import {BigNumber} from 'ethers'
 import {TransactionResponse, TransactionReceipt} from '@ethersproject/abstract-provider'
 import {TransactionDescription} from '@ethersproject/abi'
-import {ensureConfigFileIsValid, supportedNetworks} from '../../utils/config'
+import {ensureConfigFileIsValid} from '../../utils/config'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {sha3} from '../../utils/utils'
-import {networks} from '@holographxyz/networks'
+import {networks, supportedNetworks} from '@holographxyz/networks'
 
 export default class Recover extends Command {
   static description = 'Attempt to re-run/recover a particular Operator Job'

@@ -4,8 +4,8 @@ import {FeeData, TransactionReceipt, TransactionResponse} from '@ethersproject/a
 import {BigNumberish} from '@ethersproject/bignumber'
 
 import {FAUCET_ADDRESSES, HOLOGRAPH_ADDRESSES, LZ_RELAYER_ADDRESSES, getABIs} from '../utils/contracts'
-import {getEnvironment} from '../utils/environment'
-import {BigNumber, ethers} from 'ethers'
+import {getEnvironment} from '@holographxyz/environment'
+import {BigNumber, Wallet} from 'ethers'
 
 const ENVIRONMENT = getEnvironment()
 const HOLOGRAPH_ADDRESS = HOLOGRAPH_ADDRESSES[ENVIRONMENT]
@@ -13,14 +13,14 @@ const HLG_FAUCET_ADDRESS = FAUCET_ADDRESSES[ENVIRONMENT]
 
 class CoreChainService {
   provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider
-  wallet: ethers.Wallet
+  wallet: Wallet
   holograph: Contract | undefined
   chainId: number
   abis: {[key: string]: any} = {}
 
   constructor(
     provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider,
-    wallet: ethers.Wallet,
+    wallet: Wallet,
     chainId: number,
   ) {
     this.provider = provider

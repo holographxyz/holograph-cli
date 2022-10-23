@@ -46,7 +46,7 @@ export default class BridgeContract extends Command {
 
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
-    const {userWallet, configFile, supportedNetworks} = await ensureConfigFileIsValid(
+    const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
       this.config.configDir,
       undefined,
       true,
@@ -56,12 +56,12 @@ export default class BridgeContract extends Command {
     this.log('User configurations loaded')
 
     const sourceNetwork: string = await checkOptionFlag(
-      supportedNetworks,
+      supportedNetworksOptions,
       flags.sourceNetwork,
       'Select the network from which contract deploy request will be sent',
     )
     const destinationNetwork: string = await checkOptionFlag(
-      supportedNetworks,
+      supportedNetworksOptions,
       flags.destinationNetwork,
       'Select the network on which the contract will be deployed',
       sourceNetwork,

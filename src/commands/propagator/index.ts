@@ -4,9 +4,10 @@ import * as inquirer from 'inquirer'
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
-import {ensureConfigFileIsValid, supportedNetworks} from '../../utils/config'
+import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {capitalize, getNetworkByChainId} from '../../utils/utils'
+import {getNetworkByChainId, supportedNetworks} from '@holographxyz/networks'
+import {capitalize} from '../../utils/utils'
 import {DeploymentConfig, decodeDeploymentConfigInput} from '../../utils/contract-deployment'
 
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
@@ -144,7 +145,7 @@ export default class Propagator extends Command {
     if (recoveryData.length > 0) {
       this.log(`Manually running ${recoveryData.length} recovery jobs`)
       for (const data of recoveryData) {
-        let network: string = getNetworkByChainId(data.chain_id)
+        let network: string = getNetworkByChainId(data.chain_id).key
         const checkNetworks: string[] = supportedNetworks
         if (checkNetworks.includes(network)) {
           checkNetworks.splice(checkNetworks.indexOf(network), 1)

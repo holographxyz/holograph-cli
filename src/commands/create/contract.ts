@@ -60,7 +60,7 @@ export default class Contract extends Command {
   // eslint-disable-next-line complexity
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
-    const {userWallet, configFile, supportedNetworks} = await ensureConfigFileIsValid(
+    const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
       this.config.configDir,
       undefined,
       true,
@@ -135,7 +135,7 @@ export default class Contract extends Command {
     switch (deploymentType) {
       case DeploymentType.deployedTx:
         txNetwork = await checkOptionFlag(
-          supportedNetworks,
+          supportedNetworksOptions,
           flags.txNetwork,
           'Select the network on which the transaction was executed',
         )
@@ -155,7 +155,7 @@ export default class Contract extends Command {
         break
       case DeploymentType.createConfig:
         chainType = await checkOptionFlag(
-          supportedNetworks,
+          supportedNetworksOptions,
           undefined,
           'Select the primary network of the contract (does not prepend chainId to tokenIds)',
         )
@@ -312,7 +312,7 @@ export default class Contract extends Command {
     }
 
     const targetNetwork: string = await checkOptionFlag(
-      supportedNetworks,
+      supportedNetworksOptions,
       flags.targetNetwork,
       'Select the network on which the contract will be executed',
       txNetwork,

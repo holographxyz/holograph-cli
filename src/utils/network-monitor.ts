@@ -16,7 +16,8 @@ import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {capitalize, NETWORK_COLORS, zeroAddress} from './utils'
 import color from '@oclif/color'
 
-import {Environment, getEnvironment} from './environment'
+import {Environment, getEnvironment} from '@holographxyz/environment'
+import {supportedNetworks, supportedShortNetworks, networks, getNetworkByShortKey} from '@holographxyz/networks'
 import {HOLOGRAPH_ADDRESSES} from './contracts'
 
 export const warpFlag = {
@@ -400,17 +401,33 @@ export class NetworkMonitor {
 
     if (options.networks === undefined || '') {
       options.networks = Object.keys(this.configFile.networks)
-    } else {
-      options.networks = options.networks.filter((network: string) => {
-        return network !== '' && Object.keys(this.configFile.networks).includes(network)
-      })
-      for (let i = 0, l = options.networks.length; i < l; i++) {
-        const network = options.networks[i]
-        this.blockJobs[network] = []
-      }
     }
 
-    this.networks = options.networks
+    options.networks = options.networks.filter((network: string) => {
+      if (network === '') {
+        return false
+      }
+
+      if (supportedNetworks.includes(network)) {
+        return true
+      }
+
+      if (supportedShortNetworks.includes(network)) {
+        return true
+      }
+
+      return false
+    })
+    for (let i = 0, l = options.networks.length; i < l; i++) {
+      if (supportedShortNetworks.includes(options.networks[i])) {
+        options.networks[i] = getNetworkByShortKey(options.networks[i]).key
+      }
+
+      const network = options.networks[i]
+      this.blockJobs[network] = []
+    }
+
+    this.networks = [...new Set(options.networks)]
 
     // Color the networks 🌈
     for (let i = 0, l = this.networks.length; i < l; i++) {
@@ -934,7 +951,7 @@ export class NetworkMonitor {
     const timestampColor = color.keyword('green')
     this.log(
       `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
-        capitalize(network),
+        capitalize(networks[network].shortKey),
       )}]${cleanTags(tagId)} ${msg}`,
     )
   }
@@ -955,7 +972,7 @@ export class NetworkMonitor {
 
     this.warn(
       `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
-        capitalize(network),
+        capitalize(networks[network].shortKey),
       )}] [${errorColor('error')}]${cleanTags(tagId)} ${errorMessage}`,
     )
   }

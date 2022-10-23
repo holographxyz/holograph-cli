@@ -5,13 +5,13 @@ import {ethers} from 'ethers'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {networkFlag, NetworkMonitor} from '../../utils/network-monitor'
-import {getEnvironment} from '../../utils/environment'
+import {getEnvironment} from '@holographxyz/environment'
 import {
   validateContractAddress,
   validateNonEmptyString,
   validateTokenIdInput,
   checkContractAddressFlag,
-  checkNetworkFlag,
+  checkOptionFlag,
   checkStringFlag,
   checkTokenUriTypeFlag,
 } from '../../utils/validation'
@@ -60,13 +60,13 @@ export default class NFT extends Command {
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
     const environment = getEnvironment()
-    const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
+    const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
 
     const {flags} = await this.parse(NFT)
     this.log('User configurations loaded.')
 
-    const network: string = await checkNetworkFlag(
-      configFile.networks,
+    const network: string = await checkOptionFlag(
+      supportedNetworksOptions,
       flags.network,
       'Select the network on which to mint the nft',
     )

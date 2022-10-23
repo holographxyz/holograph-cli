@@ -664,11 +664,21 @@
   dependencies:
     "@hapi/hoek" "^9.0.0"
 
-"@holographxyz/networks@1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@holographxyz/networks/-/networks-1.0.0.tgz#aa2b4d277e970dc193dabd5e54af3f4cb7a30f02"
-  integrity sha512-6+nmn47gn51QW+xX3kB98DmuZZxud9LIqVFuLYRvMZndI+oxuOyxDMplHqiTIvOBpkF/5BgDcPJdPTFPVNKLlw==
+"@holographxyz/environment@0.1.7":
+  version "0.1.7"
+  resolved "https://registry.yarnpkg.com/@holographxyz/environment/-/environment-0.1.7.tgz#541c0d9571e09e147e3504ab6249e270da83f06d"
+  integrity sha512-Uy1I63uPGe4RZH217NkMfJ02YXFdamgJacgAC7xl1LuN/OBFXpPRy53XAyfiGKagpWJxDoC+nrU1cT22E2cCCQ==
   dependencies:
+    dotenv "^10.0.0"
+    path "^0.12.7"
+
+"@holographxyz/networks@0.1.7":
+  version "0.1.7"
+  resolved "https://registry.yarnpkg.com/@holographxyz/networks/-/networks-0.1.7.tgz#c62a2fced57f28dd4fdd435667fa41275b497335"
+  integrity sha512-mzg1SZgJkJ49gSeQTbR2sIDTMvEy3+kPS5ohdyGPi8CLmUvwm05xUDGdtQsOMhVClhs+LXqyrR5CNuRbXjHSBA==
+  dependencies:
+    "@ethersproject/bignumber" "^5.7.0"
+    "@holographxyz/environment" "0.1.7"
     dotenv "^10.0.0"
     path "^0.12.7"
 
