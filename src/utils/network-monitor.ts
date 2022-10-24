@@ -1,7 +1,11 @@
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
 
-import {ethers, BigNumber, PopulatedTransaction} from 'ethers'
+import {BigNumber, Contract, PopulatedTransaction, Wallet} from 'ethers'
+import {formatUnits} from '@ethersproject/units'
+import {keccak256} from '@ethersproject/keccak256'
+import {Interface, EventFragment, defaultAbiCoder} from '@ethersproject/abi'
+import {WebSocketProvider, JsonRpcProvider} from '@ethersproject/providers'
 import {
   Block,
   BlockWithTransactions,
@@ -47,7 +51,7 @@ export enum OperatorMode {
 
 export type KeepAliveParams = {
   debug: (...args: any[]) => void
-  provider: ethers.providers.WebSocketProvider
+  provider: WebSocketProvider
   onDisconnect: (err: any) => void
   expectedPongBack?: number
   checkInterval?: number
@@ -157,7 +161,7 @@ export const keepAlive = ({
 export type ExecuteTransactionParams = {
   network: string
   tags?: (string | number)[]
-  contract: ethers.Contract
+  contract: Contract
   methodName: string
   args: any[]
   gasPrice?: BigNumber
@@ -180,7 +184,7 @@ export type SendTransactionParams = {
 
 export type PopulateTransactionParams = {
   network: string
-  contract: ethers.Contract
+  contract: Contract
   methodName: string
   args: any[]
   gasPrice: BigNumber
@@ -196,7 +200,7 @@ export type PopulateTransactionParams = {
 export type GasLimitParams = {
   network: string
   tags?: (string | number)[]
-  contract: ethers.Contract
+  contract: Contract
   methodName: string
   args: any[]
   gasPrice?: BigNumber
@@ -263,7 +267,7 @@ type NetworkMonitorOptions = {
   debug: (...args: string[]) => void
   processTransactions?: (job: BlockJob, transactions: TransactionResponse[]) => Promise<void>
   filters?: TransactionFilter[]
-  userWallet?: ethers.Wallet
+  userWallet?: Wallet
   lastBlockFilename?: string
   warp?: number
 }
@@ -272,7 +276,7 @@ export class NetworkMonitor {
   environment: Environment
   parent: ImplementsCommand
   configFile: ConfigFile
-  userWallet?: ethers.Wallet
+  userWallet?: Wallet
   LAST_BLOCKS_FILE_NAME: string
   filters: TransactionFilter[] = []
   processTransactions: ((job: BlockJob, transactions: TransactionResponse[]) => Promise<void>) | undefined
@@ -287,10 +291,10 @@ export class NetworkMonitor {
   operatorAddress!: string
   registryAddress!: string
   messagingModuleAddress!: string
-  wallets: {[key: string]: ethers.Wallet} = {}
+  wallets: {[key: string]: Wallet} = {}
   walletNonces: {[key: string]: number} = {}
-  providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
-  abiCoder = ethers.utils.defaultAbiCoder
+  providers: {[key: string]: JsonRpcProvider | WebSocketProvider} = {}
+  abiCoder = defaultAbiCoder
   networkColors: any = {}
   latestBlockHeight: {[key: string]: number} = {}
   currentBlockHeight: {[key: string]: number} = {}
@@ -298,21 +302,21 @@ export class NetworkMonitor {
   exited = false
   lastBlockJobDone: {[key: string]: number} = {}
   blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
-  holograph!: ethers.Contract
-  holographer!: ethers.Contract
-  bridgeContract!: ethers.Contract
-  factoryContract!: ethers.Contract
-  interfacesContract!: ethers.Contract
-  operatorContract!: ethers.Contract
-  registryContract!: ethers.Contract
-  messagingModuleContract!: ethers.Contract
+  holograph!: Contract
+  holographer!: Contract
+  bridgeContract!: Contract
+  factoryContract!: Contract
+  interfacesContract!: Contract
+  operatorContract!: Contract
+  registryContract!: Contract
+  messagingModuleContract!: Contract
   HOLOGRAPH_ADDRESSES = HOLOGRAPH_ADDRESSES
 
   // this is specifically for handling localhost-based CLI usage with holograph-protocol package
-  localhostWallets: {[key: string]: ethers.Wallet} = {}
+  localhostWallets: {[key: string]: Wallet} = {}
   static localhostPrivateKey = '0x13f46463f9079380515b26f04e42069760b34989cc23c5f082e7d3ed3757bb4a'
   lzEndpointAddress: {[key: string]: string} = {}
-  lzEndpointContract: {[key: string]: ethers.Contract} = {}
+  lzEndpointContract: {[key: string]: Contract} = {}
 
   LAYERZERO_RECEIVERS: {[key: string]: string} = {
     localhost: '0x830e22aa238b6aeD78087FaCea8Bb95c6b7A7E2a'.toLowerCase(),
@@ -358,7 +362,7 @@ export class NetworkMonitor {
 
     for (const n of outputNetworks) {
       if (this.providers[n]) {
-        const current = this.providers[n] as ethers.providers.WebSocketProvider
+        const current = this.providers[n] as WebSocketProvider
         if (current._wsReady && current._websocket._socket.readyState === 'open') {
           output[n] = 'CONNECTED'
         }
@@ -372,7 +376,7 @@ export class NetworkMonitor {
     return output
   }
 
-  async fakeProcessor(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
+  async fakeProcessor(job: BlockJob, transactions: TransactionResponse[]): Promise<void> {
     this.structuredLog(job.network, `This should not trigger: ${JSON.stringify(transactions, undefined, 2)}`)
     Promise.resolve()
   }
@@ -517,7 +521,7 @@ export class NetworkMonitor {
         this.lastBlockJobDone[network] = Date.now()
         this.providers[network] = this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
         if (this.userWallet !== undefined) {
-          this.wallets[network] = this.userWallet.connect(this.providers[network] as ethers.providers.WebSocketProvider)
+          this.wallets[network] = this.userWallet.connect(this.providers[network] as WebSocketProvider)
 
           this.debug(`Address of wallet for ${network}: ${this.wallets[network].getAddress()}`)
           this.wallets[network].getAddress().then((walletAddress: string) => {
@@ -529,7 +533,7 @@ export class NetworkMonitor {
         }
       }
 
-      const websocketProvider = this.providers[network] as ethers.providers.WebSocketProvider
+      const websocketProvider = this.providers[network] as WebSocketProvider
       if (websocketProvider === undefined) {
         this.structuredLog(network, `Websocket is undefined. Restarting`)
       } else if (websocketProvider._websocket._req._closed === true) {
@@ -545,13 +549,9 @@ export class NetworkMonitor {
     }
   }
 
-  failoverWebSocketProvider(
-    network: string,
-    rpcEndpoint: string,
-    subscribe: boolean,
-  ): ethers.providers.WebSocketProvider {
+  failoverWebSocketProvider(network: string, rpcEndpoint: string, subscribe: boolean): WebSocketProvider {
     this.debug('this.providers', network)
-    const provider = new ethers.providers.WebSocketProvider(rpcEndpoint)
+    const provider = new WebSocketProvider(rpcEndpoint)
     keepAlive({
       debug: this.debug,
       provider,
@@ -572,11 +572,11 @@ export class NetworkMonitor {
       const protocol = new URL(rpcEndpoint).protocol
       switch (protocol) {
         case 'https:':
-          this.providers[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
+          this.providers[network] = new JsonRpcProvider(rpcEndpoint)
 
           break
         case 'http:':
-          this.providers[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
+          this.providers[network] = new JsonRpcProvider(rpcEndpoint)
 
           break
         case 'wss:':
@@ -614,14 +614,14 @@ export class NetworkMonitor {
     }
 
     const holographABI = await fs.readJson(`./src/abi/${this.environment}/Holograph.json`)
-    this.holograph = new ethers.Contract(
+    this.holograph = new Contract(
       this.HOLOGRAPH_ADDRESSES[this.environment],
       holographABI,
       this.providers[this.networks[0]],
     )
 
     const holographerABI = await fs.readJson(`./src/abi/${this.environment}/Holographer.json`)
-    this.holographer = new ethers.Contract(zeroAddress, holographerABI, this.providers[this.networks[0]])
+    this.holographer = new Contract(zeroAddress, holographerABI, this.providers[this.networks[0]])
 
     this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
     this.factoryAddress = (await this.holograph.getFactory()).toLowerCase()
@@ -630,40 +630,28 @@ export class NetworkMonitor {
     this.registryAddress = (await this.holograph.getRegistry()).toLowerCase()
 
     const holographBridgeABI = await fs.readJson(`./src/abi/${this.environment}/HolographBridge.json`)
-    this.bridgeContract = new ethers.Contract(this.bridgeAddress, holographBridgeABI, this.providers[this.networks[0]])
+    this.bridgeContract = new Contract(this.bridgeAddress, holographBridgeABI, this.providers[this.networks[0]])
 
     const holographFactoryABI = await fs.readJson(`./src/abi/${this.environment}/HolographFactory.json`)
-    this.factoryContract = new ethers.Contract(
-      this.factoryAddress,
-      holographFactoryABI,
-      this.providers[this.networks[0]],
-    )
+    this.factoryContract = new Contract(this.factoryAddress, holographFactoryABI, this.providers[this.networks[0]])
 
     const holographInterfacesABI = await fs.readJson(`./src/abi/${this.environment}/HolographInterfaces.json`)
-    this.interfacesContract = new ethers.Contract(
+    this.interfacesContract = new Contract(
       this.interfacesAddress,
       holographInterfacesABI,
       this.providers[this.networks[0]],
     )
 
     const holographOperatorABI = await fs.readJson(`./src/abi/${this.environment}/HolographOperator.json`)
-    this.operatorContract = new ethers.Contract(
-      this.operatorAddress,
-      holographOperatorABI,
-      this.providers[this.networks[0]],
-    )
+    this.operatorContract = new Contract(this.operatorAddress, holographOperatorABI, this.providers[this.networks[0]])
 
     this.messagingModuleAddress = (await this.operatorContract.getMessagingModule()).toLowerCase()
 
     const holographRegistryABI = await fs.readJson(`./src/abi/${this.environment}/HolographRegistry.json`)
-    this.registryContract = new ethers.Contract(
-      this.registryAddress,
-      holographRegistryABI,
-      this.providers[this.networks[0]],
-    )
+    this.registryContract = new Contract(this.registryAddress, holographRegistryABI, this.providers[this.networks[0]])
 
     const holographMessagingModuleABI = await fs.readJson(`./src/abi/${this.environment}/LayerZeroModule.json`)
-    this.messagingModuleContract = new ethers.Contract(
+    this.messagingModuleContract = new Contract(
       this.messagingModuleAddress,
       holographMessagingModuleABI,
       this.providers[this.networks[0]],
@@ -672,9 +660,7 @@ export class NetworkMonitor {
     for (let i = 0, l = this.networks.length; i < l; i++) {
       const network = this.networks[i]
       if (this.environment === Environment.localhost) {
-        this.localhostWallets[network] = new ethers.Wallet(NetworkMonitor.localhostPrivateKey).connect(
-          this.providers[network],
-        )
+        this.localhostWallets[network] = new Wallet(NetworkMonitor.localhostPrivateKey).connect(this.providers[network])
         // since sample localhost deployer key is used, nonce is out of sync
         this.lzEndpointAddress[network] = (
           await this.messagingModuleContract // eslint-disable-line no-await-in-loop
@@ -683,7 +669,7 @@ export class NetworkMonitor {
         ).toLowerCase()
         // eslint-disable-next-line no-await-in-loop
         const lzEndpointABI = await fs.readJson(`./src/abi/${this.environment}/MockLZEndpoint.json`)
-        this.lzEndpointContract[network] = new ethers.Contract(
+        this.lzEndpointContract[network] = new Contract(
           this.lzEndpointAddress[network],
           lzEndpointABI,
           this.localhostWallets[network],
@@ -754,11 +740,11 @@ export class NetworkMonitor {
     const protocol = new URL(rpcEndpoint).protocol
     switch (protocol) {
       case 'http:':
-        this.providers[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
+        this.providers[network] = new JsonRpcProvider(rpcEndpoint)
 
         break
       case 'https:':
-        this.providers[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
+        this.providers[network] = new JsonRpcProvider(rpcEndpoint)
 
         break
       case 'wss:':
@@ -773,7 +759,7 @@ export class NetworkMonitor {
       this.walletNonces[network] = await this.wallets[network].getTransactionCount()
     }
 
-    const provider = this.providers[network] as ethers.providers.WebSocketProvider
+    const provider = this.providers[network] as WebSocketProvider
     switch (protocol) {
       case 'https:':
         this.structuredLog(network, 'Restarting blockJob Handler since this is an HTTPS RPC connection')
@@ -977,37 +963,34 @@ export class NetworkMonitor {
     )
   }
 
-  static iface: ethers.utils.Interface = new ethers.utils.Interface([])
-  static packetEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
-    'Packet(uint16 chainId, bytes payload)',
-  )
+  static iface: Interface = new Interface([])
+  static packetEventFragment: EventFragment = EventFragment.from('Packet(uint16 chainId, bytes payload)')
 
-  static lzPacketEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from('Packet(bytes payload)')
+  static lzPacketEventFragment: EventFragment = EventFragment.from('Packet(bytes payload)')
 
-  static lzEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
+  static lzEventFragment: EventFragment = EventFragment.from(
     'LzEvent(uint16 _dstChainId, bytes _destination, bytes _payload)',
   )
 
-  static erc20TransferEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
+  static erc20TransferEventFragment: EventFragment = EventFragment.from(
     'Transfer(address indexed _from, address indexed _to, uint256 _value)',
   )
 
-  static erc721TransferEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
+  static erc721TransferEventFragment: EventFragment = EventFragment.from(
     'Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId)',
   )
 
-  static availableJobEventFragment: ethers.utils.EventFragment =
-    ethers.utils.EventFragment.from('AvailableJob(bytes payload)')
+  static availableJobEventFragment: EventFragment = EventFragment.from('AvailableJob(bytes payload)')
 
-  static bridgeableContractDeployedEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
+  static bridgeableContractDeployedEventFragment: EventFragment = EventFragment.from(
     'BridgeableContractDeployed(address indexed contractAddress, bytes32 indexed hash)',
   )
 
-  static availableOperatorJobEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
+  static availableOperatorJobEventFragment: EventFragment = EventFragment.from(
     'AvailableOperatorJob(bytes32 jobHash, bytes payload)',
   )
 
-  static crossChainMessageSentEventFragment: ethers.utils.EventFragment = ethers.utils.EventFragment.from(
+  static crossChainMessageSentEventFragment: EventFragment = EventFragment.from(
     'CrossChainMessageSent(bytes32 messageHash)',
   )
 
@@ -1645,7 +1628,7 @@ export class NetworkMonitor {
           populatedTx = await this.wallets[network].populateTransaction(rawTx)
           signedTx = await this.wallets[network].signTransaction(populatedTx)
           if (txHash === null) {
-            txHash = ethers.utils.keccak256(signedTx)
+            txHash = keccak256(signedTx)
           }
 
           tx = await this.providers[network].sendTransaction(signedTx)
@@ -1828,7 +1811,7 @@ export class NetworkMonitor {
       } else {
         const walletAddress: string = await this.wallets[network].getAddress()
         const balance: BigNumber | null = await this.getBalance({network, walletAddress, attempts, canFail, interval})
-        this.structuredLog(network, `Wallet balance is ${ethers.utils.formatUnits(balance!, 'ether')}`, tags)
+        this.structuredLog(network, `Wallet balance is ${formatUnits(balance!, 'ether')}`, tags)
         if (balance === null) {
           this.structuredLog(network, `Could not get wallet ${walletAddress} balance`, tags)
           topResolve(null)
@@ -1844,10 +1827,10 @@ export class NetworkMonitor {
           )
           topResolve(null)
         } else {
-          this.structuredLog(network, `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, 'gwei')}`, tags)
+          this.structuredLog(network, `Gas price in Gwei = ${formatUnits(gasPrice, 'gwei')}`, tags)
           this.structuredLog(
             network,
-            `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(
+            `Transaction is estimated to cost a total of ${formatUnits(
               gasLimit.mul(gasPrice),
               'ether',
             )} native gas tokens (in ether)`,

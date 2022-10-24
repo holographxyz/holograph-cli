@@ -1,6 +1,7 @@
 import * as inquirer from 'inquirer'
 import {CliUx, Command, Flags} from '@oclif/core'
-import {BigNumber} from 'ethers'
+import {BigNumber} from '@ethersproject/bignumber'
+import {Contract} from '@ethersproject/contracts'
 import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
 import {Environment} from '@holographxyz/environment'
 import {getNetworkByHolographId} from '@holographxyz/networks'
@@ -8,6 +9,19 @@ import {ensureConfigFileIsValid} from '../../utils/config'
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
 import {web3} from '../../utils/utils'
+import {OperatorJobStructOutput} from '../../types/holograph-operator'
+
+interface OperatorJob {
+  targetTime: number
+  jobDetails: OperatorJobStructOutput
+}
+
+interface OperatorStatus {
+  address: string
+  active: {[key: string]: boolean}
+  currentPod: {[key: string]: number}
+  podIndex: {[key: string]: number}
+}
 
 /**
  * Operator
@@ -36,9 +50,16 @@ export default class Operator extends Command {
     ...networksFlag,
   }
 
+  /**
+   * Operator class variables
+   */
   operatorMode: OperatorMode = OperatorMode.listen
   networkMonitor!: NetworkMonitor
   environment!: Environment
+  address!: string
+  operatorStatus: OperatorStatus = {} as OperatorStatus
+  currentPod: {[key: string]: number} = {}
+  podIndex: {[key: string]: number} = {}
 
   /**
    * Command Entry Point
@@ -234,9 +255,59 @@ export default class Operator extends Command {
     uint16[5] fallbackOperators;
   }
 
+export type OperatorJobStructOutput = [
+  number,
+  number,
+  string,
+  number,
+  BigNumber,
+  [number, number, number, number, number]
+] & {
+  pod: number;
+  blockTimes: number;
+  operator: string;
+  startBlock: number;
+  startTimestamp: BigNumber;
+  fallbackOperators: [number, number, number, number, number];
+};
+
+
 */
 
-  //  async decodeOperatorJob(network: string, operatorJobHash: string)
+  operatorJobs: {[key: string]: OperatorJob} = {}
+
+  async decodeOperatorJob(network: string, operatorJobHash: string /* , operatorJobPayload: string */): Promise<void> {
+    const contract: Contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.providers[network])
+    const jobDetails: OperatorJobStructOutput = (await contract.getJobDetails(
+      operatorJobHash,
+    )) as OperatorJobStructOutput
+    if (jobDetails.startBlock > 0) {
+      let targetTime: number = new Date(BigNumber.from(jobDetails.startTimestamp).toNumber() * 1000).getTime()
+      const selectedOperator: string = jobDetails.operator.toLowerCase()
+      if (selectedOperator !== this.operatorStatus.address) {
+        // operator is not selected
+        // add +60 seconds to target time
+        targetTime += 60 * 1000
+      }
+
+      for (let i = 0; i < 5; i++) {
+        /*
+        if (jobDetails.pod === this.operatorStatus[network].selectedPod) {
+          // leaving the work for later
+        }
+        if (jobDetails.fallbackOperators[i] !== this.operatorStatus[network].podIndex) {
+          // leaving the work for later
+        }
+      */
+      }
+
+      // we have a legit job here
+      this.operatorJobs[operatorJobHash] = {
+        targetTime,
+        jobDetails,
+      } as OperatorJob
+    }
+  }
 
   /**
    * Handle the AvailableOperatorJob event from the LayerZero contract when one is picked up while processing transactions
