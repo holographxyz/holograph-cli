@@ -1,5 +1,5 @@
-declare type BigNumberish = import('@ethersproject/bignumber').BigNumberish
-declare type BytesLike = import('@ethersproject/bytes').BytesLike
+import {BigNumberish} from '@ethersproject/bignumber'
+import {BytesLike} from '@ethersproject/bytes'
 
 export interface CreateERC721Payload {
   address: string

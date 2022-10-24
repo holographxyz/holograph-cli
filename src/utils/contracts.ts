@@ -95,9 +95,9 @@ export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
   ethereumTestnetRinkeby: '0x79a63d6d8BBD5c6dfc774dA79bCcD948EAcb53FA',
   ethereumTestnetGoerli: '0xbfD2135BFfbb0B5378b56643c2Df8a87552Bfa23',
   polygon: '0x3c2269811836af69497E5F486A85D7316753cf62',
+  polygonTestnet: '0xf69186dfBa60DdB133E91E9A4B5673624293d8F8',
   binanceSmartChain: '0x3c2269811836af69497E5F486A85D7316753cf62',
   avalanche: '0x3c2269811836af69497E5F486A85D7316753cf62',
-  fantom: '0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7',
-  polygonTestnet: '0xf69186dfBa60DdB133E91E9A4B5673624293d8F8',
   avalancheTestnet: '0x93f54D755A063cE7bB9e6Ac47Eccc8e33411d706',
+  fantom: '0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7',
 } as const
