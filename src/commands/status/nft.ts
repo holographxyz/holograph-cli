@@ -7,20 +7,23 @@ import {ethers} from 'ethers'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {addressValidator, tokenValidator} from '../../utils/validation'
-import {Environment, getEnvironment} from '../../utils/environment'
+import {Environment, getEnvironment} from '@holographxyz/environment'
 import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
-import {blockExplorers} from '../../utils/networks'
+import {networks} from '@holographxyz/networks'
 
 export default class Nft extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
   static description = 'Check the status of an nft across all networks defined in the config'
-  static examples = ['$ <%= config.bin %> <%= command.id %> --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78" --id=1']
+  static examples = [
+    '$ <%= config.bin %> <%= command.id %> --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78" --id=1',
+  ]
+
   static flags = {
     address: Flags.string({
-      description: 'The address of contract to check status of'
+      description: 'The address of contract to check status of',
     }),
     id: Flags.string({
-      description: 'Token ID to check'
+      description: 'Token ID to check',
     }),
     output: Flags.string({
       options: ['csv', 'json', 'yaml', ''],
@@ -169,7 +172,7 @@ export default class Nft extends Command {
           if (d.exists) {
             // eslint-disable-next-line no-await-in-loop
             d.owner = await erc721.ownerOf(token.toHexString())
-            d.link = blockExplorers[network] + 'token/' + this.contractAddress + '?a=' + token.toString()
+            d.link = (networks[network].explorer || '') + '/token/' + this.contractAddress + '?a=' + token.toString()
           }
         }
       }

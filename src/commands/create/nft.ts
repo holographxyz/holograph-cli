@@ -1,75 +1,53 @@
 import {CliUx, Command, Flags} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
-import {ethers, BigNumber} from 'ethers'
+import {ethers} from 'ethers'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {networkFlag, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
-import {getEnvironment} from '../../utils/environment'
-
-export enum TokenUriType {
-  unset, //  0
-  ipfs, //   1
-  https, //  2
-  arweave, // 3
-}
-
-const validateContractAddress = async (input: string): Promise<string> => {
-  const output: string = input.trim().toLowerCase()
-  if (/^0x[\da-f]{40}$/.test(output)) {
-    // we have a valid hex
-    return output
-  }
-
-  throw new Error('Invalid contact address provided ' + output)
-}
-
-const cleanTokenInput = async (input: string): Promise<string> => {
-  const output: string = input.trim()
-  if (/^\d+$/.test(output)) {
-    // we have a pure number
-    return BigNumber.from(output).toHexString()
-  }
-
-  if (/^(?:0x|)[\da-f]{1,64}$/.test(output)) {
-    // we have a valid hex
-    return output
-  }
-
-  throw new Error('Invalid tokenId provided ' + output)
-}
+import {networkFlag, NetworkMonitor} from '../../utils/network-monitor'
+import {getEnvironment} from '@holographxyz/environment'
+import {
+  validateContractAddress,
+  validateNonEmptyString,
+  validateTokenIdInput,
+  checkContractAddressFlag,
+  checkOptionFlag,
+  checkStringFlag,
+  checkTokenUriTypeFlag,
+} from '../../utils/validation'
+import {TokenUriTypeIndex} from '../../utils/asset-deployment'
 
 export default class NFT extends Command {
   static description = 'Mint a Holographable NFT'
   static examples = [
-    '$ holograph create:nft --network="goerli" --collectionAddress="0x70f5b2f4f7e31353d75ad069053906a72ce75467" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"',
+    '$ <%= config.bin %> <%= command.id %> --network="ethereumTestnetGoerli" --collectionAddress="0xf90c33d5ef88a9d84d4d61f62c913ba192091fe7" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"',
   ]
 
   static flags = {
     collectionAddress: Flags.string({
-      description: 'The address of the collection smart contract.',
+      description: 'The address of the collection smart contract',
       parse: validateContractAddress,
       multiple: false,
-      required: true,
+      required: false,
     }),
     tokenId: Flags.string({
-      description: 'The token id to mint. By default the token id is 0, which mints the next available token id.',
+      description: 'The token id to mint. By default the token id is 0, which mints the next available token id',
       default: '0',
-      parse: cleanTokenInput,
+      parse: validateTokenIdInput,
       multiple: false,
       required: false,
     }),
     tokenUriType: Flags.string({
-      description: 'The token URI type.',
+      description: 'The token URI type',
       multiple: false,
       options: ['ipfs', 'https', 'arweave'],
-      default: 'ipfs',
       required: false,
     }),
     tokenUri: Flags.string({
-      description: 'The uri of the token, minus the prepend (ie "ipfs://").',
+      description: 'The uri of the token, minus the prepend (ie "ipfs://")',
       multiple: false,
-      required: true,
+      required: false,
+      parse: validateNonEmptyString,
     }),
     ...networkFlag,
   }
@@ -79,52 +57,63 @@ export default class NFT extends Command {
    */
   networkMonitor!: NetworkMonitor
 
-  async fakeProcessor(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
-    this.networkMonitor.structuredLog(
-      job.network,
-      `This should not trigger: ${JSON.stringify(transactions, undefined, 2)}`,
-    )
-    Promise.resolve()
-  }
-
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
     const environment = getEnvironment()
-    const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
+    const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
+      this.config.configDir,
+      undefined,
+      true,
+    )
 
     const {flags} = await this.parse(NFT)
     this.log('User configurations loaded.')
 
-    let network: string = flags.network as string
-    const collectionAddress: string = flags.collectionAddress as string
+    const network: string = await checkOptionFlag(
+      supportedNetworksOptions,
+      flags.network,
+      'Select the network on which to mint the nft',
+    )
+    const collectionAddress: string = await checkContractAddressFlag(
+      flags.collectionAddress,
+      'Enter the address of the collection smart contract',
+    )
     const tokenId: string = flags.tokenId as string
-    const tokenUriType: TokenUriType = TokenUriType[flags.tokenUriType as string as keyof typeof TokenUriType]
-    const tokenUri: string = flags.tokenUri as string
-
-    if (!Object.keys(configFile.networks).includes(network)) {
-      const networkPrompt: any = await inquirer.prompt([
-        {
-          name: 'network',
-          message: 'select the network on which to mint the nft',
-          type: 'list',
-          choices: Object.keys(configFile.networks),
-        },
-      ])
-      network = networkPrompt.network
-    }
+    const tokenUriType: TokenUriTypeIndex =
+      TokenUriTypeIndex[
+        await checkTokenUriTypeFlag(flags.tokenUriType, 'Select the uri of the token, minus the prepend (ie "ipfs://")')
+      ]
+    const tokenUri: string = await checkStringFlag(
+      flags.tokenUri,
+      'Enter the uri of the token, minus the prepend (ie "ipfs://")',
+    )
 
     this.networkMonitor = new NetworkMonitor({
       parent: this,
       configFile,
       networks: [network],
       debug: this.debug,
-      processTransactions: this.fakeProcessor,
       userWallet,
     })
 
     CliUx.ux.action.start('Loading network RPC providers')
     await this.networkMonitor.initializeEthers()
     CliUx.ux.action.stop()
+
+    CliUx.ux.action.start('Checking that contract is already deployed and holographable on "' + network + '" network')
+    const isDeployed: boolean = await this.networkMonitor.registryContract
+      .connect(this.networkMonitor.providers[network])
+      .isHolographedContract(collectionAddress)
+    CliUx.ux.action.stop()
+    if (!isDeployed) {
+      throw new Error(
+        'Collection is either not deployed or not hologaphable at ' +
+          collectionAddress +
+          ' on "' +
+          network +
+          '" network',
+      )
+    }
 
     CliUx.ux.action.start('Retrieving collection smart contract')
     const collectionABI = await fs.readJson(`./src/abi/${environment}/CxipERC721.json`)
@@ -137,7 +126,7 @@ export default class NFT extends Command {
       {
         name: 'shouldContinue',
         message: `\nWould you like to mint the following NFT?\n\n${JSON.stringify(
-          {network, collectionAddress, tokenId, tokenUriType: TokenUriType[tokenUriType], tokenUri},
+          {network, collectionAddress, tokenId, tokenUriType: TokenUriTypeIndex[tokenUriType], tokenUri},
           undefined,
           2,
         )}\n`,
@@ -161,13 +150,15 @@ export default class NFT extends Command {
       if (receipt === null) {
         throw new Error('failed to confirm that the transaction was mined')
       } else {
-        const logs: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(receipt)
+        const logs: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(receipt, collectionAddress)
         if (logs === undefined) {
           throw new Error('failed to extract transfer event from transaction receipt')
         } else {
           this.log(`NFT has been minted with token id #${logs[2].toString()}`)
         }
       }
+    } else {
+      this.log('NFT minting was canceled')
     }
 
     this.exit()

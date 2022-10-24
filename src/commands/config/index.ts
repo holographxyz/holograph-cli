@@ -3,39 +3,22 @@ import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import {ethers} from 'ethers'
-import {
-  checkFileExists,
-  ensureConfigFileIsValid,
-  isFromAndToNetworksTheSame,
-  isStringAValidURL,
-  randomASCII,
-  CONFIG_FILE_NAME,
-  validateBeta1Schema,
-} from '../../utils/config'
+import {checkFileExists, ensureConfigFileIsValid, CONFIG_FILE_NAME, validateBeta3Schema} from '../../utils/config'
+import {isStringAValidURL, randomASCII} from '../../utils/utils'
+import {supportedNetworks} from '@holographxyz/networks'
 import AesEncryption from '../../utils/aes-encryption'
-import {supportedNetworks} from '../../utils/networks'
 
 export default class Config extends Command {
   static description =
     'Initialize the Holograph CLI with a config file. If no flags are passed, the CLI will prompt you for the required information.'
 
   static examples = [
-    '$ <%= config.bin %> <%= command.id %> --defaultFrom goerli',
-    '$ <%= config.bin %> <%= command.id %> --defaultFrom goerli --defaultTo mumbai',
     '$ <%= config.bin %> <%= command.id %> --privateKey abc...def',
     '$ <%= config.bin %> <%= command.id %> --fromFile ./config.json',
-    '$ <%= config.bin %> <%= command.id %> --fromJson \'{"version": "beta1", ...}',
+    '$ <%= config.bin %> <%= command.id %> --fromJson \'{"version": "beta3", ...}',
   ]
 
   static flags = {
-    defaultFrom: Flags.string({
-      options: supportedNetworks,
-      description: 'Default network to bridge FROM (source network)',
-    }),
-    defaultTo: Flags.string({
-      options: supportedNetworks,
-      description: 'Default network to bridge TO (destination network)',
-    }),
     network: Flags.string({
       options: supportedNetworks,
       description: 'Network to set',
@@ -54,8 +37,6 @@ export default class Config extends Command {
    */
   public async run(): Promise<void> {
     const {flags} = await this.parse(Config)
-    let defaultFrom = flags.defaultFrom
-    let defaultTo = flags.defaultTo
     let privateKey = flags.privateKey
     let userWallet = null
     let currentConfigFile: any = null
@@ -71,17 +52,11 @@ export default class Config extends Command {
     await this.loadConfigPath(configPath, flags.fromFile)
     await this.loadConfigJson(configPath, flags.fromJson)
 
-    this.validateToAndFrom(defaultTo, defaultFrom)
-
     // Check if config file exists
     const isConfigExist: boolean = await checkFileExists(configPath)
 
     let userConfigTemplate: any = {
-      version: 'beta1',
-      bridge: {
-        source: defaultFrom,
-        destination: defaultTo,
-      },
+      version: 'beta3',
       networks: {},
       user: {
         credentials: {
@@ -126,48 +101,6 @@ export default class Config extends Command {
     }
 
     if (updateNetworksPrompt.update || !isConfigExist) {
-      // Array will get smaller depending on input defaultFrom and defaultTo values. I copy value so I can manipulate it
-      let remainingNetworks = supportedNetworks
-      this.debug(`remainingNetworks = ${remainingNetworks}`)
-
-      // Collect default FROM network value
-      if (defaultFrom === undefined) {
-        remainingNetworks = remainingNetworks.filter((item: string) => {
-          return item !== defaultTo
-        })
-        this.debug(`remainingNetworks = ${remainingNetworks}`)
-        const prompt: any = await inquirer.prompt([
-          {
-            name: 'defaultFrom',
-            message: 'Select the default network to bridge FROM (source network)',
-            type: 'list',
-            choices: remainingNetworks,
-          },
-        ])
-        defaultFrom = prompt.defaultFrom
-      }
-
-      // Collect default TO network value
-      if (defaultTo === undefined) {
-        remainingNetworks = remainingNetworks.filter((item: string) => {
-          return item !== defaultFrom
-        })
-        this.debug(`remainingNetworks = ${remainingNetworks}`)
-        const prompt: any = await inquirer.prompt([
-          {
-            name: 'defaultTo',
-            message: 'Select the default network to bridge TO (destination network)',
-            type: 'list',
-            choices: remainingNetworks,
-          },
-        ])
-        defaultTo = prompt.defaultTo
-      }
-
-      // Update user config with new defaultFrom and defaultTo values
-      userConfigTemplate.bridge.source = defaultFrom
-      userConfigTemplate.bridge.destination = defaultTo
-
       // Check what networks the user wants to operate on
       const prompt: any = await inquirer.prompt([
         {
@@ -360,25 +293,11 @@ export default class Config extends Command {
     if (jsonString !== undefined) {
       this.log(`checking jsonString input`)
       const output = JSON.parse(jsonString)
-      await validateBeta1Schema(output)
+      await validateBeta3Schema(output)
       this.log(output)
       // Since the json at the desired path is valid, we save it!
       await fs.outputJSON(configPath, output, {spaces: 2})
       this.exit()
-    }
-  }
-
-  /**
-   * Checks that the origin and destination networks are not the same
-   */
-  validateToAndFrom(defaultTo: string | undefined, defaultFrom: string | undefined): void {
-    // Make sure default from and to networks are not the same when using flags
-    if (defaultFrom !== undefined && defaultTo !== undefined) {
-      const isValidFromAndTo = isFromAndToNetworksTheSame(defaultFrom, defaultTo)
-      if (!isValidFromAndTo) {
-        this.log('The FROM and TO networks cannot be the same')
-        this.error('Networks cannot be the same')
-      }
     }
   }
 }
