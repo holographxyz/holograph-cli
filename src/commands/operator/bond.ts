@@ -108,17 +108,8 @@ export default class Bond extends Command {
     // Setup the contracts and chain services
     const coreChainService = new CoreChainService(provider, wallet, getNetworkByKey(network).chain)
     await coreChainService.initialize()
-
     const tokenContract = await coreChainService.getUtilityToken()
     const tokenChainService = new TokenChainService(provider, wallet, getNetworkByKey(network).chain, tokenContract)
-    const currentHlgBalance = (await tokenChainService.balanceOf(wallet.address)) as BigNumber
-    this.log(`Current HLG balance: ${formatEther(currentHlgBalance)}`)
-
-    if (!currentHlgBalance.gt(BigNumber.from('0'))) {
-      this.log('No HLG balance found, please deposit HLG into your wallet before bonding.')
-      this.exit()
-    }
-
     const operatorContract = await coreChainService.getOperator()
     const operatorChainService = new OperatorChainService(
       provider,
@@ -127,6 +118,9 @@ export default class Bond extends Command {
       operatorContract,
     )
     const operator = operatorChainService.operator
+
+    const currentHlgBalance = (await tokenChainService.balanceOf(wallet.address)) as BigNumber
+    this.log(`Current HLG balance: ${formatEther(currentHlgBalance)}`)
 
     if ((await operator.getBondedAmount(wallet.address)) > 0) {
       prompt = await inquirer.prompt([
@@ -159,6 +153,11 @@ export default class Bond extends Command {
         this.log('Thank you. Come again.')
         this.exit()
       }
+    }
+
+    if (!currentHlgBalance.gt(BigNumber.from('0'))) {
+      this.log('No HLG balance found, please deposit HLG into your wallet before bonding.')
+      this.exit()
     }
 
     this.log('Checking pods available...')
@@ -204,11 +203,8 @@ export default class Bond extends Command {
           message: `Enter the amount of tokens to deposit (Units in Ether)`,
           type: 'number',
           validate: async (input: number) => {
-            if (
-              typeof input === 'number' &&
-              input > 0 &&
-              input >= Number.parseFloat(formatEther(podBondAmounts.current))
-            ) {
+            const inputBN = BigNumber.from(toLong18(input))
+            if (typeof input === 'number' && input > 0 && inputBN.gte(podBondAmounts.current)) {
               return true
             }
 
