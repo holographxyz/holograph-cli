@@ -273,9 +273,15 @@ export type OperatorJobStructOutput = [
       })
     }
 
+    this.operatorStatus.active = {}
+    this.operatorStatus.currentPod = {}
+    this.operatorStatus.podIndex = {}
     // for first time init, get operator status details
     for (const network of this.networkMonitor.networks) {
       /* eslint-disable no-await-in-loop */
+      this.operatorStatus.active[network] = false
+      this.operatorStatus.currentPod[network] = 0
+      this.operatorStatus.podIndex[network] = 0
       await this.updateOperatorStatus(network)
     }
   }
