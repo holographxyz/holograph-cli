@@ -111,7 +111,7 @@ jobs:
         shell: bash
         env:
           #
-          CHART_REPO: holograph-indexer
+          CHART_REPO: holo-indexer
           CHART_VERSION: ${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }}
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -169,7 +169,7 @@ jobs:
         shell: bash
         env:
           #
-          CHART_REPO: holograph-operator
+          CHART_REPO: holo-operator
           CHART_VERSION: ${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
