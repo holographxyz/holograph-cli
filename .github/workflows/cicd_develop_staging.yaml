@@ -130,7 +130,7 @@ jobs:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             helm upgrade --install $RELEASE_NAME \
-            holograph-indexer-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }}.tgz \
+            holo-indexer-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.STG_COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
@@ -188,7 +188,7 @@ jobs:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             helm upgrade --install $RELEASE_NAME \
-            holograph-operator-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}.tgz \
+            holo-operator-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.STG_COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
