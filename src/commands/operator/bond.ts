@@ -1,17 +1,18 @@
-import * as inquirer from 'inquirer'
 import {CliUx, Command, Flags} from '@oclif/core'
-import {BigNumber, ethers} from 'ethers'
+import {BigNumber, providers} from 'ethers'
+import * as inquirer from 'inquirer'
 
-import {ConfigNetwork, ConfigNetworks, ensureConfigFileIsValid} from '../../utils/config'
-import {toLong18} from '../../utils/contracts'
+import {getNetworkByKey} from '@holographxyz/networks'
+import color from '@oclif/color'
 import {formatEther} from 'ethers/lib/utils'
-import {PodBondAmounts} from '../../types/holograph-operator'
 import CoreChainService from '../../services/core-chain-service'
 import OperatorChainService from '../../services/operator-chain-service'
-import color from '@oclif/color'
-import {getNetworkByKey} from '@holographxyz/networks'
-import {checkOptionFlag} from '../../utils/validation'
 import TokenChainService from '../../services/token-chain-service'
+import {PodBondAmounts} from '../../types/holograph-operator'
+import {ConfigNetwork, ConfigNetworks, ensureConfigFileIsValid} from '../../utils/config'
+import {toLong18} from '../../utils/contracts'
+import {checkOptionFlag} from '../../utils/validation'
+import Operator from '.'
 
 /**
  * Start
@@ -83,10 +84,10 @@ export default class Bond extends Command {
     let provider
     switch (networkProtocol) {
       case 'https:':
-        provider = new ethers.providers.JsonRpcProvider(destinationProviderUrl)
+        provider = new providers.JsonRpcProvider(destinationProviderUrl)
         break
       case 'wss:':
-        provider = new ethers.providers.WebSocketProvider(destinationProviderUrl)
+        provider = new providers.WebSocketProvider(destinationProviderUrl)
         break
       default:
         throw new Error('Unsupported RPC URL protocol -> ' + networkProtocol)
@@ -226,7 +227,7 @@ export default class Bond extends Command {
     }
 
     const gasPriceBase = await wallet!.provider.getGasPrice()
-    const gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
+    const gasPrice = gasPriceBase.add(gasPriceBase.div(BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
     const estimatedGas = gasLimit.mul(gasPrice)
     CliUx.ux.action.stop()
 
@@ -270,11 +271,24 @@ export default class Bond extends Command {
     this.log(
       color.green(
         `Welcome operator! Your wallet ${wallet.address} has bonded ${amount} eth to pod ${pod} on ${network} 🎉` +
-          `Again please make sure your operator remains operational! ` +
+          `\nAgain please make sure your operator remains operational! ` +
           `Failure will result in slashed funds!`,
       ),
     )
 
-    this.exit()
+    prompt = await inquirer.prompt([
+      {
+        name: 'continue',
+        message: "Last chance to start your operator if you don't have it running already. Would you like to proceed?",
+        type: 'confirm',
+        default: true,
+      },
+    ])
+    if (!prompt.continue) {
+      this.log('Successfully bonded. Exiting...')
+      this.exit()
+    }
+
+    await Operator.run(['--mode', 'auto'])
   }
 }
