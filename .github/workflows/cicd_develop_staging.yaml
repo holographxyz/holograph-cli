@@ -23,7 +23,7 @@ env:
   #TODO - create new gh secret for prod. should be different from staging????
   STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLOGRAPH_INDEXER_OPERATOR_API_KEY }}
   #
-  STG_HOLOGRAPH_INDEXER_HOST: http://dev-nest-api.develop.svc.cluster.local:443
+  STG_HOLOGRAPH_INDEXER_HOST: http://devel-holo-api.develop.svc.cluster.local:443
   #
   STG_HOLOGRAPH_INDEXER_PASSWORD: ${{ secrets.DEV_HOLOGRAPH_INDEXER_PASSWORD }}
   STG_HOLOGRAPH_OPERATOR_PASSWORD: ${{ secrets.DEV_HOLOGRAPH_OPERATOR_PASSWORD }}
@@ -36,7 +36,7 @@ env:
   #
   STG_DOMAIN: 'cxipchain.xyz'
   #
-  STG_COMMON_NAMESPACE: holocli-dev # NOTICE <---
+  STG_COMMON_NAMESPACE: develop # NOTICE <---
   #
   # INDEXER DEV rpc endpoints
   indexer_dev_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
@@ -111,7 +111,7 @@ jobs:
         shell: bash
         env:
           #
-          CHART_REPO: holograph-indexer
+          CHART_REPO: holo-indexer
           CHART_VERSION: ${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }}
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -169,7 +169,7 @@ jobs:
         shell: bash
         env:
           #
-          CHART_REPO: holograph-operator
+          CHART_REPO: holo-operator
           CHART_VERSION: ${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
