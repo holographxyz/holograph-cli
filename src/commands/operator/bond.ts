@@ -1,6 +1,6 @@
 import * as inquirer from 'inquirer'
 import {CliUx, Command, Flags} from '@oclif/core'
-import {ethers} from 'ethers'
+import {BigNumber, ethers} from 'ethers'
 
 import {ConfigNetwork, ConfigNetworks, ensureConfigFileIsValid} from '../../utils/config'
 import {toLong18} from '../../utils/contracts'
@@ -111,10 +111,10 @@ export default class Bond extends Command {
 
     const tokenContract = await coreChainService.getUtilityToken()
     const tokenChainService = new TokenChainService(provider, wallet, getNetworkByKey(network).chain, tokenContract)
-    const currentHlgBalance = Number.parseFloat(formatEther(await tokenChainService.balanceOf(wallet.address)))
-    this.log(`Current HLG balance: ${currentHlgBalance}`)
+    const currentHlgBalance = (await tokenChainService.balanceOf(wallet.address)) as BigNumber
+    this.log(`Current HLG balance: ${formatEther(currentHlgBalance)}`)
 
-    if (!(currentHlgBalance > 0)) {
+    if (!currentHlgBalance.gt(BigNumber.from('0'))) {
       this.log('No HLG balance found, please deposit HLG into your wallet before bonding.')
       this.exit()
     }
@@ -231,11 +231,13 @@ export default class Bond extends Command {
 
     const gasPriceBase = await wallet!.provider.getGasPrice()
     const gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
-    const estimatedGas = ethers.utils.formatUnits(gasLimit.mul(gasPrice), 'ether')
+    const estimatedGas = gasLimit.mul(gasPrice)
     CliUx.ux.action.stop()
 
-    this.log('Transaction is estimated to cost a total of', estimatedGas, 'native gas tokens (in Ether units)')
-    if (Number.parseFloat(estimatedGas) > currentHlgBalance) {
+    this.log(
+      `Transaction is estimated to cost a total of ${formatEther(estimatedGas)} native gas tokens (in Ether units)`,
+    )
+    if (estimatedGas.gt(currentHlgBalance)) {
       this.log(
         'You do not have enough HLG to cover the gas cost. Please deposit more HLG into your wallet before bonding.',
       )
