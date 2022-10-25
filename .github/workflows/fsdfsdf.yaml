@@ -1,4 +1,4 @@
-name: Deploy holoclis to staging
+                                                                           name: Deploy holoclis to staging
 
 permissions:
   id-token: write
