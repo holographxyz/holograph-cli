@@ -1,16 +1,18 @@
-import * as inquirer from 'inquirer'
 import {CliUx, Command, Flags} from '@oclif/core'
-import {ethers} from 'ethers'
+import {BigNumber, providers} from 'ethers'
+import * as inquirer from 'inquirer'
 
-import {ConfigNetwork, ConfigNetworks, ensureConfigFileIsValid} from '../../utils/config'
-import {toLong18} from '../../utils/contracts'
+import {getNetworkByKey} from '@holographxyz/networks'
+import color from '@oclif/color'
 import {formatEther} from 'ethers/lib/utils'
-import {PodBondAmounts} from '../../types/holograph-operator'
 import CoreChainService from '../../services/core-chain-service'
 import OperatorChainService from '../../services/operator-chain-service'
-import color from '@oclif/color'
-import {getNetworkByKey} from '@holographxyz/networks'
+import TokenChainService from '../../services/token-chain-service'
+import {PodBondAmounts} from '../../types/holograph-operator'
+import {ConfigNetwork, ConfigNetworks, ensureConfigFileIsValid} from '../../utils/config'
+import {toLong18} from '../../utils/contracts'
 import {checkOptionFlag} from '../../utils/validation'
+import Operator from '.'
 
 /**
  * Start
@@ -18,7 +20,7 @@ import {checkOptionFlag} from '../../utils/validation'
  */
 export default class Bond extends Command {
   static description = 'Start an operator up into a pod'
-  static examples = ['$ holo operator:start --network <string> --pod <number> --amount <number>']
+  static examples = ['$ <%= config.bin %> <%= command.id %> --network <string> --pod <number> --amount <number>']
   static flags = {
     network: Flags.string({
       description: 'The network to bond to',
@@ -82,10 +84,10 @@ export default class Bond extends Command {
     let provider
     switch (networkProtocol) {
       case 'https:':
-        provider = new ethers.providers.JsonRpcProvider(destinationProviderUrl)
+        provider = new providers.JsonRpcProvider(destinationProviderUrl)
         break
       case 'wss:':
-        provider = new ethers.providers.WebSocketProvider(destinationProviderUrl)
+        provider = new providers.WebSocketProvider(destinationProviderUrl)
         break
       default:
         throw new Error('Unsupported RPC URL protocol -> ' + networkProtocol)
@@ -104,12 +106,22 @@ export default class Bond extends Command {
 
     const wallet = userWallet?.connect(provider)
 
-    // Setup the contract and chain services
+    // Setup the contracts and chain services
     const coreChainService = new CoreChainService(provider, wallet, getNetworkByKey(network).chain)
     await coreChainService.initialize()
-    const contract = await coreChainService.getOperator()
-    const operatorChainService = new OperatorChainService(provider, wallet, getNetworkByKey(network).chain, contract)
+    const tokenContract = await coreChainService.getUtilityToken()
+    const tokenChainService = new TokenChainService(provider, wallet, getNetworkByKey(network).chain, tokenContract)
+    const operatorContract = await coreChainService.getOperator()
+    const operatorChainService = new OperatorChainService(
+      provider,
+      wallet,
+      getNetworkByKey(network).chain,
+      operatorContract,
+    )
     const operator = operatorChainService.operator
+
+    const currentHlgBalance = (await tokenChainService.balanceOf(wallet.address)) as BigNumber
+    this.log(`Current HLG balance: ${formatEther(currentHlgBalance)}`)
 
     if ((await operator.getBondedAmount(wallet.address)) > 0) {
       prompt = await inquirer.prompt([
@@ -144,9 +156,25 @@ export default class Bond extends Command {
       }
     }
 
+    if (!currentHlgBalance.gt(BigNumber.from('0'))) {
+      this.log('No HLG balance found, please deposit HLG into your wallet before bonding.')
+      this.exit()
+    }
+
     this.log('Checking pods available...')
     const totalPods = await operator.getTotalPods()
     this.log(`Total Pods: ${totalPods}`)
+
+    // Get the bond amounts for each pod
+    const allPodBondAmounts: PodBondAmounts[] = []
+    for (let i = 1; i <= totalPods; i++) {
+      // eslint-disable-next-line no-await-in-loop
+      allPodBondAmounts.push(await operator.getPodBondAmounts(i))
+    }
+
+    const podChoices: string[] = allPodBondAmounts.map((podBondAmounts, index) => {
+      return `${index + 1} - ${formatEther(podBondAmounts.current)} HLG`
+    })
 
     if (!pod) {
       prompt = await inquirer.prompt([
@@ -154,21 +182,20 @@ export default class Bond extends Command {
           name: 'pod',
           message: 'Enter the pod number to join',
           type: 'list',
-          // eslint-disable-next-line unicorn/new-for-builtins
-          choices: [...Array(totalPods.toNumber() + 1).keys()].slice(1),
+          choices: podChoices,
         },
       ])
-      pod = prompt.pod
+      pod = Number.parseInt(prompt.pod.charAt(0), 10)
       this.log(`Joining pod: ${pod}`)
     }
 
-    const podBoundAmounts: PodBondAmounts = await operator.getPodBondAmounts(pod)
+    const podBondAmounts: PodBondAmounts = await operator.getPodBondAmounts(pod)
     this.log(
-      `Pod ${pod} has a base bond amount of ${formatEther(podBoundAmounts.base)} and currently requires ${formatEther(
-        podBoundAmounts.current,
+      `Pod ${pod} has a base bond amount of ${formatEther(podBondAmounts.base)} and currently requires ${formatEther(
+        podBondAmounts.current,
       )} to bond.`,
     )
-    this.log(`Enter an amount greater or equal to: ${formatEther(podBoundAmounts.current)} to bond.`)
+    this.log(`Enter an amount greater or equal to: ${formatEther(podBondAmounts.current)} to bond.`)
 
     if (!amount) {
       prompt = await inquirer.prompt([
@@ -177,11 +204,8 @@ export default class Bond extends Command {
           message: `Enter the amount of tokens to deposit (Units in Ether)`,
           type: 'number',
           validate: async (input: number) => {
-            if (
-              typeof input === 'number' &&
-              input > 0 &&
-              input >= Number.parseFloat(formatEther(podBoundAmounts.current))
-            ) {
+            const inputBN = BigNumber.from(toLong18(input))
+            if (typeof input === 'number' && input > 0 && inputBN.gte(podBondAmounts.current)) {
               return true
             }
 
@@ -190,12 +214,7 @@ export default class Bond extends Command {
         },
       ])
       amount = prompt.amount
-      process.stdout.write('\n\n' + JSON.stringify(amount) + '\n\n')
-      this.log(`Depositing ${amount} tokens`)
     }
-
-    process.stdout.write('\n\n' + JSON.stringify(amount) + '\n\n')
-    process.stdout.write('\n\n' + JSON.stringify(toLong18(amount as number)) + '\n\n')
 
     this.log(`Bonding from ${wallet.address} to pod ${pod} on network ${network} for ${amount} tokens`)
 
@@ -208,14 +227,19 @@ export default class Bond extends Command {
     }
 
     const gasPriceBase = await wallet!.provider.getGasPrice()
-    const gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
-
+    const gasPrice = gasPriceBase.add(gasPriceBase.div(BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
+    const estimatedGas = gasLimit.mul(gasPrice)
     CliUx.ux.action.stop()
+
     this.log(
-      'Transaction is estimated to cost a total of',
-      ethers.utils.formatUnits(gasLimit.mul(gasPrice), 'ether'),
-      'native gas tokens (in Ether)',
+      `Transaction is estimated to cost a total of ${formatEther(estimatedGas)} native gas tokens (in Ether units)`,
     )
+    if (estimatedGas.gt(currentHlgBalance)) {
+      this.log(
+        'You do not have enough HLG to cover the gas cost. Please deposit more HLG into your wallet before bonding.',
+      )
+      this.exit()
+    }
 
     prompt = await inquirer.prompt([
       {
@@ -239,12 +263,32 @@ export default class Bond extends Command {
       CliUx.ux.action.start('Waiting for transaction to be mined and confirmed')
       const receipt = await tx.wait()
       this.debug(receipt)
-      console.log(receipt)
       CliUx.ux.action.stop(`Transaction mined and confirmed. Transaction hash is ${receipt.transactionHash}`)
     } catch (error: any) {
       this.error(error.error.reason)
     }
 
-    this.exit()
+    this.log(
+      color.green(
+        `Welcome operator! Your wallet ${wallet.address} has bonded ${amount} eth to pod ${pod} on ${network} 🎉` +
+          `\nAgain please make sure your operator remains operational! ` +
+          `Failure will result in slashed funds!`,
+      ),
+    )
+
+    prompt = await inquirer.prompt([
+      {
+        name: 'continue',
+        message: "Last chance to start your operator if you don't have it running already. Would you like to proceed?",
+        type: 'confirm',
+        default: true,
+      },
+    ])
+    if (!prompt.continue) {
+      this.log('Successfully bonded. Exiting...')
+      this.exit()
+    }
+
+    await Operator.run(['--mode', 'auto'])
   }
 }

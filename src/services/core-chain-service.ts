@@ -105,8 +105,8 @@ class CoreChainService {
     return this.provider.getBalance(account)
   }
 
-  getSignerAddress = async (): Promise<string> => {
-    return this.provider.getSigner().getAddress()
+  getWalletAddress = async (): Promise<string> => {
+    return this.wallet.getAddress()
   }
 }
 
