@@ -909,10 +909,44 @@
     supports-color "^8.1.1"
     tslib "^2"
 
-"@oclif/core@1.16.4", "@oclif/core@^1.16.4":
+"@oclif/core@1.16.4":
   version "1.16.4"
   resolved "https://registry.yarnpkg.com/@oclif/core/-/core-1.16.4.tgz#fafa338ada0624d7f1adac036302b05a37cd96d0"
   integrity sha512-l+xHtVMteJWeTZZ+f2yLyNjf69X0mhAH8GILXnmoAGAemXbc1DVstvloxOouarvm9xyHHhquzO1Qg5l6xa1VIw==
+  dependencies:
+    "@oclif/linewrap" "^1.0.0"
+    "@oclif/screen" "^3.0.2"
+    ansi-escapes "^4.3.2"
+    ansi-styles "^4.3.0"
+    cardinal "^2.1.1"
+    chalk "^4.1.2"
+    clean-stack "^3.0.1"
+    cli-progress "^3.10.0"
+    debug "^4.3.4"
+    ejs "^3.1.6"
+    fs-extra "^9.1.0"
+    get-package-type "^0.1.0"
+    globby "^11.1.0"
+    hyperlinker "^1.0.0"
+    indent-string "^4.0.0"
+    is-wsl "^2.2.0"
+    js-yaml "^3.14.1"
+    natural-orderby "^2.0.3"
+    object-treeify "^1.1.33"
+    password-prompt "^1.1.2"
+    semver "^7.3.7"
+    string-width "^4.2.3"
+    strip-ansi "^6.0.1"
+    supports-color "^8.1.1"
+    supports-hyperlinks "^2.2.0"
+    tslib "^2.3.1"
+    widest-line "^3.1.0"
+    wrap-ansi "^7.0.0"
+
+"@oclif/core@^1.16.4", "@oclif/core@^1.19.1":
+  version "1.19.2"
+  resolved "https://registry.yarnpkg.com/@oclif/core/-/core-1.19.2.tgz#847b1c502ff8a91b834b8c893f0942a5d95e3b64"
+  integrity sha512-n5ni/NNR6+I0IQXVGoLKdrdw6IS3WH/R/hw6WX8ERfLMZACrNSuJFD9EmBZkztyRkmiQ2L06ULazW5bJn5Shog==
   dependencies:
     "@oclif/linewrap" "^1.0.0"
     "@oclif/screen" "^3.0.2"
@@ -1000,13 +1034,13 @@
   resolved "https://registry.yarnpkg.com/@oclif/screen/-/screen-3.0.2.tgz#969054308fe98d130c02844a45cc792199b75670"
   integrity sha512-S/SF/XYJeevwIgHFmVDAFRUvM3m+OjhvCAYMk78ZJQCYCQ5wS7j+LTt1ZEv2jpEEGg2tx/F6TYYWxddNAYHrFQ==
 
-"@oclif/test@2.2.1":
-  version "2.2.1"
-  resolved "https://registry.yarnpkg.com/@oclif/test/-/test-2.2.1.tgz#1694b0b236bff1183d0e44af063e77bf6bc60f03"
-  integrity sha512-j3PdoeK86DFCmilvUZSQFdHa0o1eejlR70c9O5UqqPLGSY3Pz/11TaXB5BrfhqISIpZTUIacDlAd1Xvybft0sg==
+"@oclif/test@2.2.6":
+  version "2.2.6"
+  resolved "https://registry.yarnpkg.com/@oclif/test/-/test-2.2.6.tgz#2c98bb1ecab3ddf6b01b51f8a3489c9105353d67"
+  integrity sha512-rf67rTBkEeulpomdeBYm0D+Q0e1uMqTPUNPhY2/G6guAJhmu3M+78HvSKpLdG7WqpbfQJ68D5Dh5HnauO+MY2g==
   dependencies:
-    "@oclif/core" "^1.16.4"
-    fancy-test "^2.0.2"
+    "@oclif/core" "^1.19.1"
+    fancy-test "^2.0.5"
 
 "@octokit/auth-token@^2.4.4":
   version "2.5.0"
@@ -3888,10 +3922,10 @@ fake-merkle-patricia-tree@^1.0.1:
   dependencies:
     checkpoint-store "^1.1.0"
 
-fancy-test@^2.0.2:
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/fancy-test/-/fancy-test-2.0.4.tgz#b7650e13598e5ad2a27f0d89ad07813bfb09d53e"
-  integrity sha512-jZbiHiJY1phazdfQkVhdBEY5aZXEydiZzFxK9VqCfrMmRw/kHPgQ6i88+nyqQwpFV3yL2mUbMe/NEfMaSfO7+g==
+fancy-test@^2.0.5:
+  version "2.0.5"
+  resolved "https://registry.yarnpkg.com/fancy-test/-/fancy-test-2.0.5.tgz#eb39e10b77e476147aa4ed5a81e14e809b46aaae"
+  integrity sha512-ASPLNVkHSSIdRI/uLlK+XGhf1ul/MpRN9VE84ehXL+FOprQjXrDXX3wW1wqKvtcTTC+AW0E0RxdpJ5IEopjhQA==
   dependencies:
     "@types/chai" "*"
     "@types/lodash" "*"
