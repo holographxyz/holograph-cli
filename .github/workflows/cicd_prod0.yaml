@@ -85,7 +85,7 @@ jobs:
           -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.PROD_IMAGE_TAG }} .
 
       - name: Push image
-        run : docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.PROD_IMAGE_TAG }}
+        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.PROD_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -119,10 +119,10 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer #notice
-          ENABLE_DEBUG: "true"
-          HEALTHCHECK : "true"
-          MODE        : "auto"
-          NETWORK     : "fuji mumbai goerli"
+          ENABLE_DEBUG: 'true'
+          HEALTHCHECK: 'true'
+          MODE: 'auto'
+          NETWORK: 'fuji mumbai goerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -176,10 +176,10 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: operator #notice
-          ENABLE_DEBUG: "true"
-          ENABLE_SYNC : "true"
-          HEALTHCHECK : "true"
-          MODE        : "auto"
+          ENABLE_DEBUG: 'true'
+          ENABLE_SYNC: 'true'
+          HEALTHCHECK: 'true'
+          MODE: 'auto'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-

@@ -1,35 +1,32 @@
 import * as inquirer from 'inquirer'
 
 import {CliUx, Command, Flags} from '@oclif/core'
-import {ethers} from 'ethers'
-
+import {BigNumber} from 'ethers'
+import {TransactionResponse, TransactionReceipt} from '@ethersproject/abstract-provider'
+import {TransactionDescription} from '@ethersproject/abi'
 import {ensureConfigFileIsValid} from '../../utils/config'
-import networks from '../../utils/networks'
-
-import {BlockJob, NetworkMonitor} from '../../utils/network-monitor'
+import {NetworkMonitor} from '../../utils/network-monitor'
+import {sha3} from '../../utils/utils'
+import {networks, supportedNetworks} from '@holographxyz/networks'
 
 export default class Recover extends Command {
   static description = 'Attempt to re-run/recover a particular Operator Job'
-  static examples = ['$ holo operator:recover --network="goerli" --tx="0x..."']
+  static examples = ['$ <%= config.bin %> <%= command.id %> --network="ethereumTestnetGoerli" --tx="0x..."']
   static flags = {
-    network: Flags.string({description: 'The network on which the transaction was executed'}),
-    tx: Flags.string({description: 'The hash of transaction that we want to attempt to execute'}),
+    network: Flags.string({
+      description: 'The network on which the transaction was executed',
+      options: supportedNetworks,
+    }),
+    tx: Flags.string({
+      description: 'The hash of transaction that we want to attempt to execute',
+    }),
   }
 
-  /**
-   * Operator class variables
-   */
-  operatorAddress!: string
   networkMonitor!: NetworkMonitor
 
-  async fakeProcessor(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
-    this.networkMonitor.structuredLog(
-      job.network,
-      `This should not trigger: ${JSON.stringify(transactions, undefined, 2)}`,
-    )
-    Promise.resolve()
-  }
-
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     this.log('Loading user configurations...')
     const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
@@ -39,7 +36,7 @@ export default class Recover extends Command {
       parent: this,
       configFile,
       debug: this.debug,
-      processTransactions: this.fakeProcessor,
+      processTransactions: undefined, // Recover doesn't process transactions
       userWallet,
     })
 
@@ -97,7 +94,10 @@ export default class Recover extends Command {
     }
   }
 
-  async processTransaction(network: string, transaction: ethers.providers.TransactionResponse): Promise<void> {
+  /**
+   * Process a transaction and attempt to either handle the bridge out or bridge in depending on the event emitted
+   */
+  async processTransaction(network: string, transaction: TransactionResponse): Promise<void> {
     this.networkMonitor.structuredLog(
       network,
       `Processing transaction ${transaction.hash} at block ${transaction.blockNumber}`,
@@ -123,8 +123,11 @@ export default class Recover extends Command {
     }
   }
 
-  async handleBridgeOutEvent(transaction: ethers.providers.TransactionResponse, network: string): Promise<void> {
-    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+  /**
+   * Handles the event emitted by the bridge contract when a token is bridged out
+   */
+  async handleBridgeOutEvent(transaction: TransactionResponse, network: string): Promise<void> {
+    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
       attempts: 30,
@@ -136,22 +139,19 @@ export default class Recover extends Command {
 
     if (receipt.status === 1) {
       this.networkMonitor.structuredLog(network, `Checking if a bridge request was made at tx: ${transaction.hash}`)
-      const operatorJobPayload = this.networkMonitor.decodePacketEvent(receipt) ?? this.networkMonitor.decodeLzPacketEvent(receipt)
-      const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
+      const operatorJobPayload =
+        this.networkMonitor.decodePacketEvent(receipt) ?? this.networkMonitor.decodeLzPacketEvent(receipt)
+      const operatorJobHash = operatorJobPayload === undefined ? undefined : sha3(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract cross-chain packet for ${transaction.hash}`)
       } else {
-        const bridgeTransaction: ethers.utils.TransactionDescription =
+        const bridgeTransaction: TransactionDescription =
           this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
         const chainId: number = (
-          await this.networkMonitor.interfacesContract.getChainId(
-            2,
-            ethers.BigNumber.from(bridgeTransaction.args.toChain),
-            1,
-          )
+          await this.networkMonitor.interfacesContract.getChainId(2, BigNumber.from(bridgeTransaction.args.toChain), 1)
         ).toNumber()
         let destinationNetwork: string | undefined
-        const networkNames: string[] = Object.keys(networks)
+        const networkNames: string[] = supportedNetworks
         for (let i = 0, l = networkNames.length; i < l; i++) {
           const n = networks[networkNames[i]]
           if ((n.chain as number) === chainId) {
@@ -166,18 +166,18 @@ export default class Recover extends Command {
 
         this.networkMonitor.structuredLog(
           network,
-          `Bridge-Out trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
+          `Bridge-Out transaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
         )
         await this.executePayload(destinationNetwork, operatorJobPayload!)
       }
     }
   }
 
-  async handleAvailableOperatorJobEvent(
-    transaction: ethers.providers.TransactionResponse,
-    network: string,
-  ): Promise<void> {
-    const receipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+  /**
+   * Handles the event emitted by the operator contract when a job is available and can be executed
+   */
+  async handleAvailableOperatorJobEvent(transaction: TransactionResponse, network: string): Promise<void> {
+    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
       network,
       transactionHash: transaction.hash,
       attempts: 30,
@@ -192,8 +192,12 @@ export default class Recover extends Command {
         network,
         `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
       )
-      const operatorJobPayload = this.networkMonitor.decodeAvailableJobEvent(receipt)
-      const operatorJobHash = operatorJobPayload === undefined ? undefined : ethers.utils.keccak256(operatorJobPayload)
+      const operatorJobEvent: string[] | undefined = this.networkMonitor.decodeAvailableOperatorJobEvent(
+        receipt,
+        this.networkMonitor.operatorAddress,
+      )
+      const operatorJobPayload: string | undefined = operatorJobEvent === undefined ? undefined : operatorJobEvent![1]
+      const operatorJobHash: string | undefined = operatorJobPayload === undefined ? undefined : operatorJobEvent![0]
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract relayer available job for ${transaction.hash}`)
       } else {
@@ -203,17 +207,20 @@ export default class Recover extends Command {
         )
         const bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
-          value: ethers.BigNumber.from('0'),
+          value: BigNumber.from('0'),
         })
         this.networkMonitor.structuredLog(
           network,
-          `Bridge-In trasaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
+          `Bridge-In transaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
         )
         await this.executePayload(network, operatorJobPayload!)
       }
     }
   }
 
+  /**
+   * Execute the payload on the destination network
+   */
   async executePayload(network: string, payload: string): Promise<void> {
     // If the operator is in listen mode, payloads will not be executed
     // If the operator is in manual mode, the payload must be manually executed

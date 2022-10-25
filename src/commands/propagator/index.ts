@@ -6,10 +6,12 @@ import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {decodeDeploymentConfigInput, capitalize, getNetworkName, DeploymentConfig} from '../../utils/utils'
-import {supportedNetworks} from '../../utils/networks'
-import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
-import {startHealthcheckServer} from '../../utils/health-check-server'
+import {getNetworkByChainId, supportedNetworks} from '@holographxyz/networks'
+import {capitalize} from '../../utils/utils'
+import {DeploymentConfig, decodeDeploymentConfigInput} from '../../utils/contract-deployment'
+
+import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
+import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
 
 type RecoveryData = {
   // eslint-disable-next-line camelcase
@@ -22,27 +24,28 @@ type RecoveryData = {
 }
 
 export default class Propagator extends Command {
-  static description = 'Listen for EVM events deploys collections to ther supported networks'
-  static examples = ['$ holo propagator --networks="rinkeby mumbai fuji" --mode=auto']
+  static hidden = true
+  static description = 'Listen for EVM events deploys collections to the supported networks'
+  static examples = [
+    '$ <%= config.bin %> <%= command.id %> --networks ethereumTestnetRinkeby polygonTestnet avalancheTestnet --mode=auto',
+  ]
+
   static flags = {
     mode: Flags.string({
       description: 'The mode in which to run the propagator',
       options: ['listen', 'manual', 'auto'],
       char: 'm',
     }),
-    healthCheck: Flags.boolean({
-      description: 'Launch server on http://localhost:6000 to make sure command is still running',
-      default: false,
-    }),
+    ...healthcheckFlag,
     sync: Flags.boolean({
       description: 'Start from last saved block position instead of latest block position',
       default: false,
     }),
     unsafePassword: Flags.string({
-      description: 'Enter the plain text password for the wallet in the holo cli config',
+      description: 'Enter the plain text password for the wallet in the holograph cli config',
     }),
     ...warpFlag,
-    ...networkFlag,
+    ...networksFlag,
     recover: Flags.string({
       description: 'Provide a JSON array of RecoveryData objects to manually ensure propagation',
       default: '[]',
@@ -53,14 +56,12 @@ export default class Propagator extends Command {
   }
 
   crossDeployments: string[] = []
-
-  /**
-   * Propagator class variables
-   */
   operatorMode: OperatorMode = OperatorMode.listen
-
   networkMonitor!: NetworkMonitor
 
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     const {flags} = await this.parse(Propagator)
 
@@ -144,7 +145,7 @@ export default class Propagator extends Command {
     if (recoveryData.length > 0) {
       this.log(`Manually running ${recoveryData.length} recovery jobs`)
       for (const data of recoveryData) {
-        let network: string = getNetworkName(data.chain_id)
+        let network: string = getNetworkByChainId(data.chain_id).key
         const checkNetworks: string[] = supportedNetworks
         if (checkNetworks.includes(network)) {
           checkNetworks.splice(checkNetworks.indexOf(network), 1)
@@ -200,7 +201,7 @@ export default class Propagator extends Command {
         networkDependant: false,
       },
     ]
-    Promise.resolve()
+    return Promise.resolve()
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
@@ -240,7 +241,10 @@ export default class Propagator extends Command {
         network,
         `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`,
       )
-      const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
+      const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(
+        receipt,
+        this.networkMonitor.factoryAddress,
+      )
       if (deploymentInfo === undefined) {
         this.networkMonitor.structuredLog(network, `BridgeableContractDeployed event not found in ${transaction.hash}`)
       } else {
@@ -292,6 +296,7 @@ export default class Propagator extends Command {
         )
         const deploymentInfo: any[] | undefined = this.networkMonitor.decodeBridgeableContractDeployedEvent(
           deployReceipt as ethers.providers.TransactionReceipt,
+          this.networkMonitor.factoryAddress,
         )
         if (deploymentInfo === undefined) {
           this.networkMonitor.structuredLog(

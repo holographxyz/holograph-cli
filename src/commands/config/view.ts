@@ -4,24 +4,31 @@ import {Command, Flags} from '@oclif/core'
 
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid, readConfig} from '../../utils/config'
 import {capitalize} from '../../utils/utils'
+import {supportedFormats} from '../../utils/output-format'
 
 export default class ConfigView extends Command {
-  static description = 'View the current configuration state of the Holo command line'
+  static description = 'View the current configuration state of the Holograph command line'
   static examples = [
-    '$ holo:view',
-    '$ holo:view --output json',
-    '$ holo:view --output yaml',
-    '$ holo:view --output clean',
+    '$ <%= config.bin %> <%= command.id %>',
+    '$ <%= config.bin %> <%= command.id %> --output json',
+    '$ <%= config.bin %> <%= command.id %> --output yaml',
+    '$ <%= config.bin %> <%= command.id %> --output clean',
   ]
 
   static flags = {
-    output: Flags.string({description: 'Output format', options: ['clean', 'json', 'yaml']}),
+    output: Flags.string({
+      description: 'Output format',
+      options: supportedFormats,
+    }),
   }
 
   yaml!: YAML.Document
   configJson: any
   configPath!: string
 
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     const {flags} = await this.parse(ConfigView)
     await this.setup()
