@@ -111,9 +111,10 @@ export default class Bond extends Command {
 
     const tokenContract = await coreChainService.getUtilityToken()
     const tokenChainService = new TokenChainService(provider, wallet, getNetworkByKey(network).chain, tokenContract)
-    const currentHlgBalance = await tokenChainService.balanceOf(wallet.address)
-    this.log(`Current HLG balance: ${formatEther(currentHlgBalance)}`)
-    if (currentHlgBalance === 0) {
+    const currentHlgBalance = Number.parseFloat(formatEther(await tokenChainService.balanceOf(wallet.address)))
+    this.log(`Current HLG balance: ${currentHlgBalance}`)
+
+    if (!(currentHlgBalance > 0)) {
       this.log('No HLG balance found, please deposit HLG into your wallet before bonding.')
       this.exit()
     }
@@ -234,7 +235,7 @@ export default class Bond extends Command {
     CliUx.ux.action.stop()
 
     this.log('Transaction is estimated to cost a total of', estimatedGas, 'native gas tokens (in Ether units)')
-    if (estimatedGas > formatEther(currentHlgBalance)) {
+    if (Number.parseFloat(estimatedGas) > currentHlgBalance) {
       this.log(
         'You do not have enough HLG to cover the gas cost. Please deposit more HLG into your wallet before bonding.',
       )
