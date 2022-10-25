@@ -45,6 +45,25 @@
     "type": "event"
   },
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "jobHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      }
+    ],
+    "name": "FinishedOperatorJob",
+    "type": "event"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -125,6 +144,25 @@
       {
         "internalType": "uint256",
         "name": "pod",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      }
+    ],
+    "name": "getBondedPodIndex",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "index",
         "type": "uint256"
       }
     ],
@@ -254,6 +292,11 @@
       {
         "internalType": "uint256",
         "name": "msgFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "dstGasPrice",
         "type": "uint256"
       }
     ],

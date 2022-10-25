@@ -15,6 +15,11 @@
         "internalType": "uint256",
         "name": "gasPrice",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "payloadLength",
+        "type": "uint256"
       }
     ],
     "name": "getHlgFee",
@@ -61,6 +66,11 @@
       {
         "internalType": "uint256",
         "name": "msgFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "dstGasPrice",
         "type": "uint256"
       }
     ],

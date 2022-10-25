@@ -1,5 +1,6 @@
 import * as inquirer from 'inquirer'
 import {CliUx, Command, Flags} from '@oclif/core'
+import {TransactionDescription} from '@ethersproject/abi'
 import {BigNumber} from '@ethersproject/bignumber'
 import {Contract} from '@ethersproject/contracts'
 import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
@@ -8,11 +9,15 @@ import {getNetworkByHolographId} from '@holographxyz/networks'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
-import {web3} from '../../utils/utils'
+import {web3, functionSignature, sha3} from '../../utils/utils'
 import {OperatorJobStructOutput} from '../../types/holograph-operator'
 
 interface OperatorJob {
+  hash: string
+  payload: string
   targetTime: number
+  gasLimit: BigNumber
+  gasPrice: BigNumber
   jobDetails: OperatorJobStructOutput
 }
 
@@ -56,10 +61,100 @@ export default class Operator extends Command {
   operatorMode: OperatorMode = OperatorMode.listen
   networkMonitor!: NetworkMonitor
   environment!: Environment
-  address!: string
   operatorStatus: OperatorStatus = {} as OperatorStatus
-  currentPod: {[key: string]: number} = {}
-  podIndex: {[key: string]: number} = {}
+  operatorJobs: {[key: string]: OperatorJob} = {}
+
+  /*
+
+  struct OperatorJob {
+    uint8 pod;
+    uint16 blockTimes;
+    address operator;
+    uint40 startBlock;
+    uint64 startTimestamp;
+    uint16[5] fallbackOperators;
+  }
+
+export type OperatorJobStructOutput = [
+  number,
+  number,
+  string,
+  number,
+  BigNumber,
+  [number, number, number, number, number]
+] & {
+  pod: number;
+  blockTimes: number;
+  operator: string;
+  startBlock: number;
+  startTimestamp: BigNumber;
+  fallbackOperators: [number, number, number, number, number];
+};
+
+
+*/
+
+  async decodeOperatorJob(network: string, operatorJobHash: string, operatorJobPayload: string): Promise<void> {
+    const contract: Contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.providers[network])
+    const jobDetails: OperatorJobStructOutput = (await contract.getJobDetails(
+      operatorJobHash,
+    )) as OperatorJobStructOutput
+    if (jobDetails.startBlock > 0) {
+      let targetTime: number = new Date(BigNumber.from(jobDetails.startTimestamp).toNumber() * 1000).getTime()
+      const selectedOperator: string = jobDetails.operator.toLowerCase()
+      if (selectedOperator !== this.operatorStatus.address) {
+        // operator is not selected
+        // add +60 seconds to target time
+        targetTime += 60 * 1000
+
+        // ignore where operator is not in same pod
+        if (jobDetails.pod === this.operatorStatus.currentPod[network]) {
+          for (let i = 0; i < 5; i++) {
+            if (jobDetails.fallbackOperators[i] === 0) {
+              // anyone from that pod can operate
+              break
+            } else if (jobDetails.fallbackOperators[i] === this.operatorStatus.podIndex[network]) {
+              // operator has been selected as the fallback
+              break
+            }
+
+            // add +60 seconds to target time
+            targetTime += 60 * 1000
+          }
+        } else {
+          // add time delay for 5 fallback operators to have a chance first
+          targetTime += 60 * 1000 * 5
+        }
+      }
+
+      // time to extract gasLimit and gasPrice from payload
+      const gasLimit: BigNumber = BigNumber.from('0x' + operatorJobPayload.slice(-128, -64))
+      const gasPrice: BigNumber = BigNumber.from('0x' + operatorJobPayload.slice(-64))
+
+      // we have a legit job here
+      this.operatorJobs[operatorJobHash] = {
+        hash: operatorJobHash,
+        payload: operatorJobPayload,
+        targetTime,
+        gasLimit,
+        gasPrice,
+        jobDetails,
+      } as OperatorJob
+    }
+  }
+
+  async updateOperatorStatus(network: string): Promise<void> {
+    const contract: Contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.providers[network])
+    this.operatorStatus.active[network] = !BigNumber.from(
+      await contract.getBondedAmount(this.operatorStatus.address),
+    ).isZero()
+    this.operatorStatus.currentPod[network] = BigNumber.from(
+      await contract.getBondedPod(this.operatorStatus.address),
+    ).toNumber()
+    this.operatorStatus.podIndex[network] = BigNumber.from(
+      await contract.getBondedPodIndex(this.operatorStatus.address),
+    ).toNumber()
+  }
 
   /**
    * Command Entry Point
@@ -138,6 +233,8 @@ export default class Operator extends Command {
       }
     }
 
+    this.operatorStatus.address = userWallet.address.toLowerCase()
+
     CliUx.ux.action.start(`Starting operator in mode: ${OperatorMode[this.operatorMode]}`)
     await this.networkMonitor.run(true, undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
@@ -154,9 +251,17 @@ export default class Operator extends Command {
    */
   async filterBuilder(): Promise<void> {
     this.networkMonitor.filters = [
+      // want to catch AvailableOperatorJob event instead of watching LZ Endpoint from address
       {
         type: FilterType.from,
         match: this.networkMonitor.LAYERZERO_RECEIVERS,
+        networkDependant: true,
+      },
+      // want to also catch FinishedOperatorJob and FailedOperatorJob event
+      // for now we catch all calls to HolographOperator with function executeJob
+      {
+        type: FilterType.functionSig,
+        match: functionSignature('executeJob(bytes)'),
         networkDependant: true,
       },
     ]
@@ -166,6 +271,18 @@ export default class Operator extends Command {
         match: this.networkMonitor.bridgeAddress,
         networkDependant: false,
       })
+    }
+
+    this.operatorStatus.active = {}
+    this.operatorStatus.currentPod = {}
+    this.operatorStatus.podIndex = {}
+    // for first time init, get operator status details
+    for (const network of this.networkMonitor.networks) {
+      /* eslint-disable no-await-in-loop */
+      this.operatorStatus.active[network] = false
+      this.operatorStatus.currentPod[network] = 0
+      this.operatorStatus.podIndex[network] = 0
+      await this.updateOperatorStatus(network)
     }
   }
 
@@ -181,9 +298,15 @@ export default class Operator extends Command {
         const to: string | undefined = transaction.to?.toLowerCase()
         const from: string | undefined = transaction.from?.toLowerCase()
         if (to === this.networkMonitor.bridgeAddress) {
+          // this only triggers in localhost environment
           await this.handleBridgeOutEvent(transaction, job.network, tags)
+        } else if (to === this.networkMonitor.operatorAddress) {
+          // use this to speed up logic for getting AvailableOperatorJob event
+          await this.handleBridgeInEvent(transaction, job.network, tags)
         } else if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
           await this.handleAvailableOperatorJobEvent(transaction, job.network, tags)
+        } else if (transaction.data?.slice(0, 10).startsWith(functionSignature('executeJob(bytes)'))) {
+          await this.handleBridgeInEvent(transaction, job.network, tags)
         } else {
           this.networkMonitor.structuredLog(
             job.network,
@@ -244,68 +367,44 @@ export default class Operator extends Command {
     }
   }
 
-  /*
+  async handleBridgeInEvent(
+    transaction: TransactionResponse,
+    network: string,
+    tags: (string | number)[],
+  ): Promise<void> {
+    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
+    if (receipt === null) {
+      throw new Error(`Could not get receipt for ${transaction.hash}`)
+    }
 
-  struct OperatorJob {
-    uint8 pod;
-    uint16 blockTimes;
-    address operator;
-    uint40 startBlock;
-    uint64 startTimestamp;
-    uint16[5] fallbackOperators;
-  }
+    if (receipt.status === 1) {
+      const parsedTransaction: TransactionDescription =
+        this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
+      if (parsedTransaction.name === 'executeJob') {
+        const args: any[] | undefined = Object.values(parsedTransaction.args)
+        const operatorJobPayload: string | undefined = args === undefined ? undefined : sha3(args[0])
+        const operatorJobHash: string | undefined =
+          operatorJobPayload === undefined ? undefined : sha3(operatorJobPayload)
+        if (operatorJobHash === undefined) {
+          this.networkMonitor.structuredLog(network, `Could not find a bridgeInRequest for ${transaction.hash}`, tags)
+        } else {
+          // remove job from operatorJobs if it exists
+          if (operatorJobHash in this.operatorJobs) {
+            delete this.operatorJobs[operatorJobHash]
+          }
 
-export type OperatorJobStructOutput = [
-  number,
-  number,
-  string,
-  number,
-  BigNumber,
-  [number, number, number, number, number]
-] & {
-  pod: number;
-  blockTimes: number;
-  operator: string;
-  startBlock: number;
-  startTimestamp: BigNumber;
-  fallbackOperators: [number, number, number, number, number];
-};
-
-
-*/
-
-  operatorJobs: {[key: string]: OperatorJob} = {}
-
-  async decodeOperatorJob(network: string, operatorJobHash: string /* , operatorJobPayload: string */): Promise<void> {
-    const contract: Contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.providers[network])
-    const jobDetails: OperatorJobStructOutput = (await contract.getJobDetails(
-      operatorJobHash,
-    )) as OperatorJobStructOutput
-    if (jobDetails.startBlock > 0) {
-      let targetTime: number = new Date(BigNumber.from(jobDetails.startTimestamp).toNumber() * 1000).getTime()
-      const selectedOperator: string = jobDetails.operator.toLowerCase()
-      if (selectedOperator !== this.operatorStatus.address) {
-        // operator is not selected
-        // add +60 seconds to target time
-        targetTime += 60 * 1000
-      }
-
-      for (let i = 0; i < 5; i++) {
-        /*
-        if (jobDetails.pod === this.operatorStatus[network].selectedPod) {
-          // leaving the work for later
+          // update operator details, in case operator was selected for a job, or any data changed
+          await this.updateOperatorStatus(network)
+          this.networkMonitor.structuredLog(network, `Found a valid bridgeInRequest for ${transaction.hash}`, tags)
         }
-        if (jobDetails.fallbackOperators[i] !== this.operatorStatus[network].podIndex) {
-          // leaving the work for later
-        }
-      */
+      } else {
+        this.networkMonitor.structuredLog(network, `Unknown bridgeIn function executed for ${transaction.hash}`, tags)
       }
-
-      // we have a legit job here
-      this.operatorJobs[operatorJobHash] = {
-        targetTime,
-        jobDetails,
-      } as OperatorJob
     }
   }
 
@@ -353,6 +452,15 @@ export type OperatorJobStructOutput = [
           `HolographOperator received a new bridge job. The job payload hash is ${operatorJobHash}. The job payload is ${operatorJobPayload}`,
           tags,
         )
+        // first update operator details, in case operator was selected for a job, or any data changed
+        await this.updateOperatorStatus(network)
+        // then add operator job to internal list of jobs to monitor and work on
+        await this.decodeOperatorJob(network, operatorJobHash as string, operatorJobPayload as string)
+        // for now we still run executePayload to provide a safe buffer while Operator V2 is finished
+        if (this.operatorMode !== OperatorMode.listen) {
+          await this.executePayload(network, operatorJobPayload!, tags)
+        }
+        /*
         const bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
           value: BigNumber.from('0'),
@@ -365,6 +473,7 @@ export type OperatorJobStructOutput = [
         if (this.operatorMode !== OperatorMode.listen) {
           await this.executePayload(network, operatorJobPayload!, tags)
         }
+*/
       }
     }
   }
