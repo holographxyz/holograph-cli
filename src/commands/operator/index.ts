@@ -456,6 +456,10 @@ export type OperatorJobStructOutput = [
         await this.updateOperatorStatus(network)
         // then add operator job to internal list of jobs to monitor and work on
         await this.decodeOperatorJob(network, operatorJobHash as string, operatorJobPayload as string)
+        // for now we still run executePayload to provide a safe buffer while Operator V2 is finished
+        if (this.operatorMode !== OperatorMode.listen) {
+          await this.executePayload(network, operatorJobPayload!, tags)
+        }
         /*
         const bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
