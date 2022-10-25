@@ -77,6 +77,7 @@ export default class Analyze extends Command {
   operatorJobCounterMap: {[key: string]: number} = {}
   transactionLogs: (ContractDeployment | AvailableJob)[] = []
   networkMonitor!: NetworkMonitor
+  blockJobs: {[key: string]: BlockJob[]} = {}
 
   /**
    * Command Entry Point
@@ -131,31 +132,35 @@ export default class Analyze extends Command {
 
     const blockJobs: {[key: string]: BlockJob[]} = {}
 
-    // Setup websocket subscriptions and start processing blocks
-    for (let i = 0, l = networks.length; i < l; i++) {
-      const network: string = networks[i]
-      blockJobs[network] = []
-      for (const scopeJob of scopeJobs) {
-        if (scopeJob.network === network) {
-          let endBlock: number = scopeJob.endBlock
-          // Allow syncing up to current block height if endBlock is set to 0
-          if (endBlock === 0) {
-            /* eslint-disable no-await-in-loop */
-            endBlock = await this.networkMonitor.providers[network].getBlockNumber()
-          }
+    const injectBlocks = async (): Promise<void> => {
+      // Setup websocket subscriptions and start processing blocks
+      for (let i = 0, l = networks.length; i < l; i++) {
+        const network: string = networks[i]
+        blockJobs[network] = []
+        for (const scopeJob of scopeJobs) {
+          if (scopeJob.network === network) {
+            let endBlock: number = scopeJob.endBlock
+            // Allow syncing up to current block height if endBlock is set to 0
+            if (endBlock === 0) {
+              /* eslint-disable no-await-in-loop */
+              endBlock = await this.networkMonitor.providers[network].getBlockNumber()
+            }
 
-          for (let n = scopeJob.startBlock, nl = endBlock; n <= nl; n++) {
-            blockJobs[network].push({
-              network: network,
-              block: n,
-            } as BlockJob)
+            for (let n = scopeJob.startBlock, nl = endBlock; n <= nl; n++) {
+              blockJobs[network].push({
+                network: network,
+                block: n,
+              } as BlockJob)
+            }
           }
         }
       }
+
+      await this.filterBuilder()
     }
 
     this.networkMonitor.exitCallback = this.exitCallback.bind(this)
-    await this.networkMonitor.run(false, blockJobs, this.filterBuilder)
+    await this.networkMonitor.run(false, blockJobs, injectBlocks.bind(this))
   }
 
   /**
