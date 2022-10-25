@@ -9,7 +9,7 @@ env:
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli # notice: the same for all 3 cli apps
   #
-  TESTNET_IMAGE_TAG : testnet-${{ github.sha }}
+  TESTNET_IMAGE_TAG: testnet-${{ github.sha }}
   #######################################
   TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.40
   TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.36
@@ -95,7 +95,7 @@ jobs:
           -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.TESTNET_IMAGE_TAG }} .
 
       - name: Push image
-        run : docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.TESTNET_IMAGE_TAG }}
+        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.TESTNET_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -129,10 +129,10 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer-testnet #notice
-          ENABLE_DEBUG: "true"
-          HEALTHCHECK : "true"
-          MODE        : "auto"
-          NETWORK     : "fuji mumbai goerli"
+          ENABLE_DEBUG: 'true'
+          HEALTHCHECK: 'true'
+          MODE: 'auto'
+          NETWORK: 'fuji mumbai goerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -190,10 +190,10 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: operator-testnet #notice
-          ENABLE_DEBUG: "true"
-          ENABLE_SYNC : "true"
-          HEALTHCHECK : "true"
-          MODE        : "auto"
+          ENABLE_DEBUG: 'true'
+          ENABLE_SYNC: 'true'
+          HEALTHCHECK: 'true'
+          MODE: 'auto'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
