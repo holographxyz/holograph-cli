@@ -85,6 +85,11 @@ export type TransactionFilter = {
 
 const TIMEOUT_THRESHOLD = 20_000
 
+const ZERO = BigNumber.from('0')
+// const ONE = BigNumber.from('1')
+const TWO = BigNumber.from('2')
+// const TEN = BigNumber.from('10')
+
 const webSocketErrorCodes: {[key: string]: string} = {
   '1000': 'Normal Closure',
   '1001': 'Going Away',
@@ -900,7 +905,7 @@ export class NetworkMonitor {
       this.structuredLog(job.network, `Block retrieved`, job.block)
       this.structuredLog(job.network, `Calculating block gas`, job.block)
 
-      if (block.baseFeePerGas) {
+      if (this.gasPrices[job.network].isEip1559) {
         this.structuredLog(
           job.network,
           `Calculated block gas price was ${formatUnits(
@@ -912,14 +917,67 @@ export class NetworkMonitor {
       }
 
       this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
-
+      const priorityFees: BigNumber = this.gasPrices[job.network].nextPriorityFee!
       if (block.transactions.length === 0) {
         this.structuredLog(job.network, `Zero transactions in block`, job.block)
       }
 
       const interestingTransactions: TransactionResponse[] = []
       for (let i = 0, l = block.transactions.length; i < l; i++) {
+        const tx: TransactionResponse = block.transactions[i]
+        if (this.gasPrices[job.network].isEip1559) {
+          // set current tx priority fee
+          let priorityFee: BigNumber = ZERO
+          let remainder: BigNumber
+          switch (tx.type) {
+            case 0:
+              // we have a legacy transaction here, so need to calculate priority fee out
+              priorityFee = tx.gasPrice!.sub(block.baseFeePerGas!)
+              break
+            case 1:
+              // we have EIP-1559 transaction here, get priority fee
+              // check first that base block fee is less than maxFeePerGas
+              remainder = tx.maxFeePerGas!.sub(block.baseFeePerGas!)
+              priorityFee = remainder.gt(tx.maxPriorityFeePerGas!) ? tx.maxPriorityFeePerGas! : remainder
+              break
+            case 2:
+              // we have EIP-1559 transaction here, get priority fee
+              // check first that base block fee is less than maxFeePerGas
+              remainder = tx.maxFeePerGas!.sub(block.baseFeePerGas!)
+              priorityFee = remainder.gt(tx.maxPriorityFeePerGas!) ? tx.maxPriorityFeePerGas! : remainder
+              break
+          }
+
+          if (this.gasPrices[job.network].nextPriorityFee === null) {
+            this.gasPrices[job.network].nextPriorityFee = priorityFee
+          } else {
+            this.gasPrices[job.network].nextPriorityFee = this.gasPrices[job.network]
+              .nextPriorityFee!.add(priorityFee)
+              .div(TWO)
+          }
+        }
+        // for legacy networks, get average gasPrice
+        else if (this.gasPrices[job.network].gasPrice === null) {
+          this.gasPrices[job.network].gasPrice = tx.gasPrice!
+        } else {
+          this.gasPrices[job.network].gasPrice = this.gasPrices[job.network].gasPrice!.add(tx.gasPrice!).div(TWO)
+        }
+
         this.filterTransaction(job, block.transactions[i], interestingTransactions)
+      }
+
+      if (this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
+        this.structuredLog(
+          job.network,
+          `Calculated block priority fees was ${formatUnits(
+            priorityFees,
+            'gwei',
+          )} GWEI, and actual block priority fees is ${formatUnits(
+            this.gasPrices[job.network].nextPriorityFee!,
+            'gwei',
+          )} GWEI`,
+          job.block,
+        )
       }
 
       if (interestingTransactions.length > 0) {
@@ -1863,7 +1921,7 @@ export class NetworkMonitor {
     args,
     gasPrice,
     gasLimit,
-    value = BigNumber.from('0'),
+    value = ZERO,
     attempts = 10,
     canFail = false,
     interval = 500,

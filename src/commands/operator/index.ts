@@ -195,7 +195,7 @@ export default class Operator extends Command {
 
   processOperatorJobs = (network: string, payloadHash?: string): void => {
     const tags: (string | number)[] = [this.networkMonitor.randomTag()]
-    this.networkMonitor.structuredLog(network, 'Checking for Operator Jobs', tags)
+    //    this.networkMonitor.structuredLog(network, 'Checking for Operator Jobs', tags)
     if (payloadHash !== undefined && payloadHash !== '' && payloadHash in this.operatorJobs) {
       delete this.operatorJobs[payloadHash]
     }
@@ -218,7 +218,7 @@ export default class Operator extends Command {
     jobs.sort((a: OperatorJob, b: OperatorJob): number => {
       return a.targetTime - b.targetTime
     })
-    this.networkMonitor.structuredLog(network, `${jobs.length} jobs pending`, tags)
+    //    this.networkMonitor.structuredLog(network, `${jobs.length} jobs pending`, tags)
     const candidates: OperatorJob[] = []
     for (const job of jobs) {
       // check that time is within scope
@@ -232,7 +232,7 @@ export default class Operator extends Command {
       }
     }
 
-    this.networkMonitor.structuredLog(network, `${candidates.length} job candidates identified`, tags)
+    //    this.networkMonitor.structuredLog(network, `${candidates.length} job candidates identified`, tags)
 
     if (candidates.length > 0) {
       // sort candidates by gas priority

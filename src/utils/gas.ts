@@ -1,5 +1,5 @@
 import {BigNumber} from '@ethersproject/bignumber'
-import {Block, BlockWithTransactions, FeeData} from '@ethersproject/abstract-provider'
+import {Block, BlockWithTransactions} from '@ethersproject/abstract-provider'
 import {WebSocketProvider, JsonRpcProvider} from '@ethersproject/providers'
 
 export type GasPricing = {
@@ -8,14 +8,10 @@ export type GasPricing = {
   gasPrice: BigNumber | null
   // For EIP-1559 transactions
   nextBlockFee: BigNumber | null
-  // these are internal calculations
+  // For EIP-1559 transactions
+  nextPriorityFee: BigNumber | null
+  // For EIP-1559 transactions
   maxFeePerGas: BigNumber | null
-  // For EIP-1559 transactions
-  // these are internal calculations
-  maxPriorityFeePerGas: BigNumber | null
-  // For EIP-1559 transactions
-  // these are ethers.js calculations
-  feeData: FeeData | null
 }
 
 // Implemented from https://eips.ethereum.org/EIPS/eip-1559
@@ -65,25 +61,16 @@ export async function initializeGasPricing(
   network: string,
   provider: JsonRpcProvider | WebSocketProvider,
 ): Promise<GasPricing> {
-  const gasPrices: GasPricing = {
-    isEip1559: false,
-    nextBlockFee: null,
-    maxFeePerGas: null,
-    maxPriorityFeePerGas: null,
-    feeData: null,
-    gasPrice: null,
-  } as GasPricing
   const block: Block = await provider.getBlock('latest')
-  const isEip1559: boolean = 'baseFeePerGas' in block
-  gasPrices.isEip1559 = isEip1559
-  if (isEip1559) {
-    const feeData: FeeData = await provider.getFeeData()
-    gasPrices.nextBlockFee = adjustBaseBlockFee(network, calculateNextBlockFee(block))
-    gasPrices.maxFeePerGas = feeData.maxFeePerGas
-    gasPrices.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas
-    gasPrices.feeData = feeData
-    gasPrices.gasPrice = feeData.gasPrice
-  } else {
+  const gasPrices: GasPricing = updateGasPricing(network, block, {
+    isEip1559: false,
+    gasPrice: null,
+    nextBlockFee: null,
+    nextPriorityFee: null,
+    maxFeePerGas: null,
+  } as GasPricing)
+  if (!gasPrices.isEip1559) {
+    // need to replace this with internal calculations
     gasPrices.gasPrice = await provider.getGasPrice()
   }
 
@@ -98,9 +85,13 @@ export function updateGasPricing(
   if (block.baseFeePerGas) {
     gasPricing.isEip1559 = true
     gasPricing.nextBlockFee = adjustBaseBlockFee(network, calculateNextBlockFee(block))
-    gasPricing.maxPriorityFeePerGas = BigNumber.from('1500000000')
-    gasPricing.maxFeePerGas = gasPricing.nextBlockFee!.add(BigNumber.from('1500000000'))
-    gasPricing.gasPrice = gasPricing.maxFeePerGas
+    gasPricing.maxFeePerGas = gasPricing.nextBlockFee!
+    if (gasPricing.nextPriorityFee === null) {
+      gasPricing.gasPrice = gasPricing.nextBlockFee
+    } else {
+      gasPricing.maxFeePerGas = gasPricing.nextBlockFee!.add(gasPricing.nextPriorityFee!)
+      gasPricing.gasPrice = gasPricing.maxFeePerGas
+    }
   }
 
   return gasPricing
