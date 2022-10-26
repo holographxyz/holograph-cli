@@ -128,7 +128,7 @@ export async function ensureConfigFileIsValid(
 }> {
   const environment: Environment = getEnvironment()
   if (environment === Environment.localhost) {
-    console.log(`Environment=${environment}`)
+    process.stdout.write(`\n👉 Environment: ${environment}\n\n`);
     return {
       environment,
       userWallet: await tryToUnlockWallet(localhostConfig, unlockWallet),
@@ -159,7 +159,7 @@ export async function ensureConfigFileIsValid(
     await validateBeta3Schema(configFile)
     const userWallet: ethers.Wallet = await tryToUnlockWallet(configFile as ConfigFile, unlockWallet, unsafePassword)
 
-    console.log(`Environment=${environment}`)
+    process.stdout.write(`\n👉 Environment: ${environment}\n\n`);
     return {
       environment,
       userWallet,
