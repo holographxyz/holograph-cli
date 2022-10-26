@@ -16,46 +16,47 @@
 This is a CLI is primarily for operators of the holograph network. The CLI includes tools to move NFTs between networks and view their status.
 
 <!-- toc -->
-
-- [Usage](#usage)
-- [Commands](#commands)
+* [Overview](#overview)
+* [Usage](#usage)
+* [Commands](#commands)
 <!-- tocstop -->
 
 # Usage
 
 <!-- usage -->
-
 ```sh-session
-$ npm install -g holograph-cli
+$ npm install -g @holographxyz/cli
 $ holograph COMMAND
 running command...
 $ holograph (--version)
-holograph-cli/0.0.1 darwin-arm64 node-v18.9.0
+@holographxyz/cli/0.0.2 darwin-arm64 node-v18.9.0
 $ holograph --help [COMMAND]
 USAGE
   $ holograph COMMAND
 ...
 ```
-
 <!-- usagestop -->
 
 # Commands
 
 <!-- commands -->
-
-- [`holograph bridge`](#holograph-bridge)
-- [`holograph bridge:contract`](#holograph-bridgecontract)
-- [`holograph bridge:nft`](#holograph-bridgenft)
-- [`holograph config`](#holograph-config)
-- [`holograph config:networks`](#holograph-confignetworks)
-- [`holograph config:user`](#holograph-configuser)
-- [`holograph config:view`](#holograph-configview)
-- [`holograph help [COMMAND]`](#holograph-help-command)
-- [`holograph operator`](#holograph-operator)
-- [`holograph operator:recover`](#holograph-operatorrecover)
-- [`holograph status`](#holograph-status)
-- [`holograph status:contract`](#holograph-statuscontract)
-- [`holograph status:nft`](#holograph-statusnft)
+* [`holograph bridge`](#holograph-bridge)
+* [`holograph bridge:contract`](#holograph-bridgecontract)
+* [`holograph bridge:nft`](#holograph-bridgenft)
+* [`holograph config`](#holograph-config)
+* [`holograph config:networks`](#holograph-confignetworks)
+* [`holograph config:user`](#holograph-configuser)
+* [`holograph config:view`](#holograph-configview)
+* [`holograph create`](#holograph-create)
+* [`holograph create:contract`](#holograph-createcontract)
+* [`holograph create:nft`](#holograph-createnft)
+* [`holograph help [COMMAND]`](#holograph-help-command)
+* [`holograph operator`](#holograph-operator)
+* [`holograph operator:bond`](#holograph-operatorbond)
+* [`holograph operator:recover`](#holograph-operatorrecover)
+* [`holograph status`](#holograph-status)
+* [`holograph status:contract`](#holograph-statuscontract)
+* [`holograph status:nft`](#holograph-statusnft)
 
 ## `holograph bridge`
 
@@ -78,75 +79,54 @@ EXAMPLES
     $ holograph bridge:nft --help
 ```
 
-_See code: [dist/commands/bridge/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/bridge/index.ts)_
+_See code: [dist/commands/bridge/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.2/dist/commands/bridge/index.ts)_
 
 ## `holograph bridge:contract`
 
-Bridge a Holographable contract from source chain to destination chain
+Bridge a Holographable contract from source chain to destination chain. You need to have a deployment config JSON file. Use the "contract:create" command to create or extract one.
 
 ```
 USAGE
-  $ holograph bridge:contract [--sourceNetwork rinkeby|goerli|mumbai|fuji] [--destinationNetwork
-    rinkeby|goerli|mumbai|fuji] [--tx <value>] [--txNetwork rinkeby|goerli|mumbai|fuji] [--deploymentType <value>]
+  $ holograph bridge:contract [--sourceNetwork <value>] [--destinationNetwork <value>] [--deploymentConfig <value>]
 
 FLAGS
-  --deploymentType=<value>       The type of deployment to use: [deployedTx, deploymentConfig]
-  --destinationNetwork=<option>  The name of destination network, where the bridge request is sent to
-                                 <options: rinkeby|goerli|mumbai|fuji>
-  --sourceNetwork=<option>       The name of source network, from which to make the bridge request
-                                 <options: rinkeby|goerli|mumbai|fuji>
-  --tx=<value>                   The hash of transaction that deployed the original collection
-  --txNetwork=<option>           The network on which the transaction was executed
-                                 <options: rinkeby|goerli|mumbai|fuji>
+  --deploymentConfig=<value>    The config file to use
+  --destinationNetwork=<value>  The network on which the contract will be deployed
+  --sourceNetwork=<value>       The network from which contract deploy request will be sent
 
 DESCRIPTION
-  Bridge a Holographable contract from source chain to destination chain
+  Bridge a Holographable contract from source chain to destination chain. You need to have a deployment config JSON
+  file. Use the "contract:create" command to create or extract one.
 
 EXAMPLES
-  Bridge a contract using bridge source and destination networks from the config
-
-    $ holograph bridge:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"
-
-  Bridge a contract and manually set the source and destination networks
-
-    $ holograph bridge:contract --sourceNetwork fuji --destinationNetwork goerli \
-      --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1
+  $ holograph bridge:contract --sourceNetwork="ethereumTestnetGoerli" --destinationNetwork="avalancheTestnet" --deploymentConfig="./MyContract.json"
 ```
 
-_See code: [dist/commands/bridge/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/bridge/contract.ts)_
+_See code: [dist/commands/bridge/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.2/dist/commands/bridge/contract.ts)_
 
 ## `holograph bridge:nft`
 
-Bridge a Holographable NFT from source chain to destination chain
+Beam a Holographable NFT from source chain to destination chain.
 
 ```
 USAGE
-  $ holograph bridge:nft [--sourceNetwork rinkeby|goerli|mumbai|fuji] [--destinationNetwork
-    rinkeby|goerli|mumbai|fuji] [--address <value>] [--tokenId <value>]
+  $ holograph bridge:nft [--collectionAddress <value>] [--tokenId <value>] [--sourceNetwork <value>]
+    [--destinationNetwork <value>]
 
 FLAGS
-  --address=<value>              The address of the contract on the source chain
-  --destinationNetwork=<option>  The name of destination network, where the bridge request is sent to
-                                 <options: rinkeby|goerli|mumbai|fuji>
-  --sourceNetwork=<option>       The name of source network, from which to make the bridge request
-                                 <options: rinkeby|goerli|mumbai|fuji>
-  --tokenId=<value>              The ID of the NFT on the source chain (number or 32-byte hex string)
+  --collectionAddress=<value>   The address of the collection smart contract
+  --destinationNetwork=<value>  The destination network which to beam to
+  --sourceNetwork=<value>       The source network from which to beam
+  --tokenId=<value>             The token ID of the NFT to beam
 
 DESCRIPTION
-  Bridge a Holographable NFT from source chain to destination chain
+  Beam a Holographable NFT from source chain to destination chain.
 
 EXAMPLES
-  Bridge an NFT using bridge source and destination networks from the config
-
-    $ holograph bridge:nft --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1
-
-  Bridge an NFT and manually set the source and destination networks
-
-    $ holograph bridge:nft --sourceNetwork fuji --destinationNetwork goerli \
-      --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1
+  $ holograph bridge:nft --sourceNetwork="ethereumTestnetGoerli" --destinationNetwork="avalancheTestnet" --collectionAddress="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId="0x01"
 ```
 
-_See code: [dist/commands/bridge/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/bridge/nft.ts)_
+_See code: [dist/commands/bridge/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.2/dist/commands/bridge/nft.ts)_
 
 ## `holograph config`
 
@@ -154,39 +134,31 @@ Initialize the Holograph CLI with a config file. If no flags are passed, the CLI
 
 ```
 USAGE
-  $ holograph config [--defaultFrom rinkeby|goerli|mumbai|fuji] [--defaultTo rinkeby|goerli|mumbai|fuji]
-    [--url <value> --network rinkeby|goerli|mumbai|fuji] [--privateKey <value>] [--fromFile <value>] [--fromJson
-    <value>]
+  $ holograph config [--url <value> --network
+    ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|ethereumTestnetRinkeby] [--privateKey <value>] [--fromFile
+    <value>] [--fromJson <value>]
 
 FLAGS
-  --defaultFrom=<option>  Default network to bridge FROM (source network)
-                          <options: rinkeby|goerli|mumbai|fuji>
-  --defaultTo=<option>    Default network to bridge TO (destination network)
-                          <options: rinkeby|goerli|mumbai|fuji>
-  --fromFile=<value>      Path to the config file to load
-  --fromJson=<value>      JSON object to use as the config
-  --network=<option>      Network to set
-                          <options: rinkeby|goerli|mumbai|fuji>
-  --privateKey=<value>    Default account to use when sending all transactions
-  --url=<value>           Provider URL of network to set
+  --fromFile=<value>    Path to the config file to load
+  --fromJson=<value>    JSON object to use as the config
+  --network=<option>    Network to set
+                        <options: ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|ethereumTestnetRinkeby>
+  --privateKey=<value>  Default account to use when sending all transactions
+  --url=<value>         Provider URL of network to set
 
 DESCRIPTION
   Initialize the Holograph CLI with a config file. If no flags are passed, the CLI will prompt you for the required
   information.
 
 EXAMPLES
-  $ holograph config --defaultFrom goerli
-
-  $ holograph config --defaultFrom goerli --defaultTo mumbai
-
   $ holograph config --privateKey abc...def
 
   $ holograph config --fromFile ./config.json
 
-  $ holograph config --fromJson '{"version": "beta1", ...}
+  $ holograph config --fromJson '{"version": "beta3", ...}
 ```
 
-_See code: [dist/commands/config/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/config/index.ts)_
+_See code: [dist/commands/config/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.2/dist/commands/config/index.ts)_
 
 ## `holograph config:networks`
 
@@ -213,7 +185,7 @@ EXAMPLES
   $ holograph config:networks --output clean
 ```
 
-_See code: [dist/commands/config/networks.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/config/networks.ts)_
+_See code: [dist/commands/config/networks.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.2/dist/commands/config/networks.ts)_
 
 ## `holograph config:user`
 
@@ -240,7 +212,7 @@ EXAMPLES
   $ holograph config:user --output clean
 ```
 
-_See code: [dist/commands/config/user.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/config/user.ts)_
+_See code: [dist/commands/config/user.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.2/dist/commands/config/user.ts)_
 
 ## `holograph config:view`
 
@@ -267,7 +239,81 @@ EXAMPLES
   $ holograph config:view --output clean
 ```
 
-_See code: [dist/commands/config/view.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/config/view.ts)_
+_See code: [dist/commands/config/view.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.2/dist/commands/config/view.ts)_
+
+## `holograph create`
+
+Create holographable contracts and assets
+
+```
+USAGE
+  $ holograph create
+
+DESCRIPTION
+  Create holographable contracts and assets
+
+EXAMPLES
+  $ holograph create
+
+  $ holo create:contract
+
+  $ holo create:nft
+```
+
+_See code: [dist/commands/create/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.2/dist/commands/create/index.ts)_
+
+## `holograph create:contract`
+
+Deploy a Holographable contract directly to a chain
+
+```
+USAGE
+  $ holograph create:contract [--tx <value>] [--txNetwork <value>] [--targetNetwork <value>] [--deploymentType
+    deployedTx|deploymentConfig|createConfig] [--deploymentConfig <value>]
+
+FLAGS
+  --deploymentConfig=<value>  The config file to use
+  --deploymentType=<option>   The type of deployment to use
+                              <options: deployedTx|deploymentConfig|createConfig>
+  --targetNetwork=<value>     The network on which the contract will be executed
+  --tx=<value>                The hash of transaction that deployed the original contract
+  --txNetwork=<value>         The network on which the transaction was executed
+
+DESCRIPTION
+  Deploy a Holographable contract directly to a chain
+
+EXAMPLES
+  $ holograph create:contract --deploymentType="deployedTx" --tx="0xdb8b393dd18a71b386c8de75b87310c0c8ded0c57cf6b4c5bab52873d54d1e8a" --txNetwork="ethereumTestnetGoerli"
+```
+
+_See code: [dist/commands/create/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.2/dist/commands/create/contract.ts)_
+
+## `holograph create:nft`
+
+Mint a Holographable NFT
+
+```
+USAGE
+  $ holograph create:nft [--collectionAddress <value>] [--tokenId <value>] [--tokenUriType ipfs|https|arweave]
+    [--tokenUri <value>] [--network <value>]
+
+FLAGS
+  --collectionAddress=<value>  The address of the collection smart contract
+  --network=<value>            Name of network to use
+  --tokenId=<value>            [default: 0] The token id to mint. By default the token id is 0, which mints the next
+                               available token id
+  --tokenUri=<value>           The uri of the token, minus the prepend (ie "ipfs://")
+  --tokenUriType=<option>      The token URI type
+                               <options: ipfs|https|arweave>
+
+DESCRIPTION
+  Mint a Holographable NFT
+
+EXAMPLES
+  $ holograph create:nft --network="ethereumTestnetGoerli" --collectionAddress="0xf90c33d5ef88a9d84d4d61f62c913ba192091fe7" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"
+```
+
+_See code: [dist/commands/create/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.2/dist/commands/create/nft.ts)_
 
 ## `holograph help [COMMAND]`
 
@@ -296,14 +342,13 @@ Listen for EVM events for jobs and process them
 ```
 USAGE
   $ holograph operator [-m listen|manual|auto] [--healthCheck] [--sync] [--unsafePassword <value>] [--networks
-    rinkeby|goerli|mumbai|fuji]
+    <value>]
 
 FLAGS
   -m, --mode=<option>       The mode in which to run the operator
                             <options: listen|manual|auto>
   --healthCheck             Launch server on http://localhost:6000 to make sure command is still running
-  --networks=<option>...    Space separated list of networks to operate on
-                            <options: rinkeby|goerli|mumbai|fuji>
+  --networks=<value>...     Space separated list of networks to use
   --sync                    Start from last saved block position instead of latest block position
   --unsafePassword=<value>  Enter the plain text password for the wallet in the holograph cli config
 
@@ -311,10 +356,32 @@ DESCRIPTION
   Listen for EVM events for jobs and process them
 
 EXAMPLES
-  $ holograph operator --networks="goerli mumbai fuji" --mode=auto
+  $ holograph operator --networks ethereumTestnetGoerli polygonTestnet avalancheTestnet --mode=auto
 ```
 
-_See code: [dist/commands/operator/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/operator/index.ts)_
+_See code: [dist/commands/operator/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.2/dist/commands/operator/index.ts)_
+
+## `holograph operator:bond`
+
+Start an operator up into a pod
+
+```
+USAGE
+  $ holograph operator:bond [-n <value>] [--pod <value>] [--amount <value>]
+
+FLAGS
+  -n, --network=<value>  The network to bond to
+  --amount=<value>       Amount of tokens to deposit
+  --pod=<value>          Pod number to join
+
+DESCRIPTION
+  Start an operator up into a pod
+
+EXAMPLES
+  $ holograph operator:bond --network <string> --pod <number> --amount <number>
+```
+
+_See code: [dist/commands/operator/bond.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.2/dist/commands/operator/bond.ts)_
 
 ## `holograph operator:recover`
 
@@ -322,41 +389,45 @@ Attempt to re-run/recover a particular Operator Job
 
 ```
 USAGE
-  $ holograph operator:recover [--network rinkeby|goerli|mumbai|fuji] [--tx <value>]
+  $ holograph operator:recover [--network
+    ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|ethereumTestnetRinkeby] [--tx <value>]
 
 FLAGS
   --network=<option>  The network on which the transaction was executed
-                      <options: rinkeby|goerli|mumbai|fuji>
+                      <options: ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|ethereumTestnetRinkeby>
   --tx=<value>        The hash of transaction that we want to attempt to execute
 
 DESCRIPTION
   Attempt to re-run/recover a particular Operator Job
 
 EXAMPLES
-  $ holograph operator:recover--network="goerli" --tx="0x..."
+  $ holograph operator:recover --network="ethereumTestnetGoerli" --tx="0x..."
 ```
 
-_See code: [dist/commands/operator/recover.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/operator/recover.ts)_
+_See code: [dist/commands/operator/recover.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.2/dist/commands/operator/recover.ts)_
 
-## `holograph plugins`
+## `holograph status`
 
-List installed plugins.
+Get the status of a contract or NFT
 
 ```
 USAGE
-  $ holograph plugins [--core]
-
-FLAGS
-  --core  Show core plugins.
+  $ holograph status
 
 DESCRIPTION
-  List installed plugins.
+  Get the status of a contract or NFT
 
 EXAMPLES
-  $ holograph plugins
+  Learn how to get the status of a contract
+
+    $ holograph status:contract --help
+
+  Learn how to get the status of an NFT
+
+    $ holograph status:nft --help
 ```
 
-_See code: [dist/commands/status/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/status/index.ts)_
+_See code: [dist/commands/status/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.2/dist/commands/status/index.ts)_
 
 ## `holograph status:contract`
 
@@ -378,7 +449,7 @@ EXAMPLES
   $ holograph status:contract --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78"
 ```
 
-_See code: [dist/commands/status/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/status/contract.ts)_
+_See code: [dist/commands/status/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.2/dist/commands/status/contract.ts)_
 
 ## `holograph status:nft`
 
@@ -401,8 +472,7 @@ EXAMPLES
   $ holograph status:nft --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78" --id=1
 ```
 
-_See code: [dist/commands/status/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/status/nft.ts)_
-
+_See code: [dist/commands/status/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.2/dist/commands/status/nft.ts)_
 <!-- commandsstop -->
 
 ## Developing
