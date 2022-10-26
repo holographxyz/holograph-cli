@@ -7,6 +7,7 @@ import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-p
 import {Environment} from '@holographxyz/environment'
 import {getNetworkByHolographId} from '@holographxyz/networks'
 import {ensureConfigFileIsValid} from '../../utils/config'
+import {GasPricing} from '../../utils/gas'
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
 import {web3, functionSignature, sha3} from '../../utils/utils'
@@ -200,7 +201,7 @@ export default class Operator extends Command {
       delete this.operatorJobs[payloadHash]
     }
 
-    const gasPrice: BigNumber = this.networkMonitor.gasPrices[network].gasPrice!
+    const gasPricing: GasPricing = this.networkMonitor.gasPrices[network]
     let highestGas: BigNumber = BigNumber.from('0')
     const now: number = Date.now()
     // update wait times really quickly
@@ -240,7 +241,8 @@ export default class Operator extends Command {
       candidates.sort((a: OperatorJob, b: OperatorJob): number => {
         return b.gasPrice.sub(a.gasPrice).toNumber()
       })
-      if (candidates[0].gasPrice.gte(gasPrice)) {
+      const compareGas: BigNumber = gasPricing.isEip1559 ? gasPricing.maxFeePerGas! : gasPricing.gasPrice!
+      if (candidates[0].gasPrice.gte(compareGas)) {
         this.networkMonitor.structuredLog(network, `Sending ${candidates[0].hash} job for execution`, tags)
         // we have a valid job to do right away
         this.processOperatorJob(network, candidates[0].hash, tags)

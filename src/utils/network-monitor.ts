@@ -1770,8 +1770,19 @@ export class NetworkMonitor {
         let populatedTx: TransactionRequest | null
         let signedTx: string | null
         let tx: TransactionResponse | null
+        const gasPricing: GasPricing = this.gasPrices[network]
+        let gasPrice: BigNumber
         try {
           populatedTx = await this.wallets[network].populateTransaction(rawTx)
+          // move gas price info around to support EIP-1559
+          if (gasPricing.isEip1559) {
+            gasPrice = BigNumber.from(populatedTx.gasPrice)
+            delete populatedTx.gasPrice
+            populatedTx.type = 2
+            populatedTx.maxPriorityFeePerGas = gasPrice.sub(gasPricing.nextBlockFee!)
+            populatedTx.maxFeePerGas = gasPrice
+          }
+
           signedTx = await this.wallets[network].signTransaction(populatedTx)
           if (txHash === null) {
             txHash = keccak256(signedTx)
@@ -1934,7 +1945,7 @@ export class NetworkMonitor {
     return new Promise<TransactionReceipt | null>(async (topResolve, _topReject) => {
       contract = contract.connect(this.wallets[network])
       if (gasPrice === undefined) {
-        gasPrice = await contract.provider.getGasPrice()
+        gasPrice = await this.gasPrices[network].gasPrice!
       }
 
       if (gasLimit === undefined) {
