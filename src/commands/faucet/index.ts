@@ -48,9 +48,10 @@ export default class Faucet extends Command {
 
     network = await checkOptionFlag(supportedNetworksOptions, network, 'Select the network to request tokens on')
 
-    this.log(`Joining network: ${getNetworkByKey(network).shortKey}`)
+    const networkName = getNetworkByKey(network).shortKey
+    this.log(`Joining network: ${networkName}`)
 
-    CliUx.ux.action.start('Loading destination network RPC provider')
+    CliUx.ux.action.start('Loading network RPC provider')
     const destinationProviderUrl: string = (configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork)
       .providerUrl
     const networkProtocol: string = new URL(destinationProviderUrl).protocol
@@ -94,7 +95,7 @@ export default class Faucet extends Command {
     if (faucetInfo.isAllowedToWithdraw === false) {
       this.log(
         color.red(
-          `You are not allowed to withdraw from the faucet on ${network}. Please wait 24 hours since your last withdrawal.\n` +
+          `You are not allowed to withdraw from the faucet on ${networkName}. Please wait 24 hours since your last withdrawal.\n` +
             `Current cooldown time is ${faucetInfo.cooldown} seconds`,
         ),
       )
@@ -105,8 +106,8 @@ export default class Faucet extends Command {
     if (faucetFee.hasEnoughBalance === false) {
       this.log(
         color.red(
-          `You do not have enough native gas tokens to pay for withdrawal of $HLG from the faucet.\n` +
-            `Please deposit more native gas tokens and try again.`,
+          `You do not have enough ${networkName} gas tokens to pay for withdrawal of $HLG from the faucet.\n` +
+            `Please deposit more ${networkName} gas tokens and try again.`,
         ),
       )
       this.exit()
@@ -138,7 +139,7 @@ export default class Faucet extends Command {
 
     this.log(
       color.green(
-        `Request for tokens on ${network} has been granted. You can return to request more tokens in 24 hours. Enjoy! 🤑`,
+        `Request for tokens on ${networkName} has been granted. You can return to request more tokens in 24 hours. Enjoy! 🤑`,
       ),
     )
   }
