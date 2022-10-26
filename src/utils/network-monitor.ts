@@ -1,7 +1,9 @@
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
 
-import {BigNumber, Contract, PopulatedTransaction, Wallet} from 'ethers'
+import {PopulatedTransaction, Wallet} from 'ethers'
+import {Contract} from '@ethersproject/contracts'
+import {BigNumber} from '@ethersproject/bignumber'
 import {formatUnits} from '@ethersproject/units'
 import {keccak256} from '@ethersproject/keccak256'
 import {Interface, EventFragment, defaultAbiCoder} from '@ethersproject/abi'
@@ -16,7 +18,7 @@ import {
 import {Command, Flags} from '@oclif/core'
 
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
-
+import {GasPricing, initializeGasPricing, updateGasPricing} from './gas'
 import {capitalize, NETWORK_COLORS, zeroAddress} from './utils'
 import color from '@oclif/color'
 
@@ -302,6 +304,7 @@ export class NetworkMonitor {
   exited = false
   lastBlockJobDone: {[key: string]: number} = {}
   blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
+  gasPrices: {[key: string]: GasPricing} = {}
   holograph!: Contract
   holographer!: Contract
   bridgeContract!: Contract
@@ -619,6 +622,8 @@ export class NetworkMonitor {
         this.latestBlockHeight[network] = 0
         this.currentBlockHeight[network] = 0
       }
+
+      this.gasPrices[network] = await initializeGasPricing(network, this.providers[network])
     }
 
     const holographABI = await fs.readJson(`./src/abi/${this.environment}/Holograph.json`)
@@ -893,6 +898,21 @@ export class NetworkMonitor {
     })
     if (block !== undefined && block !== null && 'transactions' in block) {
       this.structuredLog(job.network, `Block retrieved`, job.block)
+      this.structuredLog(job.network, `Calculating block gas`, job.block)
+
+      if (block.baseFeePerGas) {
+        this.structuredLog(
+          job.network,
+          `Calculated block gas price was ${formatUnits(
+            this.gasPrices[job.network].nextBlockFee!,
+            'gwei',
+          )} GWEI, and actual block gas price is ${formatUnits(block.baseFeePerGas!, 'gwei')} GWEI`,
+          job.block,
+        )
+      }
+
+      this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
+
       if (block.transactions.length === 0) {
         this.structuredLog(job.network, `Zero transactions in block`, job.block)
       }
