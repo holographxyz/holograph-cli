@@ -456,6 +456,7 @@ export class NetworkMonitor {
       await ethersInitializedCallback.bind(this.parent)()
     }
 
+<<<<<<< HEAD
     this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESSES[this.environment]}`)
     this.log(`Bridge address: ${this.bridgeAddress}`)
     this.log(`Factory address: ${this.factoryAddress}`)
@@ -463,6 +464,17 @@ export class NetworkMonitor {
     this.log(`Operator address: ${this.operatorAddress}`)
     this.log(`Registry address: ${this.registryAddress}`)
     this.log(`Messaging Module address: ${this.messagingModuleAddress}`)
+=======
+    this.log(``)
+    this.log(`📄 Holograph address: ${this.HOLOGRAPH_ADDRESSES[this.environment]}`)
+    this.log(`📄 Bridge address: ${this.bridgeAddress}`)
+    this.log(`📄 Factory address: ${this.factoryAddress}`)
+    this.log(`📄 Interfaces address: ${this.interfacesAddress}`)
+    this.log(`📄 Operator address: ${this.operatorAddress}`)
+    this.log(`📄 Registry address: ${this.registryAddress}`)
+    this.log(`📄 Messaging Module address: ${this.messagingModuleAddress}`)
+    this.log(``)
+>>>>>>> feature/HOLO-515-operator-v2
 
     if (blockJobs !== undefined) {
       this.blockJobs = blockJobs
@@ -693,12 +705,12 @@ export class NetworkMonitor {
     if (this.exited === false) {
       this.log('')
       if (this.needToSubscribe) {
-        this.log(`Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}`)
+        this.log(`\n💾 Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}\n`)
         this.saveLastBlocks(this.parent.config.configDir, this.latestBlockHeight)
       }
 
-      this.log(`Exiting ${this.parent.constructor.name} with code ${exitCode}...`)
-      this.log('Goodbye! 👋')
+      this.log(`🛑 Exiting ${this.parent.constructor.name} with code ${color.keyword('red')(exitCode)}`)
+      this.log(`\n👋 Thank you, come again\n`)
       this.exited = true
     }
   }
@@ -711,12 +723,12 @@ export class NetworkMonitor {
       if (this.exited === false) {
         this.log('')
         if (this.needToSubscribe) {
-          this.log(`Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}`)
+          this.log(`\n💾 Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}\n`)
           this.saveLastBlocks(this.parent.config.configDir, this.latestBlockHeight)
         }
 
-        this.log(`Exiting ${this.parent.constructor.name} with code ${exitCode}...`)
-        this.log('Goodbye! 👋')
+        this.log(`🛑 Exiting ${this.parent.constructor.name} with code ${color.keyword('red')(exitCode)}`)
+        this.log(`\n👋 Thank you, come again\n`)
         this.exited = true
       }
 
