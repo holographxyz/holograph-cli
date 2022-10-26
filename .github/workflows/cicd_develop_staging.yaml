@@ -136,7 +136,7 @@ jobs:
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLOGRAPH_CONFIG_FILE_DATA }} \
             --set holo_indexer_password=${{ env.STG_HOLOGRAPH_INDEXER_PASSWORD }} \
-            --set HOLOGRAPH_INDEXER_HOST=${{ env.STG_HOLOGRAPH_INDEXER_HOST }} \
+            --set HOLO_INDEXER_HOST=${{ env.STG_HOLOGRAPH_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             \
