@@ -672,6 +672,14 @@
     dotenv "^10.0.0"
     path "^0.12.7"
 
+"@holographxyz/environment@0.1.9":
+  version "0.1.9"
+  resolved "https://registry.yarnpkg.com/@holographxyz/environment/-/environment-0.1.9.tgz#e39bcabf83579561d9c8a098a611d8e98446b775"
+  integrity sha512-lsXWpqH8qns9DT/CIfW5vi3H7pCk2XBL+vKy/CMIZE/yWiZcPNIxQ/r2njoT6ArYwKrJDGHLDm/N9jMeofGIYw==
+  dependencies:
+    dotenv "^10.0.0"
+    path "^0.12.7"
+
 "@holographxyz/networks@0.1.8":
   version "0.1.8"
   resolved "https://registry.yarnpkg.com/@holographxyz/networks/-/networks-0.1.8.tgz#dd2f3ddd346248761e9fdb28efac7a1db9397902"
