@@ -456,15 +456,6 @@ export class NetworkMonitor {
       await ethersInitializedCallback.bind(this.parent)()
     }
 
-<<<<<<< HEAD
-    this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESSES[this.environment]}`)
-    this.log(`Bridge address: ${this.bridgeAddress}`)
-    this.log(`Factory address: ${this.factoryAddress}`)
-    this.log(`Interfaces address: ${this.interfacesAddress}`)
-    this.log(`Operator address: ${this.operatorAddress}`)
-    this.log(`Registry address: ${this.registryAddress}`)
-    this.log(`Messaging Module address: ${this.messagingModuleAddress}`)
-=======
     this.log(``)
     this.log(`📄 Holograph address: ${this.HOLOGRAPH_ADDRESSES[this.environment]}`)
     this.log(`📄 Bridge address: ${this.bridgeAddress}`)
@@ -474,7 +465,6 @@ export class NetworkMonitor {
     this.log(`📄 Registry address: ${this.registryAddress}`)
     this.log(`📄 Messaging Module address: ${this.messagingModuleAddress}`)
     this.log(``)
->>>>>>> feature/HOLO-515-operator-v2
 
     if (blockJobs !== undefined) {
       this.blockJobs = blockJobs

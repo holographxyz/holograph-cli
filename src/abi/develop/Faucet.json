@@ -34,7 +34,6 @@
     "inputs": [
       {
         "internalType": "address",
-<<<<<<< HEAD
         "name": "_address",
         "type": "address"
       }
@@ -55,9 +54,6 @@
       {
         "internalType": "address",
         "name": "_address",
-=======
-        "name": "address_",
->>>>>>> feature/HOLO-515-operator-v2
         "type": "address"
       }
     ],
@@ -70,20 +66,12 @@
     "inputs": [
       {
         "internalType": "address",
-<<<<<<< HEAD
         "name": "_address",
-=======
-        "name": "address_",
->>>>>>> feature/HOLO-515-operator-v2
         "type": "address"
       },
       {
         "internalType": "uint256",
-<<<<<<< HEAD
         "name": "_amountWei",
-=======
-        "name": "amountWei_",
->>>>>>> feature/HOLO-515-operator-v2
         "type": "uint256"
       }
     ],
@@ -96,11 +84,7 @@
     "inputs": [
       {
         "internalType": "bytes",
-<<<<<<< HEAD
         "name": "initPayload",
-=======
-        "name": "data",
->>>>>>> feature/HOLO-515-operator-v2
         "type": "bytes"
       }
     ],
@@ -119,11 +103,7 @@
     "inputs": [
       {
         "internalType": "address",
-<<<<<<< HEAD
         "name": "_address",
-=======
-        "name": "address_",
->>>>>>> feature/HOLO-515-operator-v2
         "type": "address"
       }
     ],
@@ -161,7 +141,6 @@
   {
     "inputs": [
       {
-<<<<<<< HEAD
         "internalType": "address",
         "name": "tokenAddress",
         "type": "address"
@@ -177,10 +156,6 @@
       {
         "internalType": "uint256",
         "name": "_amountWei",
-=======
-        "internalType": "uint256",
-        "name": "amountWei_",
->>>>>>> feature/HOLO-515-operator-v2
         "type": "uint256"
       }
     ],
@@ -193,11 +168,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-<<<<<<< HEAD
         "name": "_waitTimeSeconds",
-=======
-        "name": "waitTimeSeconds_",
->>>>>>> feature/HOLO-515-operator-v2
         "type": "uint256"
       }
     ],
@@ -211,11 +182,7 @@
     "name": "token",
     "outputs": [
       {
-<<<<<<< HEAD
         "internalType": "contract HolographERC20Interface",
-=======
-        "internalType": "contract ERC20Holograph",
->>>>>>> feature/HOLO-515-operator-v2
         "name": "",
         "type": "address"
       }
@@ -227,24 +194,11 @@
     "inputs": [
       {
         "internalType": "address",
-<<<<<<< HEAD
         "name": "_receiver",
         "type": "address"
       }
     ],
     "name": "withdrawAllTokens",
-=======
-        "name": "receiver_",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amountWei_",
-        "type": "uint256"
-      }
-    ],
-    "name": "withdrawTokens",
->>>>>>> feature/HOLO-515-operator-v2
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -253,7 +207,6 @@
     "inputs": [
       {
         "internalType": "address",
-<<<<<<< HEAD
         "name": "_receiver",
         "type": "address"
       },
@@ -261,10 +214,6 @@
         "internalType": "uint256",
         "name": "_amountWei",
         "type": "uint256"
-=======
-        "name": "receiver_",
-        "type": "address"
->>>>>>> feature/HOLO-515-operator-v2
       }
     ],
     "name": "withdrawTokens",
