@@ -1,6 +1,6 @@
 {
   "name": "@holographxyz/cli",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "Holograph Limited Public License (H-LPL) 1.0.0",
   "description": "Holograph operator CLI",
   "author": "@holographxyz",
@@ -18,7 +18,7 @@
     "url": "https://github.com/holographxyz/holograph-cli/issues"
   },
   "bin": {
-    "hologaph": "./bin/run"
+    "holograph": "./bin/run"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
