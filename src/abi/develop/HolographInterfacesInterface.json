@@ -188,5 +188,64 @@
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "enum InterfaceType",
+        "name": "interfaceType",
+        "type": "uint8"
+      },
+      {
+        "internalType": "bytes4[]",
+        "name": "interfaceIds",
+        "type": "bytes4[]"
+      },
+      {
+        "internalType": "bool",
+        "name": "supported",
+        "type": "bool"
+      }
+    ],
+    "name": "updateInterfaces",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "enum TokenUriType",
+        "name": "uriType",
+        "type": "uint8"
+      },
+      {
+        "internalType": "string",
+        "name": "prepend",
+        "type": "string"
+      }
+    ],
+    "name": "updateUriPrepend",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "enum TokenUriType[]",
+        "name": "uriTypes",
+        "type": "uint8[]"
+      },
+      {
+        "internalType": "string[]",
+        "name": "prepends",
+        "type": "string[]"
+      }
+    ],
+    "name": "updateUriPrepends",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
   }
 ]
