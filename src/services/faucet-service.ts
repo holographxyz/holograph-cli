@@ -7,12 +7,12 @@ import {getSecondsLeft} from '../utils/utils'
 import CoreChainService from './core-chain-service'
 import {BigNumberish, ethers} from 'ethers'
 
-interface FaucetFee {
+export interface FaucetFee {
   fee: string
   hasEnoughBalance: boolean
 }
 
-interface FaucetInfo {
+export interface FaucetInfo {
   amount: string
   cooldown: number
   isAllowedToWithdraw: boolean
