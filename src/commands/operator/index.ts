@@ -6,13 +6,13 @@ import {ethers} from 'ethers'
 import {ensureConfigFileIsValid} from '../../utils/config'
 
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
-import {BaseCommand} from '../../base-commands/base-command'
+import {HealthCheck} from '../../base-commands/healthcheck'
 
 /**
  * Operator
  * Description: The primary command for operating jobs on the Holograph network.
  */
-export default class Operator extends BaseCommand {
+export default class Operator extends HealthCheck {
   static description = 'Listen for EVM events for jobs and process them'
   static examples = ['$ <%= config.bin %> <%= command.id %> --networks="goerli mumbai fuji" --mode=auto']
 
@@ -22,7 +22,6 @@ export default class Operator extends BaseCommand {
       options: ['listen', 'manual', 'auto'],
       char: 'm',
     }),
-    // ...healthcheckFlag,
     sync: Flags.boolean({
       description: 'Start from last saved block position instead of latest block position',
       default: false,
@@ -31,7 +30,7 @@ export default class Operator extends BaseCommand {
       description: 'Enter the plain text password for the wallet in the holograph cli config',
     }),
     ...networksFlag,
-    ...BaseCommand.flags,
+    ...HealthCheck.flags,
   }
 
   operatorMode: OperatorMode = OperatorMode.listen
@@ -49,10 +48,6 @@ export default class Operator extends BaseCommand {
     const healthCheckPort = flags.healthCheckPort
     const syncFlag = flags.sync
     const unsafePassword = flags.unsafePassword
-
-    // if (healthCheckPort && !portValidator(healthCheckPort)) {
-    //   this.error('The port should be in the [3000, 65535] range.')
-    // }
 
     // Have the user input the mode if it's not provided
     let mode: string | undefined = flags.mode

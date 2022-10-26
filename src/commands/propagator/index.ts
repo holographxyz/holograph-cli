@@ -9,7 +9,7 @@ import {ensureConfigFileIsValid} from '../../utils/config'
 import {decodeDeploymentConfigInput, capitalize, getNetworkName, DeploymentConfig} from '../../utils/utils'
 import {supportedNetworks} from '../../utils/networks'
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
-import {BaseCommand} from '../../base-commands/base-command'
+import {HealthCheck} from '../../base-commands/healthcheck'
 
 type RecoveryData = {
   // eslint-disable-next-line camelcase
@@ -21,7 +21,7 @@ type RecoveryData = {
   contract_address: string
 }
 
-export default class Propagator extends BaseCommand {
+export default class Propagator extends HealthCheck {
   static hidden = true
   static description = 'Listen for EVM events deploys collections to the supported networks'
   static examples = ['$ <%= config.bin %> <%= command.id %> --networks="rinkeby mumbai fuji" --mode=auto']
@@ -48,7 +48,7 @@ export default class Propagator extends BaseCommand {
     recoverFile: Flags.string({
       description: 'Filename reference to JSON array of RecoveryData objects to manually ensure propagation',
     }),
-    ...BaseCommand.flags,
+    ...HealthCheck.flags,
   }
 
   crossDeployments: string[] = []

@@ -18,7 +18,7 @@ import {networksFlag, warpFlag, FilterType, OperatorMode, BlockJob, NetworkMonit
 
 import dotenv from 'dotenv'
 import color from '@oclif/color'
-import {BaseCommand} from '../../base-commands/base-command'
+import {HealthCheck} from '../../base-commands/healthcheck'
 dotenv.config()
 
 type DBJob = {
@@ -52,7 +52,7 @@ interface BridgeTransactionArgs {
   to: string
 }
 
-export default class Indexer extends BaseCommand {
+export default class Indexer extends HealthCheck {
   static hidden = true
   static LAST_BLOCKS_FILE_NAME = 'indexer-blocks.json'
   static description = 'Listen for EVM events and update database network status'
@@ -71,7 +71,7 @@ export default class Indexer extends BaseCommand {
     }),
     ...networksFlag,
     ...warpFlag,
-    ...BaseCommand.flags,
+    ...HealthCheck.flags,
   }
 
   // API Params

@@ -9,7 +9,7 @@ type startHealthCheckServerProps = {
   healthCheckPort?: number
 }
 
-export class BaseCommand extends Command {
+export class HealthCheck extends Command {
   static flags = {
     healthCheck: Flags.boolean({
       description: 'Launch server on http://localhost:6000 to make sure command is still running',
@@ -23,15 +23,13 @@ export class BaseCommand extends Command {
   }
 
   async run(): Promise<void> {
-    const {flags} = await this.parse(BaseCommand)
+    const {flags} = await this.parse(HealthCheck)
 
     const enableHealthCheckServer = flags.healthCheck
     const healthCheckPort = flags.healthCheckPort
 
-    if (enableHealthCheckServer) {
-      if (!portValidator(healthCheckPort)) {
-        this.error('The port should be in the [3000, 65535] range.')
-      }
+    if (enableHealthCheckServer && !portValidator(healthCheckPort)) {
+      this.error('The port should be in the [3000, 65535] range.')
     }
   }
 }
