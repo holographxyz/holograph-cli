@@ -134,15 +134,14 @@ Initialize the Holograph CLI with a config file. If no flags are passed, the CLI
 
 ```
 USAGE
-  $ holograph config [--url <value> --network
-    ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|ethereumTestnetRinkeby] [--privateKey <value>] [--fromFile
+  $ holograph config [--url <value> --network localhost|localhost2] [--privateKey <value>] [--fromFile
     <value>] [--fromJson <value>]
 
 FLAGS
   --fromFile=<value>    Path to the config file to load
   --fromJson=<value>    JSON object to use as the config
   --network=<option>    Network to set
-                        <options: ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|ethereumTestnetRinkeby>
+                        <options: localhost|localhost2>
   --privateKey=<value>  Default account to use when sending all transactions
   --url=<value>         Provider URL of network to set
 
@@ -255,9 +254,9 @@ DESCRIPTION
 EXAMPLES
   $ holograph create
 
-  $ holo create:contract
+  $ holograph create:contract
 
-  $ holo create:nft
+  $ holograph create:nft
 ```
 
 _See code: [dist/commands/create/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.2/dist/commands/create/index.ts)_
@@ -389,12 +388,11 @@ Attempt to re-run/recover a particular Operator Job
 
 ```
 USAGE
-  $ holograph operator:recover [--network
-    ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|ethereumTestnetRinkeby] [--tx <value>]
+  $ holograph operator:recover [--network localhost|localhost2] [--tx <value>]
 
 FLAGS
   --network=<option>  The network on which the transaction was executed
-                      <options: ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|ethereumTestnetRinkeby>
+                      <options: localhost|localhost2>
   --tx=<value>        The hash of transaction that we want to attempt to execute
 
 DESCRIPTION
