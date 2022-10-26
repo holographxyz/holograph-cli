@@ -21,12 +21,12 @@ env:
   ALB_CERT_ARN: ${{ secrets.STG_ALB_CERT_ARN_FOR_CXIPCHAIN_XYZ }}
   #
   #TODO - create new gh secret for prod. should be different from staging????
-  STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLOGRAPH_INDEXER_OPERATOR_API_KEY }}
+  STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
   STG_HOLOGRAPH_INDEXER_HOST: http://devel-holo-api.develop.svc.cluster.local:443
   #
-  STG_HOLOGRAPH_INDEXER_PASSWORD: ${{ secrets.DEV_HOLOGRAPH_INDEXER_PASSWORD }}
-  STG_HOLOGRAPH_OPERATOR_PASSWORD: ${{ secrets.DEV_HOLOGRAPH_OPERATOR_PASSWORD }}
+  STG_HOLOGRAPH_INDEXER_PASSWORD: ${{ secrets.DEV_HOLO_INDEXER_PASSWORD }}
+  STG_HOLOGRAPH_OPERATOR_PASSWORD: ${{ secrets.DEV_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
   INDEXER_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
@@ -130,13 +130,13 @@ jobs:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             helm upgrade --install $RELEASE_NAME \
-            holograph-indexer-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }}.tgz \
+            holo-indexer-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.STG_COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLOGRAPH_CONFIG_FILE_DATA }} \
             --set holo_indexer_password=${{ env.STG_HOLOGRAPH_INDEXER_PASSWORD }} \
-            --set HOLOGRAPH_INDEXER_HOST=${{ env.STG_HOLOGRAPH_INDEXER_HOST }} \
+            --set HOLO_INDEXER_HOST=${{ env.STG_HOLOGRAPH_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY }} \
             --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
             \
@@ -160,7 +160,7 @@ jobs:
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holograph-indexer \
+            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
             --set ingress.blue_green_deployment=false
       #
       #
@@ -188,7 +188,7 @@ jobs:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             helm upgrade --install $RELEASE_NAME \
-            holograph-operator-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}.tgz \
+            holo-operator-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.STG_COMMON_NAMESPACE }} \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
@@ -215,7 +215,7 @@ jobs:
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holograph-operator \
+            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
             --set ingress.blue_green_deployment=false
 
       - name: -> Info for the new deployments

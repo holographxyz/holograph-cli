@@ -1,15 +1,15 @@
 [
   {
-    "inputs": [
+    "inputs": [],
+    "name": "getInterfaces",
+    "outputs": [
       {
-        "internalType": "bytes",
-        "name": "_payload",
-        "type": "bytes"
+        "internalType": "address",
+        "name": "interfaces",
+        "type": "address"
       }
     ],
-    "name": "executeJob",
-    "outputs": [],
-    "stateMutability": "payable",
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -26,31 +26,16 @@
     "type": "function"
   },
   {
-    "inputs": [
+    "inputs": [],
+    "name": "getOperator",
+    "outputs": [
       {
-        "internalType": "uint16",
-        "name": "_srcChainId",
-        "type": "uint16"
-      },
-      {
-        "internalType": "bytes",
-        "name": "_srcAddress",
-        "type": "bytes"
-      },
-      {
-        "internalType": "uint64",
-        "name": "_nonce",
-        "type": "uint64"
-      },
-      {
-        "internalType": "bytes",
-        "name": "_payload",
-        "type": "bytes"
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
       }
     ],
-    "name": "jobEstimator",
-    "outputs": [],
-    "stateMutability": "payable",
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -84,24 +69,40 @@
   {
     "inputs": [
       {
-        "internalType": "uint32",
-        "name": "toChain",
-        "type": "uint32"
-      },
-      {
         "internalType": "address",
-        "name": "msgSender",
+        "name": "interfaces",
         "type": "address"
-      },
-      {
-        "internalType": "bytes",
-        "name": "_payload",
-        "type": "bytes"
       }
     ],
-    "name": "send",
+    "name": "setInterfaces",
     "outputs": [],
-    "stateMutability": "payable",
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "lZEndpoint",
+        "type": "address"
+      }
+    ],
+    "name": "setLZEndpoint",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      }
+    ],
+    "name": "setOperator",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   }
 ]

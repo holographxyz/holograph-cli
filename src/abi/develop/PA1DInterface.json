@@ -19,7 +19,7 @@
                 "type": "uint256"
               }
             ],
-            "internalType": "struct Zora.Decimal",
+            "internalType": "struct ZoraDecimal",
             "name": "prevOwner",
             "type": "tuple"
           },
@@ -31,7 +31,7 @@
                 "type": "uint256"
               }
             ],
-            "internalType": "struct Zora.Decimal",
+            "internalType": "struct ZoraDecimal",
             "name": "creator",
             "type": "tuple"
           },
@@ -43,12 +43,12 @@
                 "type": "uint256"
               }
             ],
-            "internalType": "struct Zora.Decimal",
+            "internalType": "struct ZoraDecimal",
             "name": "owner",
             "type": "tuple"
           }
         ],
-        "internalType": "struct Zora.BidShares",
+        "internalType": "struct ZoraBidShares",
         "name": "bidShares",
         "type": "tuple"
       }

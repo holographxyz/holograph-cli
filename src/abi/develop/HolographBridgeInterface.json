@@ -1,49 +1,9 @@
 [
   {
-    "inputs": [],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "stateMutability": "payable",
-    "type": "fallback"
-  },
-  {
-    "inputs": [],
-    "name": "admin",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "target",
-        "type": "address"
-      },
-      {
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      }
-    ],
-    "name": "adminCall",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "nonce",
         "type": "uint256"
       },
       {
@@ -118,19 +78,6 @@
     "name": "bridgeOutRequest",
     "outputs": [],
     "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getAdmin",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "adminAddress",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -215,22 +162,22 @@
     "inputs": [
       {
         "internalType": "uint32",
-        "name": "",
+        "name": "toChain",
         "type": "uint32"
       },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "gasLimit",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "gasPrice",
         "type": "uint256"
       },
       {
         "internalType": "bytes",
-        "name": "",
+        "name": "crossChainPayload",
         "type": "bytes"
       }
     ],
@@ -238,17 +185,17 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "hlgFee",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "msgFee",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "dstGasPrice",
         "type": "uint256"
       }
     ],
@@ -284,25 +231,6 @@
   {
     "inputs": [
       {
-        "internalType": "bytes",
-        "name": "initPayload",
-        "type": "bytes"
-      }
-    ],
-    "name": "init",
-    "outputs": [
-      {
-        "internalType": "bytes4",
-        "name": "",
-        "type": "bytes4"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "address",
         "name": "sender",
         "type": "address"
@@ -331,19 +259,6 @@
         "type": "string"
       }
     ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "adminAddress",
-        "type": "address"
-      }
-    ],
-    "name": "setAdmin",
-    "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -398,9 +313,5 @@
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
-  },
-  {
-    "stateMutability": "payable",
-    "type": "receive"
   }
 ]
