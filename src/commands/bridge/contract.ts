@@ -90,10 +90,11 @@ export default class BridgeContract extends Command {
       networks: [sourceNetwork, destinationNetwork],
       debug: this.debug,
       userWallet,
+      verbose: false,
     })
 
     CliUx.ux.action.start('Loading network RPC providers')
-    await this.networkMonitor.initializeEthers()
+    await this.networkMonitor.run(true)
     CliUx.ux.action.stop()
 
     CliUx.ux.action.start('Checking that contract is not already deployed on "' + destinationNetwork + '" network')

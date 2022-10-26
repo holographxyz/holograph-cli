@@ -107,10 +107,11 @@ export default class BridgeNFT extends Command {
       networks: [sourceNetwork, destinationNetwork],
       debug: this.debug,
       userWallet,
+      verbose: false,
     })
 
     CliUx.ux.action.start('Loading network RPC providers')
-    await this.networkMonitor.initializeEthers()
+    await this.networkMonitor.run(true)
     CliUx.ux.action.stop()
 
     // Check if the contract is deployed on the source chain and not on the destination chain

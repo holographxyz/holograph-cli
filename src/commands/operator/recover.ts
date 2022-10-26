@@ -72,7 +72,7 @@ export default class Recover extends Command {
     }
 
     CliUx.ux.action.start('Loading network RPC providers')
-    await this.networkMonitor.initializeEthers()
+    await this.networkMonitor.run(true)
     CliUx.ux.action.stop()
 
     CliUx.ux.action.start('Retrieving transaction details from ' + network + ' network')

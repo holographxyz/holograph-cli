@@ -11,7 +11,15 @@ import {GasPricing} from '../../utils/gas'
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
 import {web3, functionSignature, sha3} from '../../utils/utils'
-import {OperatorJobStructOutput} from '../../types/holograph-operator'
+
+interface OperatorJobDetails {
+  pod: number
+  blockTimes: number
+  operator: string
+  startBlock: number
+  startTimestamp: BigNumber
+  fallbackOperators: number[]
+}
 
 interface OperatorJob {
   network: string
@@ -20,7 +28,7 @@ interface OperatorJob {
   targetTime: number
   gasLimit: BigNumber
   gasPrice: BigNumber
-  jobDetails: OperatorJobStructOutput
+  jobDetails: OperatorJobDetails
 }
 
 interface OperatorStatus {
@@ -73,11 +81,17 @@ export default class Operator extends Command {
     operatorJobPayload: string,
   ): Promise<OperatorJob | undefined> {
     const contract: Contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.providers[network])
-    const jobDetails: OperatorJobStructOutput = (await contract.getJobDetails(
-      operatorJobHash,
-    )) as OperatorJobStructOutput
-    jobDetails.operator = jobDetails.operator.toLowerCase()
+    const rawJobDetails: any[] = await contract.getJobDetails(operatorJobHash)
+    const jobDetails: OperatorJobDetails = {
+      pod: rawJobDetails[0] as number,
+      blockTimes: rawJobDetails[1] as number,
+      operator: (rawJobDetails[2] as string).toLowerCase(),
+      startBlock: rawJobDetails[3] as number,
+      startTimestamp: BigNumber.from(rawJobDetails[4]),
+      fallbackOperators: rawJobDetails[5] as number[],
+    } as OperatorJobDetails
     if (jobDetails.startBlock > 0) {
+      this.networkMonitor.structuredLog(network, 'Decoded valid job ' + operatorJobHash)
       let targetTime: number = new Date(BigNumber.from(jobDetails.startTimestamp).toNumber() * 1000).getTime()
       if (jobDetails.operator !== this.operatorStatus.address) {
         // operator is not selected
@@ -123,6 +137,8 @@ export default class Operator extends Command {
       } as OperatorJob
       return this.operatorJobs[operatorJobHash]
     }
+
+    this.networkMonitor.structuredLog(network, 'Decoded invalid job ' + operatorJobHash)
 
     return undefined
   }
@@ -282,6 +298,8 @@ export default class Operator extends Command {
     }
 
     this.operatorMode = OperatorMode[mode as keyof typeof OperatorMode]
+
+    this.log(`executeJob ${functionSignature('executeJob(bytes)')}`)
     this.log(`Operator mode: ${this.operatorMode}`)
 
     this.log('Loading user configurations...')
@@ -365,7 +383,7 @@ export default class Operator extends Command {
       {
         type: FilterType.functionSig,
         match: functionSignature('executeJob(bytes)'),
-        networkDependant: true,
+        networkDependant: false,
       },
     ]
     if (this.environment === Environment.localhost) {
@@ -404,13 +422,17 @@ export default class Operator extends Command {
         const from: string | undefined = transaction.from?.toLowerCase()
         if (to === this.networkMonitor.bridgeAddress) {
           // this only triggers in localhost environment
+          this.networkMonitor.structuredLog(job.network, `handleBridgeOutEvent`, tags)
           await this.handleBridgeOutEvent(transaction, job.network, tags)
         } else if (to === this.networkMonitor.operatorAddress) {
           // use this to speed up logic for getting AvailableOperatorJob event
+          this.networkMonitor.structuredLog(job.network, `handleBridgeInEvent`, tags)
           await this.handleBridgeInEvent(transaction, job.network, tags)
         } else if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
+          this.networkMonitor.structuredLog(job.network, `handleAvailableOperatorJobEvent`, tags)
           await this.handleAvailableOperatorJobEvent(transaction, job.network, tags)
         } else if (transaction.data?.slice(0, 10).startsWith(functionSignature('executeJob(bytes)'))) {
+          this.networkMonitor.structuredLog(job.network, `handleBridgeInEvent`, tags)
           await this.handleBridgeInEvent(transaction, job.network, tags)
         } else {
           this.networkMonitor.structuredLog(
