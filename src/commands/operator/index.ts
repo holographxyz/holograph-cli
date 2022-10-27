@@ -363,7 +363,7 @@ export default class Operator extends Command {
     // Start health check server on port 6000
     // Can be used to monitor that the operator is online and running
     if (enableHealthCheckServer) {
-      startHealthcheckServer({networkMonitor: this.networkMonitor})
+      startHealthcheckServer(this.networkMonitor)
     }
   }
 

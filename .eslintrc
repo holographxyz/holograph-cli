@@ -1,6 +1,10 @@
 {
-  // "rules": {
-  //   "@typescript-eslint/ban-ts-comment": ["error", {"ts-ignore": "allow-with-description"}]
-  // },
-  "extends": ["oclif", "oclif-typescript", "prettier"]
+  "extends": ["oclif", "oclif-typescript", "prettier"],
+  "env": {
+    "node": true
+  },
+  "rules": {
+    "unicorn/prefer-module": "off",
+    "valid-jsdoc": "off"
+  }
 }
