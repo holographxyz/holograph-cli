@@ -479,7 +479,6 @@ export default class Operator extends Command {
       } else {
         const bridgeTransaction = await this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: transaction.data,
-          value: BigNumber.from('0'),
         })
         const args: any[] = this.networkMonitor.decodeLzEvent(receipt, this.networkMonitor.lzEndpointAddress[network])!
         const jobHash: string = web3.utils.keccak256(args[2] as string)
@@ -517,7 +516,7 @@ export default class Operator extends Command {
         this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
       if (parsedTransaction.name === 'executeJob') {
         const args: any[] | undefined = Object.values(parsedTransaction.args)
-        const operatorJobPayload: string | undefined = args === undefined ? undefined : sha3(args[0])
+        const operatorJobPayload: string | undefined = args === undefined ? undefined : args[0]
         const operatorJobHash: string | undefined =
           operatorJobPayload === undefined ? undefined : sha3(operatorJobPayload)
         if (operatorJobHash === undefined) {

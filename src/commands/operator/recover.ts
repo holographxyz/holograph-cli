@@ -207,7 +207,6 @@ export default class Recover extends Command {
         )
         const bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
-          value: BigNumber.from('0'),
         })
         this.networkMonitor.structuredLog(
           network,
