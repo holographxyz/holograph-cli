@@ -99,12 +99,15 @@ Bridge a Holographable contract from source chain to destination chain. You need
 
 ```
 USAGE
-  $ holo bridge:contract [--sourceNetwork <value>] [--destinationNetwork <value>] [--deploymentConfig <value>]
+  $ holo bridge:contract [--sourceNetwork goerli|mumbai|fuji|rinkeby] [--destinationNetwork
+    goerli|mumbai|fuji|rinkeby] [--deploymentConfig <value>]
 
 FLAGS
-  --deploymentConfig=<value>    The config file to use
-  --destinationNetwork=<value>  The network on which the contract will be deployed
-  --sourceNetwork=<value>       The network from which contract deploy request will be sent
+  --deploymentConfig=<value>     The config file to use
+  --destinationNetwork=<option>  The network on which the contract will be deployed
+                                 <options: goerli|mumbai|fuji|rinkeby>
+  --sourceNetwork=<option>       The network from which contract deploy request will be sent
+                                 <options: goerli|mumbai|fuji|rinkeby>
 
 DESCRIPTION
   Bridge a Holographable contract from source chain to destination chain. You need to have a deployment config JSON
@@ -122,14 +125,16 @@ Beam a Holographable NFT from source chain to destination chain.
 
 ```
 USAGE
-  $ holo bridge:nft [--collectionAddress <value>] [--tokenId <value>] [--sourceNetwork <value>]
-    [--destinationNetwork <value>]
+  $ holo bridge:nft [--collectionAddress <value>] [--tokenId <value>] [--sourceNetwork
+    goerli|mumbai|fuji|rinkeby] [--destinationNetwork goerli|mumbai|fuji|rinkeby]
 
 FLAGS
-  --collectionAddress=<value>   The address of the collection smart contract
-  --destinationNetwork=<value>  The destination network which to beam to
-  --sourceNetwork=<value>       The source network from which to beam
-  --tokenId=<value>             The token ID of the NFT to beam
+  --collectionAddress=<value>    The address of the collection smart contract
+  --destinationNetwork=<option>  The destination network which to beam to
+                                 <options: goerli|mumbai|fuji|rinkeby>
+  --sourceNetwork=<option>       The source network from which to beam
+                                 <options: goerli|mumbai|fuji|rinkeby>
+  --tokenId=<value>              The token ID of the NFT to beam
 
 DESCRIPTION
   Beam a Holographable NFT from source chain to destination chain.
@@ -146,15 +151,14 @@ Initialize the Holograph CLI with a config file. If no flags are passed, the CLI
 
 ```
 USAGE
-  $ holo config [--url <value> --network
-    ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|ethereumTestnetRinkeby] [--privateKey <value>] [--fromFile
+  $ holo config [--url <value> --network goerli|mumbai|fuji|rinkeby] [--privateKey <value>] [--fromFile
     <value>] [--fromJson <value>]
 
 FLAGS
   --fromFile=<value>    Path to the config file to load
   --fromJson=<value>    JSON object to use as the config
   --network=<option>    Network to set
-                        <options: ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|ethereumTestnetRinkeby>
+                        <options: goerli|mumbai|fuji|rinkeby>
   --privateKey=<value>  Default account to use when sending all transactions
   --url=<value>         Provider URL of network to set
 
@@ -281,11 +285,12 @@ Mint a Holographable NFT
 ```
 USAGE
   $ holo create:nft [--collectionAddress <value>] [--tokenId <value>] [--tokenUriType ipfs|https|arweave]
-    [--tokenUri <value>] [--network <value>]
+    [--tokenUri <value>] [--network goerli|mumbai|fuji|rinkeby]
 
 FLAGS
   --collectionAddress=<value>  The address of the collection smart contract
-  --network=<value>            Name of network to use
+  --network=<option>           Name of network to use
+                               <options: goerli|mumbai|fuji|rinkeby>
   --tokenId=<value>            [default: 0] The token id to mint. By default the token id is 0, which mints the next
                                available token id
   --tokenUri=<value>           The uri of the token, minus the prepend (ie "ipfs://")
@@ -328,13 +333,14 @@ Listen for EVM events for jobs and process them
 ```
 USAGE
   $ holo operator [-m listen|manual|auto] [--healthCheck] [--sync] [--unsafePassword <value>] [--networks
-    <value>]
+    goerli|mumbai|fuji|rinkeby]
 
 FLAGS
   -m, --mode=<option>       The mode in which to run the operator
                             <options: listen|manual|auto>
   --healthCheck             Launch server on http://localhost:6000 to make sure command is still running
-  --networks=<value>...     Space separated list of networks to use
+  --networks=<option>...    Space separated list of networks to use
+                            <options: goerli|mumbai|fuji|rinkeby>
   --sync                    Start from last saved block position instead of latest block position
   --unsafePassword=<value>  Enter the plain text password for the wallet in the holograph cli config
 
@@ -430,7 +436,6 @@ FLAGS
 
 DESCRIPTION
   Installs a plugin into the CLI.
-
   Can be installed from npm or a git url.
 
   Installation of a user-installed plugin will override a core plugin.
@@ -438,6 +443,7 @@ DESCRIPTION
   e.g. If you have a core plugin that has a 'hello' command, installing a user-installed plugin with a 'hello' command
   will override the core plugin implementation. This is useful if a user needs to update core plugin functionality in
   the CLI without the need to patch and update the whole CLI.
+
 
 ALIASES
   $ holo plugins:add
@@ -492,7 +498,6 @@ FLAGS
 
 DESCRIPTION
   Installs a plugin into the CLI.
-
   Can be installed from npm or a git url.
 
   Installation of a user-installed plugin will override a core plugin.
@@ -500,6 +505,7 @@ DESCRIPTION
   e.g. If you have a core plugin that has a 'hello' command, installing a user-installed plugin with a 'hello' command
   will override the core plugin implementation. This is useful if a user needs to update core plugin functionality in
   the CLI without the need to patch and update the whole CLI.
+
 
 ALIASES
   $ holo plugins:add
@@ -531,11 +537,11 @@ FLAGS
 
 DESCRIPTION
   Links a plugin into the CLI for development.
-
   Installation of a linked plugin will override a user-installed or core plugin.
 
   e.g. If you have a user-installed or core plugin that has a 'hello' command, installing a linked plugin with a 'hello'
   command will override the user-installed or core plugin implementation. This is useful for development work.
+
 
 EXAMPLES
   $ holo plugins:link myplugin

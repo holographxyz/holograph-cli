@@ -8,7 +8,7 @@ import {web3, zeroAddress, generateInitCode} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {DeploymentConfig} from '../../utils/contract-deployment'
 import {validateNetwork, validateNonEmptyString, checkOptionFlag, checkStringFlag} from '../../utils/validation'
-import {networks} from '@holographxyz/networks'
+import {networks, supportedShortNetworks} from '@holographxyz/networks'
 
 export default class BridgeContract extends Command {
   static description =
@@ -22,12 +22,14 @@ export default class BridgeContract extends Command {
     sourceNetwork: Flags.string({
       description: 'The network from which contract deploy request will be sent',
       parse: validateNetwork,
+      options: supportedShortNetworks,
       multiple: false,
       required: false,
     }),
     destinationNetwork: Flags.string({
       description: 'The network on which the contract will be deployed',
       parse: validateNetwork,
+      options: supportedShortNetworks,
       multiple: false,
       required: false,
     }),

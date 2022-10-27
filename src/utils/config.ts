@@ -103,7 +103,7 @@ async function tryToUnlockWallet(
   return userWallet as ethers.Wallet
 }
 
-function generateSupportedNetworksOptions(configNetworks?: ConfigNetworks): SelectOption[] {
+export function generateSupportedNetworksOptions(configNetworks?: ConfigNetworks): SelectOption[] {
   const options: SelectOption[] = []
   for (const key of supportedNetworks) {
     if (configNetworks === undefined) {
