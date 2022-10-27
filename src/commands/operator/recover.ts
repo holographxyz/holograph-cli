@@ -7,7 +7,7 @@ import {TransactionDescription} from '@ethersproject/abi'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {sha3} from '../../utils/utils'
-import {networks, supportedNetworks} from '@holographxyz/networks'
+import {networks, supportedNetworks, supportedShortNetworks} from '@holographxyz/networks'
 
 export default class Recover extends Command {
   static description = 'Attempt to re-run/recover a particular Operator Job'
@@ -15,7 +15,7 @@ export default class Recover extends Command {
   static flags = {
     network: Flags.string({
       description: 'The network on which the transaction was executed',
-      options: supportedNetworks,
+      options: supportedShortNetworks,
     }),
     tx: Flags.string({
       description: 'The hash of transaction that we want to attempt to execute',
@@ -72,7 +72,7 @@ export default class Recover extends Command {
     }
 
     CliUx.ux.action.start('Loading network RPC providers')
-    await this.networkMonitor.initializeEthers()
+    await this.networkMonitor.run(true)
     CliUx.ux.action.stop()
 
     CliUx.ux.action.start('Retrieving transaction details from ' + network + ' network')
@@ -207,7 +207,6 @@ export default class Recover extends Command {
         )
         const bridgeTransaction = this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: operatorJobPayload!,
-          value: BigNumber.from('0'),
         })
         this.networkMonitor.structuredLog(
           network,

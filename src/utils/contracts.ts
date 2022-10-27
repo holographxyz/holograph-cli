@@ -74,7 +74,7 @@ export const HOLOGRAPH_ADDRESSES: {[key in Environment]: string} = {
 export const FAUCET_ADDRESSES: {[key in Environment]: string} = {
   [Environment.localhost]: '0x0000000000000000000000000000000000000000',
   [Environment.experimental]: '0x4E5303d2a03660A01570be906F50C39f4cBd52F3',
-  [Environment.develop]: '0x4f5A377216ACb6A8D5ffd4d6d9Fbc6d17a4dD790',
+  [Environment.develop]: '0xcb216ff6be78cca91a183B9Fa94cA02e5c0bb12a',
   [Environment.testnet]: '0xc25cB8504f400528823451D38628365d50494e43',
   [Environment.mainnet]: '0xc25cB8504f400528823451D38628365d50494e43',
 } as const

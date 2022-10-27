@@ -1,4 +1,5 @@
 import {Flags} from '@oclif/core'
+import {supportedShortNetworks} from '@holographxyz/networks'
 
 import {BigNumber, BigNumberish, BytesLike} from 'ethers'
 import Web3 from 'web3'
@@ -43,12 +44,14 @@ export const deploymentFlags = {
   txNetwork: Flags.string({
     description: 'The network on which the transaction was executed',
     parse: validateNetwork,
+    options: supportedShortNetworks,
     multiple: false,
     required: false,
   }),
   targetNetwork: Flags.string({
     description: 'The network on which the contract will be executed',
     parse: validateNetwork,
+    options: supportedShortNetworks,
     multiple: false,
     required: false,
   }),

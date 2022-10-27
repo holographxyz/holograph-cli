@@ -95,10 +95,11 @@ export default class Contract extends Command {
       configFile,
       debug: this.debug,
       userWallet,
+      verbose: false,
     })
 
     CliUx.ux.action.start('Loading network RPC providers')
-    await this.networkMonitor.initializeEthers()
+    await this.networkMonitor.run(true)
     CliUx.ux.action.stop()
 
     let chainType: string

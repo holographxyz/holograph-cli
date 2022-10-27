@@ -54,38 +54,12 @@
   },
   {
     "inputs": [],
-    "name": "getBaseGas",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "baseGas",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
     "name": "getBridge",
     "outputs": [
       {
         "internalType": "address",
         "name": "bridge",
         "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getGasPerByte",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "gasPerByte",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -106,6 +80,11 @@
       {
         "internalType": "uint256",
         "name": "gasPrice",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "payloadLength",
         "type": "uint256"
       }
     ],
@@ -128,6 +107,32 @@
         "internalType": "address",
         "name": "interfaces",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getJobBaseGas",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "jobBaseGas",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getJobGasPerByte",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "jobGasPerByte",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -179,6 +184,37 @@
       {
         "internalType": "uint256",
         "name": "msgFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "dstGasPrice",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getMsgBaseGas",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "msgBaseGas",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getMsgGasPerByte",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "msgGasPerByte",
         "type": "uint256"
       }
     ],
@@ -299,38 +335,12 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "baseGas",
-        "type": "uint256"
-      }
-    ],
-    "name": "setBaseGas",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "address",
         "name": "bridge",
         "type": "address"
       }
     ],
     "name": "setBridge",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "gasPerByte",
-        "type": "uint256"
-      }
-    ],
-    "name": "setGasPerByte",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -351,12 +361,64 @@
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "jobBaseGas",
+        "type": "uint256"
+      }
+    ],
+    "name": "setJobBaseGas",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "jobGasPerByte",
+        "type": "uint256"
+      }
+    ],
+    "name": "setJobGasPerByte",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "lZEndpoint",
         "type": "address"
       }
     ],
     "name": "setLZEndpoint",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "msgBaseGas",
+        "type": "uint256"
+      }
+    ],
+    "name": "setMsgBaseGas",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "msgGasPerByte",
+        "type": "uint256"
+      }
+    ],
+    "name": "setMsgGasPerByte",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

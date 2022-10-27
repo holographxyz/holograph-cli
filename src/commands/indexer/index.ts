@@ -1,7 +1,6 @@
 import axios from 'axios'
 
 import {CliUx, Command, Flags} from '@oclif/core'
-import {BigNumber} from 'ethers'
 import {TransactionDescription} from '@ethersproject/abi'
 import {Block, TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
 import {hexZeroPad} from '@ethersproject/bytes'
@@ -438,14 +437,14 @@ export default class Indexer extends Command {
         this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
       if (parsedTransaction.name === 'executeJob') {
         const args: any[] | undefined = Object.values(parsedTransaction.args)
-        const operatorJobPayload: string | undefined = args === undefined ? undefined : sha3(args[0])
+        const operatorJobPayload: string | undefined = args === undefined ? undefined : args[0]
         const operatorJobHash: string | undefined =
           operatorJobPayload === undefined ? undefined : sha3(operatorJobPayload)
         if (operatorJobHash === undefined) {
           this.networkMonitor.structuredLog(network, `Could not find a bridgeInRequest for ${transaction.hash}`, tags)
         } else {
           const bridgeTransaction: TransactionDescription | null =
-            this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
+            this.networkMonitor.bridgeContract.interface.parseTransaction({data: operatorJobPayload!})
           if (bridgeTransaction === null) {
             this.networkMonitor.structuredLog(network, `Could not decode Bridge function for ${transaction.hash}`, tags)
           } else {
@@ -751,10 +750,7 @@ export default class Indexer extends Command {
         }
 
         const bridgeTransaction: TransactionDescription = this.networkMonitor.bridgeContract.interface.parseTransaction(
-          {
-            data: operatorJobPayload!,
-            value: BigNumber.from('0'),
-          },
+          {data: operatorJobPayload!},
         )
         if (bridgeTransaction.name === 'bridgeOutRequest') {
           const bridgeOut: BridgeOutArgs = bridgeTransaction.args as unknown as BridgeOutArgs

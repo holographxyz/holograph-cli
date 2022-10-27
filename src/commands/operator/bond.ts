@@ -2,7 +2,7 @@ import {CliUx, Command, Flags} from '@oclif/core'
 import {BigNumber, providers} from 'ethers'
 import * as inquirer from 'inquirer'
 
-import {getNetworkByKey} from '@holographxyz/networks'
+import {networks, supportedShortNetworks} from '@holographxyz/networks'
 import color from '@oclif/color'
 import {formatEther} from 'ethers/lib/utils'
 import CoreChainService from '../../services/core-chain-service'
@@ -24,6 +24,7 @@ export default class Bond extends Command {
   static flags = {
     network: Flags.string({
       description: 'The network to bond to',
+      options: supportedShortNetworks,
       char: 'n',
     }),
     pod: Flags.integer({
@@ -74,7 +75,7 @@ export default class Bond extends Command {
       'Select the network to bond to',
     )
 
-    this.log(`Joining network: ${getNetworkByKey(network).shortKey}`)
+    this.log(`Joining network: ${networks[network].shortKey}`)
 
     CliUx.ux.action.start('Loading destination network RPC provider')
     const destinationProviderUrl: string = (configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork)
@@ -106,17 +107,12 @@ export default class Bond extends Command {
     const wallet = userWallet?.connect(provider)
 
     // Setup the contracts and chain services
-    const coreChainService = new CoreChainService(provider, wallet, getNetworkByKey(network).chain)
+    const coreChainService = new CoreChainService(provider, wallet, networks[network].chain)
     await coreChainService.initialize()
     const tokenContract = await coreChainService.getUtilityToken()
-    const tokenChainService = new TokenChainService(provider, wallet, getNetworkByKey(network).chain, tokenContract)
+    const tokenChainService = new TokenChainService(provider, wallet, networks[network].chain, tokenContract)
     const operatorContract = await coreChainService.getOperator()
-    const operatorChainService = new OperatorChainService(
-      provider,
-      wallet,
-      getNetworkByKey(network).chain,
-      operatorContract,
-    )
+    const operatorChainService = new OperatorChainService(provider, wallet, networks[network].chain, operatorContract)
     const operator = operatorChainService.operator
 
     const currentHlgBalance = (await tokenChainService.balanceOf(wallet.address)) as BigNumber
