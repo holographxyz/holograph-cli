@@ -1,7 +1,7 @@
 import * as inquirer from 'inquirer'
 import {CliUx, Command, Flags} from '@oclif/core'
 import {TransactionDescription} from '@ethersproject/abi'
-import {formatUnits} from '@ethersproject/units'
+// import {formatUnits} from '@ethersproject/units'
 import {BigNumber} from '@ethersproject/bignumber'
 import {Contract} from '@ethersproject/contracts'
 import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
@@ -11,7 +11,7 @@ import {ensureConfigFileIsValid} from '../../utils/config'
 import {GasPricing} from '../../utils/gas'
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
-import {web3, functionSignature, sha3} from '../../utils/utils'
+import {web3, functionSignature, sha3, zeroAddress} from '../../utils/utils'
 
 interface OperatorJobDetails {
   pod: number
@@ -136,7 +136,7 @@ export default class Operator extends Command {
         gasPrice,
         jobDetails,
       } as OperatorJob
-      process.stdout.write(JSON.stringify(this.operatorJobs[operatorJobHash], undefined, 2) + '\n')
+      // process.stdout.write(JSON.stringify(this.operatorJobs[operatorJobHash], undefined, 2) + '\n')
       return this.operatorJobs[operatorJobHash]
     }
 
@@ -149,7 +149,7 @@ export default class Operator extends Command {
     for (const hash of Object.keys(this.operatorJobs)) {
       const job: OperatorJob = this.operatorJobs[hash]
       let targetTime: number = new Date(BigNumber.from(job.jobDetails.startTimestamp).toNumber() * 1000).getTime()
-      if (job.jobDetails.operator !== this.operatorStatus.address) {
+      if (job.jobDetails.operator !== zeroAddress && job.jobDetails.operator !== this.operatorStatus.address) {
         // operator is not selected
         // add +60 seconds to target time
         targetTime += 60 * 1000
@@ -214,7 +214,7 @@ export default class Operator extends Command {
 
   processOperatorJobs = (network: string, payloadHash?: string): void => {
     const tags: (string | number)[] = [this.networkMonitor.randomTag()]
-    this.networkMonitor.structuredLog(network, 'Checking for Operator Jobs', tags)
+    // this.networkMonitor.structuredLog(network, 'Checking for Operator Jobs', tags)
     if (payloadHash !== undefined && payloadHash !== '' && payloadHash in this.operatorJobs) {
       delete this.operatorJobs[payloadHash]
     }
@@ -237,7 +237,7 @@ export default class Operator extends Command {
     jobs.sort((a: OperatorJob, b: OperatorJob): number => {
       return a.targetTime - b.targetTime
     })
-    this.networkMonitor.structuredLog(network, `${jobs.length} jobs pending`, tags)
+    // this.networkMonitor.structuredLog(network, `${jobs.length} jobs pending`, tags)
     const candidates: OperatorJob[] = []
     for (const job of jobs) {
       // check that time is within scope
@@ -251,7 +251,7 @@ export default class Operator extends Command {
       }
     }
 
-    this.networkMonitor.structuredLog(network, `${candidates.length} job candidates identified`, tags)
+    // this.networkMonitor.structuredLog(network, `${candidates.length} job candidates identified`, tags)
 
     if (candidates.length > 0) {
       // sort candidates by gas priority
@@ -260,6 +260,7 @@ export default class Operator extends Command {
         return b.gasPrice.sub(a.gasPrice).toNumber()
       })
       const compareGas: BigNumber = gasPricing.isEip1559 ? gasPricing.maxFeePerGas! : gasPricing.gasPrice!
+      /*
       this.networkMonitor.structuredLog(
         network,
         `Current gas price is ${formatUnits(compareGas, 'gwei')} GWEI, and job gas price is ${formatUnits(
@@ -268,6 +269,7 @@ export default class Operator extends Command {
         )} GWEI`,
         tags,
       )
+*/
       if (candidates[0].gasPrice.gte(compareGas)) {
         this.networkMonitor.structuredLog(network, `Sending ${candidates[0].hash} job for execution`, tags)
         // we have a valid job to do right away
@@ -624,14 +626,17 @@ export default class Operator extends Command {
     }
 
     if (operate) {
+      const gasPricing: GasPricing = this.networkMonitor.gasPrices[network]
+      const gasPrice: BigNumber = gasPricing.isEip1559 ? gasPricing.maxFeePerGas! : gasPricing.gasPrice!
+
       const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
         network,
         tags,
         contract: this.networkMonitor.operatorContract,
         methodName: 'executeJob',
         args: [job.payload],
-        gasPrice: job.gasPrice,
-        gasLimit: job.gasLimit,
+        gasPrice: gasPrice,
+        gasLimit: job.gasLimit.mul(BigNumber.from('2')),
       })
       return receipt !== null
     }

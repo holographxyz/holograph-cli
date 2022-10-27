@@ -924,8 +924,8 @@ export class NetworkMonitor {
       const recentBlock: boolean = this.currentBlockHeight[job.network] - job.block < 5
       if (this.verbose) {
         this.structuredLog(job.network, `Block retrieved`, job.block)
+        /*
         this.structuredLog(job.network, `Calculating block gas`, job.block)
-
         if (this.gasPrices[job.network].isEip1559) {
           this.structuredLog(
             job.network,
@@ -936,13 +936,14 @@ export class NetworkMonitor {
             job.block,
           )
         }
+*/
       }
 
       if (recentBlock) {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
 
-      const priorityFees: BigNumber = this.gasPrices[job.network].nextPriorityFee!
+      // const priorityFees: BigNumber = this.gasPrices[job.network].nextPriorityFee!
       if (this.verbose && block.transactions.length === 0) {
         this.structuredLog(job.network, `Zero transactions in block`, job.block)
       }
@@ -993,6 +994,10 @@ export class NetworkMonitor {
         this.filterTransaction(job, block.transactions[i], interestingTransactions)
       }
 
+      if (recentBlock) {
+        this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
+      }
+      /*
       if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
         this.structuredLog(
           job.network,
@@ -1006,6 +1011,7 @@ export class NetworkMonitor {
           job.block,
         )
       }
+*/
 
       if (interestingTransactions.length > 0) {
         if (this.verbose) {

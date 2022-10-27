@@ -54,9 +54,8 @@ export default class Recover extends Command {
       parent: this,
       configFile,
       debug: this.debug,
-      processTransactions: undefined, // Recover doesn't process transactions
       userWallet,
-      verbose: true,
+      verbose: false,
     })
 
     CliUx.ux.action.start('Loading network RPC providers')

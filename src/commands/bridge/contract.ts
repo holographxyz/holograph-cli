@@ -9,6 +9,7 @@ import {web3, zeroAddress, generateInitCode} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {DeploymentConfig} from '../../utils/contract-deployment'
 import {validateNetwork, validateNonEmptyString, checkOptionFlag, checkStringFlag} from '../../utils/validation'
+import {GasPricing} from '../../utils/gas'
 import {networks, supportedShortNetworks} from '@holographxyz/networks'
 
 export default class BridgeContract extends Command {
@@ -132,8 +133,6 @@ export default class BridgeContract extends Command {
         networks[destinationNetwork].holographId,
         this.networkMonitor.factoryAddress,
         '0x' + 'ff'.repeat(32),
-        // allow LZ module to set gas price
-        // '0x' + '00'.repeat(32),
         '0x' + 'ff'.repeat(32),
         data as string,
       )
@@ -144,6 +143,10 @@ export default class BridgeContract extends Command {
         .callStatic.jobEstimator(payload as string, {gasLimit: TESTGASLIMIT}),
     )
 
+    const gasPricing: GasPricing = this.networkMonitor.gasPrices[destinationNetwork]
+    let gasPrice: BigNumber = gasPricing.isEip1559 ? gasPricing.maxFeePerGas! : gasPricing.gasPrice!
+    gasPrice = gasPrice.add(gasPrice.div(BigNumber.from('100')).mul(BigNumber.from('25')))
+
     payload = await this.networkMonitor.bridgeContract
       .connect(this.networkMonitor.providers[sourceNetwork])
       .callStatic.getBridgeOutRequestPayload(
@@ -151,13 +154,14 @@ export default class BridgeContract extends Command {
         this.networkMonitor.factoryAddress,
         estimatedGas,
         // allow LZ module to set gas price
-        '0x' + '00'.repeat(32),
+        // '0x' + '00'.repeat(32),
+        gasPrice,
         data as string,
       )
 
     const fees: BigNumber[] = await this.networkMonitor.bridgeContract
       .connect(this.networkMonitor.providers[sourceNetwork])
-      .callStatic.getMessageFee(networks[destinationNetwork].holographId, estimatedGas, '0x' + '00'.repeat(32), payload)
+      .callStatic.getMessageFee(networks[destinationNetwork].holographId, estimatedGas, gasPrice, payload)
     const total: BigNumber = fees[0].add(fees[1])
     estimatedGas = TESTGASLIMIT.sub(
       await this.networkMonitor.operatorContract
@@ -167,6 +171,7 @@ export default class BridgeContract extends Command {
     this.log('hlg fee', formatUnits(fees[0], 'ether'), 'ether')
     this.log('lz fee', formatUnits(fees[1], 'ether'), 'ether')
     this.log('lz gasPrice', formatUnits(fees[2], 'gwei'), 'GWEI')
+    this.log('our estimated gasPrice', formatUnits(gasPrice, 'gwei'), 'GWEI')
     this.log('estimated gas usage', estimatedGas.toNumber())
 
     const blockchainPrompt: any = await inquirer.prompt([
@@ -191,11 +196,11 @@ export default class BridgeContract extends Command {
         networks[destinationNetwork].holographId,
         this.networkMonitor.factoryAddress,
         estimatedGas,
-        BigNumber.from(fees[2]),
+        gasPrice,
         data as string,
       ],
       waitForReceipt: true,
-      value: total,
+      value: total.add(total.div(BigNumber.from('100')).mul(BigNumber.from('25'))),
     })
     CliUx.ux.action.stop()
 
