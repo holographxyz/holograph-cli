@@ -626,7 +626,7 @@ export class NetworkMonitor {
       this.providers[this.networks[0]],
     )
 
-    const holographerABI = await fs.readJson(`./src/abi/${this.environment}/Holographer.json`)
+    const holographerABI = await fs.readJson(path.join(__dirname,`../abi/${this.environment}/Holographer.json`))
     this.holographer = new Contract(zeroAddress, holographerABI, this.providers[this.networks[0]])
 
     this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
@@ -635,28 +635,28 @@ export class NetworkMonitor {
     this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
     this.registryAddress = (await this.holograph.getRegistry()).toLowerCase()
 
-    const holographBridgeABI = await fs.readJson(`./src/abi/${this.environment}/HolographBridge.json`)
+    const holographBridgeABI = await fs.readJson(path.join(__dirname,`../abi/${this.environment}/HolographBridge.json`))
     this.bridgeContract = new Contract(this.bridgeAddress, holographBridgeABI, this.providers[this.networks[0]])
 
-    const holographFactoryABI = await fs.readJson(`./src/abi/${this.environment}/HolographFactory.json`)
+    const holographFactoryABI = await fs.readJson(path.join(__dirname,`../abi/${this.environment}/HolographFactory.json`))
     this.factoryContract = new Contract(this.factoryAddress, holographFactoryABI, this.providers[this.networks[0]])
 
-    const holographInterfacesABI = await fs.readJson(`./src/abi/${this.environment}/HolographInterfaces.json`)
+    const holographInterfacesABI = await fs.readJson(path.join(__dirname,`../abi/${this.environment}/HolographInterfaces.json`))
     this.interfacesContract = new Contract(
       this.interfacesAddress,
       holographInterfacesABI,
       this.providers[this.networks[0]],
     )
 
-    const holographOperatorABI = await fs.readJson(`./src/abi/${this.environment}/HolographOperator.json`)
+    const holographOperatorABI = await fs.readJson(path.join(__dirname,`../abi/${this.environment}/HolographOperator.json`))
     this.operatorContract = new Contract(this.operatorAddress, holographOperatorABI, this.providers[this.networks[0]])
 
     this.messagingModuleAddress = (await this.operatorContract.getMessagingModule()).toLowerCase()
 
-    const holographRegistryABI = await fs.readJson(`./src/abi/${this.environment}/HolographRegistry.json`)
+    const holographRegistryABI = await fs.readJson(path.join(__dirname,`../abi/${this.environment}/HolographRegistry.json`))
     this.registryContract = new Contract(this.registryAddress, holographRegistryABI, this.providers[this.networks[0]])
 
-    const holographMessagingModuleABI = await fs.readJson(`./src/abi/${this.environment}/LayerZeroModule.json`)
+    const holographMessagingModuleABI = await fs.readJson(path.join(__dirname,`../abi/${this.environment}/LayerZeroModule.json`))
     this.messagingModuleContract = new Contract(
       this.messagingModuleAddress,
       holographMessagingModuleABI,
@@ -674,7 +674,7 @@ export class NetworkMonitor {
             .getLZEndpoint()
         ).toLowerCase()
         // eslint-disable-next-line no-await-in-loop
-        const lzEndpointABI = await fs.readJson(`./src/abi/${this.environment}/MockLZEndpoint.json`)
+        const lzEndpointABI = await fs.readJson(path.join(__dirname,`../abi/${this.environment}/MockLZEndpoint.json`))
         this.lzEndpointContract[network] = new Contract(
           this.lzEndpointAddress[network],
           lzEndpointABI,
