@@ -99,7 +99,7 @@
                 "type": "uint256"
               }
             ],
-            "internalType": "struct Zora.Decimal",
+            "internalType": "struct ZoraDecimal",
             "name": "prevOwner",
             "type": "tuple"
           },
@@ -111,7 +111,7 @@
                 "type": "uint256"
               }
             ],
-            "internalType": "struct Zora.Decimal",
+            "internalType": "struct ZoraDecimal",
             "name": "creator",
             "type": "tuple"
           },
@@ -123,12 +123,12 @@
                 "type": "uint256"
               }
             ],
-            "internalType": "struct Zora.Decimal",
+            "internalType": "struct ZoraDecimal",
             "name": "owner",
             "type": "tuple"
           }
         ],
-        "internalType": "struct Zora.BidShares",
+        "internalType": "struct ZoraBidShares",
         "name": "bidShares",
         "type": "tuple"
       }
@@ -369,7 +369,7 @@
     "inputs": [
       {
         "internalType": "bytes",
-        "name": "data",
+        "name": "initPayload",
         "type": "bytes"
       }
     ],
@@ -388,7 +388,7 @@
     "inputs": [
       {
         "internalType": "bytes",
-        "name": "data",
+        "name": "initPayload",
         "type": "bytes"
       }
     ],
@@ -523,25 +523,6 @@
     "name": "setRoyalties",
     "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes4",
-        "name": "interfaceId",
-        "type": "bytes4"
-      }
-    ],
-    "name": "supportsInterface",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "pure",
     "type": "function"
   },
   {
