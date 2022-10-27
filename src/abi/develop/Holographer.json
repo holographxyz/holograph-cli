@@ -54,6 +54,19 @@
   },
   {
     "inputs": [],
+    "name": "getDeploymentBlock",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "holograph",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "getHolograph",
     "outputs": [
       {
@@ -70,7 +83,7 @@
     "name": "getHolographEnforcer",
     "outputs": [
       {
-        "internalType": "address payable",
+        "internalType": "address",
         "name": "",
         "type": "address"
       }
@@ -96,7 +109,7 @@
     "name": "getSourceContract",
     "outputs": [
       {
-        "internalType": "address payable",
+        "internalType": "address",
         "name": "sourceContract",
         "type": "address"
       }
@@ -108,7 +121,7 @@
     "inputs": [
       {
         "internalType": "bytes",
-        "name": "data",
+        "name": "initPayload",
         "type": "bytes"
       }
     ],
