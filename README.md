@@ -17,6 +17,7 @@ This is a CLI is primarily for operators of the holograph network. The CLI inclu
 
 <!-- toc -->
 
+- [Overview](#overview)
 - [Usage](#usage)
 - [Commands](#commands)
 <!-- tocstop -->
@@ -26,14 +27,14 @@ This is a CLI is primarily for operators of the holograph network. The CLI inclu
 <!-- usage -->
 
 ```sh-session
-$ npm install -g holograph-cli
-$ holograph COMMAND
+$ npm install -g @holographxyz/cli
+$ holo COMMAND
 running command...
-$ holograph (--version)
-holograph-cli/0.0.1 darwin-arm64 node-v18.9.0
-$ holograph --help [COMMAND]
+$ holo (--version)
+@holographxyz/cli/0.0.1 darwin-x64 node-v18.9.0
+$ holo --help [COMMAND]
 USAGE
-  $ holograph COMMAND
+  $ holo COMMAND
 ...
 ```
 
@@ -43,27 +44,39 @@ USAGE
 
 <!-- commands -->
 
-- [`holograph bridge`](#holograph-bridge)
-- [`holograph bridge:contract`](#holograph-bridgecontract)
-- [`holograph bridge:nft`](#holograph-bridgenft)
-- [`holograph config`](#holograph-config)
-- [`holograph config:networks`](#holograph-confignetworks)
-- [`holograph config:user`](#holograph-configuser)
-- [`holograph config:view`](#holograph-configview)
-- [`holograph help [COMMAND]`](#holograph-help-command)
-- [`holograph operator`](#holograph-operator)
-- [`holograph operator:recover`](#holograph-operatorrecover)
-- [`holograph status`](#holograph-status)
-- [`holograph status:contract`](#holograph-statuscontract)
-- [`holograph status:nft`](#holograph-statusnft)
+- [`holo bridge`](#holo-bridge)
+- [`holo bridge:contract`](#holo-bridgecontract)
+- [`holo bridge:nft`](#holo-bridgenft)
+- [`holo config`](#holo-config)
+- [`holo config:networks`](#holo-confignetworks)
+- [`holo config:user`](#holo-configuser)
+- [`holo config:view`](#holo-configview)
+- [`holo create`](#holo-create)
+- [`holo create:nft`](#holo-createnft)
+- [`holo help [COMMAND]`](#holo-help-command)
+- [`holo operator`](#holo-operator)
+- [`holo operator:bond`](#holo-operatorbond)
+- [`holo operator:recover`](#holo-operatorrecover)
+- [`holo plugins`](#holo-plugins)
+- [`holo plugins:install PLUGIN...`](#holo-pluginsinstall-plugin)
+- [`holo plugins:inspect PLUGIN...`](#holo-pluginsinspect-plugin)
+- [`holo plugins:install PLUGIN...`](#holo-pluginsinstall-plugin-1)
+- [`holo plugins:link PLUGIN`](#holo-pluginslink-plugin)
+- [`holo plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin)
+- [`holo plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin-1)
+- [`holo plugins:uninstall PLUGIN...`](#holo-pluginsuninstall-plugin-2)
+- [`holo plugins:update`](#holo-pluginsupdate)
+- [`holo status`](#holo-status)
+- [`holo status:contract`](#holo-statuscontract)
+- [`holo status:nft`](#holo-statusnft)
 
-## `holograph bridge`
+## `holo bridge`
 
 Make a bridge request
 
 ```
 USAGE
-  $ holograph bridge
+  $ holo bridge
 
 DESCRIPTION
   Make a bridge request
@@ -71,130 +84,101 @@ DESCRIPTION
 EXAMPLES
   Learn how to bridge a Holographable contract
 
-    $ holograph bridge:contract --help
+    $ holo bridge:contract --help
 
   Learn how to bridge a Holographable NFT
 
-    $ holograph bridge:nft --help
+    $ holo bridge:nft --help
 ```
 
 _See code: [dist/commands/bridge/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/bridge/index.ts)_
 
-## `holograph bridge:contract`
+## `holo bridge:contract`
 
-Bridge a Holographable contract from source chain to destination chain
+Bridge a Holographable contract from source chain to destination chain. You need to have a deployment config JSON file. Use the "contract:create" command to create or extract one.
 
 ```
 USAGE
-  $ holograph bridge:contract [--sourceNetwork rinkeby|goerli|mumbai|fuji] [--destinationNetwork
-    rinkeby|goerli|mumbai|fuji] [--tx <value>] [--txNetwork rinkeby|goerli|mumbai|fuji] [--deploymentType <value>]
+  $ holo bridge:contract [--sourceNetwork <value>] [--destinationNetwork <value>] [--deploymentConfig <value>]
 
 FLAGS
-  --deploymentType=<value>       The type of deployment to use: [deployedTx, deploymentConfig]
-  --destinationNetwork=<option>  The name of destination network, where the bridge request is sent to
-                                 <options: rinkeby|goerli|mumbai|fuji>
-  --sourceNetwork=<option>       The name of source network, from which to make the bridge request
-                                 <options: rinkeby|goerli|mumbai|fuji>
-  --tx=<value>                   The hash of transaction that deployed the original collection
-  --txNetwork=<option>           The network on which the transaction was executed
-                                 <options: rinkeby|goerli|mumbai|fuji>
+  --deploymentConfig=<value>    The config file to use
+  --destinationNetwork=<value>  The network on which the contract will be deployed
+  --sourceNetwork=<value>       The network from which contract deploy request will be sent
 
 DESCRIPTION
-  Bridge a Holographable contract from source chain to destination chain
+  Bridge a Holographable contract from source chain to destination chain. You need to have a deployment config JSON
+  file. Use the "contract:create" command to create or extract one.
 
 EXAMPLES
-  Bridge a contract using bridge source and destination networks from the config
-
-    $ holograph bridge:contract --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"
-
-  Bridge a contract and manually set the source and destination networks
-
-    $ holograph bridge:contract --sourceNetwork fuji --destinationNetwork goerli \
-      --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1
+  $ holo bridge:contract --sourceNetwork="ethereumTestnetGoerli" --destinationNetwork="avalancheTestnet" --deploymentConfig="./MyContract.json"
 ```
 
 _See code: [dist/commands/bridge/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/bridge/contract.ts)_
 
-## `holograph bridge:nft`
+## `holo bridge:nft`
 
-Bridge a Holographable NFT from source chain to destination chain
+Beam a Holographable NFT from source chain to destination chain.
 
 ```
 USAGE
-  $ holograph bridge:nft [--sourceNetwork rinkeby|goerli|mumbai|fuji] [--destinationNetwork
-    rinkeby|goerli|mumbai|fuji] [--address <value>] [--tokenId <value>]
+  $ holo bridge:nft [--collectionAddress <value>] [--tokenId <value>] [--sourceNetwork <value>]
+    [--destinationNetwork <value>]
 
 FLAGS
-  --address=<value>              The address of the contract on the source chain
-  --destinationNetwork=<option>  The name of destination network, where the bridge request is sent to
-                                 <options: rinkeby|goerli|mumbai|fuji>
-  --sourceNetwork=<option>       The name of source network, from which to make the bridge request
-                                 <options: rinkeby|goerli|mumbai|fuji>
-  --tokenId=<value>              The ID of the NFT on the source chain (number or 32-byte hex string)
+  --collectionAddress=<value>   The address of the collection smart contract
+  --destinationNetwork=<value>  The destination network which to beam to
+  --sourceNetwork=<value>       The source network from which to beam
+  --tokenId=<value>             The token ID of the NFT to beam
 
 DESCRIPTION
-  Bridge a Holographable NFT from source chain to destination chain
+  Beam a Holographable NFT from source chain to destination chain.
 
 EXAMPLES
-  Bridge an NFT using bridge source and destination networks from the config
-
-    $ holograph bridge:nft --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1
-
-  Bridge an NFT and manually set the source and destination networks
-
-    $ holograph bridge:nft --sourceNetwork fuji --destinationNetwork goerli \
-      --address="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId=1
+  $ holo bridge:nft --sourceNetwork="ethereumTestnetGoerli" --destinationNetwork="avalancheTestnet" --collectionAddress="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId="0x01"
 ```
 
 _See code: [dist/commands/bridge/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/bridge/nft.ts)_
 
-## `holograph config`
+## `holo config`
 
 Initialize the Holograph CLI with a config file. If no flags are passed, the CLI will prompt you for the required information.
 
 ```
 USAGE
-  $ holograph config [--defaultFrom rinkeby|goerli|mumbai|fuji] [--defaultTo rinkeby|goerli|mumbai|fuji]
-    [--url <value> --network rinkeby|goerli|mumbai|fuji] [--privateKey <value>] [--fromFile <value>] [--fromJson
-    <value>]
+  $ holo config [--url <value> --network
+    ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|ethereumTestnetRinkeby] [--privateKey <value>] [--fromFile
+    <value>] [--fromJson <value>]
 
 FLAGS
-  --defaultFrom=<option>  Default network to bridge FROM (source network)
-                          <options: rinkeby|goerli|mumbai|fuji>
-  --defaultTo=<option>    Default network to bridge TO (destination network)
-                          <options: rinkeby|goerli|mumbai|fuji>
-  --fromFile=<value>      Path to the config file to load
-  --fromJson=<value>      JSON object to use as the config
-  --network=<option>      Network to set
-                          <options: rinkeby|goerli|mumbai|fuji>
-  --privateKey=<value>    Default account to use when sending all transactions
-  --url=<value>           Provider URL of network to set
+  --fromFile=<value>    Path to the config file to load
+  --fromJson=<value>    JSON object to use as the config
+  --network=<option>    Network to set
+                        <options: ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|ethereumTestnetRinkeby>
+  --privateKey=<value>  Default account to use when sending all transactions
+  --url=<value>         Provider URL of network to set
 
 DESCRIPTION
   Initialize the Holograph CLI with a config file. If no flags are passed, the CLI will prompt you for the required
   information.
 
 EXAMPLES
-  $ holograph config --defaultFrom goerli
+  $ holo config --privateKey abc...def
 
-  $ holograph config --defaultFrom goerli --defaultTo mumbai
+  $ holo config --fromFile ./config.json
 
-  $ holograph config --privateKey abc...def
-
-  $ holograph config --fromFile ./config.json
-
-  $ holograph config --fromJson '{"version": "beta1", ...}
+  $ holo config --fromJson '{"version": "beta3", ...}
 ```
 
 _See code: [dist/commands/config/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/config/index.ts)_
 
-## `holograph config:networks`
+## `holo config:networks`
 
 View the current network config
 
 ```
 USAGE
-  $ holograph config:networks [--output clean|json|yaml]
+  $ holo config:networks [--output clean|json|yaml]
 
 FLAGS
   --output=<option>  Output format
@@ -204,24 +188,24 @@ DESCRIPTION
   View the current network config
 
 EXAMPLES
-  $ holograph config:networks
+  $ holo config:networks
 
-  $ holograph config:networks --output json
+  $ holo config:networks --output json
 
-  $ holograph config:networks --output yaml
+  $ holo config:networks --output yaml
 
-  $ holograph config:networks --output clean
+  $ holo config:networks --output clean
 ```
 
 _See code: [dist/commands/config/networks.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/config/networks.ts)_
 
-## `holograph config:user`
+## `holo config:user`
 
 View the current user information
 
 ```
 USAGE
-  $ holograph config:user [--output clean|json|yaml]
+  $ holo config:user [--output clean|json|yaml]
 
 FLAGS
   --output=<option>  Output format
@@ -231,24 +215,24 @@ DESCRIPTION
   View the current user information
 
 EXAMPLES
-  $ holograph config:user
+  $ holo config:user
 
-  $ holograph config:user --output json
+  $ holo config:user --output json
 
-  $ holograph config:user --output yaml
+  $ holo config:user --output yaml
 
-  $ holograph config:user --output clean
+  $ holo config:user --output clean
 ```
 
 _See code: [dist/commands/config/user.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/config/user.ts)_
 
-## `holograph config:view`
+## `holo config:view`
 
 View the current configuration state of the Holograph command line
 
 ```
 USAGE
-  $ holograph config:view [--output clean|json|yaml]
+  $ holo config:view [--output clean|json|yaml]
 
 FLAGS
   --output=<option>  Output format
@@ -258,24 +242,72 @@ DESCRIPTION
   View the current configuration state of the Holograph command line
 
 EXAMPLES
-  $ holograph config:view
+  $ holo config:view
 
-  $ holograph config:view --output json
+  $ holo config:view --output json
 
-  $ holograph config:view --output yaml
+  $ holo config:view --output yaml
 
-  $ holograph config:view --output clean
+  $ holo config:view --output clean
 ```
 
 _See code: [dist/commands/config/view.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/config/view.ts)_
 
-## `holograph help [COMMAND]`
+## `holo create`
 
-Display help for holograph.
+Create holographable contracts and assets
 
 ```
 USAGE
-  $ holograph help [COMMAND] [-n]
+  $ holo create
+
+DESCRIPTION
+  Create holographable contracts and assets
+
+EXAMPLES
+  $ holograph create
+
+  $ holo create:contract
+
+  $ holo create:nft
+```
+
+_See code: [dist/commands/create/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/create/index.ts)_
+
+## `holo create:nft`
+
+Mint a Holographable NFT
+
+```
+USAGE
+  $ holo create:nft [--collectionAddress <value>] [--tokenId <value>] [--tokenUriType ipfs|https|arweave]
+    [--tokenUri <value>] [--network <value>]
+
+FLAGS
+  --collectionAddress=<value>  The address of the collection smart contract
+  --network=<value>            Name of network to use
+  --tokenId=<value>            [default: 0] The token id to mint. By default the token id is 0, which mints the next
+                               available token id
+  --tokenUri=<value>           The uri of the token, minus the prepend (ie "ipfs://")
+  --tokenUriType=<option>      The token URI type
+                               <options: ipfs|https|arweave>
+
+DESCRIPTION
+  Mint a Holographable NFT
+
+EXAMPLES
+  $ holo create:nft --network="ethereumTestnetGoerli" --collectionAddress="0xf90c33d5ef88a9d84d4d61f62c913ba192091fe7" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"
+```
+
+_See code: [dist/commands/create/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/create/nft.ts)_
+
+## `holo help [COMMAND]`
+
+Display help for holo.
+
+```
+USAGE
+  $ holo help [COMMAND] [-n]
 
 ARGUMENTS
   COMMAND  Command to show help for.
@@ -284,26 +316,25 @@ FLAGS
   -n, --nested-commands  Include all nested commands in the output.
 
 DESCRIPTION
-  Display help for holograph.
+  Display help for holo.
 ```
 
-_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.1.12/src/commands/help.ts)_
+_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.1.14/src/commands/help.ts)_
 
-## `holograph operator`
+## `holo operator`
 
 Listen for EVM events for jobs and process them
 
 ```
 USAGE
-  $ holograph operator [-m listen|manual|auto] [--healthCheck] [--sync] [--unsafePassword <value>] [--networks
-    rinkeby|goerli|mumbai|fuji]
+  $ holo operator [-m listen|manual|auto] [--healthCheck] [--sync] [--unsafePassword <value>] [--networks
+    <value>]
 
 FLAGS
   -m, --mode=<option>       The mode in which to run the operator
                             <options: listen|manual|auto>
   --healthCheck             Launch server on http://localhost:6000 to make sure command is still running
-  --networks=<option>...    Space separated list of networks to operate on
-                            <options: rinkeby|goerli|mumbai|fuji>
+  --networks=<value>...     Space separated list of networks to use
   --sync                    Start from last saved block position instead of latest block position
   --unsafePassword=<value>  Enter the plain text password for the wallet in the holograph cli config
 
@@ -311,40 +342,63 @@ DESCRIPTION
   Listen for EVM events for jobs and process them
 
 EXAMPLES
-  $ holograph operator --networks="goerli mumbai fuji" --mode=auto
+  $ holo operator --networks ethereumTestnetGoerli polygonTestnet avalancheTestnet --mode=auto
 ```
 
 _See code: [dist/commands/operator/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/operator/index.ts)_
 
-## `holograph operator:recover`
+## `holo operator:bond`
+
+Start an operator up into a pod
+
+```
+USAGE
+  $ holo operator:bond [-n <value>] [--pod <value>] [--amount <value>]
+
+FLAGS
+  -n, --network=<value>  The network to bond to
+  --amount=<value>       Amount of tokens to deposit
+  --pod=<value>          Pod number to join
+
+DESCRIPTION
+  Start an operator up into a pod
+
+EXAMPLES
+  $ holo operator:bond --network <string> --pod <number> --amount <number>
+```
+
+_See code: [dist/commands/operator/bond.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/operator/bond.ts)_
+
+## `holo operator:recover`
 
 Attempt to re-run/recover a particular Operator Job
 
 ```
 USAGE
-  $ holograph operator:recover [--network rinkeby|goerli|mumbai|fuji] [--tx <value>]
+  $ holo operator:recover [--network ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|ethereumTestnetRinkeby]
+    [--tx <value>]
 
 FLAGS
   --network=<option>  The network on which the transaction was executed
-                      <options: rinkeby|goerli|mumbai|fuji>
+                      <options: ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|ethereumTestnetRinkeby>
   --tx=<value>        The hash of transaction that we want to attempt to execute
 
 DESCRIPTION
   Attempt to re-run/recover a particular Operator Job
 
 EXAMPLES
-  $ holograph operator:recover--network="goerli" --tx="0x..."
+  $ holo operator:recover --network="ethereumTestnetGoerli" --tx="0x..."
 ```
 
 _See code: [dist/commands/operator/recover.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/operator/recover.ts)_
 
-## `holograph plugins`
+## `holo plugins`
 
 List installed plugins.
 
 ```
 USAGE
-  $ holograph plugins [--core]
+  $ holo plugins [--core]
 
 FLAGS
   --core  Show core plugins.
@@ -353,18 +407,261 @@ DESCRIPTION
   List installed plugins.
 
 EXAMPLES
-  $ holograph plugins
+  $ holo plugins
+```
+
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.1/src/commands/plugins/index.ts)_
+
+## `holo plugins:install PLUGIN...`
+
+Installs a plugin into the CLI.
+
+```
+USAGE
+  $ holo plugins:install PLUGIN...
+
+ARGUMENTS
+  PLUGIN  Plugin to install.
+
+FLAGS
+  -f, --force    Run yarn install with force flag.
+  -h, --help     Show CLI help.
+  -v, --verbose
+
+DESCRIPTION
+  Installs a plugin into the CLI.
+
+  Can be installed from npm or a git url.
+
+  Installation of a user-installed plugin will override a core plugin.
+
+  e.g. If you have a core plugin that has a 'hello' command, installing a user-installed plugin with a 'hello' command
+  will override the core plugin implementation. This is useful if a user needs to update core plugin functionality in
+  the CLI without the need to patch and update the whole CLI.
+
+ALIASES
+  $ holo plugins:add
+
+EXAMPLES
+  $ holo plugins:install myplugin
+
+  $ holo plugins:install https://github.com/someuser/someplugin
+
+  $ holo plugins:install someuser/someplugin
+```
+
+## `holo plugins:inspect PLUGIN...`
+
+Displays installation properties of a plugin.
+
+```
+USAGE
+  $ holo plugins:inspect PLUGIN...
+
+ARGUMENTS
+  PLUGIN  [default: .] Plugin to inspect.
+
+FLAGS
+  -h, --help     Show CLI help.
+  -v, --verbose
+
+DESCRIPTION
+  Displays installation properties of a plugin.
+
+EXAMPLES
+  $ holo plugins:inspect myplugin
+```
+
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.1/src/commands/plugins/inspect.ts)_
+
+## `holo plugins:install PLUGIN...`
+
+Installs a plugin into the CLI.
+
+```
+USAGE
+  $ holo plugins:install PLUGIN...
+
+ARGUMENTS
+  PLUGIN  Plugin to install.
+
+FLAGS
+  -f, --force    Run yarn install with force flag.
+  -h, --help     Show CLI help.
+  -v, --verbose
+
+DESCRIPTION
+  Installs a plugin into the CLI.
+
+  Can be installed from npm or a git url.
+
+  Installation of a user-installed plugin will override a core plugin.
+
+  e.g. If you have a core plugin that has a 'hello' command, installing a user-installed plugin with a 'hello' command
+  will override the core plugin implementation. This is useful if a user needs to update core plugin functionality in
+  the CLI without the need to patch and update the whole CLI.
+
+ALIASES
+  $ holo plugins:add
+
+EXAMPLES
+  $ holo plugins:install myplugin
+
+  $ holo plugins:install https://github.com/someuser/someplugin
+
+  $ holo plugins:install someuser/someplugin
+```
+
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.1/src/commands/plugins/install.ts)_
+
+## `holo plugins:link PLUGIN`
+
+Links a plugin into the CLI for development.
+
+```
+USAGE
+  $ holo plugins:link PLUGIN
+
+ARGUMENTS
+  PATH  [default: .] path to plugin
+
+FLAGS
+  -h, --help     Show CLI help.
+  -v, --verbose
+
+DESCRIPTION
+  Links a plugin into the CLI for development.
+
+  Installation of a linked plugin will override a user-installed or core plugin.
+
+  e.g. If you have a user-installed or core plugin that has a 'hello' command, installing a linked plugin with a 'hello'
+  command will override the user-installed or core plugin implementation. This is useful for development work.
+
+EXAMPLES
+  $ holo plugins:link myplugin
+```
+
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.1/src/commands/plugins/link.ts)_
+
+## `holo plugins:uninstall PLUGIN...`
+
+Removes a plugin from the CLI.
+
+```
+USAGE
+  $ holo plugins:uninstall PLUGIN...
+
+ARGUMENTS
+  PLUGIN  plugin to uninstall
+
+FLAGS
+  -h, --help     Show CLI help.
+  -v, --verbose
+
+DESCRIPTION
+  Removes a plugin from the CLI.
+
+ALIASES
+  $ holo plugins:unlink
+  $ holo plugins:remove
+```
+
+## `holo plugins:uninstall PLUGIN...`
+
+Removes a plugin from the CLI.
+
+```
+USAGE
+  $ holo plugins:uninstall PLUGIN...
+
+ARGUMENTS
+  PLUGIN  plugin to uninstall
+
+FLAGS
+  -h, --help     Show CLI help.
+  -v, --verbose
+
+DESCRIPTION
+  Removes a plugin from the CLI.
+
+ALIASES
+  $ holo plugins:unlink
+  $ holo plugins:remove
+```
+
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.1/src/commands/plugins/uninstall.ts)_
+
+## `holo plugins:uninstall PLUGIN...`
+
+Removes a plugin from the CLI.
+
+```
+USAGE
+  $ holo plugins:uninstall PLUGIN...
+
+ARGUMENTS
+  PLUGIN  plugin to uninstall
+
+FLAGS
+  -h, --help     Show CLI help.
+  -v, --verbose
+
+DESCRIPTION
+  Removes a plugin from the CLI.
+
+ALIASES
+  $ holo plugins:unlink
+  $ holo plugins:remove
+```
+
+## `holo plugins:update`
+
+Update installed plugins.
+
+```
+USAGE
+  $ holo plugins:update [-h] [-v]
+
+FLAGS
+  -h, --help     Show CLI help.
+  -v, --verbose
+
+DESCRIPTION
+  Update installed plugins.
+```
+
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.1/src/commands/plugins/update.ts)_
+
+## `holo status`
+
+Get the status of a contract or NFT
+
+```
+USAGE
+  $ holo status
+
+DESCRIPTION
+  Get the status of a contract or NFT
+
+EXAMPLES
+  Learn how to get the status of a contract
+
+    $ holo status:contract --help
+
+  Learn how to get the status of an NFT
+
+    $ holo status:nft --help
 ```
 
 _See code: [dist/commands/status/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/status/index.ts)_
 
-## `holograph status:contract`
+## `holo status:contract`
 
 Check the status of a contract across all networks defined in the config
 
 ```
 USAGE
-  $ holograph status:contract [--address <value>] [--output csv|json|yaml|]
+  $ holo status:contract [--address <value>] [--output csv|json|yaml|]
 
 FLAGS
   --address=<value>  The address of contract to check status of
@@ -375,18 +672,18 @@ DESCRIPTION
   Check the status of a contract across all networks defined in the config
 
 EXAMPLES
-  $ holograph status:contract --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78"
+  $ holo status:contract --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78"
 ```
 
 _See code: [dist/commands/status/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/status/contract.ts)_
 
-## `holograph status:nft`
+## `holo status:nft`
 
 Check the status of an nft across all networks defined in the config
 
 ```
 USAGE
-  $ holograph status:nft [--address <value>] [--id <value>] [--output csv|json|yaml|]
+  $ holo status:nft [--address <value>] [--id <value>] [--output csv|json|yaml|]
 
 FLAGS
   --address=<value>  The address of contract to check status of
@@ -398,7 +695,7 @@ DESCRIPTION
   Check the status of an nft across all networks defined in the config
 
 EXAMPLES
-  $ holograph status:nft --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78" --id=1
+  $ holo status:nft --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78" --id=1
 ```
 
 _See code: [dist/commands/status/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.1/dist/commands/status/nft.ts)_
