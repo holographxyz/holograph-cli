@@ -1,7 +1,8 @@
 import {CliUx, Command, Flags} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
-import {ethers, BytesLike, BigNumber} from 'ethers'
+import {BytesLike, BigNumber} from 'ethers'
+import {formatUnits} from '@ethersproject/units'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {web3, zeroAddress, generateInitCode} from '../../utils/utils'
@@ -124,7 +125,6 @@ export default class BridgeContract extends Command {
     )
 
     const TESTGASLIMIT: BigNumber = BigNumber.from('10000000')
-    const GASPRICE: BigNumber = await this.networkMonitor.providers[destinationNetwork].getGasPrice()
 
     let payload: BytesLike = await this.networkMonitor.bridgeContract
       .connect(this.networkMonitor.providers[sourceNetwork])
@@ -151,23 +151,22 @@ export default class BridgeContract extends Command {
         this.networkMonitor.factoryAddress,
         estimatedGas,
         // allow LZ module to set gas price
-        // '0x' + '00'.repeat(32),
-        GASPRICE,
+        '0x' + '00'.repeat(32),
         data as string,
       )
 
     const fees: BigNumber[] = await this.networkMonitor.bridgeContract
       .connect(this.networkMonitor.providers[sourceNetwork])
-      .callStatic.getMessageFee(networks[destinationNetwork].holographId, estimatedGas, /* 0 */ GASPRICE, payload)
+      .callStatic.getMessageFee(networks[destinationNetwork].holographId, estimatedGas, '0x' + '00'.repeat(32), payload)
     const total: BigNumber = fees[0].add(fees[1])
     estimatedGas = TESTGASLIMIT.sub(
       await this.networkMonitor.operatorContract
         .connect(this.networkMonitor.providers[destinationNetwork])
         .callStatic.jobEstimator(payload as string, {value: total, gasLimit: TESTGASLIMIT}),
     )
-    // this.log('gas price', ethers.utils.formatUnits(fees[2], 'gwei'), 'GWEI')
-    this.log('hlg fee', ethers.utils.formatUnits(fees[0], 'ether'), 'ether')
-    this.log('lz fee', ethers.utils.formatUnits(fees[1], 'ether'), 'ether')
+    this.log('hlg fee', formatUnits(fees[0], 'ether'), 'ether')
+    this.log('lz fee', formatUnits(fees[1], 'ether'), 'ether')
+    this.log('lz gasPrice', formatUnits(fees[2], 'gwei'), 'GWEI')
     this.log('estimated gas usage', estimatedGas.toNumber())
 
     const blockchainPrompt: any = await inquirer.prompt([
@@ -192,12 +191,11 @@ export default class BridgeContract extends Command {
         networks[destinationNetwork].holographId,
         this.networkMonitor.factoryAddress,
         estimatedGas,
-        GASPRICE,
+        BigNumber.from(fees[2]),
         data as string,
       ],
       waitForReceipt: true,
-      value: total.mul(BigNumber.from('2')),
-      gasPrice: GASPRICE.mul(BigNumber.from('2')),
+      value: total,
     })
     CliUx.ux.action.stop()
 

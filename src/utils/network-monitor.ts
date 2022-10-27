@@ -1803,7 +1803,7 @@ export class NetworkMonitor {
       let sent = false
       let sendTxInterval: NodeJS.Timeout | null = null
       const handleError = (error: any) => {
-        // process.stdout.write('sendTransaction' + JSON.stringify(error,undefined,2))
+        process.stdout.write('sendTransaction' + JSON.stringify(error, undefined, 2))
         counter++
         if (canFail && counter > attempts) {
           this.structuredLogError(network, error, tags)
@@ -1928,7 +1928,7 @@ export class NetworkMonitor {
       let sent = false
       let populateTxInterval: NodeJS.Timeout | null = null
       const handleError = (error: any) => {
-        // process.stdout.write('populateTransaction' + JSON.stringify(error,undefined,2))
+        process.stdout.write('populateTransaction' + JSON.stringify(error, undefined, 2))
         counter++
         if (canFail && counter > attempts) {
           this.structuredLogError(network, error, tags)
@@ -1998,7 +1998,7 @@ export class NetworkMonitor {
     return new Promise<TransactionReceipt | null>(async (topResolve, _topReject) => {
       contract = contract.connect(this.wallets[network])
       if (gasPrice === undefined) {
-        gasPrice = await this.gasPrices[network].gasPrice!
+        gasPrice = this.gasPrices[network].gasPrice!
       }
 
       if (gasLimit === undefined) {

@@ -7,6 +7,7 @@ import {TransactionDescription} from '@ethersproject/abi'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {sha3} from '../../utils/utils'
+import {checkOptionFlag, checkTransactionHashFlag} from '../../utils/validation'
 import {networks, supportedNetworks, supportedShortNetworks} from '@holographxyz/networks'
 
 export default class Recover extends Command {
@@ -29,8 +30,25 @@ export default class Recover extends Command {
    */
   async run(): Promise<void> {
     this.log('Loading user configurations...')
-    const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
+    const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
+      this.config.configDir,
+      undefined,
+      true,
+    )
     this.log('User configurations loaded.')
+
+    const {flags} = await this.parse(Recover)
+
+    const network: string = await checkOptionFlag(
+      supportedNetworksOptions,
+      flags.network,
+      'Select the network to extract transaction details from',
+    )
+
+    const tx: string = await checkTransactionHashFlag(
+      flags.tx,
+      'Enter the hash of transaction from which to extract recovery data from',
+    )
 
     this.networkMonitor = new NetworkMonitor({
       parent: this,
@@ -38,38 +56,8 @@ export default class Recover extends Command {
       debug: this.debug,
       processTransactions: undefined, // Recover doesn't process transactions
       userWallet,
+      verbose: true,
     })
-
-    const {flags} = await this.parse(Recover)
-
-    let tx: string = flags.tx || ''
-    let network: string = flags.network || ''
-
-    if (tx === '' || !/^0x[\da-f]{64}$/i.test(tx)) {
-      const txPrompt: any = await inquirer.prompt([
-        {
-          name: 'tx',
-          message: 'Enter the hash of transaction that deployed the contract',
-          type: 'input',
-          validate: async (input: string) => {
-            return /^0x[\da-f]{64}$/i.test(input) ? true : 'Input is not a valid transaction hash'
-          },
-        },
-      ])
-      tx = txPrompt.tx
-    }
-
-    if (network === '' || !this.networkMonitor.networks.includes(network)) {
-      const txNetworkPrompt: any = await inquirer.prompt([
-        {
-          name: 'network',
-          message: 'select the network to extract transaction details from',
-          type: 'list',
-          choices: this.networkMonitor.networks,
-        },
-      ])
-      network = txNetworkPrompt.network
-    }
 
     CliUx.ux.action.start('Loading network RPC providers')
     await this.networkMonitor.run(true)

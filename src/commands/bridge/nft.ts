@@ -1,7 +1,10 @@
 import {CliUx, Command, Flags} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
-import {ethers, BytesLike, BigNumber} from 'ethers'
+import {formatUnits} from '@ethersproject/units'
+import {Contract} from '@ethersproject/contracts'
+import {WebSocketProvider, JsonRpcProvider} from '@ethersproject/providers'
+import {BytesLike, BigNumber} from 'ethers'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {NetworkMonitor} from '../../utils/network-monitor'
@@ -53,7 +56,7 @@ export default class BridgeNFT extends Command {
 
   async checkIfContractExists(
     network: string,
-    provider: ethers.providers.Provider,
+    provider: WebSocketProvider | JsonRpcProvider,
     contractAddress: string,
     throwError = true,
   ): Promise<boolean> {
@@ -158,11 +161,7 @@ export default class BridgeNFT extends Command {
 
     CliUx.ux.action.start('Retrieving collection smart contract')
     const collectionABI = await fs.readJson(`./src/abi/${environment}/HolographERC721.json`)
-    const collection = new ethers.Contract(
-      collectionAddress,
-      collectionABI,
-      this.networkMonitor.providers[sourceNetwork],
-    )
+    const collection = new Contract(collectionAddress, collectionABI, this.networkMonitor.providers[sourceNetwork])
     CliUx.ux.action.stop()
 
     this.log(`tokenId is ${tokenId}`)
@@ -180,7 +179,6 @@ export default class BridgeNFT extends Command {
     )
 
     const TESTGASLIMIT: BigNumber = BigNumber.from('10000000')
-    const GASPRICE: BigNumber = await this.networkMonitor.providers[destinationNetwork].getGasPrice()
 
     let payload: BytesLike = await this.networkMonitor.bridgeContract
       .connect(this.networkMonitor.providers[sourceNetwork])
@@ -207,23 +205,22 @@ export default class BridgeNFT extends Command {
         collectionAddress,
         estimatedGas,
         // allow LZ module to set gas price
-        // '0x' + '00'.repeat(32),
-        GASPRICE,
+        '0x' + '00'.repeat(32),
         data as string,
       )
 
     const fees: BigNumber[] = await this.networkMonitor.bridgeContract
       .connect(this.networkMonitor.providers[sourceNetwork])
-      .callStatic.getMessageFee(networks[destinationNetwork].holographId, estimatedGas, /* 0 */ GASPRICE, payload)
+      .callStatic.getMessageFee(networks[destinationNetwork].holographId, estimatedGas, '0x' + '00'.repeat(32), payload)
     const total: BigNumber = fees[0].add(fees[1])
     estimatedGas = TESTGASLIMIT.sub(
       await this.networkMonitor.operatorContract
         .connect(this.networkMonitor.providers[destinationNetwork])
         .callStatic.jobEstimator(payload as string, {value: total, gasLimit: TESTGASLIMIT}),
     )
-    // this.log('gas price', ethers.utils.formatUnits(fees[2], 'gwei'), 'GWEI')
-    this.log('hlg fee', ethers.utils.formatUnits(fees[0], 'ether'), 'ether')
-    this.log('lz fee', ethers.utils.formatUnits(fees[1], 'ether'), 'ether')
+    this.log('hlg fee', formatUnits(fees[0], 'ether'), 'ether')
+    this.log('lz fee', formatUnits(fees[1], 'ether'), 'ether')
+    this.log('lz gasPrice', formatUnits(fees[2], 'gwei'), 'GWEI')
     this.log('estimated gas usage', estimatedGas.toNumber())
 
     const blockchainPrompt: any = await inquirer.prompt([
@@ -244,9 +241,15 @@ export default class BridgeNFT extends Command {
       network: sourceNetwork,
       contract: this.networkMonitor.bridgeContract.connect(this.networkMonitor.providers[destinationNetwork]),
       methodName: 'bridgeOutRequest',
-      args: [networks[destinationNetwork].holographId, collectionAddress, estimatedGas, GASPRICE, data as string],
+      args: [
+        networks[destinationNetwork].holographId,
+        collectionAddress,
+        estimatedGas,
+        BigNumber.from(fees[2]),
+        data as string,
+      ],
       waitForReceipt: true,
-      value: total.mul(BigNumber.from('2')),
+      value: total,
     })
     CliUx.ux.action.stop()
 
