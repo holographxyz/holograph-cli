@@ -1,6 +1,7 @@
 import {BigNumber} from '@ethersproject/bignumber'
 import {Block, BlockWithTransactions} from '@ethersproject/abstract-provider'
 import {WebSocketProvider, JsonRpcProvider} from '@ethersproject/providers'
+import {NetworkKeys, networks} from '@holographxyz/networks'
 
 export type GasPricing = {
   isEip1559: boolean
@@ -49,8 +50,14 @@ export function calculateNextBlockFee(parent: Block | BlockWithTransactions): Bi
   return baseFeePerGas.sub(baseFeeDelta)
 }
 
+// This function is here to accomodate instances where a network has a minimum BaseBlockFee
 export function adjustBaseBlockFee(network: string, baseBlockFee: BigNumber): BigNumber {
-  if ((network === 'avalancheTestnet' || network === 'avalanche') && baseBlockFee.lt(BigNumber.from('25000000000'))) {
+  // Avalanche has a minimum BaseBlockFee of 25 GWEI
+  // https://docs.avax.network/quickstart/transaction-fees#base-fee
+  if (
+    (network === networks['avalanche' as NetworkKeys].key || networks['avalancheTestnet' as NetworkKeys].key) &&
+    baseBlockFee.lt(BigNumber.from('25000000000'))
+  ) {
     return BigNumber.from('25000000000')
   }
 

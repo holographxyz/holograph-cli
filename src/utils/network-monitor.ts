@@ -392,11 +392,6 @@ export class NetworkMonitor {
     return output
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async fakeProcessor(job: BlockJob, transactions: TransactionResponse[]): Promise<void> {
-    Promise.resolve()
-  }
-
   constructor(options: NetworkMonitorOptions) {
     this.environment = getEnvironment()
     this.parent = options.parent
@@ -413,10 +408,10 @@ export class NetworkMonitor {
       this.verbose = options.verbose
     }
 
-    this.processTransactions =
-      options.processTransactions === undefined
-        ? this.fakeProcessor.bind(this)
-        : options.processTransactions.bind(this.parent)
+    if (options.processTransactions !== undefined) {
+      this.processTransactions = options.processTransactions.bind(this.parent)
+    }
+
     if (options.userWallet !== undefined) {
       this.userWallet = options.userWallet
     }
@@ -1010,7 +1005,10 @@ export class NetworkMonitor {
           this.structuredLog(job.network, `Found ${interestingTransactions.length} interesting transactions`, job.block)
         }
 
-        await this.processTransactions?.bind(this.parent)(job, interestingTransactions)
+        if (this.processTransactions !== undefined) {
+          await this.processTransactions?.bind(this.parent)(job, interestingTransactions)
+        }
+
         this.blockJobHandler(job.network, job)
       } else {
         this.blockJobHandler(job.network, job)
