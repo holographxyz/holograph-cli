@@ -619,7 +619,7 @@ export class NetworkMonitor {
       }
     }
 
-    const holographABI = await fs.readJson(`./src/abi/${this.environment}/Holograph.json`)
+    const holographABI = await fs.readJson(path.join(__dirname, `../abi/${this.environment}/Holograph.json`))
     this.holograph = new Contract(
       this.HOLOGRAPH_ADDRESSES[this.environment],
       holographABI,
