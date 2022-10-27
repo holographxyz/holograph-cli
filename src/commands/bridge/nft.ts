@@ -14,7 +14,7 @@ import {
   checkTokenIdFlag,
 } from '../../utils/validation'
 import {generateInitCode} from '../../utils/utils'
-import {networks} from '@holographxyz/networks'
+import {networks, supportedShortNetworks} from '@holographxyz/networks'
 
 export default class BridgeNFT extends Command {
   static description = 'Beam a Holographable NFT from source chain to destination chain.'
@@ -38,12 +38,14 @@ export default class BridgeNFT extends Command {
     sourceNetwork: Flags.string({
       description: 'The source network from which to beam',
       parse: validateNetwork,
+      options: supportedShortNetworks,
       multiple: false,
       required: false,
     }),
     destinationNetwork: Flags.string({
       description: 'The destination network which to beam to',
       parse: validateNetwork,
+      options: supportedShortNetworks,
       multiple: false,
       required: false,
     }),
@@ -107,10 +109,11 @@ export default class BridgeNFT extends Command {
       networks: [sourceNetwork, destinationNetwork],
       debug: this.debug,
       userWallet,
+      verbose: false,
     })
 
     CliUx.ux.action.start('Loading network RPC providers')
-    await this.networkMonitor.initializeEthers()
+    await this.networkMonitor.run(true)
     CliUx.ux.action.stop()
 
     // Check if the contract is deployed on the source chain and not on the destination chain
