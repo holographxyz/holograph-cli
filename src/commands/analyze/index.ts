@@ -15,6 +15,7 @@ import {
 import {toAscii, sha3, storageSlot} from '../../utils/utils'
 
 import {FilterType, BlockJob, NetworkMonitor, TransactionType} from '../../utils/network-monitor'
+import ApiService from '../../services/api-service'
 
 enum LogType {
   ContractDeployment = 'ContractDeployment',
@@ -68,6 +69,9 @@ export default class Analyze extends Command {
       default: `./${getEnvironment()}.analyzeResults.json`,
       multiple: false,
     }),
+    updateApiOn: Flags.string({
+      description: 'Update DB cross-chain table with correct beam status',
+    }),
   }
 
   environment!: Environment
@@ -77,16 +81,30 @@ export default class Analyze extends Command {
   operatorJobCounterMap: {[key: string]: number} = {}
   transactionLogs: (ContractDeployment | AvailableJob)[] = []
   networkMonitor!: NetworkMonitor
+  apiService!: ApiService | null
 
   /**
    * Command Entry Point
    */
   async run(): Promise<void> {
     const {flags} = await this.parse(Analyze)
+    const updateApiOn = flags.updateApiOn as string
+
     this.log('Loading user configurations...')
     const {environment, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
     this.log('User configurations loaded.')
+
     this.environment = environment
+
+    if (updateApiOn) {
+      try {
+        this.apiService = new ApiService(updateApiOn)
+        await this.apiService.operatorLogin()
+      } catch (error: any) {
+        this.error(error)
+      }
+    }
+
     const {networks, scopeJobs} = this.scopeItOut(flags.scope as string[])
     this.log(`${JSON.stringify(scopeJobs, undefined, 2)}`)
 
@@ -131,31 +149,35 @@ export default class Analyze extends Command {
 
     const blockJobs: {[key: string]: BlockJob[]} = {}
 
-    // Setup websocket subscriptions and start processing blocks
-    for (let i = 0, l = networks.length; i < l; i++) {
-      const network: string = networks[i]
-      blockJobs[network] = []
-      for (const scopeJob of scopeJobs) {
-        if (scopeJob.network === network) {
-          let endBlock: number = scopeJob.endBlock
-          // Allow syncing up to current block height if endBlock is set to 0
-          if (endBlock === 0) {
-            /* eslint-disable no-await-in-loop */
-            endBlock = await this.networkMonitor.providers[network].getBlockNumber()
-          }
+    const injectBlocks = async (): Promise<void> => {
+      // Setup websocket subscriptions and start processing blocks
+      for (let i = 0, l = networks.length; i < l; i++) {
+        const network: string = networks[i]
+        blockJobs[network] = []
+        for (const scopeJob of scopeJobs) {
+          if (scopeJob.network === network) {
+            let endBlock: number = scopeJob.endBlock
+            // Allow syncing up to current block height if endBlock is set to 0
+            if (endBlock === 0) {
+              /* eslint-disable no-await-in-loop */
+              endBlock = await this.networkMonitor.providers[network].getBlockNumber()
+            }
 
-          for (let n = scopeJob.startBlock, nl = endBlock; n <= nl; n++) {
-            blockJobs[network].push({
-              network: network,
-              block: n,
-            } as BlockJob)
+            for (let n = scopeJob.startBlock, nl = endBlock; n <= nl; n++) {
+              blockJobs[network].push({
+                network: network,
+                block: n,
+              } as BlockJob)
+            }
           }
         }
       }
+
+      await this.filterBuilder()
     }
 
     this.networkMonitor.exitCallback = this.exitCallback.bind(this)
-    await this.networkMonitor.run(false, blockJobs, this.filterBuilder)
+    await this.networkMonitor.run(false, blockJobs, injectBlocks.bind(this))
   }
 
   /**
@@ -213,7 +235,6 @@ export default class Analyze extends Command {
         this.log(`${scopeString} is an invalid Scope JSON object`)
       }
     }
-
     return {networks, scopeJobs}
   }
 
@@ -244,6 +265,11 @@ export default class Analyze extends Command {
     ]
     return Promise.resolve()
   }
+
+  /**
+   * Update tx status on DB
+   */
+  async updateDB() {}
 
   /**
    * Process the transactions in each block job
@@ -373,6 +399,7 @@ export default class Analyze extends Command {
 
         this.networkMonitor.structuredLog(network, `Found a valid bridgeOutRequest for ${transaction.hash}`, tags)
         this.manageOperatorJobMaps(index, operatorJobHash, beam)
+        // check tx on db
       }
     }
   }
