@@ -666,7 +666,7 @@
 
 "@holographxyz/environment@0.1.10":
   version "0.1.10"
-  resolved "https://registry.yarnpkg.com/@holographxyz/environment/-/environment-0.1.10.tgz#273d79c1f6461c1848625624b960e0860a888e9b"
+  resolved "https://registry.npmjs.org/@holographxyz/environment/-/environment-0.1.10.tgz"
   integrity sha512-NTT0eWmQRTTSTzuuYUE16T+AWI7FYNwGYOhzusnCZO4v0hiKIWEgR9upaUzYBIsn4RHjq0Zucw49LJW6ZSZIwA==
   dependencies:
     dotenv "^10.0.0"
@@ -674,7 +674,7 @@
 
 "@holographxyz/networks@0.1.10":
   version "0.1.10"
-  resolved "https://registry.yarnpkg.com/@holographxyz/networks/-/networks-0.1.10.tgz#9ace657a979f1753c6a40cdebcf604a01189cee5"
+  resolved "https://registry.npmjs.org/@holographxyz/networks/-/networks-0.1.10.tgz"
   integrity sha512-UsmqIgquiiKJ7GdYp1kWAxXfa4D87dwAM2LtQh/spwxAcwKLj4PP1TrE5yqZeEWSS/9+J3g9+TV1yHHOIy31GA==
   dependencies:
     "@ethersproject/bignumber" "^5.7.0"
