@@ -13,6 +13,8 @@ export function capitalize(input: string): string {
 // eslint-disable-next-line no-promise-executor-return
 export const sleep = (ms: number): Promise<unknown> => new Promise(resolve => setTimeout(resolve, ms))
 
+export const getSecondsLeft = (timestamp: number) => Math.round(timestamp - Date.now() / 1000)
+
 export const webSocketConfig = {
   reconnect: {
     auto: false,
