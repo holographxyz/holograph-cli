@@ -1,7 +1,6 @@
 import {IncomingMessage, ServerResponse} from 'node:http'
 import http from 'node:http'
 import {Flags} from '@oclif/core'
-import {NetworkMonitor} from './network-monitor'
 
 export const healthcheckFlag = {
   healthCheck: Flags.boolean({
@@ -10,7 +9,7 @@ export const healthcheckFlag = {
   }),
 }
 
-export function startHealthcheckServer(networkMonitor: NetworkMonitor): void {
+export function startHealthcheckServer({networkMonitor}: any): void {
   const host = '0.0.0.0'
   const port = 6000
 

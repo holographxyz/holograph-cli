@@ -19,7 +19,6 @@ import {
 import {GasPricing} from '../../utils/gas'
 import {generateInitCode} from '../../utils/utils'
 import {networks, supportedShortNetworks} from '@holographxyz/networks'
-import path from 'node:path'
 
 export default class BridgeNFT extends Command {
   static description = 'Beam a Holographable NFT from source chain to destination chain.'
@@ -162,7 +161,7 @@ export default class BridgeNFT extends Command {
     }
 
     CliUx.ux.action.start('Retrieving collection smart contract')
-    const collectionABI = await fs.readJson(path.join(__dirname, `../../abi/${environment}/HolographERC721.json`))
+    const collectionABI = await fs.readJson(`./src/abi/${environment}/HolographERC721.json`)
     const collection = new Contract(collectionAddress, collectionABI, this.networkMonitor.providers[sourceNetwork])
     CliUx.ux.action.stop()
 
