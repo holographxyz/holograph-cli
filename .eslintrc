@@ -4,7 +4,11 @@
     "node": true
   },
   "rules": {
+    // TODO: This can be removed if we update module in tsconfig.json to es2018 or above instead of commonjs
+    // https://github.com/sindresorhus/eslint-plugin-unicorn/blob/main/docs/rules/prefer-module.md
     "unicorn/prefer-module": "off",
+
+    // TODO: This can be removed if we decide to add jsdoc to all functions
     "valid-jsdoc": "off"
   }
 }
