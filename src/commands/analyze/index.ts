@@ -405,8 +405,8 @@ export default class Analyze extends Command {
         receipt,
         this.networkMonitor.operatorAddress,
       )
-      const operatorJobHash: string | undefined = args === undefined ? undefined : sha3(args[0])
-      const operatorJobPayload: string | undefined = args === undefined ? undefined : sha3(args[1])
+      const operatorJobHash: string | undefined = args === undefined ? undefined : args[0]
+      const operatorJobPayload: string | undefined = args === undefined ? undefined : args[1]
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(
           network,
@@ -460,7 +460,7 @@ export default class Analyze extends Command {
         this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
       if (parsedTransaction.name === 'executeJob') {
         const args: any[] | undefined = Object.values(parsedTransaction.args)
-        const operatorJobPayload: string | undefined = args === undefined ? undefined : sha3(args[0])
+        const operatorJobPayload: string | undefined = args === undefined ? undefined : args[0]
         const operatorJobHash: string | undefined =
           operatorJobPayload === undefined ? undefined : sha3(operatorJobPayload)
         if (operatorJobHash === undefined) {
@@ -476,7 +476,7 @@ export default class Analyze extends Command {
           beam.completed = true
 
           const bridgeTransaction: TransactionDescription | null =
-            this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
+            this.networkMonitor.bridgeContract.interface.parseTransaction({data: operatorJobPayload!})
           if (parsedTransaction === null) {
             beam.jobType = TransactionType.unknown
           } else {

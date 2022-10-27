@@ -94,10 +94,11 @@ export default class NFT extends Command {
       networks: [network],
       debug: this.debug,
       userWallet,
+      verbose: false,
     })
 
     CliUx.ux.action.start('Loading network RPC providers')
-    await this.networkMonitor.initializeEthers()
+    await this.networkMonitor.run(true)
     CliUx.ux.action.stop()
 
     CliUx.ux.action.start('Checking that contract is already deployed and holographable on "' + network + '" network')

@@ -1,7 +1,9 @@
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
 
-import {BigNumber, Contract, PopulatedTransaction, Wallet} from 'ethers'
+import {PopulatedTransaction, Wallet} from 'ethers'
+import {Contract} from '@ethersproject/contracts'
+import {BigNumber} from '@ethersproject/bignumber'
 import {formatUnits} from '@ethersproject/units'
 import {keccak256} from '@ethersproject/keccak256'
 import {Interface, EventFragment, defaultAbiCoder} from '@ethersproject/abi'
@@ -16,7 +18,7 @@ import {
 import {Command, Flags} from '@oclif/core'
 
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
-
+import {GasPricing, initializeGasPricing, updateGasPricing} from './gas'
 import {capitalize, NETWORK_COLORS, zeroAddress} from './utils'
 import color from '@oclif/color'
 
@@ -35,12 +37,19 @@ export const warpFlag = {
 export const networksFlag = {
   networks: Flags.string({
     description: 'Space separated list of networks to use',
+    options: supportedShortNetworks,
+    required: false,
     multiple: true,
   }),
 }
 
 export const networkFlag = {
-  network: Flags.string({description: 'Name of network to use', multiple: false}),
+  network: Flags.string({
+    description: 'Name of network to use',
+    options: supportedShortNetworks,
+    multiple: false,
+    required: false,
+  }),
 }
 
 export enum OperatorMode {
@@ -82,6 +91,11 @@ export type TransactionFilter = {
 }
 
 const TIMEOUT_THRESHOLD = 20_000
+
+const ZERO = BigNumber.from('0')
+// const ONE = BigNumber.from('1')
+const TWO = BigNumber.from('2')
+// const TEN = BigNumber.from('10')
 
 const webSocketErrorCodes: {[key: string]: string} = {
   '1000': 'Normal Closure',
@@ -270,9 +284,11 @@ type NetworkMonitorOptions = {
   userWallet?: Wallet
   lastBlockFilename?: string
   warp?: number
+  verbose?: boolean
 }
 
 export class NetworkMonitor {
+  verbose = true
   environment: Environment
   parent: ImplementsCommand
   configFile: ConfigFile
@@ -302,6 +318,7 @@ export class NetworkMonitor {
   exited = false
   lastBlockJobDone: {[key: string]: number} = {}
   blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
+  gasPrices: {[key: string]: GasPricing} = {}
   holograph!: Contract
   holographer!: Contract
   bridgeContract!: Contract
@@ -382,11 +399,6 @@ export class NetworkMonitor {
     return output
   }
 
-  async fakeProcessor(job: BlockJob, transactions: TransactionResponse[]): Promise<void> {
-    this.structuredLog(job.network, `This should not trigger: ${JSON.stringify(transactions, undefined, 2)}`)
-    Promise.resolve()
-  }
-
   constructor(options: NetworkMonitorOptions) {
     this.environment = getEnvironment()
     this.parent = options.parent
@@ -399,8 +411,14 @@ export class NetworkMonitor {
       this.filters = options.filters
     }
 
-    this.processTransactions =
-      options.processTransactions === undefined ? this.fakeProcessor : options.processTransactions.bind(this.parent)
+    if (options.verbose !== undefined) {
+      this.verbose = options.verbose
+    }
+
+    if (options.processTransactions !== undefined) {
+      this.processTransactions = options.processTransactions.bind(this.parent)
+    }
+
     if (options.userWallet !== undefined) {
       this.userWallet = options.userWallet
     }
@@ -456,13 +474,17 @@ export class NetworkMonitor {
       await ethersInitializedCallback.bind(this.parent)()
     }
 
-    this.log(`Holograph address: ${this.HOLOGRAPH_ADDRESSES[this.environment]}`)
-    this.log(`Bridge address: ${this.bridgeAddress}`)
-    this.log(`Factory address: ${this.factoryAddress}`)
-    this.log(`Interfaces address: ${this.interfacesAddress}`)
-    this.log(`Operator address: ${this.operatorAddress}`)
-    this.log(`Registry address: ${this.registryAddress}`)
-    this.log(`Messaging Module address: ${this.messagingModuleAddress}`)
+    if (this.verbose) {
+      this.log(``)
+      this.log(`📄 Holograph address: ${this.HOLOGRAPH_ADDRESSES[this.environment]}`)
+      this.log(`📄 Bridge address: ${this.bridgeAddress}`)
+      this.log(`📄 Factory address: ${this.factoryAddress}`)
+      this.log(`📄 Interfaces address: ${this.interfacesAddress}`)
+      this.log(`📄 Operator address: ${this.operatorAddress}`)
+      this.log(`📄 Registry address: ${this.registryAddress}`)
+      this.log(`📄 Messaging Module address: ${this.messagingModuleAddress}`)
+      this.log(``)
+    }
 
     if (blockJobs !== undefined) {
       this.blockJobs = blockJobs
@@ -477,9 +499,10 @@ export class NetworkMonitor {
       this.runningProcesses += 1
       if (continuous) {
         this.needToSubscribe = true
-        // Subscribe to events 🎧
-        this.networkSubscribe(network)
       }
+
+      // Subscribe to events 🎧
+      this.networkSubscribe(network)
 
       // Process blocks 🧱
       this.blockJobHandler(network)
@@ -586,7 +609,7 @@ export class NetworkMonitor {
 
           break
         case 'wss:':
-          this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint, false)
+          this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint, true)
           break
         default:
           throw new Error('Unsupported RPC provider protocol -> ' + protocol)
@@ -617,6 +640,8 @@ export class NetworkMonitor {
         this.latestBlockHeight[network] = 0
         this.currentBlockHeight[network] = 0
       }
+
+      this.gasPrices[network] = await initializeGasPricing(network, this.providers[network])
     }
 
     const holographABI = await fs.readJson(`./src/abi/${this.environment}/Holograph.json`)
@@ -693,12 +718,12 @@ export class NetworkMonitor {
     if (this.exited === false) {
       this.log('')
       if (this.needToSubscribe) {
-        this.log(`Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}`)
+        this.log(`\n💾 Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}\n`)
         this.saveLastBlocks(this.parent.config.configDir, this.latestBlockHeight)
       }
 
-      this.log(`Exiting ${this.parent.constructor.name} with code ${exitCode}...`)
-      this.log('Goodbye! 👋')
+      this.log(`🛑 Exiting ${this.parent.constructor.name} with code ${color.keyword('red')(exitCode)}`)
+      this.log(`\n👋 Thank you, come again\n`)
       this.exited = true
     }
   }
@@ -711,12 +736,12 @@ export class NetworkMonitor {
       if (this.exited === false) {
         this.log('')
         if (this.needToSubscribe) {
-          this.log(`Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}`)
+          this.log(`\n💾 Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}\n`)
           this.saveLastBlocks(this.parent.config.configDir, this.latestBlockHeight)
         }
 
-        this.log(`Exiting ${this.parent.constructor.name} with code ${exitCode}...`)
-        this.log('Goodbye! 👋')
+        this.log(`🛑 Exiting ${this.parent.constructor.name} with code ${color.keyword('red')(exitCode)}`)
+        this.log(`\n👋 Thank you, come again\n`)
         this.exited = true
       }
 
@@ -818,7 +843,10 @@ export class NetworkMonitor {
     if (job !== undefined) {
       this.latestBlockHeight[job.network] = job.block
       // we assume that this is latest
-      this.structuredLog(job.network, `Processed block`, job.block)
+      if (this.verbose) {
+        this.structuredLog(job.network, `Processed block`, job.block)
+      }
+
       this.blockJobs[job.network].shift()
     }
 
@@ -870,7 +898,7 @@ export class NetworkMonitor {
           break
         case FilterType.functionSig:
           data = transaction.data?.slice(0, 10) || ''
-          if (data.startsWith(match)) {
+          if (data === match) {
             interestingTransactions.push(transaction)
           }
 
@@ -882,7 +910,10 @@ export class NetworkMonitor {
   }
 
   async processBlock(job: BlockJob): Promise<void> {
-    this.structuredLog(job.network, `Processing block`, job.block)
+    if (this.verbose) {
+      this.structuredLog(job.network, `Processing block`, job.block)
+    }
+
     const block: BlockWithTransactions | null = await this.getBlockWithTransactions({
       network: job.network,
       blockNumber: job.block,
@@ -890,25 +921,116 @@ export class NetworkMonitor {
       canFail: true,
     })
     if (block !== undefined && block !== null && 'transactions' in block) {
-      this.structuredLog(job.network, `Block retrieved`, job.block)
-      if (block.transactions.length === 0) {
+      const recentBlock: boolean = this.currentBlockHeight[job.network] - job.block < 5
+      if (this.verbose) {
+        this.structuredLog(job.network, `Block retrieved`, job.block)
+        /*
+        this.structuredLog(job.network, `Calculating block gas`, job.block)
+        if (this.gasPrices[job.network].isEip1559) {
+          this.structuredLog(
+            job.network,
+            `Calculated block gas price was ${formatUnits(
+              this.gasPrices[job.network].nextBlockFee!,
+              'gwei',
+            )} GWEI, and actual block gas price is ${formatUnits(block.baseFeePerGas!, 'gwei')} GWEI`,
+            job.block,
+          )
+        }
+*/
+      }
+
+      if (recentBlock) {
+        this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
+      }
+
+      // const priorityFees: BigNumber = this.gasPrices[job.network].nextPriorityFee!
+      if (this.verbose && block.transactions.length === 0) {
         this.structuredLog(job.network, `Zero transactions in block`, job.block)
       }
 
       const interestingTransactions: TransactionResponse[] = []
       for (let i = 0, l = block.transactions.length; i < l; i++) {
+        if (recentBlock) {
+          const tx: TransactionResponse = block.transactions[i]
+          if (this.gasPrices[job.network].isEip1559) {
+            // set current tx priority fee
+            let priorityFee: BigNumber = ZERO
+            let remainder: BigNumber
+            switch (tx.type) {
+              case 0:
+                // we have a legacy transaction here, so need to calculate priority fee out
+                priorityFee = tx.gasPrice!.sub(block.baseFeePerGas!)
+                break
+              case 1:
+                // we have EIP-1559 transaction here, get priority fee
+                // check first that base block fee is less than maxFeePerGas
+                remainder = tx.maxFeePerGas!.sub(block.baseFeePerGas!)
+                priorityFee = remainder.gt(tx.maxPriorityFeePerGas!) ? tx.maxPriorityFeePerGas! : remainder
+                break
+              case 2:
+                // we have EIP-1559 transaction here, get priority fee
+                // check first that base block fee is less than maxFeePerGas
+                remainder = tx.maxFeePerGas!.sub(block.baseFeePerGas!)
+                priorityFee = remainder.gt(tx.maxPriorityFeePerGas!) ? tx.maxPriorityFeePerGas! : remainder
+                break
+            }
+
+            if (this.gasPrices[job.network].nextPriorityFee === null) {
+              this.gasPrices[job.network].nextPriorityFee = priorityFee
+            } else {
+              this.gasPrices[job.network].nextPriorityFee = this.gasPrices[job.network]
+                .nextPriorityFee!.add(priorityFee)
+                .div(TWO)
+            }
+          }
+          // for legacy networks, get average gasPrice
+          else if (this.gasPrices[job.network].gasPrice === null) {
+            this.gasPrices[job.network].gasPrice = tx.gasPrice!
+          } else {
+            this.gasPrices[job.network].gasPrice = this.gasPrices[job.network].gasPrice!.add(tx.gasPrice!).div(TWO)
+          }
+        }
+
         this.filterTransaction(job, block.transactions[i], interestingTransactions)
       }
 
+      if (recentBlock) {
+        this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
+      }
+      /*
+      if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
+        this.structuredLog(
+          job.network,
+          `Calculated block priority fees was ${formatUnits(
+            priorityFees,
+            'gwei',
+          )} GWEI, and actual block priority fees is ${formatUnits(
+            this.gasPrices[job.network].nextPriorityFee!,
+            'gwei',
+          )} GWEI`,
+          job.block,
+        )
+      }
+*/
+
       if (interestingTransactions.length > 0) {
-        this.structuredLog(job.network, `Found ${interestingTransactions.length} interesting transactions`, job.block)
-        await this.processTransactions?.bind(this.parent)(job, interestingTransactions)
+        if (this.verbose) {
+          this.structuredLog(job.network, `Found ${interestingTransactions.length} interesting transactions`, job.block)
+        }
+
+        if (this.processTransactions !== undefined) {
+          await this.processTransactions?.bind(this.parent)(job, interestingTransactions)
+        }
+
         this.blockJobHandler(job.network, job)
       } else {
         this.blockJobHandler(job.network, job)
       }
     } else {
-      this.structuredLog(job.network, `${color.red('Dropped block')}`, job.block)
+      if (this.verbose) {
+        this.structuredLog(job.network, `${color.red('Dropped block')}`, job.block)
+      }
+
       this.blockJobHandler(job.network)
     }
   }
@@ -917,10 +1039,16 @@ export class NetworkMonitor {
     this.providers[network].on('block', (blockNumber: string) => {
       const block = Number.parseInt(blockNumber, 10)
       if (this.currentBlockHeight[network] !== 0 && block - this.currentBlockHeight[network] > 1) {
-        this.structuredLog(network, `Resuming previously dropped connection, gotta do some catching up`)
+        if (this.verbose) {
+          this.structuredLog(network, `Resuming previously dropped connection, gotta do some catching up`)
+        }
+
         let latest = this.currentBlockHeight[network]
         while (block - latest > 0) {
-          this.structuredLog(network, `Block (Syncing)`, latest)
+          if (this.verbose) {
+            this.structuredLog(network, `Block (Syncing)`, latest)
+          }
+
           this.blockJobs[network].push({
             network: network,
             block: latest,
@@ -930,7 +1058,10 @@ export class NetworkMonitor {
       }
 
       this.currentBlockHeight[network] = block
-      this.structuredLog(network, `New block mined`, block)
+      if (this.verbose) {
+        this.structuredLog(network, `New block mined`, block)
+      }
+
       this.blockJobs[network].push({
         network: network,
         block: block,
@@ -1580,7 +1711,7 @@ export class NetworkMonitor {
     network,
     tags = [] as (string | number)[],
     gasPrice,
-    value,
+    value = ZERO,
     attempts = 10,
     canFail = false,
     interval = 1000,
@@ -1593,7 +1724,11 @@ export class NetworkMonitor {
         try {
           const gasLimit: BigNumber | null = await contract
             .connect(this.wallets[network])
-            .estimateGas[methodName](...args, {gasPrice, value, from: this.wallets[network].address})
+            .estimateGas[methodName](...args, {
+              gasPrice: gasPrice!.mul(TWO),
+              value,
+              from: this.wallets[network].address,
+            })
           if (gasLimit === null) {
             counter++
             if (canFail && counter > attempts) {
@@ -1674,7 +1809,7 @@ export class NetworkMonitor {
       let sent = false
       let sendTxInterval: NodeJS.Timeout | null = null
       const handleError = (error: any) => {
-        // process.stdout.write(JSON.stringify(error,undefined,2))
+        // rocess.stdout.write('sendTransaction' + JSON.stringify(error, undefined, 2))
         counter++
         if (canFail && counter > attempts) {
           this.structuredLogError(network, error, tags)
@@ -1690,8 +1825,23 @@ export class NetworkMonitor {
         let populatedTx: TransactionRequest | null
         let signedTx: string | null
         let tx: TransactionResponse | null
+        const gasPricing: GasPricing = this.gasPrices[network]
+        let gasPrice: BigNumber | undefined
         try {
+          // move gas price info around to support EIP-1559
+          if (gasPricing.isEip1559) {
+            if (gasPrice === undefined) {
+              gasPrice = BigNumber.from(rawTx.gasPrice!)
+              delete rawTx.gasPrice
+            }
+
+            rawTx.type = 2
+            rawTx.maxPriorityFeePerGas = gasPrice!.sub(gasPricing.nextBlockFee!)
+            rawTx.maxFeePerGas = gasPrice!
+          }
+
           populatedTx = await this.wallets[network].populateTransaction(rawTx)
+
           signedTx = await this.wallets[network].signTransaction(populatedTx)
           if (txHash === null) {
             txHash = keccak256(signedTx)
@@ -1772,7 +1922,7 @@ export class NetworkMonitor {
     args,
     gasPrice,
     gasLimit,
-    value,
+    value = ZERO,
     nonce,
     tags = [] as (string | number)[],
     attempts = 10,
@@ -1784,7 +1934,7 @@ export class NetworkMonitor {
       let sent = false
       let populateTxInterval: NodeJS.Timeout | null = null
       const handleError = (error: any) => {
-        // process.stdout.write(JSON.stringify(error,undefined,2))
+        // process.stdout.write('populateTransaction' + JSON.stringify(error, undefined, 2))
         counter++
         if (canFail && counter > attempts) {
           this.structuredLogError(network, error, tags)
@@ -1841,7 +1991,7 @@ export class NetworkMonitor {
     args,
     gasPrice,
     gasLimit,
-    value = BigNumber.from('0'),
+    value = ZERO,
     attempts = 10,
     canFail = false,
     interval = 500,
@@ -1854,7 +2004,7 @@ export class NetworkMonitor {
     return new Promise<TransactionReceipt | null>(async (topResolve, _topReject) => {
       contract = contract.connect(this.wallets[network])
       if (gasPrice === undefined) {
-        gasPrice = await contract.provider.getGasPrice()
+        gasPrice = this.gasPrices[network].gasPrice!
       }
 
       if (gasLimit === undefined) {

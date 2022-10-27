@@ -31,6 +31,17 @@ export const utf8ToBytes32 = (str: string) => {
   )
 }
 
+export const waitForTransactionComplete = async (innerFunc: () => Promise<void>): Promise<void> => {
+  try {
+    await innerFunc()
+  } catch (error: any) {
+    console.error('Getting error from waiting transaction', error)
+    if (error?.data?.message !== 'missing block number') {
+      throw error
+    }
+  }
+}
+
 export const getABIs = async (environment: string) => {
   return {
     HolographABI: await fs.readJson(`./src/abi/${environment}/Holograph.json`),
@@ -51,12 +62,6 @@ const HOLOGRAPH_DEVELOP_ADDRESS: string = '0x3FbcE6eb11656ad25a2e2400AEE1bE2EC96
 const HOLOGRAPH_TESTNET_ADDRESS: string = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
 const HOLOGRAPH_MAINNET_ADDRESS: string = '0x0000000000000000000000000000000000000000'.toLowerCase()
 
-const HOLOGRAPH_OPERATOR_LOCALHOST_ADDRESS: string = '0x0000000000000000000000000000000000000000'.toLowerCase()
-const HOLOGRAPH_OPERATOR_EXPERIMENTAL_ADDRESS: string = '0x601094D2BE867cc1a0Ac9aFCA8b2C1fa91071cA5'.toLowerCase()
-const HOLOGRAPH_OPERATOR_DEVELOP_ADDRESS: string = '0x0000000000000000000000000000000000000000'.toLowerCase()
-const HOLOGRAPH_OPERATOR_TESTNET_ADDRESS: string = '0x0000000000000000000000000000000000000000'.toLowerCase()
-const HOLOGRAPH_OPERATOR_MAINNET_ADDRESS: string = '0x0000000000000000000000000000000000000000'.toLowerCase()
-
 export const HOLOGRAPH_ADDRESSES: {[key in Environment]: string} = {
   [Environment.localhost]: HOLOGRAPH_LOCALHOST_ADDRESS,
   [Environment.experimental]: HOLOGRAPH_EXPERIMENTAL_ADDRESS,
@@ -64,18 +69,11 @@ export const HOLOGRAPH_ADDRESSES: {[key in Environment]: string} = {
   [Environment.testnet]: HOLOGRAPH_TESTNET_ADDRESS,
   [Environment.mainnet]: HOLOGRAPH_MAINNET_ADDRESS,
 }
-export const HOLOGRAPH_OPERATOR_ADDRESSES: {[key in Environment]: string} = {
-  [Environment.localhost]: HOLOGRAPH_OPERATOR_LOCALHOST_ADDRESS,
-  [Environment.experimental]: HOLOGRAPH_OPERATOR_EXPERIMENTAL_ADDRESS,
-  [Environment.develop]: HOLOGRAPH_OPERATOR_DEVELOP_ADDRESS,
-  [Environment.testnet]: HOLOGRAPH_OPERATOR_TESTNET_ADDRESS,
-  [Environment.mainnet]: HOLOGRAPH_OPERATOR_MAINNET_ADDRESS,
-}
 
 export const FAUCET_ADDRESSES: {[key in Environment]: string} = {
   [Environment.localhost]: '0x0000000000000000000000000000000000000000',
   [Environment.experimental]: '0x4E5303d2a03660A01570be906F50C39f4cBd52F3',
-  [Environment.develop]: '0x4f5A377216ACb6A8D5ffd4d6d9Fbc6d17a4dD790',
+  [Environment.develop]: '0xcb216ff6be78cca91a183B9Fa94cA02e5c0bb12a',
   [Environment.testnet]: '0xc25cB8504f400528823451D38628365d50494e43',
   [Environment.mainnet]: '0xc25cB8504f400528823451D38628365d50494e43',
 } as const
