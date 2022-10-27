@@ -4078,11 +4078,7 @@ fast-diff@^1.1.2:
   resolved "https://registry.yarnpkg.com/fast-diff/-/fast-diff-1.2.0.tgz#73ee11982d86caaf7959828d519cfe927fac5f03"
   integrity sha512-xJuoT5+L99XlZ8twedaRf6Ax2TgQVxvgZOYoPKqZufmJib0tL2tegPBOZb1pVNgIhlqDlA0eO0c3wBvQcmzx4w==
 
-<<<<<<< HEAD
-fast-glob@^3.0.3, fast-glob@^3.2.9:
-=======
 fast-glob@^3.0.3, fast-glob@^3.2.7, fast-glob@^3.2.9:
->>>>>>> experimental
   version "3.2.12"
   resolved "https://registry.yarnpkg.com/fast-glob/-/fast-glob-3.2.12.tgz#7f39ec99c2e6ab030337142da9e0c18f37afae80"
   integrity sha512-DVj4CQIYYow0BlaelwK1pHl5n5cRSJfM60UA0zK891sVInoPri2Ekj7+e1CT3/3qxXenpI+nBBmQAcJPJgaj4w==
@@ -5184,14 +5180,11 @@ is-number@^7.0.0:
   resolved "https://registry.yarnpkg.com/is-number/-/is-number-7.0.0.tgz#7535345b896734d5f80c4d06c50955527a14f12b"
   integrity sha512-41Cifkg6e8TylSpdtTpeLVMqvSBEVzTttHvERD741+pnZ8ANv0004MRL43QKPDlK9cGvNp6NZWZUBlbGXYxxng==
 
-<<<<<<< HEAD
-=======
 is-plain-obj@^1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/is-plain-obj/-/is-plain-obj-1.1.0.tgz#71a50c8429dfca773c92a390a4a03b39fcd51d3e"
   integrity sha512-yvkRyxmFKEOQ4pNXCmJG5AEQNlXJS5LaONXo5/cLdTZdWvsZ1ioJEonLGAosKlMWE8lwUy/bJzMjcw8az73+Fg==
 
->>>>>>> experimental
 is-plain-obj@^2.0.0, is-plain-obj@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/is-plain-obj/-/is-plain-obj-2.1.0.tgz#45e42e37fccf1f40da8e5f76ee21515840c09287"
@@ -5536,14 +5529,11 @@ keyv@^3.0.0:
   dependencies:
     json-buffer "3.0.0"
 
-<<<<<<< HEAD
-=======
 kind-of@^6.0.3:
   version "6.0.3"
   resolved "https://registry.yarnpkg.com/kind-of/-/kind-of-6.0.3.tgz#07c05034a6c349fa06e24fa35aa76db4580ce4dd"
   integrity sha512-dcS1ul+9tmeD95T+x28/ehLgd9mENa3LsvDTtzm3vyBEO7RPptvAD+t44WVXaUjTBRcrpFeFlC8WCruUR456hw==
 
->>>>>>> experimental
 level-codec@~7.0.0:
   version "7.0.1"
   resolved "https://registry.yarnpkg.com/level-codec/-/level-codec-7.0.1.tgz#341f22f907ce0f16763f24bddd681e395a0fb8a7"
