@@ -15,11 +15,11 @@ import {checkOptionFlag} from '../../utils/validation'
 import Operator from '.'
 
 /**
- * Start
- * Description: The primary command for operating jobs on the Holograph network.
+ * Bond
+ * Description: Bond and operator into a pod.
  */
 export default class Bond extends Command {
-  static description = 'Start an operator up into a pod'
+  static description = 'Bond an operator into a pod'
   static examples = ['$ <%= config.bin %> <%= command.id %> --network <string> --pod <number> --amount <number>']
   static flags = {
     network: Flags.string({
@@ -59,7 +59,6 @@ export default class Bond extends Command {
     ])
     if (!prompt.continue) {
       this.log('Operator is not ready to bond, please start an operator first.')
-      // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
       this.exit()
     }
 
