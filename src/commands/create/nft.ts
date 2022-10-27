@@ -118,7 +118,7 @@ export default class NFT extends Command {
     }
 
     CliUx.ux.action.start('Retrieving collection smart contract')
-    const collectionABI = await fs.readJson(path.join(__dirname,`../../abi/${environment}/CxipERC721.json`))
+    const collectionABI = await fs.readJson(path.join(__dirname, `../../abi/${environment}/CxipERC721.json`))
     const collection = new ethers.ContractFactory(collectionABI, this.networkMonitor.wallets[network].address).attach(
       collectionAddress,
     )

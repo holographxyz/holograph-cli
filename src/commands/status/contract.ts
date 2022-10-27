@@ -62,7 +62,9 @@ export default class Contract extends Command {
       this.providers[this.supportedNetworks[0]],
     )
 
-    const holographRegistryABI = await fs.readJson(path.join(__dirname, `.../../abi/${environment}/HolographRegistry.json`))
+    const holographRegistryABI = await fs.readJson(
+      path.join(__dirname, `.../../abi/${environment}/HolographRegistry.json`),
+    )
     this.registryAddress = await this.holograph.getRegistry()
     this.registryContract = new ethers.Contract(
       this.registryAddress,

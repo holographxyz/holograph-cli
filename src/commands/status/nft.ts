@@ -68,14 +68,16 @@ export default class Nft extends Command {
       this.providers[this.supportedNetworks[0]],
     )
 
-    const holographRegistryABI = await fs.readJson(path.join(__dirname,`../../abi/${environment}/HolographRegistry.json`))
+    const holographRegistryABI = await fs.readJson(
+      path.join(__dirname, `../../abi/${environment}/HolographRegistry.json`),
+    )
     this.registryAddress = await this.holograph.getRegistry()
     this.registryContract = new ethers.Contract(
       this.registryAddress,
       holographRegistryABI,
       this.providers[this.supportedNetworks[0]],
     )
-    const erc721ABI = await fs.readJson(path.join(__dirname,`../../abi/${environment}/ERC721Holograph.json`))
+    const erc721ABI = await fs.readJson(path.join(__dirname, `../../abi/${environment}/ERC721Holograph.json`))
     this.erc721Contract = new ethers.Contract(
       this.contractAddress,
       erc721ABI,
