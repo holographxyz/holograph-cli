@@ -30,7 +30,7 @@
   ],
   "scripts": {
     "copyABI": "cp -R ./src/abi ./dist/abi",
-    "setEnv": ". .env ; npx replace-in-files-cli --regex=\"process.env.HOLOGRAPH_ENVIRONMENT = '[^']+'\" --replacement=\"process.env.HOLOGRAPH_ENVIRONMENT = '$HOLOGRAPH_ENVIRONMENT'\" ./bin/dev ./bin/run",
+    "setEnv": "(ls .env >> /dev/null 2>&1 && . .env) || echo '.env file does not exist'; npx replace-in-files-cli --regex=\"process.env.HOLOGRAPH_ENVIRONMENT = '[^']+'\" --replacement=\"process.env.HOLOGRAPH_ENVIRONMENT = '$HOLOGRAPH_ENVIRONMENT'\" ./bin/dev ./bin/run",
     "build": "shx rm -rf dist && tsc -b && yarn run copyABI && yarn run setEnv",
     "lint": "eslint . --ext .ts --config .eslintrc",
     "lint:fix": "eslint . --ext .ts --config .eslintrc --fix",
