@@ -405,7 +405,7 @@ export default class Analyze extends Command {
         receipt,
         this.networkMonitor.operatorAddress,
       )
-      const operatorJobHash: string | undefined = args === undefined ? undefined : sha3(args[0])
+      const operatorJobHash: string | undefined = args === undefined ? undefined : args[0]
       const operatorJobPayload: string | undefined = args === undefined ? undefined : args[1]
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(
