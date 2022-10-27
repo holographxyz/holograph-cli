@@ -16,14 +16,18 @@
 This is a CLI is primarily for operators of the holograph network. The CLI includes tools to move NFTs between networks and view their status.
 
 <!-- toc -->
-* [Overview](#overview)
-* [Usage](#usage)
-* [Commands](#commands)
+
+<!-- toc -->
+
+- [Overview](#overview)
+- [Usage](#usage)
+- [Commands](#commands)
 <!-- tocstop -->
 
 # Usage
 
 <!-- usage -->
+
 ```sh-session
 $ npm install -g @holographxyz/cli
 $ holograph COMMAND
@@ -35,28 +39,30 @@ USAGE
   $ holograph COMMAND
 ...
 ```
+
 <!-- usagestop -->
 
 # Commands
 
 <!-- commands -->
-* [`holograph bridge`](#holograph-bridge)
-* [`holograph bridge:contract`](#holograph-bridgecontract)
-* [`holograph bridge:nft`](#holograph-bridgenft)
-* [`holograph config`](#holograph-config)
-* [`holograph config:networks`](#holograph-confignetworks)
-* [`holograph config:user`](#holograph-configuser)
-* [`holograph config:view`](#holograph-configview)
-* [`holograph create`](#holograph-create)
-* [`holograph create:contract`](#holograph-createcontract)
-* [`holograph create:nft`](#holograph-createnft)
-* [`holograph help [COMMAND]`](#holograph-help-command)
-* [`holograph operator`](#holograph-operator)
-* [`holograph operator:bond`](#holograph-operatorbond)
-* [`holograph operator:recover`](#holograph-operatorrecover)
-* [`holograph status`](#holograph-status)
-* [`holograph status:contract`](#holograph-statuscontract)
-* [`holograph status:nft`](#holograph-statusnft)
+
+- [`holograph bridge`](#holograph-bridge)
+- [`holograph bridge:contract`](#holograph-bridgecontract)
+- [`holograph bridge:nft`](#holograph-bridgenft)
+- [`holograph config`](#holograph-config)
+- [`holograph config:networks`](#holograph-confignetworks)
+- [`holograph config:user`](#holograph-configuser)
+- [`holograph config:view`](#holograph-configview)
+- [`holograph create`](#holograph-create)
+- [`holograph create:contract`](#holograph-createcontract)
+- [`holograph create:nft`](#holograph-createnft)
+- [`holograph help [COMMAND]`](#holograph-help-command)
+- [`holograph operator`](#holograph-operator)
+- [`holograph operator:bond`](#holograph-operatorbond)
+- [`holograph operator:recover`](#holograph-operatorrecover)
+- [`holograph status`](#holograph-status)
+- [`holograph status:contract`](#holograph-statuscontract)
+- [`holograph status:nft`](#holograph-statusnft)
 
 ## `holograph bridge`
 
@@ -191,6 +197,8 @@ _See code: [dist/commands/config/networks.ts](https://github.com/holographxyz/ho
 
 View the current user information
 
+$ holograph config --fromJson '{"version": "beta1", ...}
+
 ```
 USAGE
   $ holograph config:user [--output clean|json|yaml]
@@ -265,6 +273,8 @@ _See code: [dist/commands/create/index.ts](https://github.com/holographxyz/holog
 ## `holograph create:contract`
 
 Deploy a Holographable contract directly to a chain
+
+$ holograph config:user --output clean
 
 ```
 USAGE
@@ -473,6 +483,7 @@ EXAMPLES
 ```
 
 _See code: [dist/commands/status/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.6/dist/commands/status/nft.ts)_
+
 <!-- commandsstop -->
 
 ## Developing

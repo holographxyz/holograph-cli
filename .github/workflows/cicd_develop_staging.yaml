@@ -36,7 +36,7 @@ env:
   #
   STG_DOMAIN: 'cxipchain.xyz'
   #
-  STG_COMMON_NAMESPACE: holocli-dev # NOTICE <---
+  STG_COMMON_NAMESPACE: develop # NOTICE <---
   #
   # INDEXER DEV rpc endpoints
   indexer_dev_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
