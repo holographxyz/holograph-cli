@@ -337,6 +337,12 @@ export class NetworkMonitor {
     AvailableOperatorJob: '0x4422a85db963f113e500bc4ada8f9e9f1a7bcd57cbec6907fbb2bf6aaf5878ff',
     '0x4422a85db963f113e500bc4ada8f9e9f1a7bcd57cbec6907fbb2bf6aaf5878ff': 'AvailableOperatorJob',
 
+    FinishedOperatorJob: '0xfc3963369d694e97f35e33cc03fcd382bfa4dbb688ae43d318fcf344f479425e',
+    '0xfc3963369d694e97f35e33cc03fcd382bfa4dbb688ae43d318fcf344f479425e': 'FinishedOperatorJob',
+
+    FailedOperatorJob: '0x26dc03e6c4feb5e9d33804dc1646860c976c3aeabb458f4719c53dcbadbf44b5',
+    '0x26dc03e6c4feb5e9d33804dc1646860c976c3aeabb458f4719c53dcbadbf44b5': 'FailedOperatorJob',
+
     BridgeableContractDeployed: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
     '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b': 'BridgeableContractDeployed',
 
@@ -994,6 +1000,12 @@ export class NetworkMonitor {
     'CrossChainMessageSent(bytes32 messageHash)',
   )
 
+  static finishedOperatorJobEventFragment: EventFragment = EventFragment.from(
+    'FinishedOperatorJob(bytes32 jobHash, address operator)',
+  )
+
+  static failedOperatorJobEventFragment: EventFragment = EventFragment.from('FailedOperatorJob(bytes32 jobHash)')
+
   decodePacketEvent(receipt: TransactionReceipt, target?: string): string | undefined {
     if (target !== undefined) {
       target = target.toLowerCase().trim()
@@ -1013,7 +1025,10 @@ export class NetworkMonitor {
             log.topics,
           )[1] as string
           if (packetPayload.indexOf(toFind) > 0) {
-            return ('0x' + packetPayload.split(this.operatorAddress.slice(2, 42).repeat(2))[1]).toLowerCase()
+            let index: number = packetPayload.indexOf(toFind)
+            // address + address
+            index += 40 + 40
+            return ('0x' + packetPayload.slice(Math.max(0, index))).toLowerCase()
           }
         }
       }
@@ -1220,6 +1235,57 @@ export class NetworkMonitor {
           return (
             NetworkMonitor.iface.decodeEventLog(
               NetworkMonitor.crossChainMessageSentEventFragment,
+              log.data,
+              log.topics,
+            )[0] as string
+          ).toLowerCase()
+        }
+      }
+    }
+
+    return undefined
+  }
+
+  decodeFinishedOperatorJobEvent(receipt: TransactionReceipt, target?: string): string[] | undefined {
+    if (target !== undefined) {
+      target = target.toLowerCase().trim()
+    }
+
+    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+      for (let i = 0, l = receipt.logs.length; i < l; i++) {
+        const log = receipt.logs[i]
+        if (
+          log.topics[0] === this.targetEvents.FinishedOperatorJob &&
+          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
+        ) {
+          const output: string[] = NetworkMonitor.iface.decodeEventLog(
+            NetworkMonitor.finishedOperatorJobEventFragment,
+            log.data,
+            log.topics,
+          ) as string[]
+          return this.lowerCaseAllStrings(output) as string[]
+        }
+      }
+    }
+
+    return undefined
+  }
+
+  decodeFailedOperatorJobEvent(receipt: TransactionReceipt, target?: string): string | undefined {
+    if (target !== undefined) {
+      target = target.toLowerCase().trim()
+    }
+
+    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+      for (let i = 0, l = receipt.logs.length; i < l; i++) {
+        const log = receipt.logs[i]
+        if (
+          log.topics[0] === this.targetEvents.FailedOperatorJob &&
+          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
+        ) {
+          return (
+            NetworkMonitor.iface.decodeEventLog(
+              NetworkMonitor.failedOperatorJobEventFragment,
               log.data,
               log.topics,
             )[0] as string

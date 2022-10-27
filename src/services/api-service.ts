@@ -12,7 +12,7 @@ class ApiService {
   }
 
   async operatorLogin() {
-    if (!process.env.OPERATOR_API_KEY) throw 'OPERATOR_API_KEY env is required'
+    if (!process.env.OPERATOR_API_KEY) throw new Error('OPERATOR_API_KEY env is required')
 
     const res = await this.api.post(`/v1/auth/operator`, {
       hash: process.env.OPERATOR_API_KEY,
@@ -20,7 +20,7 @@ class ApiService {
 
     this.JWT = res!.data.accessToken
     if (typeof this.JWT === 'undefined') {
-      throw 'Failed to authorize as an operator'
+      throw new TypeError('Failed to authorize as an operator')
     }
 
     // console.log(`process.env.OPERATOR_API_KEY = ${process.env.OPERATOR_API_KEY}`)
