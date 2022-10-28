@@ -161,7 +161,7 @@ export default class Indexer extends Command {
 
     // Start server
     if (enableHealthCheckServer) {
-      startHealthcheckServer({networkMonitor: this.networkMonitor})
+      startHealthcheckServer(this.networkMonitor)
     }
 
     this.processDBJobs()

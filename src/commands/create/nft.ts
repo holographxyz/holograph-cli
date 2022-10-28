@@ -16,6 +16,7 @@ import {
   checkTokenUriTypeFlag,
 } from '../../utils/validation'
 import {TokenUriTypeIndex} from '../../utils/asset-deployment'
+import path from 'node:path'
 
 export default class NFT extends Command {
   static description = 'Mint a Holographable NFT'
@@ -117,7 +118,7 @@ export default class NFT extends Command {
     }
 
     CliUx.ux.action.start('Retrieving collection smart contract')
-    const collectionABI = await fs.readJson(`./src/abi/${environment}/CxipERC721.json`)
+    const collectionABI = await fs.readJson(path.join(__dirname, `../../abi/${environment}/CxipERC721.json`))
     const collection = new ethers.ContractFactory(collectionABI, this.networkMonitor.wallets[network].address).attach(
       collectionAddress,
     )
