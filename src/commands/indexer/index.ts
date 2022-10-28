@@ -1,40 +1,41 @@
 import axios from 'axios'
 
-import {CliUx, Command, Flags} from '@oclif/core'
 import {TransactionDescription} from '@ethersproject/abi'
 import {Block, TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
 import {hexZeroPad} from '@ethersproject/bytes'
+import {CliUx, Command, Flags} from '@oclif/core'
 
-import {ensureConfigFileIsValid} from '../../utils/config'
 import {Environment} from '@holographxyz/environment'
-import {getNetworkByHolographId} from '@holographxyz/networks'
-import {capitalize, sleep, sha3, functionSignature, storageSlot, toAscii} from '../../utils/utils'
+import {getNetworkByHolographId, networks} from '@holographxyz/networks'
+import {ensureConfigFileIsValid} from '../../utils/config'
+
 import {
-  DeploymentConfig,
+  create2address,
   decodeDeploymentConfig,
   decodeDeploymentConfigInput,
+  DeploymentConfig,
   deploymentConfigHash,
-  create2address,
 } from '../../utils/contract-deployment'
+import {capitalize, functionSignature, sha3, sleep, storageSlot, toAscii} from '../../utils/utils'
 
-import {networksFlag, warpFlag, FilterType, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
 import {
   BridgeInArgs,
   BridgeInErc20Args,
   BridgeInErc721Args,
-  decodeBridgeIn,
-  decodeBridgeInErc20Args,
-  decodeBridgeInErc721Args,
   BridgeOutArgs,
   BridgeOutErc20Args,
   BridgeOutErc721Args,
+  decodeBridgeInErc20Args,
+  decodeBridgeInErc721Args,
   decodeBridgeOutErc20Args,
   decodeBridgeOutErc721Args,
 } from '../../utils/bridge'
 import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
+import {BlockJob, FilterType, NetworkMonitor, networksFlag, warpFlag} from '../../utils/network-monitor'
 
-import dotenv from 'dotenv'
 import color from '@oclif/color'
+import dotenv from 'dotenv'
+import {BigNumber} from 'ethers'
 dotenv.config()
 
 type DBJob = {
@@ -445,6 +446,7 @@ export default class Indexer extends Command {
           } else {
             const bridgeIn: BridgeInArgs = bridgeTransaction.args as unknown as BridgeInArgs
             const fromNetwork: string = getNetworkByHolographId(bridgeIn.fromChain).key
+            const toNetwork: string = network
             const bridgeInPayload: string = bridgeIn.bridgeInPayload
             const holographableContractAddress: string = bridgeIn.holographableContract.toLowerCase()
             if (holographableContractAddress === this.networkMonitor.factoryAddress) {
@@ -534,6 +536,7 @@ export default class Indexer extends Command {
                     transaction,
                     network,
                     fromNetwork,
+                    toNetwork,
                     contractType,
                     holographableContractAddress,
                     erc721TransferEvent,
@@ -615,6 +618,7 @@ export default class Indexer extends Command {
           this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
         if (bridgeTransaction.name === 'bridgeOutRequest') {
           const bridgeOut: BridgeOutArgs = bridgeTransaction.args as unknown as BridgeOutArgs
+          const fromNetwork: string = network
           const toNetwork: string = getNetworkByHolographId(bridgeOut.toChain).key
           const bridgeOutPayload: string = bridgeOut.bridgeOutPayload
           const holographableContractAddress: string = bridgeOut.holographableContract.toLowerCase()
@@ -686,6 +690,7 @@ export default class Indexer extends Command {
                   'out',
                   transaction,
                   network,
+                  fromNetwork,
                   toNetwork,
                   contractType,
                   holographableContractAddress,
@@ -747,15 +752,16 @@ export default class Indexer extends Command {
         const bridgeTransaction: TransactionDescription = this.networkMonitor.bridgeContract.interface.parseTransaction(
           {data: operatorJobPayload!},
         )
-        if (bridgeTransaction.name === 'bridgeOutRequest') {
-          const bridgeOut: BridgeOutArgs = bridgeTransaction.args as unknown as BridgeOutArgs
-          const toNetwork: string = getNetworkByHolographId(bridgeOut.toChain).key
-          const bridgeOutPayload: string = decodeBridgeIn(bridgeOut.bridgeOutPayload).payload
-          const holographableContractAddress: string = bridgeOut.holographableContract.toLowerCase()
+        if (bridgeTransaction.name === 'bridgeInRequest') {
+          const bridgeIn: BridgeInArgs = bridgeTransaction.args as unknown as BridgeInArgs
+          const fromNetwork: string = getNetworkByHolographId(bridgeIn.fromChain).key
+          const toNetwork: string = network
+          const bridgeInPayload: string = bridgeIn.bridgeInPayload
+          const holographableContractAddress: string = bridgeIn.holographableContract.toLowerCase()
 
+          // BRIDGE OUT CONTRACT DEPLOYMENT
           if (holographableContractAddress === this.networkMonitor.factoryAddress) {
-            // BRIDGE OUT CONTRACT DEPLOYMENT
-            const deploymentConfig: DeploymentConfig = decodeDeploymentConfig(bridgeOutPayload)
+            const deploymentConfig: DeploymentConfig = decodeDeploymentConfig(bridgeInPayload)
             const deploymentHash: string = deploymentConfigHash(deploymentConfig)
             const contractAddress = create2address(deploymentConfig, this.networkMonitor.factoryAddress)
             const deploymentEvent: string[] = [contractAddress, deploymentHash]
@@ -778,7 +784,7 @@ export default class Indexer extends Command {
             const contractType: string = toAscii(slot)
             if (contractType === 'HolographERC20') {
               // BRIDGE OUT ERC20 TOKENS
-              const erc20BeamInfo: BridgeOutErc20Args = decodeBridgeOutErc20Args(bridgeOutPayload)
+              const erc20BeamInfo: BridgeOutErc20Args = decodeBridgeOutErc20Args(bridgeInPayload)
               const erc20TransferEvent: any[] | undefined = this.networkMonitor.decodeErc20TransferEvent(
                 receipt,
                 holographableContractAddress,
@@ -805,41 +811,26 @@ export default class Indexer extends Command {
               }
             } else if (contractType === 'HolographERC721') {
               // BRIDGE IN ERC721 NFT
-              const erc721BeamInfo: BridgeOutErc721Args = decodeBridgeOutErc721Args(bridgeOutPayload)
-              const erc721TransferEvent: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(
-                receipt,
+              const erc721BeamInfo: BridgeInErc721Args = decodeBridgeInErc721Args(bridgeInPayload)
+              await this.updateBridgedERC721(
+                'msg',
+                transaction,
+                network,
+                fromNetwork,
+                toNetwork,
+                contractType,
                 holographableContractAddress,
+                [erc721BeamInfo.from, erc721BeamInfo.to, BigNumber.from(erc721BeamInfo.tokenId)],
+                erc721BeamInfo,
+                operatorJobHash,
+                tags,
               )
-              if (erc721TransferEvent === undefined) {
-                this.networkMonitor.structuredLog(
-                  network,
-                  `Bridge erc721 transfer event not found for ${transaction.hash}`,
-                  tags,
-                )
-              } else {
-                await this.updateBridgedERC721(
-                  'msg',
-                  transaction,
-                  network,
-                  toNetwork,
-                  contractType,
-                  holographableContractAddress,
-                  erc721TransferEvent,
-                  erc721BeamInfo,
-                  operatorJobHash,
-                  tags,
-                )
-              }
             }
           }
 
-          this.networkMonitor.structuredLog(network, `Found a valid bridgeOutRequest for ${transaction.hash}`, tags)
+          this.networkMonitor.structuredLog(network, `Found a valid bridgeInRequest for ${transaction.hash}`, tags)
         } else {
-          this.networkMonitor.structuredLog(
-            network,
-            `Unknown bridgeOut function executed for ${transaction.hash}`,
-            tags,
-          )
+          this.networkMonitor.structuredLog(network, `Unknown bridgeIn function executed for ${transaction.hash}`, tags)
         }
 
         this.networkMonitor.structuredLog(
@@ -1057,6 +1048,7 @@ export default class Indexer extends Command {
     transaction: TransactionResponse,
     network: string,
     fromNetwork: string,
+    toNetwork: string,
     contractType: string,
     contractAddress: string,
     erc721TransferEvent: any[],
@@ -1095,12 +1087,13 @@ export default class Indexer extends Command {
 
     const crossChainTxType: string =
       direction === 'in' ? 'bridgeIn' : direction === 'out' ? 'bridgeOut' : 'relayMessage'
+
     await this.updateCrossChainTransaction(
       crossChainTxType,
       network,
       transaction,
-      network, // fromNetwork
-      network, // toNetwork
+      fromNetwork,
+      toNetwork,
       contractAddress,
       contractType,
       tokenId,
@@ -1165,9 +1158,8 @@ export default class Indexer extends Command {
       tags,
     )
 
-    // Get and convert the destination chain id from holograph id in the trasaction args
-    // const destinationChainid = networks[getNetworkByHolographId(bridgeTransaction.args[0])].chain
-    const destinationChainid = toNetwork
+    // Get and convert the destination chain id from network name to chain id
+    const destinationChainid = networks[toNetwork].chain
 
     let data = {}
     const params = {
@@ -1177,6 +1169,8 @@ export default class Indexer extends Command {
       },
       data: data,
     }
+
+    this.networkMonitor.structuredLog(network, `Cross chain transaction type is ${crossChainTxType}`, tags)
     // Set the columns to update based on the type of cross-chain transaction
     switch (crossChainTxType) {
       case 'bridgeOut':
@@ -1194,10 +1188,9 @@ export default class Indexer extends Command {
           messageChainId: destinationChainid,
           operatorChainId: destinationChainid,
         })
-
         this.networkMonitor.structuredLog(
           network,
-          this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash}`),
+          this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash} for brigdeOut`),
           tags,
         )
 
@@ -1249,7 +1242,7 @@ export default class Indexer extends Command {
 
         this.networkMonitor.structuredLog(
           network,
-          this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash}`),
+          this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash} for relayMessage`),
           tags,
         )
         if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
@@ -1300,7 +1293,7 @@ export default class Indexer extends Command {
 
         this.networkMonitor.structuredLog(
           network,
-          this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash}`),
+          this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash} for bridgeIn`),
           tags,
         )
         if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
