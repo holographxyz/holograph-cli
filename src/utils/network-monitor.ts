@@ -2017,7 +2017,7 @@ export class NetworkMonitor {
       contract = contract.connect(this.wallets[network])
       if (gasPrice === undefined) {
         gasPrice = this.gasPrices[network].gasPrice!
-        gasPrice = gasPrice.add(gasPrice.mul(ONEHUNDRED).mul(FIFTY))
+        gasPrice = gasPrice.add(gasPrice.div(TWO))
       }
 
       if (gasLimit === undefined) {

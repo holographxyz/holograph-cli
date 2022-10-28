@@ -145,7 +145,7 @@ export default class BridgeContract extends Command {
 
     const gasPricing: GasPricing = this.networkMonitor.gasPrices[destinationNetwork]
     let gasPrice: BigNumber = gasPricing.isEip1559 ? gasPricing.maxFeePerGas! : gasPricing.gasPrice!
-    gasPrice = gasPrice.add(gasPrice.div(BigNumber.from('100')).mul(BigNumber.from('25')))
+    gasPrice = gasPrice.add(gasPrice.div(BigNumber.from('4')))
 
     payload = await this.networkMonitor.bridgeContract
       .connect(this.networkMonitor.providers[sourceNetwork])
@@ -200,7 +200,7 @@ export default class BridgeContract extends Command {
         data as string,
       ],
       waitForReceipt: true,
-      value: total.add(total.div(BigNumber.from('100')).mul(BigNumber.from('25'))),
+      value: total.add(total.div(BigNumber.from('4')))
     })
     CliUx.ux.action.stop()
 
