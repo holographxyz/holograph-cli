@@ -87,6 +87,7 @@ export default class Analyze extends Command {
   operatorJobCounterMap: {[key: string]: number} = {}
   transactionLogs: (ContractDeployment | AvailableJob)[] = []
   networkMonitor!: NetworkMonitor
+  blockJobs: {[key: string]: BlockJob[]} = {}
   apiService!: ApiService | null
 
   /**

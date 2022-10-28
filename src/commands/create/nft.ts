@@ -16,6 +16,7 @@ import {
   checkTokenUriTypeFlag,
 } from '../../utils/validation'
 import {TokenUriTypeIndex} from '../../utils/asset-deployment'
+import path from 'node:path'
 
 export default class NFT extends Command {
   static description = 'Mint a Holographable NFT'
@@ -94,10 +95,11 @@ export default class NFT extends Command {
       networks: [network],
       debug: this.debug,
       userWallet,
+      verbose: false,
     })
 
     CliUx.ux.action.start('Loading network RPC providers')
-    await this.networkMonitor.initializeEthers()
+    await this.networkMonitor.run(true)
     CliUx.ux.action.stop()
 
     CliUx.ux.action.start('Checking that contract is already deployed and holographable on "' + network + '" network')
@@ -116,7 +118,7 @@ export default class NFT extends Command {
     }
 
     CliUx.ux.action.start('Retrieving collection smart contract')
-    const collectionABI = await fs.readJson(`./src/abi/${environment}/CxipERC721.json`)
+    const collectionABI = await fs.readJson(path.join(__dirname, `../../abi/${environment}/CxipERC721.json`))
     const collection = new ethers.ContractFactory(collectionABI, this.networkMonitor.wallets[network].address).attach(
       collectionAddress,
     )

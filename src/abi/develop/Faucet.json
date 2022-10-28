@@ -34,7 +34,26 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "address_",
+        "name": "_address",
+        "type": "address"
+      }
+    ],
+    "name": "getLastAccessTime",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_address",
         "type": "address"
       }
     ],
@@ -47,12 +66,12 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "address_",
+        "name": "_address",
         "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "amountWei_",
+        "name": "_amountWei",
         "type": "uint256"
       }
     ],
@@ -65,7 +84,7 @@
     "inputs": [
       {
         "internalType": "bytes",
-        "name": "data",
+        "name": "initPayload",
         "type": "bytes"
       }
     ],
@@ -84,7 +103,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "address_",
+        "name": "_address",
         "type": "address"
       }
     ],
@@ -122,8 +141,21 @@
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "tokenAddress",
+        "type": "address"
+      }
+    ],
+    "name": "setToken",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint256",
-        "name": "amountWei_",
+        "name": "_amountWei",
         "type": "uint256"
       }
     ],
@@ -136,7 +168,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "waitTimeSeconds_",
+        "name": "_waitTimeSeconds",
         "type": "uint256"
       }
     ],
@@ -150,7 +182,7 @@
     "name": "token",
     "outputs": [
       {
-        "internalType": "contract ERC20Holograph",
+        "internalType": "contract HolographERC20Interface",
         "name": "",
         "type": "address"
       }
@@ -162,16 +194,11 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "receiver_",
+        "name": "_receiver",
         "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amountWei_",
-        "type": "uint256"
       }
     ],
-    "name": "withdrawTokens",
+    "name": "withdrawAllTokens",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -180,8 +207,13 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "receiver_",
+        "name": "_receiver",
         "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_amountWei",
+        "type": "uint256"
       }
     ],
     "name": "withdrawTokens",

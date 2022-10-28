@@ -3,9 +3,15 @@ import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import {ethers} from 'ethers'
-import {checkFileExists, ensureConfigFileIsValid, CONFIG_FILE_NAME, validateBeta3Schema} from '../../utils/config'
+import {
+  checkFileExists,
+  ensureConfigFileIsValid,
+  generateSupportedNetworksOptions,
+  CONFIG_FILE_NAME,
+  validateBeta3Schema,
+} from '../../utils/config'
 import {isStringAValidURL, randomASCII} from '../../utils/utils'
-import {supportedNetworks} from '@holographxyz/networks'
+import {supportedShortNetworks, networks} from '@holographxyz/networks'
 import AesEncryption from '../../utils/aes-encryption'
 
 export default class Config extends Command {
@@ -20,7 +26,7 @@ export default class Config extends Command {
 
   static flags = {
     network: Flags.string({
-      options: supportedNetworks,
+      options: supportedShortNetworks,
       description: 'Network to set',
     }),
     url: Flags.string({
@@ -108,7 +114,7 @@ export default class Config extends Command {
 
           name: 'networks',
           message: 'Which networks do you want to operate?',
-          choices: supportedNetworks,
+          choices: generateSupportedNetworksOptions(),
           validate: async (input: any) => {
             if (input.length >= 2) {
               return true
@@ -118,11 +124,11 @@ export default class Config extends Command {
           },
         },
       ])
-      const networks = prompt.networks
+      const providedNetworks = prompt.networks
 
       // Remove networks the user doesn't want to operate on
       for (const network of Object.keys(userConfigTemplate.networks)) {
-        if (!networks.includes(network)) {
+        if (!providedNetworks.includes(network)) {
           delete userConfigTemplate.networks[network]
         }
       }
@@ -130,14 +136,14 @@ export default class Config extends Command {
       // Add networks to the user config
       // It's okay to await in loop because this is a synchronous operation
       /* eslint-disable no-await-in-loop */
-      for (const network of networks) {
+      for (const network of providedNetworks) {
         const prompt: any = await inquirer.prompt([
           {
             name: 'providerUrl',
-            message: `Enter the provider url for ${network}. Leave blank to keep current provider.`,
+            message: `Enter the provider url for ${networks[network].shortKey}. Leave blank to keep current provider.`,
             type: 'input',
             validate: async (input: string) => {
-              if (isStringAValidURL(input) || (input === '' && isConfigExist)) {
+              if (isStringAValidURL(input) || input === '') {
                 return true
               }
 
@@ -149,6 +155,8 @@ export default class Config extends Command {
         // Leave existing providerUrl if user didn't enter a new one
         if (prompt.providerUrl !== '') {
           userConfigTemplate.networks[network] = {providerUrl: prompt.providerUrl}
+        } else if (!(network in userConfigTemplate.networks)) {
+          userConfigTemplate.networks[network] = {providerUrl: networks[network].rpc}
         }
       }
     }
