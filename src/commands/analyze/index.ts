@@ -494,7 +494,7 @@ export default class Analyze extends Command {
             const contractType: string = toAscii(slot)
             if (contractType === 'HolographERC20') {
               beam.jobType = TransactionType.erc20
-            } else if (contractType === 'HolographERC721' || contractType === 'CxipERC721') {
+            } else if (contractType === 'HolographERC721') {
               beam.jobType = TransactionType.erc721
             }
           }
@@ -619,7 +619,7 @@ export default class Analyze extends Command {
               const contractType: string = toAscii(slot)
               if (contractType === 'HolographERC20') {
                 beam.jobType = TransactionType.erc20
-              } else if (contractType === 'HolographERC721' || contractType === 'CxipERC721') {
+              } else if (contractType === 'HolographERC721') {
                 beam.jobType = TransactionType.erc721
               }
             }
