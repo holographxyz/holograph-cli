@@ -1,6 +1,6 @@
 {
   "name": "@holographxyz/cli",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "license": "Holograph Limited Public License (H-LPL) 1.0.0",
   "description": "Holograph operator CLI",
   "author": "@holographxyz",
