@@ -93,9 +93,11 @@ export type TransactionFilter = {
 const TIMEOUT_THRESHOLD = 20_000
 
 const ZERO = BigNumber.from('0')
-// const ONE = BigNumber.from('1')
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const ONE = BigNumber.from('1')
 const TWO = BigNumber.from('2')
-// const TEN = BigNumber.from('10')
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const TEN = BigNumber.from('10')
 
 const webSocketErrorCodes: {[key: string]: string} = {
   '1000': 'Normal Closure',
@@ -1819,7 +1821,7 @@ export class NetworkMonitor {
       let sent = false
       let sendTxInterval: NodeJS.Timeout | null = null
       const handleError = (error: any) => {
-        // rocess.stdout.write('sendTransaction' + JSON.stringify(error, undefined, 2))
+        // process.stdout.write('sendTransaction' + JSON.stringify(error, undefined, 2))
         counter++
         if (canFail && counter > attempts) {
           this.structuredLogError(network, error, tags)
@@ -2015,6 +2017,7 @@ export class NetworkMonitor {
       contract = contract.connect(this.wallets[network])
       if (gasPrice === undefined) {
         gasPrice = this.gasPrices[network].gasPrice!
+        gasPrice = gasPrice.add(gasPrice.div(TWO))
       }
 
       if (gasLimit === undefined) {
