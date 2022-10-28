@@ -1811,7 +1811,7 @@ export class NetworkMonitor {
       let sent = false
       let sendTxInterval: NodeJS.Timeout | null = null
       const handleError = (error: any) => {
-        // rocess.stdout.write('sendTransaction' + JSON.stringify(error, undefined, 2))
+        // process.stdout.write('sendTransaction' + JSON.stringify(error, undefined, 2))
         counter++
         if (canFail && counter > attempts) {
           this.structuredLogError(network, error, tags)

@@ -4,7 +4,7 @@ require('dotenv').config();
 
 const env = process.env.ABI_ENVIRONMENT || process.env.HOLOGRAPH_ENVIRONMENT || '';
 if (env === '') {
-  process.env.HOLOGRAPH_ENVIRONMENT = 'develop';
+  process.env.HOLOGRAPH_ENVIRONMENT = 'experimental';
 }
 
 const oclif = require('@oclif/core')
