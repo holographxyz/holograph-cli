@@ -31,6 +31,18 @@ export const webSocketConfig = {
   },
 }
 
+export const networkToChainId: Record<string, number> = {
+  ethereum: 1,
+  ethereumTestnetRinkeby: 4,
+  ethereumTestnetGoerli: 5,
+  polygon: 89,
+  polygonTestnet: 80001,
+  avalanche: 43114,
+  avalancheTestnet: 43113,
+  binanceSmartChain: 56,
+  binanceSmartChainTestnet: 97,
+}
+
 export const NETWORK_COLORS: Record<string, string> = {
   localhost: '##83EEFF',
   localhost2: '#ff0000',
