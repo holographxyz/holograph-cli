@@ -19,6 +19,7 @@ import {
 import {GasPricing} from '../../utils/gas'
 import {generateInitCode} from '../../utils/utils'
 import {networks, supportedShortNetworks} from '@holographxyz/networks'
+import path from 'node:path'
 
 export default class BridgeNFT extends Command {
   static description = 'Beam a Holographable NFT from source chain to destination chain.'
@@ -161,7 +162,7 @@ export default class BridgeNFT extends Command {
     }
 
     CliUx.ux.action.start('Retrieving collection smart contract')
-    const collectionABI = await fs.readJson(`./src/abi/${environment}/HolographERC721.json`)
+    const collectionABI = await fs.readJson(path.join(__dirname, `../../abi/${environment}/HolographERC721.json`))
     const collection = new Contract(collectionAddress, collectionABI, this.networkMonitor.providers[sourceNetwork])
     CliUx.ux.action.stop()
 
@@ -199,7 +200,7 @@ export default class BridgeNFT extends Command {
 
     const gasPricing: GasPricing = this.networkMonitor.gasPrices[destinationNetwork]
     let gasPrice: BigNumber = gasPricing.isEip1559 ? gasPricing.maxFeePerGas! : gasPricing.gasPrice!
-    gasPrice = gasPrice.add(gasPrice.div(BigNumber.from('100')).mul(BigNumber.from('25')))
+    gasPrice = gasPrice.add(gasPrice.div(BigNumber.from('4')))
 
     payload = await this.networkMonitor.bridgeContract
       .connect(this.networkMonitor.providers[sourceNetwork])
@@ -248,7 +249,7 @@ export default class BridgeNFT extends Command {
       methodName: 'bridgeOutRequest',
       args: [networks[destinationNetwork].holographId, collectionAddress, estimatedGas, gasPrice, data as string],
       waitForReceipt: true,
-      value: total.add(total.div(BigNumber.from('100')).mul(BigNumber.from('25'))),
+      value: total.add(total.div(BigNumber.from('4'))),
     })
     CliUx.ux.action.stop()
 

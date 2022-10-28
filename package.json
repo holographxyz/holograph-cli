@@ -1,7 +1,7 @@
 {
   "name": "@holographxyz/cli",
-  "version": "0.0.1",
-  "license": "MIT",
+  "version": "0.0.8",
+  "license": "SEE LICENSE IN LICENSE.md",
   "description": "Holograph operator CLI",
   "author": "@holographxyz",
   "homepage": "https://holograph.xyz",
@@ -18,11 +18,12 @@
     "url": "https://github.com/holographxyz/holograph-cli/issues"
   },
   "bin": {
-    "holo": "./bin/run"
+    "holograph": "./bin/run"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
+    "/src/abi",
     "/bin",
     "/dist",
     "/npm-shrinkwrap.json",
@@ -54,8 +55,8 @@
     "@ethersproject/providers": "^5.7.2",
     "@ethersproject/units": "^5.7.0",
     "@ethersproject/wallet": "^5.6.1",
-    "@holographxyz/environment": "0.1.8",
-    "@holographxyz/networks": "0.1.8",
+    "@holographxyz/environment": "0.1.10",
+    "@holographxyz/networks": "0.1.10",
     "@oclif/color": "^1.0.1",
     "@oclif/core": "1.16.4",
     "@oclif/plugin-help": "5.1.14",
@@ -93,7 +94,7 @@
     "@types/fs-extra": "^9.0.13",
     "@types/inquirer": "^8.2.1",
     "@types/mocha": "^9.1.1",
-    "@types/node": "18.7.23",
+    "@types/node": "^18.11.7",
     "@types/unorm": "^1.3.28",
     "bip39": "^3.0.4",
     "chai": "4.3.6",
@@ -112,12 +113,11 @@
     "typescript": "4.8.4"
   },
   "oclif": {
-    "bin": "holo",
-    "dirname": "holo",
+    "bin": "holograph",
+    "dirname": "holograph",
     "commands": "./dist/commands",
     "plugins": [
-      "@oclif/plugin-help",
-      "@oclif/plugin-plugins"
+      "@oclif/plugin-help"
     ],
     "topicSeparator": ":",
     "topics": {}
