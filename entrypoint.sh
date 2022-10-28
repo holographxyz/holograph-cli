@@ -30,7 +30,7 @@ else
 fi
 
 # notice: configure
-holo config --fromFile $CONFIG_FILE
+holograph config --fromFile $CONFIG_FILE
 
 # notice: run the specified app
 if [[ $HOLO_CLI_CMD == "operator" ]]
