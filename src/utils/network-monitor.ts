@@ -95,6 +95,8 @@ const TIMEOUT_THRESHOLD = 20_000
 const ZERO = BigNumber.from('0')
 // const ONE = BigNumber.from('1')
 const TWO = BigNumber.from('2')
+const FIFTY = BigNumber.from('50')
+const ONEHUNDRED = BigNumber.from('100')
 // const TEN = BigNumber.from('10')
 
 const webSocketErrorCodes: {[key: string]: string} = {
@@ -2005,6 +2007,7 @@ export class NetworkMonitor {
       contract = contract.connect(this.wallets[network])
       if (gasPrice === undefined) {
         gasPrice = this.gasPrices[network].gasPrice!
+        gasPrice = gasPrice.add(gasPrice.mul(ONEHUNDRED).mul(FIFTY))
       }
 
       if (gasLimit === undefined) {
