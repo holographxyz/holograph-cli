@@ -162,7 +162,6 @@ export default class BridgeNFT extends Command {
     }
 
     CliUx.ux.action.start('Retrieving collection smart contract')
-    const collectionABI = await fs.readJson(`./src/abi/${environment}/HolographERC721.json`)
     const collectionABI = await fs.readJson(path.join(__dirname, `../../abi/${environment}/HolographERC721.json`))
     const collection = new Contract(collectionAddress, collectionABI, this.networkMonitor.providers[sourceNetwork])
     CliUx.ux.action.stop()
@@ -250,7 +249,7 @@ export default class BridgeNFT extends Command {
       methodName: 'bridgeOutRequest',
       args: [networks[destinationNetwork].holographId, collectionAddress, estimatedGas, gasPrice, data as string],
       waitForReceipt: true,
-      value: total.add(total.div(BigNumber.from('4')))
+      value: total.add(total.div(BigNumber.from('4'))),
     })
     CliUx.ux.action.stop()
 

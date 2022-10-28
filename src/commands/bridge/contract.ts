@@ -200,7 +200,7 @@ export default class BridgeContract extends Command {
         data as string,
       ],
       waitForReceipt: true,
-      value: total.add(total.div(BigNumber.from('4')))
+      value: total.add(total.div(BigNumber.from('4'))),
     })
     CliUx.ux.action.stop()
 

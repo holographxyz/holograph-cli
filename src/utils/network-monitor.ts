@@ -93,11 +93,11 @@ export type TransactionFilter = {
 const TIMEOUT_THRESHOLD = 20_000
 
 const ZERO = BigNumber.from('0')
-// const ONE = BigNumber.from('1')
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const ONE = BigNumber.from('1')
 const TWO = BigNumber.from('2')
-const FIFTY = BigNumber.from('50')
-const ONEHUNDRED = BigNumber.from('100')
-// const TEN = BigNumber.from('10')
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const TEN = BigNumber.from('10')
 
 const webSocketErrorCodes: {[key: string]: string} = {
   '1000': 'Normal Closure',
