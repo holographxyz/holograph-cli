@@ -16,7 +16,7 @@ import {toAscii, sha3, storageSlot, networkToChainId} from '../../utils/utils'
 
 import {FilterType, BlockJob, NetworkMonitor, TransactionType} from '../../utils/network-monitor'
 import ApiService from '../../services/api-service'
-import {CrossChainTransaction, TransactionStatus} from '../../types/api'
+import {CrossChainTransaction, TransactionStatus, Logger} from '../../types/api'
 
 enum LogType {
   ContractDeployment = 'ContractDeployment',
@@ -88,7 +88,7 @@ export default class Analyze extends Command {
   transactionLogs: (ContractDeployment | AvailableJob)[] = []
   networkMonitor!: NetworkMonitor
   blockJobs: {[key: string]: BlockJob[]} = {}
-  apiService!: ApiService | null
+  apiService!: ApiService | undefined
 
   /**
    * Command Entry Point
@@ -105,7 +105,14 @@ export default class Analyze extends Command {
 
     if (updateApiOn) {
       try {
-        this.apiService = new ApiService(updateApiOn)
+        const logger: Logger = {
+          log: this.log,
+          warn: this.warn,
+          debug: this.debug,
+          error: this.error,
+          jsonEnabled: () => false,
+        }
+        this.apiService = new ApiService(updateApiOn, logger)
         await this.apiService.operatorLogin()
       } catch (error: any) {
         this.error(error)
@@ -235,6 +242,10 @@ export default class Analyze extends Command {
     const networks: string[] = []
     const scopeJobs: Scope[] = []
 
+    if (scopeFlags === undefined && scopeFile === undefined) {
+      this.error('scope or scopeFile should be informed')
+    }
+
     if (scopeFlags) {
       for (const scopeString of scopeFlags) {
         try {
@@ -244,14 +255,21 @@ export default class Analyze extends Command {
           this.log(`${scopeString} is an invalid Scope JSON object`)
         }
       }
+    } else if (scopeFile) {
+      if (!(await fs.pathExists(scopeFile))) {
+        this.error(`Problem reading ${scopeFile}`)
+      }
+
+      try {
+        const scopes = (await fs.readJson(scopeFile)) as Scope[]
+        scopes.forEach(scope => this.validateScope(scope, networks, scopeJobs))
+      } catch {
+        this.error(`One or more lines are an invalid Scope JSON object`)
+      }
     } else {
-      if (!scopeFile) this.error('scope or scopeFile should be informed')
-
-      if (!(await fs.pathExists(scopeFile))) this.error(`Problem reading ${scopeFile}`)
-
-      const scopes = (await fs.readJson(scopeFile)) as Scope[]
-      scopes.forEach(scope => this.validateScope(scope, networks, scopeJobs))
+      this.error(`Invalid scope`)
     }
+
     return {networks, scopeJobs}
   }
 
@@ -287,7 +305,9 @@ export default class Analyze extends Command {
    * Update cross chain transaction on DB
    */
   async updateBeamStatusDB(beam: AvailableJob) {
-    if (!this.apiService) return
+    if (this.apiService === undefined) {
+      return
+    }
 
     let crossChainTx, updatedTx: CrossChainTransaction
 
@@ -297,15 +317,13 @@ export default class Analyze extends Command {
       this.error(error)
     }
 
-    const sourceChainId = networkToChainId[beam.bridgeNetwork]
-    const messageChainId = networkToChainId[beam.messageNetwork]
-    const operatorChainId = networkToChainId[beam.operatorNetwork]
+    const sourceChainId: number = networkToChainId[beam.bridgeNetwork]
+    const messageChainId: number = networkToChainId[beam.messageNetwork]
+    const operatorChainId: number = networkToChainId[beam.operatorNetwork]
     const getCorrectValue = (val1: any, val2: any) => (val1 && val1 !== val2 ? val1 : val2)
     const getTxStatus = (tx?: string) => (tx ? TransactionStatus.COMPLETED : TransactionStatus.PENDING)
 
     if (crossChainTx) {
-      this.log('Found Job ↑')
-
       if (
         crossChainTx.sourceStatus === TransactionStatus.COMPLETED &&
         crossChainTx.messageStatus === TransactionStatus.COMPLETED &&
@@ -341,6 +359,7 @@ export default class Analyze extends Command {
         operatorBlockNumber: getCorrectValue(beam.operatorBlock, crossChainTx.operatorBlockNumber),
         operatorStatus: getTxStatus(beam.bridgeTx),
       }
+      delete updatedTx.id
     } else {
       this.log('No source job found in DB')
 
@@ -367,8 +386,8 @@ export default class Analyze extends Command {
     }
 
     try {
-      await this.apiService.updateCrossChainTransactionStatus(updatedTx)
-      this.log('Updated ↑')
+      const response = await this.apiService.updateCrossChainTransactionStatus(updatedTx)
+      this.log(`Updated cross chain transaction ${response.id}`)
     } catch (error: any) {
       this.error(error)
     }
