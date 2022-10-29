@@ -937,6 +937,7 @@ export class NetworkMonitor {
       if (this.verbose) {
         this.structuredLog(job.network, `Block retrieved`, job.block)
 
+        /*
         this.structuredLog(job.network, `Calculating block gas`, job.block)
         if (this.gasPrices[job.network].isEip1559) {
           this.structuredLog(
@@ -948,6 +949,7 @@ export class NetworkMonitor {
             job.block,
           )
         }
+        */
       }
 
       if (recentBlock) {
@@ -1001,6 +1003,7 @@ export class NetworkMonitor {
       }
 
       if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
+        /*
         this.structuredLog(
           job.network,
           `Calculated block priority fees was ${formatUnits(
@@ -1012,6 +1015,7 @@ export class NetworkMonitor {
           )} GWEI`,
           job.block,
         )
+        */
       }
 
       if (interestingTransactions.length > 0) {
