@@ -59,6 +59,12 @@ export enum OperatorMode {
   auto,
 }
 
+export enum ProviderStatus {
+  NOT_CONFIGURED = 'NOT_CONFIGURED',
+  CONNECTED = 'CONNECTED',
+  DISCONNECTED = 'DISCONNECTED',
+}
+
 export type KeepAliveParams = {
   debug: (...args: any[]) => void
   websocket: WebSocket
@@ -489,18 +495,25 @@ export class NetworkMonitor {
     '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef': 'Transfer',
   }
 
-  getProviderStatus(): any {
-    const outputNetworks = Object.keys(this.configFile.networks)
-    const output = {} as any
+  getProviderStatus(): {[key: string]: ProviderStatus} {
+    const output: {[key: string]: ProviderStatus} = {}
 
-    for (const n of outputNetworks) {
-      if (this.providers[n]) {
-        const current = this.providers[n] as WebSocketProvider
-        if (current._wsReady && current._websocket._socket.readyState === 'open') {
-          output[n] = 'CONNECTED'
-        }
+    for (const network of supportedNetworks) {
+      if (
+        !(network in this.configFile.networks) ||
+        !('providerUrl' in this.configFile.networks[network]) ||
+        this.configFile.networks[network].providerUrl === undefined ||
+        this.configFile.networks[network].providerUrl === ''
+      ) {
+        output[network] = ProviderStatus.NOT_CONFIGURED
       } else {
-        output[n] = this.configFile.networks[n].providerUrl ? 'DISCONNECTED' : 'NOT_CONFIGURED'
+        output[network] = this.providers[network] === undefined ? ProviderStatus.DISCONNECTED : ProviderStatus.CONNECTED
+        // check if using a WebSocketProvider connection
+        if (output[network] === ProviderStatus.CONNECTED && network in this.ws) {
+          // using WebSocketProvider, do a more thorough test
+          output[network] =
+            this.ws[network].readyState === WebSocket.OPEN ? ProviderStatus.CONNECTED : ProviderStatus.DISCONNECTED
+        }
       }
     }
 
@@ -645,11 +658,6 @@ export class NetworkMonitor {
 
   disconnectBuilder(network: string, rpcEndpoint: string, subscribe: boolean): (code: number, reason: any) => void {
     return (code: number, reason: any): void => {
-      if (this.providers[network] === undefined) {
-        this.log(JSON.stringify(this.providers))
-        throw new Error(`Provider for ${network} is undefined`)
-      }
-
       const restart = () => {
         this.structuredLog(
           network,
@@ -671,7 +679,7 @@ export class NetworkMonitor {
     this.log('this.providers', networks[network].shortKey)
     this.ws[network] = new WebSocket(rpcEndpoint)
     keepAlive({
-      debug: this.log,
+      debug: this.debug,
       websocket: this.ws[network],
       onDisconnect: this.disconnectBuilder.bind(this)(network, rpcEndpoint, true),
     })
@@ -849,7 +857,7 @@ export class NetworkMonitor {
         this.exited = true
       }
 
-      this.log(`\nExit code ${exitCode}`)
+      this.debug(`\nExit code ${exitCode}`)
       if (options.exit) {
         if (this.exitCallback !== undefined) {
           this.exitCallback()
@@ -859,8 +867,8 @@ export class NetworkMonitor {
         process.exit()
       }
     } else {
-      this.log('exitRouter triggered')
-      this.log(`\nError: ${exitCode}`)
+      this.debug('exitRouter triggered')
+      this.debug(`\nError: ${exitCode}`)
     }
   }
 
