@@ -25,7 +25,7 @@ class CoreChainService {
   }
 
   // NOTE: This must be called on instantiation!
-  async initialize() {
+  async initialize(): Promise<void> {
     this.abis = await getABIs(ENVIRONMENT)
     this.holograph = new Contract(HOLOGRAPH_ADDRESS, this.abis.HolographABI, this.wallet)
   }

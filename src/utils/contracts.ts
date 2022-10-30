@@ -16,11 +16,11 @@ export const toLong18 = (num: BigNumberish): BigNumberish => {
   return BigNumber.from(num).mul(BigNumber.from('10').pow(18))
 }
 
-export const generateRandomSalt = () => {
+export const generateRandomSalt = (): string => {
   return '0x' + Date.now().toString(16).padStart(64, '0')
 }
 
-export const utf8ToBytes32 = (str: string) => {
+export const utf8ToBytes32 = (str: string): string => {
   return (
     '0x' +
     [...str]
@@ -43,7 +43,7 @@ export const waitForTransactionComplete = async (innerFunc: () => Promise<void>)
   }
 }
 
-export const getABIs = async (environment: string) => {
+export const getABIs = async (environment: string): Promise<any> => {
   return {
     HolographABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/Holograph.json`)),
     HolographFactoryABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographFactory.json`)),

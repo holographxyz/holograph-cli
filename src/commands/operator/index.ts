@@ -1,7 +1,6 @@
 import * as inquirer from 'inquirer'
 import {CliUx, Command, Flags} from '@oclif/core'
 import {TransactionDescription} from '@ethersproject/abi'
-// import {formatUnits} from '@ethersproject/units'
 import {BigNumber} from '@ethersproject/bignumber'
 import {Contract} from '@ethersproject/contracts'
 import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
@@ -76,6 +75,39 @@ export default class Operator extends Command {
   operatorStatus: OperatorStatus = {} as OperatorStatus
   operatorJobs: {[key: string]: OperatorJob} = {}
 
+  getTargetTime(network: string, jobDetails: OperatorJobDetails): number {
+    let targetTime: number = new Date(BigNumber.from(jobDetails.startTimestamp).toNumber() * 1000).getTime()
+    if (jobDetails.operator !== zeroAddress && jobDetails.operator !== this.operatorStatus.address) {
+      // operator is not selected
+      // add +60 seconds to target time
+      targetTime += 60 * 1000
+
+      // ignore where operator is not in same pod
+      if (jobDetails.pod === this.operatorStatus.currentPod[network]) {
+        for (let i = 0; i < 5; i++) {
+          if (
+            jobDetails.fallbackOperators[i] >= this.operatorStatus.podSize[network] ||
+            jobDetails.fallbackOperators[i] === 0
+          ) {
+            // anyone from that pod can operate
+            break
+          } else if (jobDetails.fallbackOperators[i] === this.operatorStatus.podIndex[network]) {
+            // operator has been selected as the fallback
+            break
+          }
+
+          // add +60 seconds to target time
+          targetTime += 60 * 1000
+        }
+      } else {
+        // add time delay for 5 fallback operators to have a chance first
+        targetTime += 60 * 1000 * 5
+      }
+    }
+
+    return targetTime
+  }
+
   async decodeOperatorJob(
     network: string,
     operatorJobHash: string,
@@ -93,34 +125,7 @@ export default class Operator extends Command {
     } as OperatorJobDetails
     if (jobDetails.startBlock > 0) {
       this.networkMonitor.structuredLog(network, 'Decoded valid job ' + operatorJobHash)
-      let targetTime: number = new Date(BigNumber.from(jobDetails.startTimestamp).toNumber() * 1000).getTime()
-      if (jobDetails.operator !== this.operatorStatus.address) {
-        // operator is not selected
-        // add +60 seconds to target time
-        targetTime += 60 * 1000
-
-        // ignore where operator is not in same pod
-        if (jobDetails.pod === this.operatorStatus.currentPod[network]) {
-          for (let i = 0; i < 5; i++) {
-            if (
-              jobDetails.fallbackOperators[i] >= this.operatorStatus.podSize[network] ||
-              jobDetails.fallbackOperators[i] === 0
-            ) {
-              // anyone from that pod can operate
-              break
-            } else if (jobDetails.fallbackOperators[i] === this.operatorStatus.podIndex[network]) {
-              // operator has been selected as the fallback
-              break
-            }
-
-            // add +60 seconds to target time
-            targetTime += 60 * 1000
-          }
-        } else {
-          // add time delay for 5 fallback operators to have a chance first
-          targetTime += 60 * 1000 * 5
-        }
-      }
+      const targetTime: number = this.getTargetTime(network, jobDetails)
 
       // time to extract gasLimit and gasPrice from payload
       const gasLimit: BigNumber = BigNumber.from('0x' + operatorJobPayload.slice(-128, -64))
@@ -148,36 +153,7 @@ export default class Operator extends Command {
   updateJobTimes(): void {
     for (const hash of Object.keys(this.operatorJobs)) {
       const job: OperatorJob = this.operatorJobs[hash]
-      let targetTime: number = new Date(BigNumber.from(job.jobDetails.startTimestamp).toNumber() * 1000).getTime()
-      if (job.jobDetails.operator !== zeroAddress && job.jobDetails.operator !== this.operatorStatus.address) {
-        // operator is not selected
-        // add +60 seconds to target time
-        targetTime += 60 * 1000
-
-        // ignore where operator is not in same pod
-        if (job.jobDetails.pod === this.operatorStatus.currentPod[job.network]) {
-          for (let i = 0; i < 5; i++) {
-            if (
-              job.jobDetails.fallbackOperators[i] >= this.operatorStatus.podSize[job.network] ||
-              job.jobDetails.fallbackOperators[i] === 0
-            ) {
-              // anyone from that pod can operate
-              break
-            } else if (job.jobDetails.fallbackOperators[i] === this.operatorStatus.podIndex[job.network]) {
-              // operator has been selected as the fallback
-              break
-            }
-
-            // add +60 seconds to target time
-            targetTime += 60 * 1000
-          }
-        } else {
-          // add time delay for 5 fallback operators to have a chance first
-          targetTime += 60 * 1000 * 5
-        }
-      }
-
-      this.operatorJobs[hash].targetTime = targetTime
+      this.operatorJobs[hash].targetTime = this.getTargetTime(job.network, job.jobDetails)
     }
   }
 
@@ -251,8 +227,6 @@ export default class Operator extends Command {
       }
     }
 
-    // this.networkMonitor.structuredLog(network, `${candidates.length} job candidates identified`, tags)
-
     if (candidates.length > 0) {
       // sort candidates by gas priority
       // returning highest gas first
@@ -260,19 +234,9 @@ export default class Operator extends Command {
         return b.gasPrice.sub(a.gasPrice).toNumber()
       })
       const compareGas: BigNumber = gasPricing.isEip1559 ? gasPricing.maxFeePerGas! : gasPricing.gasPrice!
-      /*
-      this.networkMonitor.structuredLog(
-        network,
-        `Current gas price is ${formatUnits(compareGas, 'gwei')} GWEI, and job gas price is ${formatUnits(
-          candidates[0].gasPrice,
-          'gwei',
-        )} GWEI`,
-        tags,
-      )
-*/
       if (candidates[0].gasPrice.gte(compareGas)) {
         this.networkMonitor.structuredLog(network, `Sending ${candidates[0].hash} job for execution`, tags)
-        // we have a valid job to do right away
+        // have a valid job to do right away
         this.processOperatorJob(network, candidates[0].hash, tags)
       } else {
         setTimeout(this.processOperatorJobs.bind(this, network), 1000)
@@ -311,7 +275,6 @@ export default class Operator extends Command {
 
     this.operatorMode = OperatorMode[mode as keyof typeof OperatorMode]
 
-    this.log(`executeJob ${functionSignature('executeJob(bytes)')}`)
     this.log(`Operator mode: ${this.operatorMode}`)
 
     this.log('Loading user configurations...')
