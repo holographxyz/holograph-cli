@@ -2055,6 +2055,7 @@ export class NetworkMonitor {
         gasPrice = gasPrice.add(gasPrice.div(TWO))
       }
 
+      this.structuredLog(network, `Gas price is ${formatUnits(gasPrice, 'gwei')} GWEI`, tags)
       if (gasLimit === undefined) {
         gasLimit = await this.getGasLimit({
           network,
@@ -2075,38 +2076,37 @@ export class NetworkMonitor {
         return
       }
 
+      this.structuredLog(network, `Gas limit is ${gasLimit.toNumber()}`, tags)
+      this.structuredLog(
+        network,
+        `Transaction is estimated to cost a total of ${formatUnits(gasLimit.mul(gasPrice), 'ether')} ${
+          networks[network].tokenSymbol
+        }`,
+        tags,
+      )
       const walletAddress: string = await this.wallets[network].getAddress()
       const balance: BigNumber | null = await this.getBalance({network, walletAddress, attempts, canFail, interval})
-      this.structuredLog(network, `Wallet balance is ${formatUnits(balance!, 'ether')}`, tags)
       if (balance === null) {
         this.structuredLog(network, `Could not get wallet ${walletAddress} balance`, tags)
         topResolve(null)
         return
       }
 
-      if (balance.lt(gasLimit.mul(gasPrice))) {
+      this.structuredLog(network, `Wallet balance is ${formatUnits(balance!, 'ether')}`, tags)
+      if (balance.lt(gasLimit.mul(gasPrice).add(value))) {
         this.structuredLog(
           network,
-          `Wallet balance is lower than the transaction required amount. ${JSON.stringify(
-            {contract: await contract.resolvedAddress, method: methodName, args},
-            undefined,
-            2,
-          )}`,
+          `Wallet balance is lower than the transaction required amount. Balance is ${formatUnits(balance, 'ether')} ${
+            networks[network].tokenSymbol
+          } and required amount is ${formatUnits(gasLimit.mul(gasPrice).add(value), 'ether')} ${
+            networks[network].tokenSymbol
+          }`,
           tags,
         )
         topResolve(null)
         return
       }
 
-      this.structuredLog(network, `Gas price in Gwei = ${formatUnits(gasPrice, 'gwei')}`, tags)
-      this.structuredLog(
-        network,
-        `Transaction is estimated to cost a total of ${formatUnits(
-          gasLimit.mul(gasPrice),
-          'ether',
-        )} native gas tokens (in ether)`,
-        tags,
-      )
       const rawTx: PopulatedTransaction | null = await this.populateTransaction({
         network,
         contract,
@@ -2128,7 +2128,7 @@ export class NetworkMonitor {
         return
       }
 
-      // we reset time to allow for proper transaction submission
+      // reset time to allow for proper transaction submission
       this.lastBlockJobDone[network] = Date.now()
       const tx: TransactionResponse | null = await this.sendTransaction({
         network,
@@ -2145,7 +2145,7 @@ export class NetworkMonitor {
         return
       }
 
-      // we reset time to allow for proper transaction confirmation
+      // reset time to allow for proper transaction confirmation
       this.lastBlockJobDone[network] = Date.now()
       this.structuredLog(network, `Transaction ${tx.hash} has been submitted`, tags)
       this.walletNonces[network]++
@@ -2153,13 +2153,21 @@ export class NetworkMonitor {
         network,
         transactionHash: tx.hash,
         attempts,
-        // we allow this promise to resolve as null to not hold up the confirmation process for too long
+        // allow this promise to resolve as null to not hold up the confirmation process for too long
         canFail: waitForReceipt ? false : canFail, // canFail,
       })
       if (receipt === null) {
-        this.structuredLog(network, `Transaction ${tx.hash} could not be confirmed`, tags)
+        this.structuredLog(
+          network,
+          `Transaction ${networks[network].explorer}/tx/${tx.hash} could not be confirmed`,
+          tags,
+        )
       } else {
-        this.structuredLog(network, `Transaction ${receipt.transactionHash} mined and confirmed`, tags)
+        this.structuredLog(
+          network,
+          `Transaction ${networks[network].explorer}/tx/${receipt.transactionHash} mined and confirmed`,
+          tags,
+        )
       }
 
       topResolve(receipt)
