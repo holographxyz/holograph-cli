@@ -150,68 +150,22 @@ export const keepAlive = ({
     if (errorCounter === 0) {
       errorCounter++
       debug(`websocket error event triggered ${err.code} ${JSON.stringify(err.reason)}`)
-      if (keepAliveInterval) clearInterval(keepAliveInterval)
-      if (pingTimeout) clearTimeout(pingTimeout)
+      if (keepAliveInterval) {
+        clearInterval(keepAliveInterval)
+      }
+
+      if (pingTimeout) {
+        clearTimeout(pingTimeout)
+      }
+
       terminator = setTimeout(() => {
         websocket.terminate()
       }, checkInterval)
     }
   }
 
-  /*
-  websocket.on('close', (code: number, reason: any) => {
-    debug(JSON.stringify({
-      on: 'close',
-      code,
-      reason,
-    },undefined,2))
-  })
-
-  websocket.on('error', (error: Error) => {
-    debug(JSON.stringify({
-      on: 'error',
-      error,
-    },undefined,2))
-  })
-
-  websocket.on('message', (data: any) => {
-    debug(JSON.stringify({
-      on: 'message',
-//      data: JSON.parse(data.toString()),
-    },undefined,2))
-  })
-
-  websocket.on('open', () => {
-    debug(JSON.stringify({
-      on: 'open',
-    },undefined,2))
-  })
-*/
-
   websocket.on('ping', (data: any) => {
-    debug(
-      JSON.stringify(
-        {
-          on: 'ping',
-          data,
-        },
-        undefined,
-        2,
-      ),
-    )
-  })
-
-  websocket.on('data', (data: any) => {
-    debug(
-      JSON.stringify(
-        {
-          on: 'data',
-          data,
-        },
-        undefined,
-        2,
-      ),
-    )
+    websocket.pong(data)
   })
 
   websocket.on('redirect', (url: string, request: any) => {
@@ -241,24 +195,14 @@ export const keepAlive = ({
       ),
     )
   })
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  websocket.on('upgrade', (response: any) => {
-    debug(
-      JSON.stringify(
-        {
-          on: 'upgrade',
-          //      response,
-        },
-        undefined,
-        2,
-      ),
-    )
-  })
 
   websocket.on('open', () => {
     debug(`websocket open event triggered`)
     websocket.off('error', errHandler)
-    if (terminator) clearTimeout(terminator)
+    if (terminator) {
+      clearTimeout(terminator)
+    }
+
     keepAliveInterval = setInterval(() => {
       websocket.ping()
       pingTimeout = setTimeout(() => {
@@ -272,8 +216,14 @@ export const keepAlive = ({
     if (counter === 0) {
       debug(`websocket closed`)
       counter++
-      if (keepAliveInterval) clearInterval(keepAliveInterval)
-      if (pingTimeout) clearTimeout(pingTimeout)
+      if (keepAliveInterval) {
+        clearInterval(keepAliveInterval)
+      }
+
+      if (pingTimeout) {
+        clearTimeout(pingTimeout)
+      }
+
       setTimeout(() => {
         onDisconnect(code, reason)
       }, checkInterval)
@@ -283,7 +233,9 @@ export const keepAlive = ({
   websocket.on('error', errHandler)
 
   websocket.on('pong', () => {
-    if (pingTimeout) clearInterval(pingTimeout)
+    if (pingTimeout) {
+      clearInterval(pingTimeout)
+    }
   })
 }
 
