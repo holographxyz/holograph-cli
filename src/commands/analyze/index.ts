@@ -342,6 +342,9 @@ export default class Analyze extends Command {
         crossChainTx.sourceStatus === TransactionStatus.COMPLETED &&
         crossChainTx.messageStatus === TransactionStatus.COMPLETED &&
         crossChainTx.operatorStatus === TransactionStatus.COMPLETED &&
+        crossChainTx.sourceAddress != undefined &&
+        crossChainTx.messageAddress != undefined &&
+        crossChainTx.operatorAddress != undefined &&
         crossChainTx.data != undefined
       ) {
         this.log('Beaming is completed')
