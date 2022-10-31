@@ -72,7 +72,14 @@ export default class Operator extends Command {
   operatorMode: OperatorMode = OperatorMode.listen
   networkMonitor!: NetworkMonitor
   environment!: Environment
-  operatorStatus: OperatorStatus = {} as OperatorStatus
+  operatorStatus: OperatorStatus = {
+    address: '',
+    active: {},
+    currentPod: {},
+    podIndex: {},
+    podSize: {},
+  }
+
   operatorJobs: {[key: string]: OperatorJob} = {}
 
   /**
@@ -189,10 +196,6 @@ export default class Operator extends Command {
       })
     }
 
-    this.operatorStatus.active = {}
-    this.operatorStatus.currentPod = {}
-    this.operatorStatus.podIndex = {}
-    this.operatorStatus.podSize = {}
     // for first time init, get operator status details
     for (const network of this.networkMonitor.networks) {
       /* eslint-disable no-await-in-loop */

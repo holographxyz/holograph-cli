@@ -112,9 +112,8 @@ export default class BridgeContract extends Command {
       .getContractTypeAddress(configHash)
     CliUx.ux.action.stop()
     if (contractAddress !== zeroAddress) {
-      throw new Error(
-        `Contract already deployed at ${contractAddress} on ${networks[destinationNetwork].shortKey} network`,
-      )
+      this.networkMonitor.structuredLogError(destinationNetwork, `Contract already deployed at ${contractAddress}`)
+      this.exit()
     }
 
     const data: BytesLike = generateInitCode(
@@ -212,7 +211,8 @@ export default class BridgeContract extends Command {
     CliUx.ux.action.stop()
 
     if (receipt === null) {
-      throw new Error('failed to confirm that the transaction was mined')
+      this.networkMonitor.structuredLogError(sourceNetwork, `Failed to confirm that the transaction was mined`)
+      this.exit()
     } else {
       const jobHash: string | undefined = this.networkMonitor.decodeCrossChainMessageSentEvent(
         receipt,
