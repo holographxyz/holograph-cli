@@ -412,7 +412,7 @@ export default class Analyze extends Command {
         operatorStatus: getTxStatus(beam.operatorTx),
       }
 
-      if (rawData) {
+      if (rawData !== undefined) {
         updatedTx.data = JSON.stringify(rawData)
       }
     }
