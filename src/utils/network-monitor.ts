@@ -552,8 +552,8 @@ export class NetworkMonitor {
     blockJobs?: {[key: string]: BlockJob[]},
     ethersInitializedCallback?: () => Promise<void>,
   ): Promise<void> {
-    // check connections in 30 seconds, if something failed, kill the process
-    setTimeout(this.checkConnectionStatus.bind(this), 30_000)
+    // check connections in 60 seconds, if something failed, kill the process
+    setTimeout(this.checkConnectionStatus.bind(this), 60_000)
     await this.initializeEthers()
     if (ethersInitializedCallback !== undefined) {
       await ethersInitializedCallback.bind(this.parent)()
