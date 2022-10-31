@@ -562,11 +562,14 @@ export default class Analyze extends Command {
 
               if (erc721TransferEvent === undefined) {
                 this.warn("Couldn't create raw json data, since the tokenId is undefined")
-                return
+                this.exit()
               }
 
+              //@ts-ignore
               const from = erc721TransferEvent[0]
+              //@ts-ignore
               const to = erc721TransferEvent[1]
+              //@ts-ignore
               const tokenId = erc721TransferEvent[2].toNumber()
 
               rawData = {
@@ -634,7 +637,7 @@ export default class Analyze extends Command {
         beam.messageNetwork = network
         beam.messageBlock = transaction.blockNumber!
         beam.messageAddress = transaction.from
-        if (!beam.completed) {
+        if (beam.completed !== true) {
           beam.completed = await this.validateOperatorJob(transaction.hash, network, operatorJobPayload!, tags)
         }
 
