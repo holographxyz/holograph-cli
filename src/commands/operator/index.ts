@@ -482,6 +482,11 @@ export default class Operator extends Command {
     }
   }
 
+  /*
+    @dev defining some of the current values like: if operator is bonded on the network, which pod they are in,
+         which index position inside of the pod doe they hold (used for fallback operator calculations),
+         the current pod size (used for fallback operator calculations).
+  */
   async updateOperatorStatus(network: string): Promise<void> {
     const contract: Contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.providers[network])
     this.operatorStatus.active[network] = !BigNumber.from(
