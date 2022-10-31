@@ -676,7 +676,10 @@ export class NetworkMonitor {
       }
 
       if (this.warp > 0) {
-        this.structuredLog(network, `Starting Operator from ${this.warp} blocks back...`)
+        if (this.verbose) {
+          this.structuredLog(network, `Starting Operator from ${this.warp} blocks back...`)
+        }
+
         /* eslint-disable no-await-in-loop */
         const currentBlock: number = await this.providers[network].getBlockNumber()
         this.blockJobs[network] = []
@@ -687,10 +690,16 @@ export class NetworkMonitor {
           })
         }
       } else if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
-        this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
+        if (this.verbose) {
+          this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
+        }
+
         this.currentBlockHeight[network] = this.latestBlockHeight[network]
       } else {
-        this.structuredLog(network, `Starting Operator from latest block height`)
+        if (this.verbose) {
+          this.structuredLog(network, `Starting Operator from latest block height`)
+        }
+
         this.latestBlockHeight[network] = 0
         this.currentBlockHeight[network] = 0
       }

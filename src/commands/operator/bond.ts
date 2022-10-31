@@ -2,16 +2,17 @@ import * as inquirer from 'inquirer'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import color from '@oclif/color'
-import {networks, supportedShortNetworks} from '@holographxyz/networks'
-import {WebSocketProvider, JsonRpcProvider} from '@ethersproject/providers'
+import {networks} from '@holographxyz/networks'
 import {BigNumber} from '@ethersproject/bignumber'
+import {TransactionReceipt} from '@ethersproject/providers'
 import {formatUnits} from '@ethersproject/units'
 
 import CoreChainService from '../../services/core-chain-service'
 import OperatorChainService from '../../services/operator-chain-service'
 import TokenChainService from '../../services/token-chain-service'
 import {PodBondAmounts} from '../../types/holograph-operator'
-import {ConfigNetwork, ConfigNetworks, ensureConfigFileIsValid} from '../../utils/config'
+import {ensureConfigFileIsValid} from '../../utils/config'
+import {NetworkMonitor, networkFlag} from '../../utils/network-monitor'
 import {toLong18} from '../../utils/utils'
 import {checkOptionFlag} from '../../utils/validation'
 import Operator from '.'
@@ -24,11 +25,7 @@ export default class Bond extends Command {
   static description = 'Bond an operator into a pod'
   static examples = ['$ <%= config.bin %> <%= command.id %> --network <string> --pod <number> --amount <number>']
   static flags = {
-    network: Flags.string({
-      description: 'The network to bond to',
-      options: supportedShortNetworks,
-      char: 'n',
-    }),
+    ...networkFlag,
     pod: Flags.integer({
       description: 'Pod number to join',
     }),
@@ -37,9 +34,8 @@ export default class Bond extends Command {
     }),
   }
 
-  /**
-   * Command Entry Point
-   */
+  networkMonitor!: NetworkMonitor
+
   async run(): Promise<void> {
     const {flags} = await this.parse(Bond)
     let {pod, amount} = flags
@@ -79,48 +75,32 @@ export default class Bond extends Command {
 
     this.log(`Joining network: ${networks[network].shortKey}`)
 
-    CliUx.ux.action.start('Loading destination network RPC provider')
-    const destinationProviderUrl: string = (configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork)
-      .providerUrl
-    const networkProtocol: string = new URL(destinationProviderUrl).protocol
-    let provider
-    switch (networkProtocol) {
-      case 'https:':
-        provider = new JsonRpcProvider(destinationProviderUrl)
-        break
-      case 'wss:':
-        provider = new WebSocketProvider(destinationProviderUrl)
-        break
-      default:
-        throw new Error('Unsupported RPC URL protocol -> ' + networkProtocol)
-    }
+    this.networkMonitor = new NetworkMonitor({
+      parent: this,
+      configFile,
+      networks: [network],
+      debug: this.debug,
+      userWallet,
+      verbose: false,
+    })
 
+    CliUx.ux.action.start('Loading network RPC provider')
+    await this.networkMonitor.run(true)
     CliUx.ux.action.stop()
-
-    CliUx.ux.action.start('Checking RPC connection')
-    const listening = await provider.send('net_listening', [])
-    CliUx.ux.action.stop()
-    if (!listening) {
-      throw new Error('RPC connection failed')
-    }
-
-    this.log('RPC connection successful')
-
-    const wallet = userWallet?.connect(provider)
 
     // Setup the contracts and chain services
-    const coreChainService = new CoreChainService(provider, wallet, networks[network].chain)
+    const coreChainService = new CoreChainService(network, this.networkMonitor)
     await coreChainService.initialize()
     const tokenContract = await coreChainService.getUtilityToken()
-    const tokenChainService = new TokenChainService(provider, wallet, networks[network].chain, tokenContract)
+    const tokenChainService = new TokenChainService(network, this.networkMonitor, tokenContract)
     const operatorContract = await coreChainService.getOperator()
-    const operatorChainService = new OperatorChainService(provider, wallet, networks[network].chain, operatorContract)
+    const operatorChainService = new OperatorChainService(network, this.networkMonitor, operatorContract)
     const operator = operatorChainService.operator
 
-    const currentHlgBalance = (await tokenChainService.balanceOf(wallet.address)) as BigNumber
+    const currentHlgBalance = (await tokenChainService.balanceOf(coreChainService.wallet.address)) as BigNumber
     this.log(`Current HLG balance: ${formatUnits(currentHlgBalance, 'ether')}`)
 
-    if ((await operator.getBondedAmount(wallet.address)) > 0) {
+    if ((await operator.getBondedAmount(coreChainService.wallet.address)) > 0) {
       prompt = await inquirer.prompt([
         {
           name: 'continue',
@@ -134,10 +114,12 @@ export default class Bond extends Command {
         this.exit()
       }
 
-      CliUx.ux.action.start(`Unbonding operator ${wallet.address} from network: ${network}`)
-      const tx = await operator.unbondUtilityToken(wallet.address, wallet.address)
-      await tx.wait()
-      CliUx.ux.action.stop()
+      this.log(`Unbonding operator ${coreChainService.wallet.address} from network: ${networks[network].shortKey}`)
+      const unbondReceipt: TransactionReceipt | null = await operatorChainService.unbondUtilityToken()
+      if (unbondReceipt === null) {
+        this.log(color.red(`Could not confirm the success of unbonding transaction.`))
+        this.exit()
+      }
 
       prompt = await inquirer.prompt([
         {
@@ -182,7 +164,7 @@ export default class Bond extends Command {
           choices: podChoices,
         },
       ])
-      pod = Number.parseInt(prompt.pod.charAt(0), 10)
+      pod = Number.parseInt(prompt.pod.split(' - ')[0], 10)
       this.log(`Joining pod: ${pod}`)
     }
 
@@ -199,7 +181,7 @@ export default class Bond extends Command {
       prompt = await inquirer.prompt([
         {
           name: 'amount',
-          message: `Enter the amount of tokens to deposit (Units in Ether)`,
+          message: `Enter the amount of tokens to deposit (Units in ether)`,
           type: 'number',
           validate: async (input: number) => {
             const inputBN = BigNumber.from(toLong18(input))
@@ -214,30 +196,26 @@ export default class Bond extends Command {
       amount = prompt.amount
     }
 
-    this.log(`Bonding from ${wallet.address} to pod ${pod} on network ${network} for ${amount} tokens`)
+    this.log(
+      `Bonding from ${coreChainService.wallet.address} to pod ${pod} on ${networks[network].shortKey} network for ${amount} tokens`,
+    )
 
     CliUx.ux.action.start('Calculating gas amounts and prices')
-    let gasLimit
-    try {
-      gasLimit = await operator.estimateGas.bondUtilityToken(wallet.address, toLong18(amount as number), pod)
-    } catch (error: any) {
-      this.error(error.reason)
-    }
-
-    const gasPriceBase = await wallet!.provider.getGasPrice()
-    const gasPrice = gasPriceBase.add(gasPriceBase.div(BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
-    const estimatedGas = gasLimit.mul(gasPrice)
+    const estimatedGas: BigNumber = await operatorChainService.estimateGasForBondUtilityToken(
+      coreChainService.wallet.address,
+      toLong18(amount as number),
+      pod,
+    )
     CliUx.ux.action.stop()
 
     this.log(
-      `Transaction is estimated to cost a total of ${formatUnits(
-        estimatedGas,
-        'ether',
-      )} native gas tokens (in Ether units)`,
+      `Transaction is estimated to cost a total of ${formatUnits(estimatedGas, 'ether')} ${
+        networks[network].tokenSymbol
+      }`,
     )
-    if (estimatedGas.gt(currentHlgBalance)) {
+    if (estimatedGas.gt(await coreChainService.getBalance())) {
       this.log(
-        'You do not have enough HLG to cover the gas cost. Please deposit more HLG into your wallet before bonding.',
+        `You do not have enough ${networks[network].tokenSymbol} to cover the transaction cost. Please deposit more ${networks[network].tokenSymbol} into your wallet before bonding.`,
       )
       this.exit()
     }
@@ -255,23 +233,20 @@ export default class Bond extends Command {
       this.exit()
     }
 
-    try {
-      CliUx.ux.action.start('Sending transaction to mempool')
-      const tx = await operator.bondUtilityToken(wallet.address, toLong18(amount as number), pod)
-      this.debug(tx)
-      CliUx.ux.action.stop('Transaction hash is ' + tx.hash)
+    const receipt: TransactionReceipt | null = await operatorChainService.bondUtilityToken(
+      coreChainService.wallet.address,
+      toLong18(amount as number),
+      pod,
+    )
 
-      CliUx.ux.action.start('Waiting for transaction to be mined and confirmed')
-      const receipt = await tx.wait()
-      this.debug(receipt)
-      CliUx.ux.action.stop(`Transaction mined and confirmed. Transaction hash is ${receipt.transactionHash}`)
-    } catch (error: any) {
-      this.error(error.error.reason)
+    if (receipt === null) {
+      this.log(color.red(`Could not confirm the success of transaction.`))
+      this.exit()
     }
 
     this.log(
       color.green(
-        `Welcome operator! Your wallet ${wallet.address} has bonded ${amount} eth to pod ${pod} on ${network} 🎉` +
+        `Welcome operator! Your wallet ${coreChainService.wallet.address} has bonded ${amount} eth to pod ${pod} on ${networks[network].shortKey} 🎉` +
           `\nAgain please make sure your operator remains operational! ` +
           `Failure will result in slashed funds!`,
       ),

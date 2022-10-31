@@ -122,7 +122,7 @@ export default class Config extends Command {
               return true
             }
 
-            return 'Please select at least 1 network to operate on. Use the arrow keys and space-bar to select.'
+            return 'Please select at least 1 network. Use the arrow keys and space-bar to select.'
           },
         },
       ])

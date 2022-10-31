@@ -3,9 +3,8 @@ import * as inquirer from 'inquirer'
 import {CliUx, Command} from '@oclif/core'
 import color from '@oclif/color'
 import {BigNumber} from '@ethersproject/bignumber'
-import {Wallet} from '@ethersproject/wallet'
-import {JsonRpcProvider, WebSocketProvider} from '@ethersproject/providers'
 import {formatUnits} from '@ethersproject/units'
+import {TransactionReceipt} from '@ethersproject/providers'
 import {networks} from '@holographxyz/networks'
 
 import CoreChainService from '../../services/core-chain-service'
@@ -70,20 +69,17 @@ export default class Faucet extends Command {
     await this.networkMonitor.run(true)
     CliUx.ux.action.stop()
 
-    const provider: JsonRpcProvider | WebSocketProvider = this.networkMonitor.providers[network]
-    const wallet: Wallet = this.networkMonitor.wallets[network]
-
     // Setup the contracts and chain services
-    const coreChainService = new CoreChainService(provider, wallet, networks[network].chain)
+    const coreChainService = new CoreChainService(network, this.networkMonitor)
     await coreChainService.initialize()
     const tokenContract = await coreChainService.getUtilityToken()
     const faucetContract = await coreChainService.getFaucet()
-    const tokenChainService = new TokenChainService(provider, wallet, networks[network].chain, tokenContract)
-    const faucetService = new FaucetService(provider, wallet, networks[network].chain, faucetContract)
-    const currentHlgBalance = BigNumber.from(await tokenChainService.balanceOf(wallet.address))
+    const tokenChainService = new TokenChainService(network, this.networkMonitor, tokenContract)
+    const faucetService = new FaucetService(network, this.networkMonitor, faucetContract)
+    const currentHlgBalance = BigNumber.from(await tokenChainService.balanceOf(coreChainService.wallet.address))
     this.log(`Current $HLG balance: ${formatUnits(currentHlgBalance, 'ether')}`)
 
-    const faucetInfo: FaucetInfo = await faucetService.getFaucetInfo(wallet.address)
+    const faucetInfo: FaucetInfo = await faucetService.getFaucetInfo(coreChainService.wallet.address)
 
     if (faucetInfo.isAllowedToWithdraw === false) {
       this.log(
@@ -95,12 +91,12 @@ export default class Faucet extends Command {
       this.exit()
     }
 
-    const faucetFee = await faucetService.getFaucetFee(wallet.address)
+    const faucetFee = await faucetService.getFaucetFee(coreChainService.wallet.address)
     if (faucetFee.hasEnoughBalance === false) {
       this.log(
         color.red(
-          `You do not have enough ${networks[network].shortKey} gas tokens to pay for withdrawal of $HLG from the faucet.\n` +
-            `Please deposit more ${networks[network].shortKey} gas tokens and try again.`,
+          `You do not have enough ${networks[network].tokenSymbol} to pay for withdrawal of $HLG from the faucet.\n` +
+            `Please deposit more ${networks[network].tokenSymbol} and try again.`,
         ),
       )
       this.exit()
@@ -112,7 +108,7 @@ export default class Faucet extends Command {
         name: 'continue',
         message:
           `You are about to withdraw ${faucetInfo.amount} $HLG from the faucet.\n` +
-          `The gas cost will be ${faucetFee.fee}. Continue?`,
+          `The gas cost will be approximately ${faucetFee.fee} ${networks[network].tokenSymbol}. Continue?`,
         type: 'confirm',
         default: false,
       },
@@ -122,18 +118,19 @@ export default class Faucet extends Command {
       this.exit()
     }
 
-    try {
-      CliUx.ux.action.start('Sending request for tokens transaction to mempool')
-      const receipt = await faucetService.requestTokens()
-      CliUx.ux.action.stop(`Transaction mined and confirmed. Transaction hash is ${receipt.transactionHash}`)
-    } catch (error: any) {
-      this.error(error.error.reason)
+    this.log('Sending request for tokens')
+    const receipt: TransactionReceipt | null = await faucetService.requestTokens()
+
+    if (receipt === null) {
+      this.log(color.red(`Could not confirm the success of transaction.`))
+    } else {
+      this.log(
+        color.green(
+          `Request for tokens on ${networks[network].shortKey} has been granted. You can return to request more tokens in 24 hours. Enjoy! 🤑`,
+        ),
+      )
     }
 
-    this.log(
-      color.green(
-        `Request for tokens on ${networks[network].shortKey} has been granted. You can return to request more tokens in 24 hours. Enjoy! 🤑`,
-      ),
-    )
+    this.exit()
   }
 }

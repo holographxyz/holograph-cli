@@ -1,27 +1,34 @@
 import {Contract} from '@ethersproject/contracts'
-import {BigNumber, BigNumberish} from '@ethersproject/bignumber'
+import {BigNumber} from '@ethersproject/bignumber'
 import {Wallet} from '@ethersproject/wallet'
-import {StaticJsonRpcProvider, JsonRpcProvider, Web3Provider} from '@ethersproject/providers'
-import {FeeData, TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
+import {JsonRpcProvider, WebSocketProvider} from '@ethersproject/providers'
+import {TransactionResponse} from '@ethersproject/abstract-provider'
 import {getEnvironment} from '@holographxyz/environment'
 
 import {FAUCET_ADDRESSES, HOLOGRAPH_ADDRESSES, LZ_RELAYER_ADDRESSES, getABIs} from '../utils/contracts'
+import {NetworkMonitor} from '../utils/network-monitor'
 
 const ENVIRONMENT = getEnvironment()
 const HOLOGRAPH_ADDRESS = HOLOGRAPH_ADDRESSES[ENVIRONMENT]
 const HLG_FAUCET_ADDRESS = FAUCET_ADDRESSES[ENVIRONMENT]
 
 class CoreChainService {
-  provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider
-  wallet: Wallet
+  network: string
+  networkMonitor: NetworkMonitor
   holograph: Contract | undefined
-  chainId: number
   abis: {[key: string]: any} = {}
 
-  constructor(provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider, wallet: Wallet, chainId: number) {
-    this.provider = provider
-    this.chainId = chainId
-    this.wallet = wallet
+  get provider(): JsonRpcProvider | WebSocketProvider {
+    return this.networkMonitor.providers[this.network]
+  }
+
+  get wallet(): Wallet {
+    return this.networkMonitor.wallets[this.network]
+  }
+
+  constructor(network: string, networkMonitor: NetworkMonitor) {
+    this.network = network
+    this.networkMonitor = networkMonitor
   }
 
   // NOTE: This must be called on instantiation!
@@ -30,22 +37,19 @@ class CoreChainService {
     this.holograph = new Contract(HOLOGRAPH_ADDRESS, this.abis.HolographABI, this.wallet)
   }
 
-  getProviderGasPrice = async (): Promise<BigNumber> => {
-    const price = await this.provider.getFeeData()
-    return BigNumber.from(price.maxFeePerGas || price.gasPrice || 1)
+  getChainGasPrice = (): BigNumber => {
+    let gasPrice: BigNumber = this.networkMonitor.gasPrices[this.network].gasPrice!
+    gasPrice = gasPrice.add(gasPrice.div(BigNumber.from('4')))
+    return gasPrice
   }
 
-  getProviderFeeData = async (): Promise<{
-    maxFeePerGas: BigNumber
-    maxPriorityFeePerGas: BigNumber
-    gasPrice: BigNumber
-  }> => {
-    const feeData: FeeData = await this.provider.getFeeData()
-    return {
-      maxFeePerGas: feeData.maxFeePerGas || feeData.gasPrice || BigNumber.from(1),
-      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas || BigNumber.from(0),
-      gasPrice: feeData.gasPrice || BigNumber.from(1),
-    }
+  getCxipNFT = (collection: string): Contract => {
+    return new Contract(collection, this.abis.CxipERC721ABI, this.wallet)
+  }
+
+  getBridge = async (): Promise<Contract> => {
+    const address = await this.holograph?.getBridge()
+    return new Contract(address, this.abis.HolographBridgeABI, this.wallet)
   }
 
   getFactory = async (): Promise<Contract> => {
@@ -53,9 +57,8 @@ class CoreChainService {
     return new Contract(address, this.abis.HolographFactoryABI, this.wallet)
   }
 
-  getBridge = async (): Promise<Contract> => {
-    const address = await this.holograph?.getBridge()
-    return new Contract(address, this.abis.HolographBridgeABI, this.wallet)
+  getFaucet = (): Contract => {
+    return new Contract(HLG_FAUCET_ADDRESS, this.abis.FaucetABI, this.wallet)
   }
 
   getInterfaces = async (): Promise<Contract> => {
@@ -68,45 +71,44 @@ class CoreChainService {
     return new Contract(address, this.abis.HolographOperatorABI, this.wallet)
   }
 
-  getUtilityToken = async (): Promise<Contract> => {
-    const address = await this.holograph?.getUtilityToken()
-    return new Contract(address, this.abis.HolographERC20ABI, this.wallet)
+  getRegistry = async (): Promise<Contract> => {
+    const address = await this.holograph?.getRegistry()
+    return new Contract(address, this.abis.HolographRegistryABI, this.wallet)
   }
 
   getRegistryAddress = async (): Promise<string> => {
     return this.holograph?.getRegistry()
   }
 
-  getChainGasPrice = async (): Promise<BigNumber> => {
-    return this.provider.getGasPrice()
-  }
-
-  getTransaction = async (txHash: string): Promise<TransactionResponse> => {
-    return this.provider.getTransaction(txHash)
-  }
-
-  waitForTransaction = async (txHash: string): Promise<TransactionReceipt> => {
-    return this.provider.waitForTransaction(txHash)
-  }
-
-  getCxipNFT = (collection: string): Contract => {
-    return new Contract(collection, this.abis.CxipNFTABI, this.wallet)
+  getUtilityToken = async (): Promise<Contract> => {
+    const address = await this.holograph?.getUtilityToken()
+    return new Contract(address, this.abis.HolographERC20ABI, this.wallet)
   }
 
   getLZ = (): Contract => {
-    return new Contract(LZ_RELAYER_ADDRESSES[this.chainId], this.abis.LayerZeroABI, this.wallet)
-  }
-
-  getFaucet = (): Contract => {
-    return new Contract(HLG_FAUCET_ADDRESS, this.abis.FaucetABI, this.wallet)
-  }
-
-  getBalance = async (account: string): Promise<BigNumberish> => {
-    return this.provider.getBalance(account)
+    return new Contract(LZ_RELAYER_ADDRESSES[this.network], this.abis.LayerZeroABI, this.wallet)
   }
 
   getWalletAddress = async (): Promise<string> => {
     return this.wallet.getAddress()
+  }
+
+  getBalance = async (account?: string): Promise<BigNumber> => {
+    if (account === undefined) {
+      account = this.wallet.address
+    }
+
+    return this.networkMonitor.getBalance({
+      walletAddress: account,
+      network: this.network,
+    })
+  }
+
+  getTransaction = async (txHash: string): Promise<TransactionResponse | null> => {
+    return this.networkMonitor.getTransaction({
+      transactionHash: txHash,
+      network: this.network,
+    })
   }
 }
 

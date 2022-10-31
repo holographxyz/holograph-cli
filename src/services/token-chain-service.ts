@@ -1,19 +1,14 @@
-import {JsonRpcProvider, StaticJsonRpcProvider, TransactionReceipt, Web3Provider} from '@ethersproject/providers'
-import {Wallet} from '@ethersproject/wallet'
+import {TransactionReceipt} from '@ethersproject/providers'
 import {Contract} from '@ethersproject/contracts'
 import {BigNumber, BigNumberish} from '@ethersproject/bignumber'
 
 import CoreChainService from './core-chain-service'
+import {NetworkMonitor} from '../utils/network-monitor'
 
 class TokenChainService extends CoreChainService {
   token: Contract
-  constructor(
-    provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider,
-    wallet: Wallet,
-    chainId: number,
-    contract: Contract,
-  ) {
-    super(provider, wallet, chainId)
+  constructor(network: string, networkMonitor: NetworkMonitor, contract: Contract) {
+    super(network, networkMonitor)
     this.token = contract
   }
 
