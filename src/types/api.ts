@@ -50,4 +50,7 @@ export interface CrossChainTransaction {
   operatorBlockNumber?: number
   operatorTx?: string
   operatorStatus?: TransactionStatus
+  operatorAddress?: string
+  messageAddress?: string
+  sourceAddress?: string
 }
