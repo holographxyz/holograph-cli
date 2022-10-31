@@ -471,6 +471,29 @@ export class NetworkMonitor {
     return output
   }
 
+  checkConnectionStatus(): void {
+    for (const network of this.networks) {
+      if (
+        !(network in this.configFile.networks) ||
+        !('providerUrl' in this.configFile.networks[network]) ||
+        this.configFile.networks[network].providerUrl === undefined ||
+        this.configFile.networks[network].providerUrl === ''
+      ) {
+        this.structuredLogError(network, 'Cannot start RPC provider')
+        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+        process.exit()
+      } else if (this.providers[network] === undefined) {
+        this.structuredLogError(network, 'Cannot start RPC provider')
+        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+        process.exit()
+      } else if (network in this.ws && this.ws[network].readyState !== WebSocket.OPEN) {
+        this.structuredLogError(network, 'Cannot start RPC provider')
+        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+        process.exit()
+      }
+    }
+  }
+
   constructor(options: NetworkMonitorOptions) {
     this.environment = getEnvironment()
     this.parent = options.parent
@@ -590,6 +613,9 @@ export class NetworkMonitor {
     }
 
     process.on('exit', this.exitHandler)
+
+    // check connections in 60 seconds, if something failed, kill the process
+    setTimeout(this.checkConnectionStatus, 60_000)
   }
 
   async loadLastBlocks(configDir: string): Promise<{[key: string]: number}> {
@@ -2102,7 +2128,7 @@ export class NetworkMonitor {
 
       this.structuredLog(network, `Wallet balance is ${formatUnits(balance!, 'ether')}`, tags)
       if (balance.lt(gasLimit.mul(gasPrice).add(value))) {
-        this.structuredLog(
+        this.structuredLogError(
           network,
           `Wallet balance is lower than the transaction required amount. Balance is ${formatUnits(balance, 'ether')} ${
             networks[network].tokenSymbol

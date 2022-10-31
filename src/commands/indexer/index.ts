@@ -285,21 +285,33 @@ export default class Indexer extends Command {
         const functionSig: string | undefined = transaction.data?.slice(0, 10)
         switch (to) {
           case this.networkMonitor.factoryAddress: {
-            this.networkMonitor.structuredLog(job.network, `handleContractDeployedEvent`, tags)
+            this.networkMonitor.structuredLog(
+              job.network,
+              `handleContractDeployedEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
+              tags,
+            )
             await this.handleContractDeployedEvent(transaction, job.network, tags)
 
             break
           }
 
           case this.networkMonitor.bridgeAddress: {
-            this.networkMonitor.structuredLog(job.network, `handleBridgeOutEvent`, tags)
+            this.networkMonitor.structuredLog(
+              job.network,
+              `handleBridgeOutEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
+              tags,
+            )
             await this.handleBridgeOutEvent(transaction, job.network, tags)
 
             break
           }
 
           case this.networkMonitor.operatorAddress: {
-            this.networkMonitor.structuredLog(job.network, `handleBridgeInEvent`, tags)
+            this.networkMonitor.structuredLog(
+              job.network,
+              `handleBridgeInEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
+              tags,
+            )
             await this.handleBridgeInEvent(transaction, job.network, tags)
 
             break
@@ -307,10 +319,18 @@ export default class Indexer extends Command {
 
           default:
             if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
-              this.networkMonitor.structuredLog(job.network, `handleAvailableOperatorJobEvent`, tags)
+              this.networkMonitor.structuredLog(
+                job.network,
+                `handleAvailableOperatorJobEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
+                tags,
+              )
               await this.handleAvailableOperatorJobEvent(transaction, job.network, tags)
             } else if (functionSig === functionSignature('cxipMint(uint224,uint8,string)')) {
-              this.networkMonitor.structuredLog(job.network, `handleMintEvent`, tags)
+              this.networkMonitor.structuredLog(
+                job.network,
+                `handleMintEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
+                tags,
+              )
               await this.handleMintEvent(transaction, job.network, tags)
             } else {
               this.networkMonitor.structuredLog(job.network, `irrelevant transaction ${transaction.hash}`, tags)
