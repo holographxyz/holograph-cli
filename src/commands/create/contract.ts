@@ -1,119 +1,383 @@
 import {CliUx, Command} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
-import {ethers} from 'ethers'
+import {BytesLike} from 'ethers'
+import {TransactionReceipt} from '@ethersproject/abstract-provider'
+import {BytecodeType, bytecodes} from '../../utils/bytecodes'
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {ConfigNetwork, ConfigNetworks} from '../../utils/config'
-import {deploymentFlags, prepareDeploymentConfig} from '../../utils/contract-deployment'
-import {getEnvironment} from '../../utils/environment'
-import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
-import {supportedNetworks} from '../../utils/networks'
+import {web3, zeroAddress, generateInitCode, remove0x, sha3} from '../../utils/utils'
+import {NetworkMonitor} from '../../utils/network-monitor'
+import {
+  deploymentFlags,
+  DeploymentType,
+  DeploymentConfig,
+  decodeDeploymentConfigInput,
+} from '../../utils/contract-deployment'
+import {Signature, strictECDSA} from '../../utils/signature'
+import {
+  HolographERC20Event,
+  HolographERC721Event,
+  allEventsEnabled,
+  configureEvents,
+} from '../../utils/holograph-contract-events'
+import {
+  validateBytes,
+  checkBytecodeTypeFlag,
+  checkDeploymentTypeFlag,
+  checkNumberFlag,
+  checkOptionFlag,
+  checkStringFlag,
+  checkTokenIdFlag,
+  checkTransactionHashFlag,
+} from '../../utils/validation'
+import {networks} from '@holographxyz/networks'
+
+async function getCodeFromFile(prompt: string): Promise<string> {
+  const codeFile: string = await checkStringFlag(undefined, prompt)
+  if (await fs.pathExists(codeFile as string)) {
+    return validateBytes(await fs.readFile(codeFile, 'utf8'))
+  }
+
+  throw new Error('The file "' + codeFile + '" does not exist.')
+}
 
 export default class Contract extends Command {
-  static hidden = true
-  static description = 'Deploy a Holographable contract directly to another chain'
+  static hidden = false
+  static description = 'Deploy a Holographable contract directly to a chain'
   static examples = [
-    '$ <%= config.bin %> <%= command.id %> --tx="0x42703541786f900187dbf909de281b4fda7ef9256f0006d3c11d886e6e678845"',
+    '$ <%= config.bin %> <%= command.id %> --deploymentType="deployedTx" --tx="0xdb8b393dd18a71b386c8de75b87310c0c8ded0c57cf6b4c5bab52873d54d1e8a" --txNetwork="ethereumTestnetGoerli"',
   ]
 
   static flags = {
     ...deploymentFlags,
   }
 
-  targetEvents: Record<string, string> = {
-    BridgeableContractDeployed: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
-    '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b': 'BridgeableContractDeployed',
-  }
-
   /**
-   * Command Entry Point
+   * Contract class variables
    */
+  networkMonitor!: NetworkMonitor
+
+  // eslint-disable-next-line complexity
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
-    const environment = getEnvironment()
-    const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
+    const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
+      this.config.configDir,
+      undefined,
+      true,
+    )
 
     const {flags} = await this.parse(Contract)
     this.log('User configurations loaded.')
 
-    let remainingNetworks = supportedNetworks
-    this.debug(`remainingNetworks = ${remainingNetworks}`)
+    let configHash: BytesLike
 
-    const destinationNetworkPrompt: any = await inquirer.prompt([
-      {
-        name: 'destinationNetwork',
-        message: 'Select the network to which the contract will be deployed',
-        type: 'list',
-        choices: remainingNetworks,
+    let tx!: string
+    let txNetwork: string | undefined
+    let deploymentConfig: DeploymentConfig = {
+      config: {
+        contractType: '',
+        chainType: '',
+        salt: '',
+        byteCode: '',
+        initCode: '',
       },
-    ])
-    const destinationNetwork = destinationNetworkPrompt.destinationNetwork
+      signature: {
+        r: '',
+        s: '',
+        v: 0,
+      },
+      signer: userWallet.address,
+    } as DeploymentConfig
+    let deploymentConfigFile: string | undefined
 
-    remainingNetworks = remainingNetworks.filter((item: string) => {
-      return item !== destinationNetwork
+    this.networkMonitor = new NetworkMonitor({
+      parent: this,
+      configFile,
+      debug: this.debug,
+      userWallet,
+      verbose: false,
     })
 
-    CliUx.ux.action.start('Loading destination network RPC provider')
-    const destinationProviderUrl: string = (
-      configFile.networks[destinationNetwork as keyof ConfigNetworks] as ConfigNetwork
-    ).providerUrl
-    const destinationNetworkProtocol: string = new URL(destinationProviderUrl).protocol
-    let destinationNetworkProvider
-    switch (destinationNetworkProtocol) {
-      case 'https:':
-        destinationNetworkProvider = new ethers.providers.JsonRpcProvider(destinationProviderUrl)
+    CliUx.ux.action.start('Loading network RPC providers')
+    await this.networkMonitor.run(true)
+    CliUx.ux.action.stop()
+
+    let chainType: string
+    let chainId: string
+    let salt: string
+    let bytecodeType: BytecodeType
+    const contractTypes: string[] = ['HolographERC20', 'HolographERC721']
+    let contractType: string
+    let contractTypeHash: string
+    let byteCode: string
+    let eventConfig: string = allEventsEnabled()
+    let sourceInitCode: string = generateInitCode(['bytes'], ['0x00'])
+    let initCode: string = generateInitCode(['bytes'], [sourceInitCode])
+
+    let tokenName: string
+    let tokenSymbol: string
+    let domainSeperator: string
+    const domainVersion = '1'
+    let decimals: number
+
+    let collectionName: string
+    let collectionSymbol: string
+    let royaltyBps: number
+
+    let configHashBytes: number[]
+    let sig: string
+    let signature: Signature
+    let needToSign = false
+
+    const deploymentType: DeploymentType = await checkDeploymentTypeFlag(
+      flags.deploymentType,
+      'Select the type of deployment to use',
+    )
+    switch (deploymentType) {
+      case DeploymentType.deployedTx:
+        txNetwork = await checkOptionFlag(
+          supportedNetworksOptions,
+          flags.txNetwork,
+          'Select the network on which the transaction was executed',
+        )
+        tx = await checkTransactionHashFlag(
+          flags.tx,
+          'Enter the hash of transaction that deployed the original contract',
+        )
         break
-      case 'wss:':
-        destinationNetworkProvider = new ethers.providers.WebSocketProvider(destinationProviderUrl)
+      case DeploymentType.deploymentConfig:
+        deploymentConfigFile = await checkStringFlag(flags.deploymentConfig, 'Enter the config file to use')
+        if (await fs.pathExists(deploymentConfigFile as string)) {
+          deploymentConfig = (await fs.readJson(deploymentConfigFile as string)) as DeploymentConfig
+        } else {
+          throw new Error('The file "' + (deploymentConfigFile as string) + '" does not exist.')
+        }
+
         break
-      default:
-        throw new Error('Unsupported RPC URL protocol -> ' + destinationNetworkProtocol)
+      case DeploymentType.createConfig:
+        chainType = await checkOptionFlag(
+          supportedNetworksOptions,
+          undefined,
+          'Select the primary network of the contract (does not prepend chainId to tokenIds)',
+        )
+        chainId = '0x' + networks[chainType].holographId.toString(16).padStart(8, '0')
+        deploymentConfig.config.chainType = chainId
+        salt =
+          '0x' +
+          remove0x(await checkTokenIdFlag(undefined, 'Enter a bytes32 hash or number to use for salt hash')).padStart(
+            64,
+            '0',
+          )
+        deploymentConfig.config.salt = salt
+        bytecodeType = await checkBytecodeTypeFlag(undefined, 'Select the bytecode type to deploy')
+        contractType =
+          bytecodeType === BytecodeType.Custom
+            ? await checkOptionFlag(contractTypes, undefined, 'Select the contract type to create')
+            : bytecodeType === BytecodeType.SampleERC20
+            ? 'HolographERC20'
+            : 'HolographERC721'
+        contractTypeHash = '0x' + web3.utils.asciiToHex(contractType).slice(2).padStart(64, '0')
+        deploymentConfig.config.contractType = contractTypeHash
+        byteCode =
+          bytecodeType === BytecodeType.Custom
+            ? await getCodeFromFile(
+                'Provide the filename containing the hex encoded string of the bytecode you want to use',
+              )
+            : bytecodes[bytecodeType]
+        switch (contractType) {
+          case 'HolographERC20':
+            tokenName = await checkStringFlag(undefined, 'Enter the token name to use')
+            tokenSymbol = await checkStringFlag(undefined, 'Enter the token symbol to use')
+            domainSeperator = tokenName
+            decimals = await checkNumberFlag(
+              undefined,
+              'Enter the number of decimals [0-18] to use. The recommended number is 18.',
+            )
+            if (decimals > 18 || decimals < 0) {
+              throw new Error('Invalid decimals was provided: ' + decimals.toString())
+            }
+
+            switch (bytecodeType) {
+              case BytecodeType.SampleERC20:
+                eventConfig = configureEvents([1, 2]) // [HolographERC20Event.bridgeIn, HolographERC20Event.bridgeOut]
+                sourceInitCode = generateInitCode(['address'], [userWallet.address])
+                break
+              case BytecodeType.Custom:
+                eventConfig = configureEvents(
+                  (
+                    await inquirer.prompt([
+                      {
+                        type: 'checkbox',
+                        message: 'Select the events to enable',
+                        name: 'erc20events',
+                        choices: HolographERC20Event,
+                      },
+                    ])
+                  ).erc20events,
+                )
+                sourceInitCode = await getCodeFromFile(
+                  'Provide the filename containing the hex encoded string of the initCode you want to use',
+                )
+                break
+            }
+
+            initCode = generateInitCode(
+              ['string', 'string', 'uint8', 'uint256', 'string', 'string', 'bool', 'bytes'],
+              [
+                tokenName, // string memory tokenName
+                tokenSymbol, // string memory tokenSymbol
+                decimals, // uint8 decimals
+                eventConfig, // uint256 eventConfig
+                domainSeperator,
+                domainVersion,
+                false, // bool skipInit
+                sourceInitCode,
+              ],
+            )
+            break
+          case 'HolographERC721':
+            collectionName = await checkStringFlag(undefined, 'Enter the collection name to use')
+            collectionSymbol = await checkStringFlag(undefined, 'Enter the collection symbol to use')
+            royaltyBps = await checkNumberFlag(
+              undefined,
+              'Enter the percentage of royalty to collect in basepoints. (1 = 0.01%, 10000 = 100%)',
+            )
+            if (royaltyBps > 10_000 || royaltyBps < 0) {
+              throw new Error('Invalid royalty basepoints was provided: ' + royaltyBps.toString())
+            }
+
+            switch (bytecodeType) {
+              case BytecodeType.CxipERC721:
+                eventConfig = configureEvents([1, 2, 7]) // [HolographERC721Event.bridgeIn, HolographERC721Event.bridgeOut, HolographERC721Event.afterBurn]
+                sourceInitCode = generateInitCode(
+                  ['bytes32', 'address', 'bytes'],
+                  [
+                    '0x' + web3.utils.asciiToHex('CxipERC721').slice(2).padStart(64, '0'),
+                    await this.networkMonitor.registryContract.address,
+                    generateInitCode(['address'], [userWallet.address]),
+                  ],
+                )
+                break
+              case BytecodeType.SampleERC721:
+                eventConfig = configureEvents([1, 2, 7]) // [HolographERC721Event.bridgeIn, HolographERC721Event.bridgeOut, HolographERC721Event.afterBurn]
+                sourceInitCode = generateInitCode(['address'], [userWallet.address])
+                break
+              case BytecodeType.Custom:
+                eventConfig = configureEvents(
+                  (
+                    await inquirer.prompt([
+                      {
+                        type: 'checkbox',
+                        message: 'Select the events to enable',
+                        name: 'erc721events',
+                        choices: HolographERC721Event,
+                      },
+                    ])
+                  ).erc721events,
+                )
+                sourceInitCode = await getCodeFromFile(
+                  'Provide the filename containing the hex encoded string of the initCode you want to use',
+                )
+                break
+            }
+
+            initCode = generateInitCode(
+              ['string', 'string', 'uint16', 'uint256', 'bool', 'bytes'],
+              [
+                collectionName, // string memory contractName
+                collectionSymbol, // string memory contractSymbol
+                royaltyBps, // uint16 contractBps
+                eventConfig, // uint256 eventConfig
+                false, // bool skipInit
+                sourceInitCode,
+              ],
+            )
+            break
+        }
+
+        deploymentConfig.config.byteCode = byteCode
+        deploymentConfig.config.initCode = initCode
+
+        configHash = sha3(
+          '0x' +
+            (deploymentConfig.config.contractType as string).slice(2) +
+            (deploymentConfig.config.chainType as string).slice(2) +
+            (deploymentConfig.config.salt as string).slice(2) +
+            sha3(deploymentConfig.config.byteCode as string).slice(2) +
+            sha3(deploymentConfig.config.initCode as string).slice(2) +
+            (deploymentConfig.signer as string).slice(2),
+        )
+        configHashBytes = web3.utils.hexToBytes(configHash)
+        needToSign = true
+        break
     }
 
-    const destinationWallet = userWallet?.connect(destinationNetworkProvider)
-    CliUx.ux.action.stop()
-
-    const deploymentConfig = await prepareDeploymentConfig(
-      configFile,
-      userWallet!,
-      flags as Record<string, string | undefined>,
-      remainingNetworks,
-    )
-    this.debug(deploymentConfig)
-
-    CliUx.ux.action.start('Retrieving HolographFactory contract ABIs')
-    const holographABI = await fs.readJson(`./src/abi/${environment}/Holograph.json`)
-    const holograph = new ethers.ContractFactory(holographABI, '0x', destinationWallet).attach(
-      HOLOGRAPH_ADDRESSES[environment],
+    const targetNetwork: string = await checkOptionFlag(
+      supportedNetworksOptions,
+      flags.targetNetwork,
+      'Select the network on which the contract will be executed',
+      txNetwork,
     )
 
-    const holographFactoryABI = await fs.readJson(`./src/abi/${environment}/HolographFactory.json`)
-    const holographFactory = new ethers.ContractFactory(holographFactoryABI, '0x', destinationWallet).attach(
-      await holograph.getFactory(),
-    )
-    CliUx.ux.action.stop()
+    if (needToSign) {
+      sig = await this.networkMonitor.wallets[targetNetwork].signMessage(configHashBytes!)
+      signature = strictECDSA({
+        r: '0x' + sig.slice(2, 66),
+        s: '0x' + sig.slice(66, 130),
+        v: '0x' + sig.slice(130, 132),
+      } as Signature)
+      deploymentConfig.signature.r = signature.r
+      deploymentConfig.signature.s = signature.s
+      deploymentConfig.signature.v = Number.parseInt(signature.v, 16)
+    }
 
-    CliUx.ux.action.start('Calculating gas amounts and prices')
-    let gasLimit
-    try {
-      gasLimit = await holographFactory.estimateGas.deployHolographableContract(
-        deploymentConfig.config,
-        deploymentConfig.signature,
-        deploymentConfig.signer,
+    if (deploymentType === DeploymentType.deployedTx) {
+      CliUx.ux.action.start('Retrieving transaction details from "' + (txNetwork as string) + '" network')
+      const deploymentTransaction = await this.networkMonitor.providers[txNetwork as string].getTransaction(
+        tx as string,
       )
-    } catch (error: any) {
-      this.error(error.reason)
+      deploymentConfig = decodeDeploymentConfigInput(deploymentTransaction.data)
+      CliUx.ux.action.stop()
     }
 
-    const gasPriceBase = await destinationWallet!.provider.getGasPrice()
-    const gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
-
-    CliUx.ux.action.stop()
-    this.log(
-      'Transaction is estimated to cost a total of',
-      ethers.utils.formatUnits(gasLimit.mul(gasPrice), 'ether'),
-      'native gas tokens (in ether)',
+    configHash = sha3(
+      '0x' +
+        (deploymentConfig.config.contractType as string).slice(2) +
+        (deploymentConfig.config.chainType as string).slice(2) +
+        (deploymentConfig.config.salt as string).slice(2) +
+        sha3(deploymentConfig.config.byteCode as string).slice(2) +
+        sha3(deploymentConfig.config.initCode as string).slice(2) +
+        (deploymentConfig.signer as string).slice(2),
     )
+
+    if (deploymentType !== DeploymentType.deploymentConfig) {
+      const configFilePrompt: any = await inquirer.prompt([
+        {
+          name: 'shouldSave',
+          message: 'Would you like to export/save the deployment config file?',
+          type: 'confirm',
+          default: true,
+        },
+      ])
+      if (configFilePrompt.shouldSave) {
+        deploymentConfigFile = await checkStringFlag(
+          undefined,
+          'Enter the path and file where to save (ie ./deploymentConfig.json)',
+        )
+        await fs.ensureFile(deploymentConfigFile)
+        await fs.writeFile(deploymentConfigFile, JSON.stringify(deploymentConfig, undefined, 2), 'utf8')
+        this.log('File successfully saved to "' + deploymentConfigFile + '"')
+      }
+    }
+
+    CliUx.ux.action.start('Checking that contract is not already deployed on "' + targetNetwork + '" network')
+    const contractAddress: string = await this.networkMonitor.registryContract
+      .connect(this.networkMonitor.providers[targetNetwork])
+      .getContractTypeAddress(configHash)
+    CliUx.ux.action.stop()
+    if (contractAddress !== zeroAddress) {
+      throw new Error('Contract already deployed at ' + contractAddress + ' on "' + targetNetwork + '" network')
+    }
 
     const blockchainPrompt: any = await inquirer.prompt([
       {
@@ -124,37 +388,33 @@ export default class Contract extends Command {
       },
     ])
     if (!blockchainPrompt.shouldContinue) {
-      this.error('Dropping command, no blockchain transactions executed')
+      throw new Error('Dropping command, no blockchain transactions executed')
     }
 
-    try {
-      CliUx.ux.action.start('Sending transaction to mempool')
-      const deployTx = await holographFactory.deployHolographableContract(
-        deploymentConfig.config,
-        deploymentConfig.signature,
-        deploymentConfig.signer,
-        {gasPrice, gasLimit},
+    CliUx.ux.action.start('Deploying contract')
+    const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
+      network: targetNetwork,
+      contract: this.networkMonitor.factoryContract.connect(this.networkMonitor.providers[targetNetwork]),
+      methodName: 'deployHolographableContract',
+      args: [deploymentConfig.config, deploymentConfig.signature, deploymentConfig.signer],
+      waitForReceipt: true,
+    })
+    CliUx.ux.action.stop()
+
+    if (receipt === null) {
+      throw new Error('failed to confirm that the transaction was mined')
+    } else {
+      const logs: any[] | undefined = this.networkMonitor.decodeBridgeableContractDeployedEvent(
+        receipt,
+        this.networkMonitor.factoryAddress,
       )
-      this.debug(deployTx)
-      CliUx.ux.action.stop('Transaction hash is ' + deployTx.hash)
-
-      CliUx.ux.action.start('Waiting for transaction to be mined and confirmed')
-      const deployReceipt = await deployTx.wait()
-      this.debug(deployReceipt)
-      let collectionAddress
-      for (let i = 0, l = deployReceipt.logs.length; i < l; i++) {
-        const log = deployReceipt.logs[i]
-        if (log.topics.length === 3 && log.topics[0] === this.targetEvents.BridgeableContractDeployed) {
-          collectionAddress = '0x' + log.topics[1].slice(26)
-          break
-        }
+      if (logs === undefined) {
+        throw new Error('failed to extract transfer event from transaction receipt')
+      } else {
+        const deploymentAddress = logs[0] as string
+        this.log(`Contract has been deployed to address ${deploymentAddress} on ${targetNetwork} network`)
+        this.exit()
       }
-
-      CliUx.ux.action.stop('Collection deployed to ' + collectionAddress)
-    } catch (error: any) {
-      this.error(error.error.reason)
     }
-
-    this.exit()
   }
 }

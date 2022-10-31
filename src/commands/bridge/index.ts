@@ -7,10 +7,11 @@ export default class Bridge extends Command {
     {
       description: 'Learn how to bridge a Holographable contract',
       command: '<%= config.bin %> bridge:contract --help',
-    }, {
+    },
+    {
       description: 'Learn how to bridge a Holographable NFT',
       command: '<%= config.bin %> bridge:nft --help',
-    }
+    },
   ]
 
   /**

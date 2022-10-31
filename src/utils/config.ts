@@ -5,24 +5,18 @@ import * as Joi from 'joi'
 import {ethers} from 'ethers'
 
 import AesEncryption from './aes-encryption'
+import {Environment, getEnvironment} from '@holographxyz/environment'
+import {NetworkKeys, supportedNetworks, networks} from '@holographxyz/networks'
+import {SelectOption} from './validation'
 
 export const CONFIG_FILE_NAME = 'config.json'
 
 export interface ConfigNetwork {
-  name: string
   providerUrl: string
 }
 
-export interface ConfigBridge {
-  source: string
-  destination: string
-}
-
 export interface ConfigNetworks {
-  goerli: ConfigNetwork
-  rinkeby: ConfigNetwork
-  fuji: ConfigNetwork
-  mumbai: ConfigNetwork
+  [k: NetworkKeys]: ConfigNetwork
 }
 
 export interface ConfigCredentials {
@@ -37,20 +31,32 @@ export interface ConfigUser {
 
 export interface ConfigFile {
   version: string
-  bridge: ConfigBridge
   networks: ConfigNetworks
   user: ConfigUser
+}
+
+const localhostConfig: ConfigFile = {
+  version: 'beta3',
+  networks: {localhost: {providerUrl: 'http://localhost:8545'}, localhost2: {providerUrl: 'http://localhost:9545'}},
+  user: {
+    credentials: {
+      iv: 'n6QP9:_vn=})',
+      privateKey:
+        'QDiDSbP9O0C58wm9rj41D1jqGgYT4+XBMuO6e8R1gc53IzbxKrHAjVeALxkSCkcFIx7MerWm4+ZVbJ0n51FbIPYz6OpnKRXXFGtDLq64mgU=',
+      address: '0xdf5295149F367b1FBFD595bdA578BAd22e59f504',
+    },
+  },
 }
 
 async function tryToUnlockWallet(
   configFile: ConfigFile,
   unlockWallet: boolean,
-  unsafePassword: string | undefined,
+  unsafePassword?: string,
 ): Promise<ethers.Wallet> {
   let userWallet: ethers.Wallet | undefined
   if (unlockWallet) {
     // eslint-disable-next-line no-negated-condition
-    if (typeof unsafePassword !== 'undefined') {
+    if (unsafePassword !== undefined) {
       try {
         userWallet = new ethers.Wallet(
           new AesEncryption(unsafePassword, configFile.user.credentials.iv).decrypt(
@@ -97,11 +103,40 @@ async function tryToUnlockWallet(
   return userWallet as ethers.Wallet
 }
 
+export function generateSupportedNetworksOptions(configNetworks?: ConfigNetworks): SelectOption[] {
+  const options: SelectOption[] = []
+  for (const key of supportedNetworks) {
+    if (configNetworks === undefined) {
+      options.push({name: networks[key].shortKey, value: networks[key].key} as SelectOption)
+    } else if (key in configNetworks) {
+      options.push({name: networks[key].shortKey, value: networks[key].key} as SelectOption)
+    }
+  }
+
+  return options
+}
+
 export async function ensureConfigFileIsValid(
   configDir: string,
   unsafePassword: string | undefined,
   unlockWallet = false,
-): Promise<{userWallet: ethers.Wallet; configFile: ConfigFile}> {
+): Promise<{
+  environment: Environment
+  userWallet: ethers.Wallet
+  configFile: ConfigFile
+  supportedNetworksOptions: SelectOption[]
+}> {
+  const environment: Environment = getEnvironment()
+  if (environment === Environment.localhost) {
+    process.stdout.write(`\n👉 Environment: ${environment}\n\n`)
+    return {
+      environment,
+      userWallet: await tryToUnlockWallet(localhostConfig, unlockWallet),
+      configFile: localhostConfig,
+      supportedNetworksOptions: generateSupportedNetworksOptions(),
+    }
+  }
+
   let configPath = configDir
   try {
     await fs.pathExists(configDir)
@@ -121,10 +156,16 @@ export async function ensureConfigFileIsValid(
 
   try {
     const configFile = await fs.readJson(configPath)
-    await validateBeta1Schema(configFile)
+    await validateBeta3Schema(configFile)
     const userWallet: ethers.Wallet = await tryToUnlockWallet(configFile as ConfigFile, unlockWallet, unsafePassword)
 
-    return {userWallet, configFile}
+    process.stdout.write(`\n👉 Environment: ${environment}\n\n`)
+    return {
+      environment,
+      userWallet,
+      configFile,
+      supportedNetworksOptions: generateSupportedNetworksOptions(configFile.networks),
+    }
   } catch (error: any) {
     throw error.message
       ? error
@@ -132,27 +173,17 @@ export async function ensureConfigFileIsValid(
   }
 }
 
-export async function validateBeta1Schema(config: Record<string, unknown>): Promise<void> {
-  const beta1Schema = Joi.object({
-    version: Joi.string().valid('beta1').required(),
-    bridge: Joi.object({
-      source: Joi.string().required(),
-      destination: Joi.string().required(),
-    }).required(),
-    networks: Joi.object({
-      rinkeby: Joi.object({
-        providerUrl: Joi.string().required(),
-      }),
-      goerli: Joi.object({
-        providerUrl: Joi.string().required(),
-      }),
-      fuji: Joi.object({
-        providerUrl: Joi.string().required(),
-      }),
-      mumbai: Joi.object({
-        providerUrl: Joi.string().required(),
-      }),
-    }).required(),
+export async function validateBeta3Schema(config: Record<string, unknown>): Promise<void> {
+  const networkObjects: {[k: string]: any} = {} as {[k: string]: any}
+  for (const network of supportedNetworks) {
+    networkObjects[network] = Joi.object({
+      providerUrl: Joi.string().required(),
+    })
+  }
+
+  const beta3Schema = Joi.object({
+    version: Joi.string().valid('beta3').required(),
+    networks: Joi.object(networkObjects).required().unknown(false),
     user: Joi.object({
       credentials: Joi.object({
         iv: Joi.string(),
@@ -164,16 +195,7 @@ export async function validateBeta1Schema(config: Record<string, unknown>): Prom
     .required()
     .unknown(false)
 
-  await beta1Schema.validateAsync(config)
-}
-
-export function randomASCII(bytes: number): string {
-  let text = ''
-  for (let i = 0; i < bytes; i++) {
-    text += (32 + Math.floor(Math.random() * 94)).toString(16).padStart(2, '0')
-  }
-
-  return Buffer.from(text, 'hex').toString()
+  await beta3Schema.validateAsync(config)
 }
 
 export async function checkFileExists(configPath: string): Promise<boolean> {
@@ -192,18 +214,4 @@ export async function readConfig(configPath: string): Promise<any> {
     console.debug(error)
     return undefined
   }
-}
-
-export function isStringAValidURL(s: string): boolean {
-  const protocols = ['https', 'wss']
-  try {
-    const result = new URL(s)
-    return result.protocol ? protocols.map(x => `${x.toLowerCase()}:`).includes(result.protocol) : false
-  } catch {
-    return false
-  }
-}
-
-export function isFromAndToNetworksTheSame(from: string | undefined, to: string | undefined): boolean {
-  return from !== to
 }
