@@ -1,10 +1,10 @@
 import * as fs from 'fs-extra'
+
 import {Command, Flags} from '@oclif/core'
-import {BigNumber, Contract} from 'ethers'
+import {Contract} from '@ethersproject/contracts'
+import {BigNumber} from '@ethersproject/bignumber'
 import {TransactionResponse, TransactionReceipt} from '@ethersproject/abstract-provider'
 import {TransactionDescription} from '@ethersproject/abi'
-
-import {ensureConfigFileIsValid} from '../../utils/config'
 import {Environment, getEnvironment} from '@holographxyz/environment'
 import {
   getNetworkByHolographId,
@@ -12,8 +12,9 @@ import {
   supportedShortNetworks,
   getNetworkByShortKey,
 } from '@holographxyz/networks'
-import {toAscii, sha3, storageSlot} from '../../utils/utils'
 
+import {ensureConfigFileIsValid} from '../../utils/config'
+import {toAscii, sha3, storageSlot} from '../../utils/utils'
 import {FilterType, BlockJob, NetworkMonitor, TransactionType} from '../../utils/network-monitor'
 
 enum LogType {
@@ -55,7 +56,7 @@ export default class Analyze extends Command {
   static hidden = true
   static description = 'Extract all operator jobs and get their status'
   static examples = [
-    `$ <%= config.bin %> <%= command.id %> --scope='{"network":"ethereumTestnetGoerli","startBlock":10857626,"endBlock":11138178}' --scope='{"network":"polygonTestnet","startBlock":26758573,"endBlock":27457918}' --scope='{"network":"avalancheTestnet","startBlock":11406945,"endBlock":12192217}'`,
+    `$ <%= config.bin %> <%= command.id %> --scope='{"network":"goerli","startBlock":10857626,"endBlock":11138178}' --scope='{"network":"mumbai","startBlock":26758573,"endBlock":27457918}' --scope='{"network":"fuji","startBlock":11406945,"endBlock":12192217}'`,
   ]
 
   static flags = {
@@ -64,7 +65,7 @@ export default class Analyze extends Command {
       multiple: true,
     }),
     output: Flags.string({
-      description: 'Specify a file to output the results to (ie "~/Desktop/analyzeResults.json")',
+      description: 'Specify a file to output the results to (ie "../../analyzeResults.json")',
       default: `./${getEnvironment()}.analyzeResults.json`,
       multiple: false,
     }),

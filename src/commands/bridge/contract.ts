@@ -1,23 +1,26 @@
-import {CliUx, Command, Flags} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
-import {BytesLike, BigNumber} from 'ethers'
+
+import {CliUx, Command, Flags} from '@oclif/core'
+import {BigNumber} from '@ethersproject/bignumber'
+import {BytesLike} from '@ethersproject/bytes'
 import {formatUnits} from '@ethersproject/units'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
+import {networks, supportedShortNetworks} from '@holographxyz/networks'
+
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {web3, zeroAddress, generateInitCode} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {DeploymentConfig} from '../../utils/contract-deployment'
 import {validateNetwork, validateNonEmptyString, checkOptionFlag, checkStringFlag} from '../../utils/validation'
 import {GasPricing} from '../../utils/gas'
-import {networks, supportedShortNetworks} from '@holographxyz/networks'
 
 export default class BridgeContract extends Command {
   static description =
     'Bridge a Holographable contract from source chain to destination chain. You need to have a deployment config JSON file. Use the "contract:create" command to create or extract one.'
 
   static examples = [
-    '$ <%= config.bin %> <%= command.id %> --sourceNetwork="ethereumTestnetGoerli" --destinationNetwork="avalancheTestnet" --deploymentConfig="./MyContract.json"',
+    '$ <%= config.bin %> <%= command.id %> --sourceNetwork="goerli" --destinationNetwork="fuji" --deploymentConfig="./MyContract.json"',
   ]
 
   static flags = {
@@ -101,13 +104,17 @@ export default class BridgeContract extends Command {
     await this.networkMonitor.run(true)
     CliUx.ux.action.stop()
 
-    CliUx.ux.action.start('Checking that contract is not already deployed on "' + destinationNetwork + '" network')
+    CliUx.ux.action.start(
+      `Checking that contract is not already deployed on ${networks[destinationNetwork].shortKey} network`,
+    )
     const contractAddress: string = await this.networkMonitor.registryContract
       .connect(this.networkMonitor.providers[destinationNetwork])
       .getContractTypeAddress(configHash)
     CliUx.ux.action.stop()
     if (contractAddress !== zeroAddress) {
-      throw new Error('Contract already deployed at ' + contractAddress + ' on "' + destinationNetwork + '" network')
+      throw new Error(
+        `Contract already deployed at ${contractAddress} on ${networks[destinationNetwork].shortKey} network`,
+      )
     }
 
     const data: BytesLike = generateInitCode(
@@ -216,7 +223,7 @@ export default class BridgeContract extends Command {
       }
 
       this.log(
-        `Cross-chain beaming has started under job hash ${jobHash}, from ${sourceNetwork} network, to ${destinationNetwork} network.`,
+        `Cross-chain beaming from ${networks[sourceNetwork].shortKey} network, to ${networks[destinationNetwork].shortKey} network has started under job hash ${jobHash}`,
       )
     }
 

@@ -1,27 +1,32 @@
-import {CliUx, Command} from '@oclif/core'
-import {BigNumber, providers} from 'ethers'
 import * as inquirer from 'inquirer'
 
-import {networks} from '@holographxyz/networks'
+import {CliUx, Command} from '@oclif/core'
 import color from '@oclif/color'
-import {formatEther} from 'ethers/lib/utils'
+import {BigNumber} from '@ethersproject/bignumber'
+import {Wallet} from '@ethersproject/wallet'
+import {JsonRpcProvider, WebSocketProvider} from '@ethersproject/providers'
+import {formatUnits} from '@ethersproject/units'
+import {networks} from '@holographxyz/networks'
+
 import CoreChainService from '../../services/core-chain-service'
 import TokenChainService from '../../services/token-chain-service'
 import FaucetService, {FaucetInfo} from '../../services/faucet-service'
-import {networkFlag} from '../../utils/network-monitor'
-import {ConfigNetwork, ConfigNetworks, ensureConfigFileIsValid} from '../../utils/config'
+import {NetworkMonitor, networkFlag} from '../../utils/network-monitor'
+
+import {ensureConfigFileIsValid} from '../../utils/config'
 import {checkOptionFlag} from '../../utils/validation'
 
 export default class Faucet extends Command {
   static description = 'Request tokens from a faucet'
-  static examples = ['$ <%= config.bin %> <%= command.id %> --network=<network>']
+  static examples = ['$ <%= config.bin %> <%= command.id %> --network="goerli"']
   static flags = {
     ...networkFlag,
   }
 
+  networkMonitor!: NetworkMonitor
+
   async run(): Promise<void> {
     const {flags} = await this.parse(Faucet)
-    let {network} = flags
     let prompt: any
 
     prompt = await inquirer.prompt([
@@ -44,38 +49,29 @@ export default class Faucet extends Command {
       true,
     )
 
-    network = await checkOptionFlag(supportedNetworksOptions, network, 'Select the network to request tokens on')
+    const network: string = await checkOptionFlag(
+      supportedNetworksOptions,
+      flags.network,
+      'Select the network to request tokens on',
+    )
 
     this.log(`Joining network: ${networks[network].shortKey}`)
 
+    this.networkMonitor = new NetworkMonitor({
+      parent: this,
+      configFile,
+      networks: [network],
+      debug: this.debug,
+      userWallet,
+      verbose: false,
+    })
+
     CliUx.ux.action.start('Loading network RPC provider')
-    const destinationProviderUrl: string = (configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork)
-      .providerUrl
-    const networkProtocol: string = new URL(destinationProviderUrl).protocol
-    let provider
-    switch (networkProtocol) {
-      case 'https:':
-        provider = new providers.JsonRpcProvider(destinationProviderUrl)
-        break
-      case 'wss:':
-        provider = new providers.WebSocketProvider(destinationProviderUrl)
-        break
-      default:
-        throw new Error('Unsupported RPC URL protocol -> ' + networkProtocol)
-    }
-
+    await this.networkMonitor.run(true)
     CliUx.ux.action.stop()
 
-    CliUx.ux.action.start('Checking RPC connection')
-    const listening = await provider.send('net_listening', [])
-    CliUx.ux.action.stop()
-    if (!listening) {
-      throw new Error('RPC connection failed')
-    }
-
-    this.log('RPC connection successful')
-
-    const wallet = userWallet?.connect(provider)
+    const provider: JsonRpcProvider | WebSocketProvider = this.networkMonitor.providers[network]
+    const wallet: Wallet = this.networkMonitor.wallets[network]
 
     // Setup the contracts and chain services
     const coreChainService = new CoreChainService(provider, wallet, networks[network].chain)
@@ -84,8 +80,8 @@ export default class Faucet extends Command {
     const faucetContract = await coreChainService.getFaucet()
     const tokenChainService = new TokenChainService(provider, wallet, networks[network].chain, tokenContract)
     const faucetService = new FaucetService(provider, wallet, networks[network].chain, faucetContract)
-    const currentHlgBalance = (await tokenChainService.balanceOf(wallet.address)) as BigNumber
-    this.log(`Current $HLG balance: ${formatEther(currentHlgBalance)}`)
+    const currentHlgBalance = BigNumber.from(await tokenChainService.balanceOf(wallet.address))
+    this.log(`Current $HLG balance: ${formatUnits(currentHlgBalance, 'ether')}`)
 
     const faucetInfo: FaucetInfo = await faucetService.getFaucetInfo(wallet.address)
 

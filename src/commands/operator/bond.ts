@@ -1,16 +1,18 @@
-import {CliUx, Command, Flags} from '@oclif/core'
-import {BigNumber, providers} from 'ethers'
 import * as inquirer from 'inquirer'
 
-import {networks, supportedShortNetworks} from '@holographxyz/networks'
+import {CliUx, Command, Flags} from '@oclif/core'
 import color from '@oclif/color'
-import {formatEther} from 'ethers/lib/utils'
+import {networks, supportedShortNetworks} from '@holographxyz/networks'
+import {WebSocketProvider, JsonRpcProvider} from '@ethersproject/providers'
+import {BigNumber} from '@ethersproject/bignumber'
+import {formatUnits} from '@ethersproject/units'
+
 import CoreChainService from '../../services/core-chain-service'
 import OperatorChainService from '../../services/operator-chain-service'
 import TokenChainService from '../../services/token-chain-service'
 import {PodBondAmounts} from '../../types/holograph-operator'
 import {ConfigNetwork, ConfigNetworks, ensureConfigFileIsValid} from '../../utils/config'
-import {toLong18} from '../../utils/contracts'
+import {toLong18} from '../../utils/utils'
 import {checkOptionFlag} from '../../utils/validation'
 import Operator from '.'
 
@@ -84,10 +86,10 @@ export default class Bond extends Command {
     let provider
     switch (networkProtocol) {
       case 'https:':
-        provider = new providers.JsonRpcProvider(destinationProviderUrl)
+        provider = new JsonRpcProvider(destinationProviderUrl)
         break
       case 'wss:':
-        provider = new providers.WebSocketProvider(destinationProviderUrl)
+        provider = new WebSocketProvider(destinationProviderUrl)
         break
       default:
         throw new Error('Unsupported RPC URL protocol -> ' + networkProtocol)
@@ -116,7 +118,7 @@ export default class Bond extends Command {
     const operator = operatorChainService.operator
 
     const currentHlgBalance = (await tokenChainService.balanceOf(wallet.address)) as BigNumber
-    this.log(`Current HLG balance: ${formatEther(currentHlgBalance)}`)
+    this.log(`Current HLG balance: ${formatUnits(currentHlgBalance, 'ether')}`)
 
     if ((await operator.getBondedAmount(wallet.address)) > 0) {
       prompt = await inquirer.prompt([
@@ -168,7 +170,7 @@ export default class Bond extends Command {
     }
 
     const podChoices: string[] = allPodBondAmounts.map((podBondAmounts, index) => {
-      return `${index + 1} - ${formatEther(podBondAmounts.current)} HLG`
+      return `${index + 1} - ${formatUnits(podBondAmounts.current, 'ether')} HLG`
     })
 
     if (!pod) {
@@ -186,11 +188,12 @@ export default class Bond extends Command {
 
     const podBondAmounts: PodBondAmounts = await operator.getPodBondAmounts(pod)
     this.log(
-      `Pod ${pod} has a base bond amount of ${formatEther(podBondAmounts.base)} and currently requires ${formatEther(
-        podBondAmounts.current,
-      )} to bond.`,
+      `Pod ${pod} has a base bond amount of ${formatUnits(
+        podBondAmounts.base,
+        'ether',
+      )} and currently requires ${formatUnits(podBondAmounts.current, 'ether')} to bond.`,
     )
-    this.log(`Enter an amount greater or equal to: ${formatEther(podBondAmounts.current)} to bond.`)
+    this.log(`Enter an amount greater or equal to: ${formatUnits(podBondAmounts.current, 'ether')} to bond.`)
 
     if (!amount) {
       prompt = await inquirer.prompt([
@@ -227,7 +230,10 @@ export default class Bond extends Command {
     CliUx.ux.action.stop()
 
     this.log(
-      `Transaction is estimated to cost a total of ${formatEther(estimatedGas)} native gas tokens (in Ether units)`,
+      `Transaction is estimated to cost a total of ${formatUnits(
+        estimatedGas,
+        'ether',
+      )} native gas tokens (in Ether units)`,
     )
     if (estimatedGas.gt(currentHlgBalance)) {
       this.log(

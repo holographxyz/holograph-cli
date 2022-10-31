@@ -1,6 +1,9 @@
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
+import WebSocket from 'ws'
 
+import {Command, Flags} from '@oclif/core'
+import color from '@oclif/color'
 import {Wallet} from '@ethersproject/wallet'
 import {Contract, PopulatedTransaction} from '@ethersproject/contracts'
 import {BigNumber} from '@ethersproject/bignumber'
@@ -8,7 +11,6 @@ import {formatUnits} from '@ethersproject/units'
 import {keccak256} from '@ethersproject/keccak256'
 import {Interface, EventFragment, defaultAbiCoder} from '@ethersproject/abi'
 import {WebSocketProvider, JsonRpcProvider} from '@ethersproject/providers'
-import WebSocket from 'ws'
 import {
   Block,
   BlockWithTransactions,
@@ -16,15 +18,12 @@ import {
   TransactionResponse,
   TransactionRequest,
 } from '@ethersproject/abstract-provider'
-import {Command, Flags} from '@oclif/core'
+import {Environment, getEnvironment} from '@holographxyz/environment'
+import {supportedNetworks, supportedShortNetworks, networks, getNetworkByShortKey} from '@holographxyz/networks'
 
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {GasPricing, initializeGasPricing, updateGasPricing} from './gas'
 import {capitalize, NETWORK_COLORS, zeroAddress} from './utils'
-import color from '@oclif/color'
-
-import {Environment, getEnvironment} from '@holographxyz/environment'
-import {supportedNetworks, supportedShortNetworks, networks, getNetworkByShortKey} from '@holographxyz/networks'
 import {HOLOGRAPH_ADDRESSES} from './contracts'
 
 export const warpFlag = {
@@ -1268,7 +1267,7 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeErc20TransferEvent(receipt: TransactionReceipt, target?: string): any[] | undefined {
+  decodeErc20TransferEvent(receipt: TransactionReceipt, target?: string): string[] | undefined {
     if (target !== undefined) {
       target = target.toLowerCase().trim()
     }
@@ -1284,7 +1283,7 @@ export class NetworkMonitor {
             NetworkMonitor.erc20TransferEventFragment,
             log.data,
             log.topics,
-          ) as any[]
+          ) as string[]
           return this.lowerCaseAllStrings(event, log.address)
         }
       }
@@ -1293,7 +1292,7 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeErc721TransferEvent(receipt: TransactionReceipt, target?: string): any[] | undefined {
+  decodeErc721TransferEvent(receipt: TransactionReceipt, target?: string): string[] | undefined {
     if (target !== undefined) {
       target = target.toLowerCase().trim()
     }
@@ -1309,7 +1308,7 @@ export class NetworkMonitor {
             NetworkMonitor.erc721TransferEventFragment,
             log.data,
             log.topics,
-          ) as any[]
+          ) as string[]
           return this.lowerCaseAllStrings(event, log.address)
         }
       }

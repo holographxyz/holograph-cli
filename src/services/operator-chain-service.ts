@@ -1,5 +1,8 @@
 import {JsonRpcProvider, StaticJsonRpcProvider, TransactionReceipt, Web3Provider} from '@ethersproject/providers'
-import {BigNumberish, Contract, ethers} from 'ethers'
+import {Wallet} from '@ethersproject/wallet'
+import {Contract} from '@ethersproject/contracts'
+import {BigNumberish} from '@ethersproject/bignumber'
+
 import CoreChainService from './core-chain-service'
 import {GasFee} from '../types/interfaces'
 
@@ -7,7 +10,7 @@ class OperatorChainService extends CoreChainService {
   operator: Contract
   constructor(
     provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider,
-    wallet: ethers.Wallet,
+    wallet: Wallet,
     chainId: number,
     contract: Contract,
   ) {

@@ -1,11 +1,11 @@
 import {Contract} from '@ethersproject/contracts'
+import {BigNumber, BigNumberish} from '@ethersproject/bignumber'
+import {Wallet} from '@ethersproject/wallet'
 import {StaticJsonRpcProvider, JsonRpcProvider, Web3Provider} from '@ethersproject/providers'
 import {FeeData, TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
-import {BigNumberish} from '@ethersproject/bignumber'
+import {getEnvironment} from '@holographxyz/environment'
 
 import {FAUCET_ADDRESSES, HOLOGRAPH_ADDRESSES, LZ_RELAYER_ADDRESSES, getABIs} from '../utils/contracts'
-import {getEnvironment} from '@holographxyz/environment'
-import {BigNumber, Wallet} from 'ethers'
 
 const ENVIRONMENT = getEnvironment()
 const HOLOGRAPH_ADDRESS = HOLOGRAPH_ADDRESSES[ENVIRONMENT]

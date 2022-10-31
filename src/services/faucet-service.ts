@@ -1,11 +1,10 @@
 import {Contract} from '@ethersproject/contracts'
 import {StaticJsonRpcProvider, JsonRpcProvider, Web3Provider, TransactionReceipt} from '@ethersproject/providers'
+import {BigNumber} from '@ethersproject/bignumber'
+import {Wallet} from '@ethersproject/wallet'
 
-import {toShort18, toShort18Str, waitForTransactionComplete} from '../utils/contracts'
-import {getSecondsLeft} from '../utils/utils'
-
+import {getSecondsLeft, toShort18, toShort18Str} from '../utils/utils'
 import CoreChainService from './core-chain-service'
-import {BigNumberish, ethers} from 'ethers'
 
 export interface FaucetFee {
   fee: string
@@ -23,7 +22,7 @@ class FaucetService extends CoreChainService {
 
   constructor(
     provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider,
-    wallet: ethers.Wallet,
+    wallet: Wallet,
     chainId: number,
     contract?: Contract,
   ) {
@@ -31,7 +30,7 @@ class FaucetService extends CoreChainService {
     this.faucet = contract ? contract : this.getFaucet()
   }
 
-  estimateGasForRequestTokens = async (): Promise<BigNumberish> => {
+  estimateGasForRequestTokens = async (): Promise<BigNumber> => {
     const gasPrice = await this.getChainGasPrice()
     const gasLimit = await this.faucet.estimateGas.requestTokens()
     return gasPrice.mul(gasLimit)
@@ -64,8 +63,8 @@ class FaucetService extends CoreChainService {
 
   requestTokens = async (): Promise<TransactionReceipt> => {
     const tx = await this.faucet.requestTokens()
-    await waitForTransactionComplete(tx.wait)
-    return this.waitForTransaction(tx.hash)
+    await tx.wait()
+    return tx
   }
 }
 

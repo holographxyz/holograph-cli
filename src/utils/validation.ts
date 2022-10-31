@@ -1,10 +1,12 @@
 import * as inquirer from 'inquirer'
-import {BigNumber} from 'ethers'
+
+import {BigNumber} from '@ethersproject/bignumber'
+import {supportedNetworks, supportedShortNetworks, getNetworkByShortKey} from '@holographxyz/networks'
+
 import {BytecodeType} from './bytecodes'
 import {ConfigNetworks} from './config'
 import {DeploymentType, deploymentProcesses} from './contract-deployment'
 import {TokenUriType} from './asset-deployment'
-import {supportedNetworks, supportedShortNetworks, getNetworkByShortKey} from '@holographxyz/networks'
 import {remove0x} from './utils'
 
 export interface SelectOption {

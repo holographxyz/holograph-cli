@@ -1,11 +1,15 @@
-import {CliUx, Command, Flags} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
-import {ethers} from 'ethers'
+import path from 'node:path'
+
+import {CliUx, Command, Flags} from '@oclif/core'
+import {Contract} from '@ethersproject/contracts'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
+import {getEnvironment} from '@holographxyz/environment'
+import {networks} from '@holographxyz/networks'
+
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {networkFlag, NetworkMonitor} from '../../utils/network-monitor'
-import {getEnvironment} from '@holographxyz/environment'
 import {
   validateContractAddress,
   validateNonEmptyString,
@@ -16,12 +20,11 @@ import {
   checkTokenUriTypeFlag,
 } from '../../utils/validation'
 import {TokenUriTypeIndex} from '../../utils/asset-deployment'
-import path from 'node:path'
 
 export default class NFT extends Command {
   static description = 'Mint a Holographable NFT'
   static examples = [
-    '$ <%= config.bin %> <%= command.id %> --network="ethereumTestnetGoerli" --collectionAddress="0xf90c33d5ef88a9d84d4d61f62c913ba192091fe7" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"',
+    '$ <%= config.bin %> <%= command.id %> --network="goerli" --collectionAddress="0xf90c33d5ef88a9d84d4d61f62c913ba192091fe7" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"',
   ]
 
   static flags = {
@@ -119,16 +122,20 @@ export default class NFT extends Command {
 
     CliUx.ux.action.start('Retrieving collection smart contract')
     const collectionABI = await fs.readJson(path.join(__dirname, `../../abi/${environment}/CxipERC721.json`))
-    const collection = new ethers.ContractFactory(collectionABI, this.networkMonitor.wallets[network].address).attach(
-      collectionAddress,
-    )
+    const collection: Contract = new Contract(collectionAddress, collectionABI, this.networkMonitor.providers[network])
     CliUx.ux.action.stop()
 
     const mintPrompt: any = await inquirer.prompt([
       {
         name: 'shouldContinue',
         message: `\nWould you like to mint the following NFT?\n\n${JSON.stringify(
-          {network, collectionAddress, tokenId, tokenUriType: TokenUriTypeIndex[tokenUriType], tokenUri},
+          {
+            network: networks[network].shortKey,
+            collectionAddress,
+            tokenId,
+            tokenUriType: TokenUriTypeIndex[tokenUriType],
+            tokenUri,
+          },
           undefined,
           2,
         )}\n`,

@@ -268,13 +268,13 @@ export default class Operator extends Command {
     }
 
     if (receipt.status === 1) {
-      this.networkMonitor.structuredLog(network, `Extracting job hash`, tags)
+      this.networkMonitor.structuredLog(network, `Checking for job hash`, tags)
       const operatorJobHash: string | undefined = this.networkMonitor.decodeCrossChainMessageSentEvent(
         receipt,
         this.networkMonitor.operatorAddress,
       )
       if (operatorJobHash === undefined) {
-        this.networkMonitor.structuredLog(network, `Failed extracting job hash from CrossChainMessageSent event`, tags)
+        this.networkMonitor.structuredLog(network, `No CrossChainMessageSent event found`, tags)
       } else {
         const bridgeTransaction = await this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: transaction.data,
@@ -292,6 +292,8 @@ export default class Operator extends Command {
           )
         }
       }
+    } else {
+      this.networkMonitor.structuredLog(network, `Transaction failed, ignoring it`, tags)
     }
   }
 
@@ -311,15 +313,17 @@ export default class Operator extends Command {
     }
 
     if (receipt.status === 1) {
+      this.networkMonitor.structuredLog(network, `Checking for executeJob function`, tags)
       const parsedTransaction: TransactionDescription =
         this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
       if (parsedTransaction.name === 'executeJob') {
+        this.networkMonitor.structuredLog(network, `Extracting bridgeInRequest from transaction`, tags)
         const args: any[] | undefined = Object.values(parsedTransaction.args)
         const operatorJobPayload: string | undefined = args === undefined ? undefined : args[0]
         const operatorJobHash: string | undefined =
           operatorJobPayload === undefined ? undefined : sha3(operatorJobPayload)
         if (operatorJobHash === undefined) {
-          this.networkMonitor.structuredLog(network, `Could not find a bridgeInRequest for ${transaction.hash}`, tags)
+          this.networkMonitor.structuredLog(network, `Could not find bridgeInRequest in ${transaction.hash}`, tags)
         } else {
           this.networkMonitor.structuredLog(network, `Operator executed job ${operatorJobHash}`, tags)
           // remove job from operatorJobs if it exists
@@ -339,6 +343,8 @@ export default class Operator extends Command {
           tags,
         )
       }
+    } else {
+      this.networkMonitor.structuredLog(network, `Transaction failed, ignoring it`, tags)
     }
   }
 
@@ -361,7 +367,7 @@ export default class Operator extends Command {
     }
 
     if (receipt.status === 1) {
-      this.networkMonitor.structuredLog(network, `Extracting job hash`, tags)
+      this.networkMonitor.structuredLog(network, `Checking for job hash`, tags)
       const operatorJobPayloadData = this.networkMonitor.decodeAvailableOperatorJobEvent(
         receipt,
         this.networkMonitor.operatorAddress,
@@ -369,7 +375,7 @@ export default class Operator extends Command {
       const operatorJobHash = operatorJobPayloadData === undefined ? undefined : operatorJobPayloadData[0]
       const operatorJobPayload = operatorJobPayloadData === undefined ? undefined : operatorJobPayloadData[1]
       if (operatorJobHash === undefined) {
-        this.networkMonitor.structuredLog(network, `Failed extracting job hash from AvailableOperatorJob event`, tags)
+        this.networkMonitor.structuredLog(network, `No AvailableOperatorJob event found`, tags)
       } else {
         this.networkMonitor.structuredLog(network, `Found a new job ${operatorJobHash}`, tags)
         // first update operator details, in case operator was selected for a job, or any data changed
@@ -379,6 +385,8 @@ export default class Operator extends Command {
         this.networkMonitor.structuredLog(network, `Adding job to list of available jobs`, tags)
         await this.decodeOperatorJob(network, operatorJobHash as string, operatorJobPayload as string, tags)
       }
+    } else {
+      this.networkMonitor.structuredLog(network, `Transaction failed, ignoring it`, tags)
     }
   }
 

@@ -1,5 +1,8 @@
 import Web3 from 'web3'
 
+import {BigNumber, BigNumberish} from '@ethersproject/bignumber'
+import {formatUnits} from '@ethersproject/units'
+
 export const web3 = new Web3()
 
 export function randomNumber(min: number, max: number): number {
@@ -119,8 +122,36 @@ export function isStringAValidURL(s: string): boolean {
   const protocols = ['http', 'https', 'wss']
   try {
     const result = new URL(s)
-    return result.protocol ? protocols.map(x => `${x.toLowerCase()}:`).includes(result.protocol) : false
+    return result.protocol ? protocols.includes(result.protocol) : false
   } catch {
     return false
   }
+}
+
+export const toShort18Str = (num: string): string => {
+  return formatUnits(num, 'ether')
+}
+
+export const toShort18 = (num: BigNumberish): BigNumber => {
+  return BigNumber.from(num).div(BigNumber.from('10').pow(18))
+}
+
+export const toLong18 = (num: BigNumberish): BigNumber => {
+  return BigNumber.from(num).mul(BigNumber.from('10').pow(18))
+}
+
+export const generateRandomSalt = (): string => {
+  return '0x' + Date.now().toString(16).padStart(64, '0')
+}
+
+export const utf8ToBytes32 = (str: string): string => {
+  return (
+    '0x' +
+    [...str]
+      .map(c =>
+        c.charCodeAt(0) < 128 ? c.charCodeAt(0).toString(16) : encodeURIComponent(c).replace(/%/g, '').toLowerCase(),
+      )
+      .join('')
+      .padStart(64, '0')
+  )
 }
