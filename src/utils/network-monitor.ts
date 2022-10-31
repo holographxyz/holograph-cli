@@ -377,6 +377,7 @@ export class NetworkMonitor {
   walletNonces: {[key: string]: number} = {}
   providers: {[key: string]: JsonRpcProvider | WebSocketProvider} = {}
   ws: {[key: string]: WebSocket} = {}
+  activated: {[key: string]: boolean} = {}
   abiCoder = defaultAbiCoder
   networkColors: any = {}
   latestBlockHeight: {[key: string]: number} = {}
@@ -473,20 +474,7 @@ export class NetworkMonitor {
 
   checkConnectionStatus(): void {
     for (const network of this.networks) {
-      if (
-        !(network in this.configFile.networks) ||
-        !('providerUrl' in this.configFile.networks[network]) ||
-        this.configFile.networks[network].providerUrl === undefined ||
-        this.configFile.networks[network].providerUrl === ''
-      ) {
-        this.structuredLogError(network, 'Cannot start RPC provider')
-        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
-        process.exit()
-      } else if (this.providers[network] === undefined) {
-        this.structuredLogError(network, 'Cannot start RPC provider')
-        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
-        process.exit()
-      } else if (network in this.ws && this.ws[network].readyState !== WebSocket.OPEN) {
+      if (!this.activated[network]) {
         this.structuredLogError(network, 'Cannot start RPC provider')
         // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
         process.exit()
@@ -564,6 +552,8 @@ export class NetworkMonitor {
     blockJobs?: {[key: string]: BlockJob[]},
     ethersInitializedCallback?: () => Promise<void>,
   ): Promise<void> {
+    // check connections in 30 seconds, if something failed, kill the process
+    setTimeout(this.checkConnectionStatus.bind(this), 30_000)
     await this.initializeEthers()
     if (ethersInitializedCallback !== undefined) {
       await ethersInitializedCallback.bind(this.parent)()
@@ -613,9 +603,6 @@ export class NetworkMonitor {
     }
 
     process.on('exit', this.exitHandler)
-
-    // check connections in 60 seconds, if something failed, kill the process
-    setTimeout(this.checkConnectionStatus, 60_000)
   }
 
   async loadLastBlocks(configDir: string): Promise<{[key: string]: number}> {
@@ -789,8 +776,7 @@ export class NetworkMonitor {
       this.providers[this.networks[0]],
     )
 
-    for (let i = 0, l = this.networks.length; i < l; i++) {
-      const network = this.networks[i]
+    for (const network of this.networks) {
       if (this.environment === Environment.localhost) {
         this.localhostWallets[network] = new Wallet(NetworkMonitor.localhostPrivateKey).connect(this.providers[network])
         // since sample localhost deployer key is used, nonce is out of sync
@@ -804,6 +790,8 @@ export class NetworkMonitor {
           this.localhostWallets[network],
         )
       }
+
+      this.activated[network] = false
     }
   }
 
@@ -1016,6 +1004,7 @@ export class NetworkMonitor {
   }
 
   async processBlock(job: BlockJob): Promise<void> {
+    this.activated[job.network] = true
     if (this.verbose) {
       this.structuredLog(job.network, `Processing block`, job.block)
     }
