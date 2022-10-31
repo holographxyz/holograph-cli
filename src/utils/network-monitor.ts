@@ -54,9 +54,9 @@ export const networkFlag = {
 }
 
 export enum OperatorMode {
-  listen,
-  manual,
-  auto,
+  listen = 'listen',
+  manual = 'manual',
+  auto = 'auto',
 }
 
 export enum ProviderStatus {
