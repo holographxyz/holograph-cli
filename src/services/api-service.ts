@@ -65,6 +65,7 @@ class ApiService {
             operatorAddress
             messageAddress
             sourceAddress
+            data
         }
       }
   `
@@ -93,6 +94,7 @@ class ApiService {
             operatorBlockNumber
             operatorTx
             operatorStatus
+            data
           }
         }
     `

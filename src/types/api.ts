@@ -53,4 +53,5 @@ export interface CrossChainTransaction {
   operatorAddress?: string
   messageAddress?: string
   sourceAddress?: string
+  data?: string
 }
