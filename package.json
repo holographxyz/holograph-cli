@@ -75,6 +75,8 @@
     "ethereumjs-wallet": "^1.0.2",
     "ethers": "^5.7.1",
     "fs-extra": "^10.1.0",
+    "graphql": "^16.6.0",
+    "graphql-request": "^5.0.0",
     "http": "^0.0.1-security",
     "https": "^1.0.0",
     "husky": "^8.0.1",
