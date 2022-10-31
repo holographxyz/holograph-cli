@@ -6,6 +6,7 @@ import {
   CrossChainTransaction,
   UpdateCrossChainTransactionStatusInput,
   CreateOrUpdateCrossChainTransactionResponse,
+  UpdateCrossChainTransactionStatusInputWithoutData,
 } from '../types/api'
 
 class ApiService {
@@ -77,7 +78,9 @@ class ApiService {
   }
 
   async updateCrossChainTransactionStatus(
-    updateCrossChainTransactionStatusInput: UpdateCrossChainTransactionStatusInput,
+    updateCrossChainTransactionStatusInput:
+      | UpdateCrossChainTransactionStatusInput
+      | UpdateCrossChainTransactionStatusInputWithoutData,
   ): Promise<CrossChainTransaction> {
     const mutation = gql`
         mutation CreateOrUpdateCrossChainTransaction($createOrUpdateCrossChainTransactionInput: CreateOrUpdateCrossChainTransactionInput!) {
@@ -94,6 +97,9 @@ class ApiService {
             operatorBlockNumber
             operatorTx
             operatorStatus
+            operatorAddress
+            messageAddress
+            sourceAddress
             data
           }
         }

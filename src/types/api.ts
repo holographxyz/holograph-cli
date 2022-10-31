@@ -34,6 +34,7 @@ export enum TransactionStatus {
 }
 
 export interface UpdateCrossChainTransactionStatusInput extends Omit<CrossChainTransaction, 'id'> {}
+export interface UpdateCrossChainTransactionStatusInputWithoutData extends Omit<CrossChainTransaction, 'id' | 'data'> {}
 export interface CrossChainTransaction {
   id?: string
   jobType: string
