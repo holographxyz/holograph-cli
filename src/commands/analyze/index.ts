@@ -264,14 +264,14 @@ export default class Analyze extends Command {
     }
 
     if (scopeFlags) {
-    for (const scopeString of scopeFlags) {
-      try {
-        const scope: Scope = JSON.parse(scopeString) as Scope
-        this.validateScope(scope, networks, scopeJobs)
-      } catch {
-        this.log(`${scopeString} is an invalid Scope JSON object`)
+      for (const scopeString of scopeFlags) {
+        try {
+          const scope: Scope = JSON.parse(scopeString) as Scope
+          this.validateScope(scope, networks, scopeJobs)
+        } catch {
+          this.log(`${scopeString} is an invalid Scope JSON object`)
+        }
       }
-    }
     } else if (scopeFile) {
       if (!(await fs.pathExists(scopeFile))) {
         this.error(`Problem reading ${scopeFile}`)
@@ -279,7 +279,7 @@ export default class Analyze extends Command {
 
       try {
         const scopes = (await fs.readJson(scopeFile)) as Scope[]
-        for (const scope of scopes)  this.validateScope(scope, networks, scopeJobs)
+        for (const scope of scopes) this.validateScope(scope, networks, scopeJobs)
       } catch {
         this.error(`One or more lines are an invalid Scope JSON object`)
       }
