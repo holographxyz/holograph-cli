@@ -1,5 +1,8 @@
 import Web3 from 'web3'
 
+import {BigNumber, BigNumberish} from '@ethersproject/bignumber'
+import {formatUnits} from '@ethersproject/units'
+
 export const web3 = new Web3()
 
 export function randomNumber(min: number, max: number): number {
@@ -13,7 +16,9 @@ export function capitalize(input: string): string {
 // eslint-disable-next-line no-promise-executor-return
 export const sleep = (ms: number): Promise<unknown> => new Promise(resolve => setTimeout(resolve, ms))
 
-export const getSecondsLeft = (timestamp: number) => Math.round(timestamp - Date.now() / 1000)
+export const getSecondsLeft = (timestamp: number): number => {
+  return Math.round((timestamp - Date.now()) / 1000)
+}
 
 export const webSocketConfig = {
   reconnect: {
@@ -31,6 +36,18 @@ export const webSocketConfig = {
     dropConnectionOnKeepaliveTimeout: true,
     keepaliveGracePeriod: 4000, // ms
   },
+}
+
+export const networkToChainId: Record<string, number> = {
+  ethereum: 1,
+  ethereumTestnetRinkeby: 4,
+  ethereumTestnetGoerli: 5,
+  polygon: 89,
+  polygonTestnet: 80_001,
+  avalanche: 43_114,
+  avalancheTestnet: 43_113,
+  binanceSmartChain: 56,
+  binanceSmartChainTestnet: 97,
 }
 
 export const NETWORK_COLORS: Record<string, string> = {
@@ -117,8 +134,36 @@ export function isStringAValidURL(s: string): boolean {
   const protocols = ['http', 'https', 'wss']
   try {
     const result = new URL(s)
-    return result.protocol ? protocols.map(x => `${x.toLowerCase()}:`).includes(result.protocol) : false
+    return result.protocol ? protocols.includes(result.protocol) : false
   } catch {
     return false
   }
+}
+
+export const toShort18Str = (num: string): string => {
+  return formatUnits(num, 'ether')
+}
+
+export const toShort18 = (num: BigNumberish): BigNumber => {
+  return BigNumber.from(num).div(BigNumber.from('10').pow(18))
+}
+
+export const toLong18 = (num: BigNumberish): BigNumber => {
+  return BigNumber.from(num).mul(BigNumber.from('10').pow(18))
+}
+
+export const generateRandomSalt = (): string => {
+  return '0x' + Date.now().toString(16).padStart(64, '0')
+}
+
+export const utf8ToBytes32 = (str: string): string => {
+  return (
+    '0x' +
+    [...str]
+      .map(c =>
+        c.charCodeAt(0) < 128 ? c.charCodeAt(0).toString(16) : encodeURIComponent(c).replace(/%/g, '').toLowerCase(),
+      )
+      .join('')
+      .padStart(64, '0')
+  )
 }

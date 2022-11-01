@@ -13,6 +13,14 @@ export type GasPricing = {
   nextPriorityFee: BigNumber | null
   // For EIP-1559 transactions
   maxFeePerGas: BigNumber | null
+
+  lowestBlockFee: BigNumber | null
+  averageBlockFee: BigNumber | null
+  highestBlockFee: BigNumber | null
+
+  lowestPriorityFee: BigNumber | null
+  averagePriorityFee: BigNumber | null
+  highestPriorityFee: BigNumber | null
 }
 
 // Implemented from https://eips.ethereum.org/EIPS/eip-1559
@@ -33,8 +41,9 @@ export function calculateNextBlockFee(parent: Block | BlockWithTransactions): Bi
 
   let gasUsedDelta: BigNumber
   let baseFeeDelta: BigNumber
+
+  // If the parent block used more gas than its target, the baseFee should increase.
   if (parent.gasUsed.gt(parentGasTarget)) {
-    // If the parent block used more gas than its target, the baseFee should increase.
     gasUsedDelta = parent.gasUsed.sub(parentGasTarget)
     baseFeeDelta = baseFeePerGas.mul(gasUsedDelta).div(parentGasTarget).div(baseFeeMaxChangeDenominator)
     if (one.gt(baseFeeDelta)) {
@@ -47,6 +56,7 @@ export function calculateNextBlockFee(parent: Block | BlockWithTransactions): Bi
   // Otherwise if the parent block used less gas than its target, the baseFee should decrease.
   gasUsedDelta = parentGasTarget.sub(parent.gasUsed)
   baseFeeDelta = baseFeePerGas.mul(gasUsedDelta).div(parentGasTarget).div(baseFeeMaxChangeDenominator)
+
   return baseFeePerGas.sub(baseFeeDelta)
 }
 
@@ -55,7 +65,8 @@ export function adjustBaseBlockFee(network: string, baseBlockFee: BigNumber): Bi
   // Avalanche has a minimum BaseBlockFee of 25 GWEI
   // https://docs.avax.network/quickstart/transaction-fees#base-fee
   if (
-    (network === networks['avalanche' as NetworkKeys].key || networks['avalancheTestnet' as NetworkKeys].key) &&
+    (network === networks['avalanche' as NetworkKeys].key ||
+      network === networks['avalancheTestnet' as NetworkKeys].key) &&
     baseBlockFee.lt(BigNumber.from('25000000000'))
   ) {
     return BigNumber.from('25000000000')
@@ -75,6 +86,12 @@ export async function initializeGasPricing(
     nextBlockFee: null,
     nextPriorityFee: null,
     maxFeePerGas: null,
+    lowestBlockFee: null,
+    averageBlockFee: null,
+    highestBlockFee: null,
+    lowestPriorityFee: null,
+    averagePriorityFee: null,
+    highestPriorityFee: null,
   } as GasPricing)
   if (!gasPrices.isEip1559) {
     // need to replace this with internal calculations
