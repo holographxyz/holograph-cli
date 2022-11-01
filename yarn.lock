@@ -978,10 +978,10 @@
     widest-line "^3.1.0"
     wrap-ansi "^7.0.0"
 
-"@oclif/core@^1.16.4", "@oclif/core@^1.18.0", "@oclif/core@^1.19.1":
-  version "1.19.2"
-  resolved "https://registry.yarnpkg.com/@oclif/core/-/core-1.19.2.tgz#847b1c502ff8a91b834b8c893f0942a5d95e3b64"
-  integrity sha512-n5ni/NNR6+I0IQXVGoLKdrdw6IS3WH/R/hw6WX8ERfLMZACrNSuJFD9EmBZkztyRkmiQ2L06ULazW5bJn5Shog==
+"@oclif/core@^1.16.4", "@oclif/core@^1.18.0", "@oclif/core@^1.19.1", "@oclif/core@^1.20.0":
+  version "1.20.2"
+  resolved "https://registry.yarnpkg.com/@oclif/core/-/core-1.20.2.tgz#724713086355d693e578960f72c7e2d14fd3e7c3"
+  integrity sha512-c6CpDbDPS9UuKwGoajzsjrjfnwQywWEV3WI5FDvb87h0/WW2tGf1QwHUWgdKOojafEcMAa9DnP5j+mXdUTtpCg==
   dependencies:
     "@oclif/linewrap" "^1.0.0"
     "@oclif/screen" "^3.0.2"
@@ -1076,13 +1076,13 @@
   resolved "https://registry.yarnpkg.com/@oclif/screen/-/screen-3.0.2.tgz#969054308fe98d130c02844a45cc792199b75670"
   integrity sha512-S/SF/XYJeevwIgHFmVDAFRUvM3m+OjhvCAYMk78ZJQCYCQ5wS7j+LTt1ZEv2jpEEGg2tx/F6TYYWxddNAYHrFQ==
 
-"@oclif/test@2.2.1":
-  version "2.2.1"
-  resolved "https://registry.yarnpkg.com/@oclif/test/-/test-2.2.1.tgz#1694b0b236bff1183d0e44af063e77bf6bc60f03"
-  integrity sha512-j3PdoeK86DFCmilvUZSQFdHa0o1eejlR70c9O5UqqPLGSY3Pz/11TaXB5BrfhqISIpZTUIacDlAd1Xvybft0sg==
+"@oclif/test@2.2.8":
+  version "2.2.8"
+  resolved "https://registry.yarnpkg.com/@oclif/test/-/test-2.2.8.tgz#c4114922428f90f94e3775b596876a88830a91c2"
+  integrity sha512-VPVR1XLiTYqKToXlU7TPRnp5WMZvzfjyyPDH2sqKVCuEj9ZdEsK8m4woTK1n9aX1HI1Yv0tyyvg2a8HbUJOwhw==
   dependencies:
-    "@oclif/core" "^1.16.4"
-    fancy-test "^2.0.2"
+    "@oclif/core" "^1.20.0"
+    fancy-test "^2.0.5"
 
 "@octokit/auth-token@^2.4.4":
   version "2.5.0"
@@ -4066,10 +4066,10 @@ fake-merkle-patricia-tree@^1.0.1:
   dependencies:
     checkpoint-store "^1.1.0"
 
-fancy-test@^2.0.2:
-  version "2.0.5"
-  resolved "https://registry.yarnpkg.com/fancy-test/-/fancy-test-2.0.5.tgz#eb39e10b77e476147aa4ed5a81e14e809b46aaae"
-  integrity sha512-ASPLNVkHSSIdRI/uLlK+XGhf1ul/MpRN9VE84ehXL+FOprQjXrDXX3wW1wqKvtcTTC+AW0E0RxdpJ5IEopjhQA==
+fancy-test@^2.0.5:
+  version "2.0.6"
+  resolved "https://registry.yarnpkg.com/fancy-test/-/fancy-test-2.0.6.tgz#e8ac4e652214dd0424a44e8e8a684d70897cdef4"
+  integrity sha512-vzH5MOYK+vAQW/jnRnBiyASemIOAmSYuh2j12w4Ktzh+u2d69OENvI9GLDvNLMxOIqCtwz8ndLMH+5cJHfBmSQ==
   dependencies:
     "@types/chai" "*"
     "@types/lodash" "*"
