@@ -333,7 +333,7 @@ export default class Analyze extends Command {
 
     const sourceChainId: number = networks[beam.bridgeNetwork].chain
     const messageChainId: number = networks[beam.messageNetwork].chain
-    const operatorChainId: number = networks[beam.operatorNetwork].hain
+    const operatorChainId: number = networks[beam.operatorNetwork].chain
     const getCorrectValue = (val1: any, val2: any) => (val1 && val1 !== val2 ? val1 : val2)
     const getTxStatus = (tx?: string) => (tx ? TransactionStatus.COMPLETED : TransactionStatus.PENDING)
 
