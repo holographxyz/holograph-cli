@@ -7,6 +7,7 @@ import {TransactionResponse, TransactionReceipt} from '@ethersproject/abstract-p
 import {TransactionDescription} from '@ethersproject/abi'
 import {Environment, getEnvironment} from '@holographxyz/environment'
 import {
+  networks,
   getNetworkByHolographId,
   supportedNetworks,
   supportedShortNetworks,
@@ -16,6 +17,8 @@ import {
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {toAscii, sha3, storageSlot} from '../../utils/utils'
 import {FilterType, BlockJob, NetworkMonitor, TransactionType} from '../../utils/network-monitor'
+import ApiService from '../../services/api-service'
+import {CrossChainTransaction, TransactionStatus, Logger} from '../../types/api'
 
 enum LogType {
   ContractDeployment = 'ContractDeployment',
@@ -26,6 +29,7 @@ type TransactionLog = {
   messageTx: string
   messageNetwork: string
   messageBlock: number
+  messageAddress: string
   logType: LogType
 }
 
@@ -41,15 +45,27 @@ interface ContractDeployment extends TransactionLog {
 }
 
 interface AvailableJob extends TransactionLog {
+  jobType: TransactionType
   jobHash: string
   bridgeTx: string
   bridgeNetwork: string
   bridgeBlock: number
-  jobType: TransactionType
-  completed: boolean
+  bridgeAddress: string
   operatorTx: string
   operatorNetwork: string
   operatorBlock: number
+  operatorAddress: string
+  completed: boolean
+}
+
+interface RawData {
+  data?: string
+  tokenId?: string
+  collection?: string
+  holographId?: number
+  operatorJobPayload?: string
+  from?: string
+  to?: string
 }
 
 export default class Analyze extends Command {
@@ -64,10 +80,18 @@ export default class Analyze extends Command {
       description: 'JSON object of blocks to analyze "{ network: string, startBlock: number, endBlock: number }"',
       multiple: true,
     }),
+    scopeFile: Flags.string({
+      description: 'JSON file path of blocks to analyze (ie "./scopeFile.json")',
+      exclusive: ['scope'],
+      required: false,
+    }),
     output: Flags.string({
       description: 'Specify a file to output the results to (ie "../../analyzeResults.json")',
       default: `./${getEnvironment()}.analyzeResults.json`,
       multiple: false,
+    }),
+    updateApiOn: Flags.string({
+      description: 'Update DB cross-chain table with correct beam status',
     }),
   }
 
@@ -79,17 +103,37 @@ export default class Analyze extends Command {
   transactionLogs: (ContractDeployment | AvailableJob)[] = []
   networkMonitor!: NetworkMonitor
   blockJobs: {[key: string]: BlockJob[]} = {}
+  apiService!: ApiService | undefined
 
   /**
    * Command Entry Point
    */
   async run(): Promise<void> {
     const {flags} = await this.parse(Analyze)
+    const updateApiOn = flags.updateApiOn as string
+
     this.log('Loading user configurations...')
     const {environment, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
     this.log('User configurations loaded.')
     this.environment = environment
-    const {networks, scopeJobs} = this.scopeItOut(flags.scope as string[])
+
+    if (updateApiOn) {
+      try {
+        const logger: Logger = {
+          log: this.log,
+          warn: this.warn,
+          debug: this.debug,
+          error: this.error,
+          jsonEnabled: () => false,
+        }
+        this.apiService = new ApiService(updateApiOn, logger)
+        await this.apiService.operatorLogin()
+      } catch (error: any) {
+        this.error(error)
+      }
+    }
+
+    const {networks, scopeJobs} = await this.scopeItOut(flags.scope, flags.scopeFile)
     this.log(`${JSON.stringify(scopeJobs, undefined, 2)}`)
 
     this.outputFile = flags.output as string
@@ -208,9 +252,15 @@ export default class Analyze extends Command {
   /**
    * Checks all the input scopes and validates them
    */
-  scopeItOut(scopeFlags: string[]): {networks: string[]; scopeJobs: Scope[]} {
+  async scopeItOut(scopeFlags?: string[], scopeFile?: string): Promise<{networks: string[]; scopeJobs: Scope[]}> {
     const networks: string[] = []
     const scopeJobs: Scope[] = []
+
+    if (scopeFlags === undefined && scopeFile === undefined) {
+      this.error('scope or scopeFile should be informed')
+    }
+
+    if (scopeFlags) {
     for (const scopeString of scopeFlags) {
       try {
         const scope: Scope = JSON.parse(scopeString) as Scope
@@ -218,6 +268,20 @@ export default class Analyze extends Command {
       } catch {
         this.log(`${scopeString} is an invalid Scope JSON object`)
       }
+    }
+    } else if (scopeFile) {
+      if (!(await fs.pathExists(scopeFile))) {
+        this.error(`Problem reading ${scopeFile}`)
+      }
+
+      try {
+        const scopes = (await fs.readJson(scopeFile)) as Scope[]
+        scopes.forEach(scope => this.validateScope(scope, networks, scopeJobs))
+      } catch {
+        this.error(`One or more lines are an invalid Scope JSON object`)
+      }
+    } else {
+      this.error(`Invalid scope`)
     }
 
     return {networks, scopeJobs}
@@ -249,6 +313,119 @@ export default class Analyze extends Command {
       },
     ]
     return Promise.resolve()
+  }
+
+  /**
+   * Update cross chain transaction on DB
+   */
+  async updateBeamStatusDB(beam: AvailableJob, rawData?: RawData) {
+    if (this.apiService === undefined) {
+      return
+    }
+
+    let crossChainTx, updatedTx: CrossChainTransaction
+
+    try {
+      crossChainTx = await this.apiService.getCrossChainTransaction(beam.jobHash)
+    } catch (error: any) {
+      this.error(error)
+    }
+
+    const sourceChainId: number = networks[beam.bridgeNetwork].chain
+    const messageChainId: number = networks[beam.messageNetwork].chain
+    const operatorChainId: number = networks[beam.operatorNetwork].hain
+    const getCorrectValue = (val1: any, val2: any) => (val1 && val1 !== val2 ? val1 : val2)
+    const getTxStatus = (tx?: string) => (tx ? TransactionStatus.COMPLETED : TransactionStatus.PENDING)
+
+    if (crossChainTx) {
+      if (
+        crossChainTx.sourceStatus === TransactionStatus.COMPLETED &&
+        crossChainTx.messageStatus === TransactionStatus.COMPLETED &&
+        crossChainTx.operatorStatus === TransactionStatus.COMPLETED &&
+        crossChainTx.sourceAddress != undefined &&
+        crossChainTx.messageAddress != undefined &&
+        crossChainTx.operatorAddress != undefined &&
+        crossChainTx.data != undefined
+      ) {
+        this.log('Beaming is completed')
+        return
+      }
+
+      if (
+        (crossChainTx.sourceChainId && crossChainTx.sourceChainId !== sourceChainId) ||
+        (crossChainTx.messageChainId && crossChainTx.messageChainId !== messageChainId) ||
+        (crossChainTx.operatorChainId && crossChainTx.operatorChainId !== operatorChainId)
+      ) {
+        this.log('Job hash collision')
+        return
+      }
+
+      updatedTx = crossChainTx
+
+      updatedTx = {
+        ...updatedTx,
+        sourceTx: getCorrectValue(beam.bridgeTx, crossChainTx.sourceTx),
+        sourceChainId: getCorrectValue(sourceChainId, crossChainTx.sourceChainId),
+        sourceBlockNumber: getCorrectValue(beam.bridgeBlock, crossChainTx.sourceBlockNumber),
+        sourceAddress: getCorrectValue(beam.operatorAddress, crossChainTx.sourceAddress),
+        sourceStatus: getTxStatus(beam.bridgeTx),
+        messageTx: getCorrectValue(beam.messageTx, crossChainTx.messageTx),
+        messageChainId: getCorrectValue(messageChainId, crossChainTx.messageChainId),
+        messageBlockNumber: getCorrectValue(beam.messageBlock, crossChainTx.messageBlockNumber),
+        messageAddress: getCorrectValue(beam.messageAddress, crossChainTx.messageAddress),
+        messageStatus: getTxStatus(beam.messageTx),
+        operatorTx: getCorrectValue(beam.operatorTx, crossChainTx.operatorTx),
+        operatorChainId: getCorrectValue(operatorChainId, crossChainTx.operatorChainId),
+        operatorBlockNumber: getCorrectValue(beam.operatorBlock, crossChainTx.operatorBlockNumber),
+        operatorAddress: getCorrectValue(beam.operatorAddress, crossChainTx.operatorAddress),
+        operatorStatus: getTxStatus(beam.bridgeTx),
+      }
+
+      if (rawData !== undefined && crossChainTx.data == undefined) {
+        updatedTx.data = JSON.stringify(rawData)
+      } else if (rawData === undefined && crossChainTx.data == undefined) {
+        delete updatedTx.data
+      }
+
+      delete updatedTx.id
+    } else {
+      this.log('No source job found in DB')
+
+      if (!beam.jobType) return
+
+      this.log('Creating job instance in DB...')
+
+      updatedTx = {
+        jobType: beam.jobType.toUpperCase(),
+        jobHash: beam.jobHash,
+        sourceTx: beam.bridgeTx,
+        sourceChainId: sourceChainId,
+        sourceBlockNumber: beam.bridgeBlock,
+        sourceAddress: beam.bridgeAddress,
+        sourceStatus: getTxStatus(beam.bridgeTx),
+        messageTx: beam.messageTx,
+        messageChainId: messageChainId,
+        messageBlockNumber: beam.messageBlock,
+        messageAddress: beam.messageAddress,
+        messageStatus: getTxStatus(beam.messageTx),
+        operatorTx: beam.operatorTx,
+        operatorChainId: operatorChainId,
+        operatorBlockNumber: beam.operatorBlock,
+        operatorAddress: beam.operatorAddress,
+        operatorStatus: getTxStatus(beam.operatorTx),
+      }
+
+      if (rawData !== undefined) {
+        updatedTx.data = JSON.stringify(rawData)
+      }
+    }
+
+    try {
+      const response = await this.apiService.updateCrossChainTransactionStatus(updatedTx)
+      this.log(`Updated cross chain transaction ${response.id}`)
+    } catch (error: any) {
+      this.error(error)
+    }
   }
 
   /**
@@ -309,6 +486,8 @@ export default class Analyze extends Command {
       let operatorJobHash: string | undefined
       let operatorJobPayload: string | undefined
       let args: any[] | undefined
+      let rawData: RawData | undefined
+
       switch (this.environment) {
         case Environment.localhost:
           operatorJobHash = this.networkMonitor.decodeCrossChainMessageSentEvent(
@@ -352,6 +531,7 @@ export default class Analyze extends Command {
         beam.bridgeTx = transaction.hash
         beam.bridgeNetwork = network
         beam.bridgeBlock = transaction.blockNumber!
+        beam.bridgeAddress = transaction.from
         const parsedTransaction: TransactionDescription | null =
           this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
         if (parsedTransaction === null) {
@@ -371,14 +551,42 @@ export default class Analyze extends Command {
             const contractType: string = toAscii(slot)
             if (contractType === 'HolographERC20') {
               beam.jobType = TransactionType.erc20
-            } else if (contractType === 'HolographERC721' || contractType === 'CxipERC721') {
+            } else if (contractType === 'HolographERC721') {
               beam.jobType = TransactionType.erc721
+
+              // creating json data field
+              const erc721TransferEvent: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(
+                receipt,
+                holographableContractAddress,
+              )
+
+              if (erc721TransferEvent === undefined) {
+                this.warn("Couldn't create raw json data, since the tokenId is undefined")
+                this.exit()
+              }
+
+              //@ts-ignore
+              const from = erc721TransferEvent[0]
+              //@ts-ignore
+              const to = erc721TransferEvent[1]
+              //@ts-ignore
+              const tokenId = erc721TransferEvent[2].toNumber()
+
+              rawData = {
+                operatorJobPayload,
+                from,
+                to,
+                tokenId,
+                holographId: networks[beam.bridgeNetwork].holographId,
+                collection: holographableContractAddress,
+              }
             }
           }
         }
 
         this.networkMonitor.structuredLog(network, `Found a valid bridgeOutRequest for ${transaction.hash}`, tags)
         this.manageOperatorJobMaps(index, operatorJobHash, beam)
+        await this.updateBeamStatusDB(beam, rawData)
       }
     }
   }
@@ -428,12 +636,14 @@ export default class Analyze extends Command {
         beam.messageTx = transaction.hash
         beam.messageNetwork = network
         beam.messageBlock = transaction.blockNumber!
-        if (!beam.completed) {
+        beam.messageAddress = transaction.from
+        if (beam.completed !== true) {
           beam.completed = await this.validateOperatorJob(transaction.hash, network, operatorJobPayload!, tags)
         }
 
         this.networkMonitor.structuredLog(network, `Found a valid availableOperatorJob for ${transaction.hash}`, tags)
         this.manageOperatorJobMaps(index, operatorJobHash, beam)
+        await this.updateBeamStatusDB(beam)
       }
     }
   }
@@ -474,6 +684,7 @@ export default class Analyze extends Command {
           beam.logType = LogType.AvailableJob
           beam.operatorTx = transaction.hash
           beam.operatorBlock = transaction.blockNumber!
+          beam.operatorAddress = transaction.from
           beam.completed = true
 
           const bridgeTransaction: TransactionDescription | null =
@@ -494,7 +705,7 @@ export default class Analyze extends Command {
               const contractType: string = toAscii(slot)
               if (contractType === 'HolographERC20') {
                 beam.jobType = TransactionType.erc20
-              } else if (contractType === 'HolographERC721' || contractType === 'CxipERC721') {
+              } else if (contractType === 'HolographERC721') {
                 beam.jobType = TransactionType.erc721
               }
             }
@@ -502,6 +713,7 @@ export default class Analyze extends Command {
 
           this.networkMonitor.structuredLog(network, `Found a valid bridgeOutRequest for ${transaction.hash}`, tags)
           this.manageOperatorJobMaps(index, operatorJobHash, beam)
+          await this.updateBeamStatusDB(beam)
         }
       } else {
         this.networkMonitor.structuredLog(network, `Unknown bridge function executed for ${transaction.hash}`, tags)
