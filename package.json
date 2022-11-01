@@ -62,7 +62,7 @@
     "@holographxyz/networks": "0.1.10",
     "@oclif/color": "^1.0.1",
     "@oclif/core": "1.16.4",
-    "@oclif/plugin-help": "5.1.14",
+    "@oclif/plugin-help": "5.1.17",
     "@oclif/plugin-plugins": "2.1.1",
     "@truffle/hdwallet-provider": "^2.0.16",
     "@types/axios": "^0.14.0",
