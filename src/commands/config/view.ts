@@ -1,5 +1,6 @@
 import YAML from 'yaml'
 import * as path from 'node:path'
+
 import {Command, Flags} from '@oclif/core'
 
 import {CONFIG_FILE_NAME, ensureConfigFileIsValid, readConfig} from '../../utils/config'

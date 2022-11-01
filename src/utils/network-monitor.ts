@@ -1,8 +1,11 @@
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
+import WebSocket from 'ws'
 
-import {PopulatedTransaction, Wallet} from 'ethers'
-import {Contract} from '@ethersproject/contracts'
+import {Command, Flags} from '@oclif/core'
+import color from '@oclif/color'
+import {Wallet} from '@ethersproject/wallet'
+import {Contract, PopulatedTransaction} from '@ethersproject/contracts'
 import {BigNumber} from '@ethersproject/bignumber'
 import {formatUnits} from '@ethersproject/units'
 import {keccak256} from '@ethersproject/keccak256'
@@ -15,15 +18,12 @@ import {
   TransactionResponse,
   TransactionRequest,
 } from '@ethersproject/abstract-provider'
-import {Command, Flags} from '@oclif/core'
+import {Environment, getEnvironment} from '@holographxyz/environment'
+import {supportedNetworks, supportedShortNetworks, networks, getNetworkByShortKey} from '@holographxyz/networks'
 
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {GasPricing, initializeGasPricing, updateGasPricing} from './gas'
 import {capitalize, NETWORK_COLORS, zeroAddress} from './utils'
-import color from '@oclif/color'
-
-import {Environment, getEnvironment} from '@holographxyz/environment'
-import {supportedNetworks, supportedShortNetworks, networks, getNetworkByShortKey} from '@holographxyz/networks'
 import {HOLOGRAPH_ADDRESSES} from './contracts'
 
 export const warpFlag = {
@@ -53,15 +53,21 @@ export const networkFlag = {
 }
 
 export enum OperatorMode {
-  listen,
-  manual,
-  auto,
+  listen = 'listen',
+  manual = 'manual',
+  auto = 'auto',
+}
+
+export enum ProviderStatus {
+  NOT_CONFIGURED = 'NOT_CONFIGURED',
+  CONNECTED = 'CONNECTED',
+  DISCONNECTED = 'DISCONNECTED',
 }
 
 export type KeepAliveParams = {
   debug: (...args: any[]) => void
-  provider: WebSocketProvider
-  onDisconnect: (err: any) => void
+  websocket: WebSocket
+  onDisconnect: (code: number, reason: any) => void
   expectedPongBack?: number
   checkInterval?: number
 }
@@ -99,28 +105,37 @@ const TWO = BigNumber.from('2')
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const TEN = BigNumber.from('10')
 
-const webSocketErrorCodes: {[key: string]: string} = {
-  '1000': 'Normal Closure',
-  '1001': 'Going Away',
-  '1002': 'Protocol Error',
-  '1003': 'Unsupported Data',
-  '1004': '(For future)',
-  '1005': 'No Status Received',
-  '1006': 'Abnormal Closure',
-  '1007': 'Invalid frame payload data',
-  '1008': 'Policy Violation',
-  '1009': 'Message too big',
-  '1010': 'Missing Extension',
-  '1011': 'Internal Error',
-  '1012': 'Service Restart',
-  '1013': 'Try Again Later',
-  '1014': 'Bad Gateway',
-  '1015': 'TLS Handshake',
+const webSocketErrorCodes: {[key: number]: string} = {
+  1000: 'Normal Closure',
+  1001: 'Going Away',
+  1002: 'Protocol Error',
+  1003: 'Unsupported Data',
+  1004: '(For future)',
+  1005: 'No Status Received',
+  1006: 'Abnormal Closure',
+  1007: 'Invalid frame payload data',
+  1008: 'Policy Violation',
+  1009: 'Message too big',
+  1010: 'Missing Extension',
+  1011: 'Internal Error',
+  1012: 'Service Restart',
+  1013: 'Try Again Later',
+  1014: 'Bad Gateway',
+  1015: 'TLS Handshake',
+}
+
+interface ExtendedError extends Error {
+  code: number
+  reason: any
+}
+
+interface AbstractError extends Error {
+  [key: string]: any
 }
 
 export const keepAlive = ({
   debug,
-  provider,
+  websocket,
   onDisconnect,
   expectedPongBack = TIMEOUT_THRESHOLD,
   checkInterval = Math.round(TIMEOUT_THRESHOLD / 2),
@@ -130,47 +145,96 @@ export const keepAlive = ({
   let counter = 0
   let errorCounter = 0
   let terminator: NodeJS.Timeout | null = null
-  const errHandler: (err: any) => void = (err: any) => {
+  const errHandler: (err: ExtendedError) => void = (err: ExtendedError) => {
     if (errorCounter === 0) {
       errorCounter++
-      debug(`websocket error event triggered ${err.code} ${err.syscall}`)
-      if (keepAliveInterval) clearInterval(keepAliveInterval)
-      if (pingTimeout) clearTimeout(pingTimeout)
+      debug(`websocket error event triggered ${err.code} ${JSON.stringify(err.reason)}`)
+      if (keepAliveInterval) {
+        clearInterval(keepAliveInterval)
+      }
+
+      if (pingTimeout) {
+        clearTimeout(pingTimeout)
+      }
+
       terminator = setTimeout(() => {
-        provider._websocket.terminate()
+        websocket.terminate()
       }, checkInterval)
     }
   }
 
-  provider._websocket.on('open', () => {
+  websocket.on('ping', (data: any) => {
+    websocket.pong(data)
+  })
+
+  websocket.on('redirect', (url: string, request: any) => {
+    debug(
+      JSON.stringify(
+        {
+          on: 'redirect',
+          url,
+          request,
+        },
+        undefined,
+        2,
+      ),
+    )
+  })
+
+  websocket.on('unexpected-response', (request: any, response: any) => {
+    debug(
+      JSON.stringify(
+        {
+          on: 'unexpected-response',
+          request,
+          response,
+        },
+        undefined,
+        2,
+      ),
+    )
+  })
+
+  websocket.on('open', () => {
     debug(`websocket open event triggered`)
-    provider._websocket.off('error', errHandler)
-    if (terminator) clearTimeout(terminator)
+    websocket.off('error', errHandler)
+    if (terminator) {
+      clearTimeout(terminator)
+    }
+
     keepAliveInterval = setInterval(() => {
-      provider._websocket.ping()
+      websocket.ping()
       pingTimeout = setTimeout(() => {
-        provider._websocket.terminate()
+        websocket.terminate()
       }, expectedPongBack)
     }, checkInterval)
   })
 
-  provider._websocket.on('close', (err: any) => {
+  websocket.on('close', (code: number, reason: any) => {
     debug(`websocket close event triggered`)
     if (counter === 0) {
       debug(`websocket closed`)
       counter++
-      if (keepAliveInterval) clearInterval(keepAliveInterval)
-      if (pingTimeout) clearTimeout(pingTimeout)
+      if (keepAliveInterval) {
+        clearInterval(keepAliveInterval)
+      }
+
+      if (pingTimeout) {
+        clearTimeout(pingTimeout)
+      }
+
       setTimeout(() => {
-        onDisconnect(err)
+        onDisconnect(code, reason)
       }, checkInterval)
     }
   })
 
-  provider._websocket.on('error', errHandler)
+  websocket.on('error', errHandler)
 
-  provider._websocket.on('pong', () => {
-    if (pingTimeout) clearInterval(pingTimeout)
+  websocket.on('pong', () => {
+    if (pingTimeout) {
+      clearInterval(pingTimeout)
+    }
   })
 }
 
@@ -312,6 +376,8 @@ export class NetworkMonitor {
   wallets: {[key: string]: Wallet} = {}
   walletNonces: {[key: string]: number} = {}
   providers: {[key: string]: JsonRpcProvider | WebSocketProvider} = {}
+  ws: {[key: string]: WebSocket} = {}
+  activated: {[key: string]: boolean} = {}
   abiCoder = defaultAbiCoder
   networkColors: any = {}
   latestBlockHeight: {[key: string]: number} = {}
@@ -381,22 +447,39 @@ export class NetworkMonitor {
     '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef': 'Transfer',
   }
 
-  getProviderStatus(): any {
-    const outputNetworks = Object.keys(this.configFile.networks)
-    const output = {} as any
+  getProviderStatus(): {[key: string]: ProviderStatus} {
+    const output: {[key: string]: ProviderStatus} = {}
 
-    for (const n of outputNetworks) {
-      if (this.providers[n]) {
-        const current = this.providers[n] as WebSocketProvider
-        if (current._wsReady && current._websocket._socket.readyState === 'open') {
-          output[n] = 'CONNECTED'
-        }
+    for (const network of supportedNetworks) {
+      if (
+        !(network in this.configFile.networks) ||
+        !('providerUrl' in this.configFile.networks[network]) ||
+        this.configFile.networks[network].providerUrl === undefined ||
+        this.configFile.networks[network].providerUrl === ''
+      ) {
+        output[network] = ProviderStatus.NOT_CONFIGURED
       } else {
-        output[n] = this.configFile.networks[n].providerUrl ? 'DISCONNECTED' : 'NOT_CONFIGURED'
+        output[network] = this.providers[network] === undefined ? ProviderStatus.DISCONNECTED : ProviderStatus.CONNECTED
+        // check if using a WebSocketProvider connection
+        if (output[network] === ProviderStatus.CONNECTED && network in this.ws) {
+          // using WebSocketProvider, do a more thorough test
+          output[network] =
+            this.ws[network].readyState === WebSocket.OPEN ? ProviderStatus.CONNECTED : ProviderStatus.DISCONNECTED
+        }
       }
     }
 
     return output
+  }
+
+  checkConnectionStatus(): void {
+    for (const network of this.networks) {
+      if (!this.activated[network]) {
+        this.structuredLogError(network, 'Cannot start RPC provider')
+        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+        process.exit()
+      }
+    }
   }
 
   constructor(options: NetworkMonitorOptions) {
@@ -469,6 +552,8 @@ export class NetworkMonitor {
     blockJobs?: {[key: string]: BlockJob[]},
     ethersInitializedCallback?: () => Promise<void>,
   ): Promise<void> {
+    // check connections in 60 seconds, if something failed, kill the process
+    setTimeout(this.checkConnectionStatus.bind(this), 60_000)
     await this.initializeEthers()
     if (ethersInitializedCallback !== undefined) {
       await ethersInitializedCallback.bind(this.parent)()
@@ -535,68 +620,45 @@ export class NetworkMonitor {
     fs.writeFileSync(filePath, JSON.stringify(lastBlocks), 'utf8')
   }
 
-  disconnectBuilder(network: string, rpcEndpoint: string, subscribe: boolean): (error: any) => void {
-    return (error: any): void => {
-      if (this.providers[network] === undefined) {
-        this.debug(this.providers)
-        throw new Error(`Provider for ${network} is undefined`)
-      }
-
+  disconnectBuilder(network: string, rpcEndpoint: string, subscribe: boolean): (code: number, reason: any) => void {
+    return (code: number, reason: any): void => {
       const restart = () => {
         this.structuredLog(
           network,
-          `Error in websocket connection, restarting... ${webSocketErrorCodes[error as string]}`,
+          `Error in websocket connection, restarting... ${webSocketErrorCodes[code]} ${JSON.stringify(reason)}`,
         )
         this.lastBlockJobDone[network] = Date.now()
-        this.providers[network] = this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
-        if (this.userWallet !== undefined) {
-          this.wallets[network] = this.userWallet.connect(this.providers[network] as WebSocketProvider)
-
-          this.debug(`Address of wallet for ${network}: ${this.wallets[network].getAddress()}`)
-          this.wallets[network].getAddress().then((walletAddress: string) => {
-            this.debug(`Checking what getNonce is: ${this.getNonce}`)
-            this.getNonce({network, walletAddress, canFail: false}).then((nonce: number) => {
-              this.walletNonces[network] = nonce
-            })
-          })
-        }
+        this.walletNonces[network] = -1
+        this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
       }
 
-      const websocketProvider = this.providers[network] as WebSocketProvider
-      if (websocketProvider === undefined) {
-        this.structuredLog(network, `Websocket is undefined. Restarting`)
-      } else if (websocketProvider._websocket._req._closed === true) {
-        this.structuredLog(
-          network,
-          `Websocket is closed. Restarting connection for ${network} to ${websocketProvider.connection.url}`,
-        )
-      } else {
-        this.structuredLog(network, `Unknown error with websocket. Restarting`)
-      }
-
+      this.structuredLog(network, `Websocket is closed. Restarting connection for ${networks[network].shortKey}`)
+      // terminate the existing websocket
+      this.ws[network].terminate()
       restart()
     }
   }
 
-  failoverWebSocketProvider(network: string, rpcEndpoint: string, subscribe: boolean): WebSocketProvider {
-    this.debug('this.providers', network)
-    const provider = new WebSocketProvider(rpcEndpoint)
+  failoverWebSocketProvider(network: string, rpcEndpoint: string, subscribe: boolean): void {
+    this.log('this.providers', networks[network].shortKey)
+    this.ws[network] = new WebSocket(rpcEndpoint)
     keepAlive({
       debug: this.debug,
-      provider,
+      websocket: this.ws[network],
       onDisconnect: this.disconnectBuilder.bind(this)(network, rpcEndpoint, true),
     })
-    this.providers[network] = provider
+    this.providers[network] = new WebSocketProvider(this.ws[network])
+    if (this.userWallet !== undefined) {
+      this.wallets[network] = this.userWallet.connect(this.providers[network])
+    }
+
     if (subscribe && this.needToSubscribe) {
       this.networkSubscribe(network)
     }
-
-    return provider
   }
 
   async initializeEthers(): Promise<void> {
-    for (let i = 0, l = this.networks.length; i < l; i++) {
-      const network = this.networks[i]
+    for (const network of this.networks) {
       const rpcEndpoint = (this.configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork).providerUrl
       const protocol = new URL(rpcEndpoint).protocol
       switch (protocol) {
@@ -609,7 +671,7 @@ export class NetworkMonitor {
 
           break
         case 'wss:':
-          this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint, true)
+          this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint, true)
           break
         default:
           throw new Error('Unsupported RPC provider protocol -> ' + protocol)
@@ -618,11 +680,19 @@ export class NetworkMonitor {
       if (this.userWallet !== undefined) {
         this.wallets[network] = this.userWallet.connect(this.providers[network])
         // eslint-disable-next-line no-await-in-loop
-        this.walletNonces[network] = await this.wallets[network].getTransactionCount()
+        this.walletNonces[network] = await this.getNonce({
+          network,
+          // eslint-disable-next-line no-await-in-loop
+          walletAddress: await this.wallets[network].getAddress(),
+          canFail: false,
+        })
       }
 
       if (this.warp > 0) {
-        this.structuredLog(network, `Starting Operator from ${this.warp} blocks back...`)
+        if (this.verbose) {
+          this.structuredLog(network, `Starting Operator from ${this.warp} blocks back...`)
+        }
+
         /* eslint-disable no-await-in-loop */
         const currentBlock: number = await this.providers[network].getBlockNumber()
         this.blockJobs[network] = []
@@ -633,10 +703,16 @@ export class NetworkMonitor {
           })
         }
       } else if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
-        this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
+        if (this.verbose) {
+          this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
+        }
+
         this.currentBlockHeight[network] = this.latestBlockHeight[network]
       } else {
-        this.structuredLog(network, `Starting Operator from latest block height`)
+        if (this.verbose) {
+          this.structuredLog(network, `Starting Operator from latest block height`)
+        }
+
         this.latestBlockHeight[network] = 0
         this.currentBlockHeight[network] = 0
       }
@@ -700,17 +776,13 @@ export class NetworkMonitor {
       this.providers[this.networks[0]],
     )
 
-    for (let i = 0, l = this.networks.length; i < l; i++) {
-      const network = this.networks[i]
+    for (const network of this.networks) {
       if (this.environment === Environment.localhost) {
         this.localhostWallets[network] = new Wallet(NetworkMonitor.localhostPrivateKey).connect(this.providers[network])
         // since sample localhost deployer key is used, nonce is out of sync
         this.lzEndpointAddress[network] = (
-          await this.messagingModuleContract // eslint-disable-line no-await-in-loop
-            .connect(this.providers[network])
-            .getLZEndpoint()
+          await this.messagingModuleContract.connect(this.providers[network]).getLZEndpoint()
         ).toLowerCase()
-        // eslint-disable-next-line no-await-in-loop
         const lzEndpointABI = await fs.readJson(path.join(__dirname, `../abi/${this.environment}/MockLZEndpoint.json`))
         this.lzEndpointContract[network] = new Contract(
           this.lzEndpointAddress[network],
@@ -718,6 +790,8 @@ export class NetworkMonitor {
           this.localhostWallets[network],
         )
       }
+
+      this.activated[network] = false
     }
   }
 
@@ -791,7 +865,8 @@ export class NetworkMonitor {
 
         break
       case 'wss:':
-        this.providers[network] = this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint, false)
+        this.ws[network].close(1012, 'Block Job Handler has been inactive longer than threshold time.')
+        //        this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint, false)
         break
       default:
         throw new Error('Unsupported RPC provider protocol -> ' + protocol)
@@ -799,37 +874,11 @@ export class NetworkMonitor {
 
     if (this.userWallet !== undefined) {
       this.wallets[network] = this.userWallet.connect(this.providers[network])
-      this.walletNonces[network] = await this.wallets[network].getTransactionCount()
-    }
-
-    const provider = this.providers[network] as WebSocketProvider
-    switch (protocol) {
-      case 'https:':
-        this.structuredLog(network, 'Restarting blockJob Handler since this is an HTTPS RPC connection')
-        this.blockJobHandler(network)
-        break
-      case 'http:':
-        this.structuredLog(network, 'Restarting blockJob Handler since this is an HTTPS RPC connection')
-        this.blockJobHandler(network)
-        break
-      case 'wss:':
-        if (provider !== undefined && provider._websocket !== undefined) {
-          this.debug(`Closing websocket connection for ${network}`)
-          this.debug(`Provider _websocket is: ${JSON.stringify(provider._websocket)}`)
-          const terminationPromise = provider._websocket.terminate()
-          if (terminationPromise === undefined) {
-            this.structuredLog(network, `Websocket was undefined in blockJobMonitor function`)
-            Promise.resolve()
-          } else {
-            terminationPromise.then(() => {
-              Promise.resolve()
-            })
-          }
-        } else {
-          throw new Error(`Provider for ${network} is undefined`)
-        }
-
-        break
+      this.walletNonces[network] = await this.getNonce({
+        network,
+        walletAddress: await this.wallets[network].getAddress(),
+        canFail: false,
+      })
     }
 
     Promise.resolve()
@@ -838,7 +887,11 @@ export class NetworkMonitor {
   blockJobMonitor = (network: string): Promise<void> => {
     return new Promise<void>(() => {
       if (Date.now() - this.lastBlockJobDone[network] > TIMEOUT_THRESHOLD) {
-        this.structuredLog(network, 'Block Job Handler has been inactive longer than threshold time. Restarting.', [])
+        this.structuredLogError(
+          network,
+          'Block Job Handler has been inactive longer than threshold time. Restarting.',
+          [],
+        )
         this.lastBlockJobDone[network] = Date.now()
         this.restartProvider(network)
       }
@@ -921,7 +974,37 @@ export class NetworkMonitor {
     }
   }
 
+  extractGasData(network: string, block: Block | BlockWithTransactions, tx: TransactionResponse): void {
+    if (this.gasPrices[network].isEip1559) {
+      // set current tx priority fee
+      let priorityFee: BigNumber = ZERO
+      let remainder: BigNumber
+      if (tx.maxFeePerGas === undefined || tx.maxPriorityFeePerGas === undefined) {
+        // we have a legacy transaction here, so need to calculate priority fee out
+        priorityFee = tx.gasPrice!.sub(block.baseFeePerGas!)
+      } else {
+        // we have EIP-1559 transaction here, get priority fee
+        // check first that base block fee is less than maxFeePerGas
+        remainder = tx.maxFeePerGas!.sub(block.baseFeePerGas!)
+        priorityFee = remainder.gt(tx.maxPriorityFeePerGas!) ? tx.maxPriorityFeePerGas! : remainder
+      }
+
+      if (this.gasPrices[network].nextPriorityFee === null) {
+        this.gasPrices[network].nextPriorityFee = priorityFee
+      } else {
+        this.gasPrices[network].nextPriorityFee = this.gasPrices[network].nextPriorityFee!.add(priorityFee).div(TWO)
+      }
+    }
+    // for legacy networks, get average gasPrice
+    else if (this.gasPrices[network].gasPrice === null) {
+      this.gasPrices[network].gasPrice = tx.gasPrice!
+    } else {
+      this.gasPrices[network].gasPrice = this.gasPrices[network].gasPrice!.add(tx.gasPrice!).div(TWO)
+    }
+  }
+
   async processBlock(job: BlockJob): Promise<void> {
+    this.activated[job.network] = true
     if (this.verbose) {
       this.structuredLog(job.network, `Processing block`, job.block)
     }
@@ -936,6 +1019,7 @@ export class NetworkMonitor {
       const recentBlock: boolean = this.currentBlockHeight[job.network] - job.block < 5
       if (this.verbose) {
         this.structuredLog(job.network, `Block retrieved`, job.block)
+
         /*
         this.structuredLog(job.network, `Calculating block gas`, job.block)
         if (this.gasPrices[job.network].isEip1559) {
@@ -948,14 +1032,15 @@ export class NetworkMonitor {
             job.block,
           )
         }
-*/
+        */
       }
 
       if (recentBlock) {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
 
-      // const priorityFees: BigNumber = this.gasPrices[job.network].nextPriorityFee!
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const priorityFees: BigNumber = this.gasPrices[job.network].nextPriorityFee!
       if (this.verbose && block.transactions.length === 0) {
         this.structuredLog(job.network, `Zero transactions in block`, job.block)
       }
@@ -963,44 +1048,7 @@ export class NetworkMonitor {
       const interestingTransactions: TransactionResponse[] = []
       for (let i = 0, l = block.transactions.length; i < l; i++) {
         if (recentBlock) {
-          const tx: TransactionResponse = block.transactions[i]
-          if (this.gasPrices[job.network].isEip1559) {
-            // set current tx priority fee
-            let priorityFee: BigNumber = ZERO
-            let remainder: BigNumber
-            switch (tx.type) {
-              case 0:
-                // we have a legacy transaction here, so need to calculate priority fee out
-                priorityFee = tx.gasPrice!.sub(block.baseFeePerGas!)
-                break
-              case 1:
-                // we have EIP-1559 transaction here, get priority fee
-                // check first that base block fee is less than maxFeePerGas
-                remainder = tx.maxFeePerGas!.sub(block.baseFeePerGas!)
-                priorityFee = remainder.gt(tx.maxPriorityFeePerGas!) ? tx.maxPriorityFeePerGas! : remainder
-                break
-              case 2:
-                // we have EIP-1559 transaction here, get priority fee
-                // check first that base block fee is less than maxFeePerGas
-                remainder = tx.maxFeePerGas!.sub(block.baseFeePerGas!)
-                priorityFee = remainder.gt(tx.maxPriorityFeePerGas!) ? tx.maxPriorityFeePerGas! : remainder
-                break
-            }
-
-            if (this.gasPrices[job.network].nextPriorityFee === null) {
-              this.gasPrices[job.network].nextPriorityFee = priorityFee
-            } else {
-              this.gasPrices[job.network].nextPriorityFee = this.gasPrices[job.network]
-                .nextPriorityFee!.add(priorityFee)
-                .div(TWO)
-            }
-          }
-          // for legacy networks, get average gasPrice
-          else if (this.gasPrices[job.network].gasPrice === null) {
-            this.gasPrices[job.network].gasPrice = tx.gasPrice!
-          } else {
-            this.gasPrices[job.network].gasPrice = this.gasPrices[job.network].gasPrice!.add(tx.gasPrice!).div(TWO)
-          }
+          this.extractGasData(job.network, block, block.transactions[i])
         }
 
         this.filterTransaction(job, block.transactions[i], interestingTransactions)
@@ -1009,6 +1057,7 @@ export class NetworkMonitor {
       if (recentBlock) {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
+
       /*
       if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
         this.structuredLog(
@@ -1023,7 +1072,7 @@ export class NetworkMonitor {
           job.block,
         )
       }
-*/
+      */
 
       if (interestingTransactions.length > 0) {
         if (this.verbose) {
@@ -1091,14 +1140,20 @@ export class NetworkMonitor {
     )
   }
 
-  structuredLogError(network: string, error: any, tagId?: string | number | (number | string)[]): void {
+  structuredLogError(
+    network: string,
+    error: string | Error | AbstractError,
+    tagId?: string | number | (number | string)[],
+  ): void {
     let errorMessage = `unknown error message`
-    if (error.message) {
+    if (typeof error === 'string') {
+      errorMessage = error
+    } else if ('message' in error) {
       errorMessage = `${error.message}`
-    } else if (error.reason) {
-      errorMessage = `${error.reason}`
-    } else if (error.error.reason) {
-      errorMessage = `${error.error.reason}`
+    } else if ('reason' in error) {
+      errorMessage = `${(error as AbstractError).reason}`
+    } else if ('error' in error && 'reason' in (error as AbstractError).error) {
+      errorMessage = `${((error as AbstractError).error as AbstractError).reason}`
     }
 
     const timestamp = new Date(Date.now()).toISOString()
@@ -1236,7 +1291,7 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeErc20TransferEvent(receipt: TransactionReceipt, target?: string): any[] | undefined {
+  decodeErc20TransferEvent(receipt: TransactionReceipt, target?: string): string[] | undefined {
     if (target !== undefined) {
       target = target.toLowerCase().trim()
     }
@@ -1252,7 +1307,7 @@ export class NetworkMonitor {
             NetworkMonitor.erc20TransferEventFragment,
             log.data,
             log.topics,
-          ) as any[]
+          ) as string[]
           return this.lowerCaseAllStrings(event, log.address)
         }
       }
@@ -1261,7 +1316,7 @@ export class NetworkMonitor {
     return undefined
   }
 
-  decodeErc721TransferEvent(receipt: TransactionReceipt, target?: string): any[] | undefined {
+  decodeErc721TransferEvent(receipt: TransactionReceipt, target?: string): string[] | undefined {
     if (target !== undefined) {
       target = target.toLowerCase().trim()
     }
@@ -1277,7 +1332,7 @@ export class NetworkMonitor {
             NetworkMonitor.erc721TransferEventFragment,
             log.data,
             log.topics,
-          ) as any[]
+          ) as string[]
           return this.lowerCaseAllStrings(event, log.address)
         }
       }
@@ -1466,7 +1521,7 @@ export class NetworkMonitor {
     tags = [] as (string | number)[],
     attempts = 10,
     canFail = false,
-    interval = 1000,
+    interval = 5000,
   }: BlockParams): Promise<Block | null> {
     return new Promise<Block | null>((topResolve, _topReject) => {
       let counter = 0
@@ -1517,7 +1572,7 @@ export class NetworkMonitor {
     tags = [] as (string | number)[],
     attempts = 10,
     canFail = false,
-    interval = 1000,
+    interval = 5000,
   }: BlockParams): Promise<BlockWithTransactions | null> {
     return new Promise<BlockWithTransactions | null>((topResolve, _topReject) => {
       let counter = 0
@@ -1570,7 +1625,7 @@ export class NetworkMonitor {
     tags = [] as (string | number)[],
     attempts = 10,
     canFail = false,
-    interval = 1000,
+    interval = 2000,
   }: TransactionParams): Promise<TransactionResponse | null> {
     return new Promise<TransactionResponse | null>((topResolve, _topReject) => {
       let counter = 0
@@ -1608,7 +1663,7 @@ export class NetworkMonitor {
     tags = [] as (string | number)[],
     attempts = 10,
     canFail = false,
-    interval = 1000,
+    interval = 2000,
   }: TransactionParams): Promise<TransactionReceipt | null> {
     return new Promise<TransactionReceipt | null>((topResolve, _topReject) => {
       let counter = 0
@@ -1726,7 +1781,7 @@ export class NetworkMonitor {
     value = ZERO,
     attempts = 10,
     canFail = false,
-    interval = 1000,
+    interval = 5000,
   }: GasLimitParams): Promise<BigNumber | null> {
     return new Promise<BigNumber | null>((topResolve, _topReject) => {
       let counter = 0
@@ -1909,11 +1964,6 @@ export class NetworkMonitor {
               break
             }
 
-            case 'only replay-protected (EIP-155) transactions allowed over RPC': {
-              handleError(error)
-              break
-            }
-
             default: {
               handleError(error)
               break
@@ -2014,12 +2064,21 @@ export class NetworkMonitor {
     this.structuredLog(network, `Executing contract function ${methodName}`, tags)
     // eslint-disable-next-line no-async-promise-executor
     return new Promise<TransactionReceipt | null>(async (topResolve, _topReject) => {
+      if (this.walletNonces[network] < 0) {
+        this.walletNonces[network] = await this.getNonce({
+          network,
+          walletAddress: await this.wallets[network].getAddress(),
+          canFail: false,
+        })
+      }
+
       contract = contract.connect(this.wallets[network])
       if (gasPrice === undefined) {
         gasPrice = this.gasPrices[network].gasPrice!
         gasPrice = gasPrice.add(gasPrice.div(TWO))
       }
 
+      this.structuredLog(network, `Gas price is ${formatUnits(gasPrice, 'gwei')} GWEI`, tags)
       if (gasLimit === undefined) {
         gasLimit = await this.getGasLimit({
           network,
@@ -2037,90 +2096,104 @@ export class NetworkMonitor {
 
       if (gasLimit === null) {
         topResolve(null)
-      } else {
-        const walletAddress: string = await this.wallets[network].getAddress()
-        const balance: BigNumber | null = await this.getBalance({network, walletAddress, attempts, canFail, interval})
-        this.structuredLog(network, `Wallet balance is ${formatUnits(balance!, 'ether')}`, tags)
-        if (balance === null) {
-          this.structuredLog(network, `Could not get wallet ${walletAddress} balance`, tags)
-          topResolve(null)
-        } else if (balance.lt(gasLimit.mul(gasPrice))) {
-          this.structuredLog(
-            network,
-            `Wallet balance is lower than the transaction required amount. ${JSON.stringify(
-              {contract: await contract.resolvedAddress, method: methodName, args},
-              undefined,
-              2,
-            )}`,
-            tags,
-          )
-          topResolve(null)
-        } else {
-          this.structuredLog(network, `Gas price in Gwei = ${formatUnits(gasPrice, 'gwei')}`, tags)
-          this.structuredLog(
-            network,
-            `Transaction is estimated to cost a total of ${formatUnits(
-              gasLimit.mul(gasPrice),
-              'ether',
-            )} native gas tokens (in ether)`,
-            tags,
-          )
-          const rawTx: PopulatedTransaction | null = await this.populateTransaction({
-            network,
-            contract,
-            methodName,
-            args,
-            gasPrice,
-            gasLimit,
-            value,
-            nonce: this.walletNonces[network],
-            tags,
-            attempts,
-            canFail,
-            interval,
-          })
-          if (rawTx === null) {
-            // populating tx failed
-            this.structuredLog(network, `Failed to populate transaction ${methodName} ${JSON.stringify(args)}`, tags)
-            topResolve(null)
-          } else {
-            // we reset time to allow for proper transaction submission
-            this.lastBlockJobDone[network] = Date.now()
-            const tx: TransactionResponse | null = await this.sendTransaction({
-              network,
-              tags,
-              rawTx,
-              attempts,
-              canFail,
-              interval,
-            })
-            if (tx === null) {
-              // sending tx failed
-              this.structuredLog(network, `Failed to send transaction ${methodName} ${JSON.stringify(args)}`, tags)
-              topResolve(null)
-            } else {
-              // we reset time to allow for proper transaction confirmation
-              this.lastBlockJobDone[network] = Date.now()
-              this.structuredLog(network, `Transaction ${tx.hash} has been submitted`, tags)
-              this.walletNonces[network]++
-              const receipt: TransactionReceipt | null = await this.getTransactionReceipt({
-                network,
-                transactionHash: tx.hash,
-                attempts,
-                // we allow this promise to resolve as null to not hold up the confirmation process for too long
-                canFail: waitForReceipt ? false : canFail, // canFail,
-              })
-              if (receipt === null) {
-                this.structuredLog(network, `Transaction ${tx.hash} could not be confirmed`, tags)
-              } else {
-                this.structuredLog(network, `Transaction ${receipt.transactionHash} mined and confirmed`, tags)
-              }
-
-              topResolve(receipt)
-            }
-          }
-        }
+        return
       }
+
+      this.structuredLog(network, `Gas limit is ${gasLimit.toNumber()}`, tags)
+      this.structuredLog(
+        network,
+        `Transaction is estimated to cost a total of ${formatUnits(gasLimit.mul(gasPrice), 'ether')} ${
+          networks[network].tokenSymbol
+        }`,
+        tags,
+      )
+      const walletAddress: string = await this.wallets[network].getAddress()
+      const balance: BigNumber | null = await this.getBalance({network, walletAddress, attempts, canFail, interval})
+      if (balance === null) {
+        this.structuredLog(network, `Could not get wallet ${walletAddress} balance`, tags)
+        topResolve(null)
+        return
+      }
+
+      this.structuredLog(network, `Wallet balance is ${formatUnits(balance!, 'ether')}`, tags)
+      if (balance.lt(gasLimit.mul(gasPrice).add(value))) {
+        this.structuredLogError(
+          network,
+          `Wallet balance is lower than the transaction required amount. Balance is ${formatUnits(balance, 'ether')} ${
+            networks[network].tokenSymbol
+          } and required amount is ${formatUnits(gasLimit.mul(gasPrice).add(value), 'ether')} ${
+            networks[network].tokenSymbol
+          }`,
+          tags,
+        )
+        topResolve(null)
+        return
+      }
+
+      const rawTx: PopulatedTransaction | null = await this.populateTransaction({
+        network,
+        contract,
+        methodName,
+        args,
+        gasPrice,
+        gasLimit,
+        value,
+        nonce: this.walletNonces[network],
+        tags,
+        attempts,
+        canFail,
+        interval,
+      })
+      if (rawTx === null) {
+        // populating tx failed
+        this.structuredLog(network, `Failed to populate transaction ${methodName} ${JSON.stringify(args)}`, tags)
+        topResolve(null)
+        return
+      }
+
+      // reset time to allow for proper transaction submission
+      this.lastBlockJobDone[network] = Date.now()
+      const tx: TransactionResponse | null = await this.sendTransaction({
+        network,
+        tags,
+        rawTx,
+        attempts,
+        canFail,
+        interval,
+      })
+      if (tx === null) {
+        // sending tx failed
+        this.structuredLog(network, `Failed to send transaction ${methodName} ${JSON.stringify(args)}`, tags)
+        topResolve(null)
+        return
+      }
+
+      // reset time to allow for proper transaction confirmation
+      this.lastBlockJobDone[network] = Date.now()
+      this.structuredLog(network, `Transaction ${tx.hash} has been submitted`, tags)
+      this.walletNonces[network]++
+      const receipt: TransactionReceipt | null = await this.getTransactionReceipt({
+        network,
+        transactionHash: tx.hash,
+        attempts,
+        // allow this promise to resolve as null to not hold up the confirmation process for too long
+        canFail: waitForReceipt ? false : canFail, // canFail,
+      })
+      if (receipt === null) {
+        this.structuredLog(
+          network,
+          `Transaction ${networks[network].explorer}/tx/${tx.hash} could not be confirmed`,
+          tags,
+        )
+      } else {
+        this.structuredLog(
+          network,
+          `Transaction ${networks[network].explorer}/tx/${receipt.transactionHash} mined and confirmed`,
+          tags,
+        )
+      }
+
+      topResolve(receipt)
     })
   }
 }
