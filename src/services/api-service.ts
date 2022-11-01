@@ -1,4 +1,4 @@
-import {request, gql, GraphQLClient} from 'graphql-request'
+import {gql, GraphQLClient} from 'graphql-request'
 import {
   Logger,
   AuthOperatorResponse,
@@ -18,7 +18,7 @@ class ApiService {
     this.client = new GraphQLClient(`${baseURL}/graphql`)
   }
 
-  async operatorLogin() {
+  async operatorLogin(): Promise<void> {
     if (!process.env.OPERATOR_API_KEY) {
       throw new Error('OPERATOR_API_KEY env is required')
     }

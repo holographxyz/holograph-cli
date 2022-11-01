@@ -68,6 +68,9 @@ interface RawData {
   to?: string
 }
 
+const getCorrectValue = (val1: any, val2: any) => (val1 && val1 !== val2 ? val1 : val2)
+const getTxStatus = (tx?: string) => (tx ? TransactionStatus.COMPLETED : TransactionStatus.PENDING)
+
 export default class Analyze extends Command {
   static hidden = true
   static description = 'Extract all operator jobs and get their status'
@@ -276,7 +279,7 @@ export default class Analyze extends Command {
 
       try {
         const scopes = (await fs.readJson(scopeFile)) as Scope[]
-        scopes.forEach(scope => this.validateScope(scope, networks, scopeJobs))
+        for (const scope of scopes)  this.validateScope(scope, networks, scopeJobs)
       } catch {
         this.error(`One or more lines are an invalid Scope JSON object`)
       }
@@ -318,12 +321,13 @@ export default class Analyze extends Command {
   /**
    * Update cross chain transaction on DB
    */
-  async updateBeamStatusDB(beam: AvailableJob, rawData?: RawData) {
+  async updateBeamStatusDB(beam: AvailableJob, rawData?: RawData): Promise<void> {
     if (this.apiService === undefined) {
       return
     }
 
-    let crossChainTx, updatedTx: CrossChainTransaction
+    let crossChainTx: CrossChainTransaction
+    let updatedTx: CrossChainTransaction
 
     try {
       crossChainTx = await this.apiService.getCrossChainTransaction(beam.jobHash)
@@ -334,18 +338,16 @@ export default class Analyze extends Command {
     const sourceChainId: number = networks[beam.bridgeNetwork].chain
     const messageChainId: number = networks[beam.messageNetwork].chain
     const operatorChainId: number = networks[beam.operatorNetwork].chain
-    const getCorrectValue = (val1: any, val2: any) => (val1 && val1 !== val2 ? val1 : val2)
-    const getTxStatus = (tx?: string) => (tx ? TransactionStatus.COMPLETED : TransactionStatus.PENDING)
 
     if (crossChainTx) {
       if (
         crossChainTx.sourceStatus === TransactionStatus.COMPLETED &&
         crossChainTx.messageStatus === TransactionStatus.COMPLETED &&
         crossChainTx.operatorStatus === TransactionStatus.COMPLETED &&
-        crossChainTx.sourceAddress != undefined &&
-        crossChainTx.messageAddress != undefined &&
-        crossChainTx.operatorAddress != undefined &&
-        crossChainTx.data != undefined
+        crossChainTx.sourceAddress !== undefined &&
+        crossChainTx.messageAddress !== undefined &&
+        crossChainTx.operatorAddress !== undefined &&
+        crossChainTx.data !== undefined
       ) {
         this.log('Beaming is completed')
         return
@@ -381,9 +383,9 @@ export default class Analyze extends Command {
         operatorStatus: getTxStatus(beam.bridgeTx),
       }
 
-      if (rawData !== undefined && crossChainTx.data == undefined) {
+      if (rawData !== undefined && crossChainTx.data === undefined) {
         updatedTx.data = JSON.stringify(rawData)
-      } else if (rawData === undefined && crossChainTx.data == undefined) {
+      } else if (rawData === undefined && crossChainTx.data === undefined) {
         delete updatedTx.data
       }
 
@@ -555,7 +557,7 @@ export default class Analyze extends Command {
               beam.jobType = TransactionType.erc721
 
               // creating json data field
-              const erc721TransferEvent: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(
+              const erc721TransferEvent: string[] | undefined = this.networkMonitor.decodeErc721TransferEvent(
                 receipt,
                 holographableContractAddress,
               )
@@ -565,12 +567,9 @@ export default class Analyze extends Command {
                 this.exit()
               }
 
-              //@ts-ignore
-              const from = erc721TransferEvent[0]
-              //@ts-ignore
-              const to = erc721TransferEvent[1]
-              //@ts-ignore
-              const tokenId = erc721TransferEvent[2].toNumber()
+              const from: string = erc721TransferEvent![0]
+              const to: string = erc721TransferEvent![1]
+              const tokenId: string = erc721TransferEvent![2]
 
               rawData = {
                 operatorJobPayload,

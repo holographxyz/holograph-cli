@@ -43,9 +43,9 @@ export const networkToChainId: Record<string, number> = {
   ethereumTestnetRinkeby: 4,
   ethereumTestnetGoerli: 5,
   polygon: 89,
-  polygonTestnet: 80001,
-  avalanche: 43114,
-  avalancheTestnet: 43113,
+  polygonTestnet: 80_001,
+  avalanche: 43_114,
+  avalancheTestnet: 43_113,
   binanceSmartChain: 56,
   binanceSmartChainTestnet: 97,
 }
