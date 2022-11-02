@@ -69,7 +69,15 @@ interface RawData {
 }
 
 const getCorrectValue = (val1: any, val2: any) => (val1 && val1 !== val2 ? val1 : val2)
-const getTxStatus = (tx?: string) => (tx ? TransactionStatus.COMPLETED : TransactionStatus.PENDING)
+const getTxStatus = (tx?: string, currentStatus?: string) => {
+  if (currentStatus != undefined && currentStatus === TransactionStatus.COMPLETED) {
+    return currentStatus
+  } else if (tx != undefined) {
+    return TransactionStatus.COMPLETED
+  } else {
+    TransactionStatus.PENDING
+  }
+}
 
 export default class Analyze extends Command {
   static hidden = true
@@ -370,17 +378,17 @@ export default class Analyze extends Command {
         sourceChainId: getCorrectValue(sourceChainId, crossChainTx.sourceChainId),
         sourceBlockNumber: getCorrectValue(beam.bridgeBlock, crossChainTx.sourceBlockNumber),
         sourceAddress: getCorrectValue(beam.operatorAddress, crossChainTx.sourceAddress),
-        sourceStatus: getTxStatus(beam.bridgeTx),
+        sourceStatus: getTxStatus(beam.bridgeTx, crossChainTx.sourceStatus),
         messageTx: getCorrectValue(beam.messageTx, crossChainTx.messageTx),
         messageChainId: getCorrectValue(messageChainId, crossChainTx.messageChainId),
         messageBlockNumber: getCorrectValue(beam.messageBlock, crossChainTx.messageBlockNumber),
         messageAddress: getCorrectValue(beam.messageAddress, crossChainTx.messageAddress),
-        messageStatus: getTxStatus(beam.messageTx),
+        messageStatus: getTxStatus(beam.messageTx, crossChainTx.messageStatus),
         operatorTx: getCorrectValue(beam.operatorTx, crossChainTx.operatorTx),
         operatorChainId: getCorrectValue(operatorChainId, crossChainTx.operatorChainId),
         operatorBlockNumber: getCorrectValue(beam.operatorBlock, crossChainTx.operatorBlockNumber),
         operatorAddress: getCorrectValue(beam.operatorAddress, crossChainTx.operatorAddress),
-        operatorStatus: getTxStatus(beam.bridgeTx),
+        operatorStatus: getTxStatus(beam.operatorTx, crossChainTx.operatorStatus),
       }
 
       if (rawData !== undefined && crossChainTx.data === undefined) {
