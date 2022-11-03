@@ -7,12 +7,12 @@ permissions:
 env:
   AWS_REGION: us-west-2
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
-  ECR_REPOSITORY: holo-cli # notice: the same for all 3 cli apps
+  ECR_REPOSITORY: holo-cli # notice: the same for all cli apps
   #
   TESTNET_IMAGE_TAG: testnet-${{ github.sha }}
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.40
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.36
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.45
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.40
   #######################################
   CLUSTER_NAME: prod0
   #
@@ -23,7 +23,7 @@ env:
   #TODO - create new gh secret for prod. should be different from staging????
   TESTNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
-  TESTNET_HOLO_INDEXER_HOST: 'http://olympus-holo-api.main.svc.cluster.local:443' # Notice <-- OLYMPUS release from API
+  TESTNET_HOLO_INDEXER_HOST: 'http://pegasus-holo-api.main.svc.cluster.local:443' # Notice <-- PEGASUS release from API
   #
   # TODO -> replace them with the PROD specific password <---------------------------
   TESTNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
@@ -40,16 +40,16 @@ env:
   TESTNET_COMMON_NAMESPACE: testnet # NOTICE <---
   #
   # INDEXER TESTNET
-  indexer_testnet_fuji_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
-  indexer_testnet_mumbai_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
-  indexer_testnet_goerli_rpc_url: ${{ secrets.INDEXER_PROD_GOERLI_RPC_URL }}
+  indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
+  indexer_testnet_polygonTestnet_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
+  indexer_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_GOERLI_RPC_URL }}
   #
   indexer_testnet_private_key: ${{ secrets.INDEXER_PROD_PRIVATE_KEY }}
   indexer_testnet_address: ${{ secrets.INDEXER_PROD_ADDRESS }}
   # OPERATOR TESTNET
-  operator_testnet_fuji_rpc_url: ${{ secrets.OPERATOR_PROD_FUJI_RPC_URL }}
-  operator_testnet_mumbai_rpc_url: ${{ secrets.OPERATOR_PROD_MUMBAI_RPC_URL }}
-  operator_testnet_goerli_rpc_url: ${{ secrets.OPERATOR_PROD_GOERLI_RPC_URL }}
+  operator_testnet_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_FUJI_RPC_URL }}
+  operator_testnet_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_MUMBAI_RPC_URL }}
+  operator_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_GOERLI_RPC_URL }}
   #
   operator_testnet_private_key: ${{ secrets.OPERATOR_PROD_PRIVATE_KEY }}
   operator_testnet_address: ${{ secrets.OPERATOR_PROD_ADDRESS }}
@@ -152,12 +152,9 @@ jobs:
             --set MODE=$MODE \
             --set NETWORK="${NETWORK}" \
             \
-            --set testnet_rpc_config_values.bridge_source="goerli" \
-            --set testnet_rpc_config_values.bridge_destination="mumbai" \
-            \
-            --set testnet_rpc_config_values.fuji_rpc_url=${{ env.indexer_testnet_fuji_rpc_url }} \
-            --set testnet_rpc_config_values.mumbai_rpc_url=${{ env.indexer_testnet_mumbai_rpc_url }} \
-            --set testnet_rpc_config_values.goerli_rpc_url=${{ env.indexer_testnet_goerli_rpc_url }} \
+            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_testnet_avalancheTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_testnet_polygonTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.indexer_testnet_ethereumTestnetGoerli_rpc_url }} \
             \
             --set testnet_rpc_config_values.private_key=${{ env.indexer_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.indexer_testnet_address }} \
@@ -211,12 +208,9 @@ jobs:
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
             \
-            --set testnet_rpc_config_values.bridge_source="goerli" \
-            --set testnet_rpc_config_values.bridge_destination="mumbai" \
-            \
-            --set testnet_rpc_config_values.fuji_rpc_url=${{ env.operator_testnet_fuji_rpc_url }} \
-            --set testnet_rpc_config_values.mumbai_rpc_url=${{ env.operator_testnet_mumbai_rpc_url }} \
-            --set testnet_rpc_config_values.goerli_rpc_url=${{ env.operator_testnet_goerli_rpc_url }} \
+            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_testnet_avalancheTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_testnet_polygonTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.operator_testnet_ethereumTestnetGoerli_rpc_url }} \
             \
             --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
@@ -234,8 +228,8 @@ jobs:
       - name: -> Info for the new deployments
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          INDEXER_RELEASE_NAME: indexer-test
-          OPERATOR_RELEASE_NAME: operator-test
+          INDEXER_RELEASE_NAME: indexer-testnet
+          OPERATOR_RELEASE_NAME: operator-testnet
           LB_URL: 'https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
