@@ -7,16 +7,20 @@ import {ethers} from 'ethers'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {addressValidator} from '../../utils/validation'
-import {Environment, getEnvironment} from '../../utils/environment'
+import {Environment, getEnvironment} from '@holographxyz/environment'
 import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
-import {blockExplorers} from '../../utils/networks'
+import {networks} from '@holographxyz/networks'
+import path from 'node:path'
 
 export default class Contract extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
-  static description = 'Check the status of a contract across all enabled networks'
-  static examples = ['$ holo status:contract --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78"']
+  static description = 'Check the status of a contract across all networks defined in the config'
+  static examples = ['$ <%= config.bin %> <%= command.id %> --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78"']
+
   static flags = {
-    address: Flags.string({description: 'The address of contract to check status of'}),
+    address: Flags.string({
+      description: 'The address of contract to check status of',
+    }),
     output: Flags.string({
       options: ['csv', 'json', 'yaml', ''],
       description: 'Define table output type',
@@ -51,21 +55,23 @@ export default class Contract extends Command {
       }
     }
 
-    const holographABI = await fs.readJson(`./src/abi/${environment}/Holograph.json`)
+    const holographABI = await fs.readJson(path.join(__dirname, `../../abi/${environment}/Holograph.json`))
     this.holograph = new ethers.Contract(
       HOLOGRAPH_ADDRESSES[environment],
       holographABI,
       this.providers[this.supportedNetworks[0]],
     )
 
-    const holographRegistryABI = await fs.readJson(`./src/abi/${environment}/HolographRegistry.json`)
+    const holographRegistryABI = await fs.readJson(
+      path.join(__dirname, `.../../abi/${environment}/HolographRegistry.json`),
+    )
     this.registryAddress = await this.holograph.getRegistry()
     this.registryContract = new ethers.Contract(
       this.registryAddress,
       holographRegistryABI,
       this.providers[this.supportedNetworks[0]],
     )
-    const ownerABI = await fs.readJson(`./src/abi/${environment}/Owner.json`)
+    const ownerABI = await fs.readJson(path.join(__dirname, `.../../abi/${environment}/Owner.json`))
     this.ownableContract = new ethers.Contract(
       this.contractAddress,
       ownerABI,
@@ -93,6 +99,9 @@ export default class Contract extends Command {
     }
   }
 
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     this.log('Loading user configurations...')
     const environment = getEnvironment()
@@ -129,7 +138,7 @@ export default class Contract extends Command {
         d.deployed = true
         // eslint-disable-next-line no-await-in-loop
         d.valid = await registry.isHolographedContract(this.contractAddress)
-        d.link = blockExplorers[network] + 'address/' + this.contractAddress
+        d.link = (networks[network].explorer || '') + '/address/' + this.contractAddress
         // eslint-disable-next-line no-await-in-loop
         d.owner = await ownable.getOwner()
       }

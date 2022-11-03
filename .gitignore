@@ -1,3 +1,6 @@
+# ignore any file by prepending "ignore." to it
+ignore.*
+
 ## oclif
 /.nyc_output
 /dist
@@ -25,7 +28,6 @@ lerna-debug.log*
 
 # Tests
 /coverage
-/.nyc_output
 
 # env
 .env
@@ -38,7 +40,7 @@ lerna-debug.log*
 blocks.json
 
 # IDEs and editors
-/.idea
+.idea
 .project
 .classpath
 .c9/
@@ -55,3 +57,6 @@ blocks.json
 
 # config
 config.json
+
+# BBEdit
+editor.bbprojectd
