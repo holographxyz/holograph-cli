@@ -119,6 +119,7 @@ export abstract class OperatorJobAwareCommand extends Command {
         gasPrice,
         jobDetails,
       } as OperatorJob
+      process.stdout.write('\n\n' + JSON.stringify(this.operatorJobs[operatorJobHash],undefined,2) + '\n\n')
       return this.operatorJobs[operatorJobHash]
     }
 
