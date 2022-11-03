@@ -147,7 +147,7 @@ export async function ensureConfigFileIsValid(
     }
   } catch {
     configPath = path.join(configDir, CONFIG_FILE_NAME)
-    console.log('configPath', configPath)
+    // console.debug('configPath', configPath)
   }
 
   const exists = await fs.pathExists(configPath)
