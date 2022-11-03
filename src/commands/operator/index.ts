@@ -565,7 +565,7 @@ export default class Operator extends Command {
         return b.gasPrice.sub(a.gasPrice).toNumber()
       })
       const compareGas: BigNumber = gasPricing.isEip1559 ? gasPricing.maxFeePerGas! : gasPricing.gasPrice!
-      if (candidates[0].gasPrice.gte(compareGas)) {
+      if (candidates[0].jobDetails.operator === zeroAddress || candidates[0].gasPrice.gte(compareGas)) {
         this.networkMonitor.structuredLog(network, `Sending job ${candidates[0].hash} for execution`, tags)
         // have a valid job to do right away
         this.processOperatorJob(network, candidates[0].hash, tags)
