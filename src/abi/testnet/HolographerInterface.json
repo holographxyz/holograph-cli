@@ -1,11 +1,24 @@
 [
   {
     "inputs": [],
-    "name": "getBridge",
+    "name": "getContractType",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "contractType",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getDeploymentBlock",
     "outputs": [
       {
         "internalType": "address",
-        "name": "bridgeAddress",
+        "name": "holograph",
         "type": "address"
       }
     ],
@@ -14,11 +27,37 @@
   },
   {
     "inputs": [],
-    "name": "getChainType",
+    "name": "getHolograph",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "holograph",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getHolographEnforcer",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getOriginChain",
     "outputs": [
       {
         "internalType": "uint32",
-        "name": "chainType",
+        "name": "originChain",
         "type": "uint32"
       }
     ],
@@ -27,50 +66,11 @@
   },
   {
     "inputs": [],
-    "name": "getFactory",
+    "name": "getSourceContract",
     "outputs": [
       {
         "internalType": "address",
-        "name": "factoryAddress",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getInterfaces",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "interfacesAddress",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getOperator",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "operatorAddress",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getRegistry",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "registryAddress",
+        "name": "sourceContract",
         "type": "address"
       }
     ],
