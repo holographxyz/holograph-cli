@@ -152,6 +152,7 @@ jobs:
             --set MODE=$MODE \
             --set NETWORK="${NETWORK}" \
             \
+            --set testnet_rpc_config_values.version="beta3" \
             --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_testnet_avalancheTestnet_rpc_url }} \
             --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_testnet_polygonTestnet_rpc_url }} \
             --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.indexer_testnet_ethereumTestnetGoerli_rpc_url }} \
@@ -208,6 +209,7 @@ jobs:
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
             \
+            --set testnet_rpc_config_values.version="beta3" \
             --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_testnet_avalancheTestnet_rpc_url }} \
             --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_testnet_polygonTestnet_rpc_url }} \
             --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.operator_testnet_ethereumTestnetGoerli_rpc_url }} \
