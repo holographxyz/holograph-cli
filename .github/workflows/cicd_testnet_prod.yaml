@@ -11,8 +11,8 @@ env:
   #
   TESTNET_IMAGE_TAG: testnet-${{ github.sha }}
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.45
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.40
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.46
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.41
   #######################################
   CLUSTER_NAME: prod0
   #
@@ -152,7 +152,6 @@ jobs:
             --set MODE=$MODE \
             --set NETWORK="${NETWORK}" \
             \
-            --set testnet_rpc_config_values.version="beta3" \
             --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_testnet_avalancheTestnet_rpc_url }} \
             --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_testnet_polygonTestnet_rpc_url }} \
             --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.indexer_testnet_ethereumTestnetGoerli_rpc_url }} \
@@ -209,7 +208,6 @@ jobs:
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
             \
-            --set testnet_rpc_config_values.version="beta3" \
             --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_testnet_avalancheTestnet_rpc_url }} \
             --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_testnet_polygonTestnet_rpc_url }} \
             --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.operator_testnet_ethereumTestnetGoerli_rpc_url }} \
