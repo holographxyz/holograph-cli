@@ -1,11 +1,16 @@
-import {CliUx, Command, Flags} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
+import path from 'node:path'
+
+import {CliUx, Command, Flags} from '@oclif/core'
 import {formatUnits} from '@ethersproject/units'
 import {Contract} from '@ethersproject/contracts'
 import {WebSocketProvider, JsonRpcProvider} from '@ethersproject/providers'
-import {BytesLike, BigNumber} from 'ethers'
+import {BigNumber} from '@ethersproject/bignumber'
+import {BytesLike} from '@ethersproject/bytes'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
+import {networks, supportedShortNetworks} from '@holographxyz/networks'
+
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {
@@ -18,13 +23,11 @@ import {
 } from '../../utils/validation'
 import {GasPricing} from '../../utils/gas'
 import {generateInitCode} from '../../utils/utils'
-import {networks, supportedShortNetworks} from '@holographxyz/networks'
-import path from 'node:path'
 
 export default class BridgeNFT extends Command {
   static description = 'Beam a Holographable NFT from source chain to destination chain.'
   static examples = [
-    '$ <%= config.bin %> <%= command.id %> --sourceNetwork="ethereumTestnetGoerli" --destinationNetwork="avalancheTestnet" --collectionAddress="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId="0x01"',
+    '$ <%= config.bin %> <%= command.id %> --sourceNetwork="goerli" --destinationNetwork="fuji" --collectionAddress="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId="0x01"',
   ]
 
   static flags = {
@@ -65,9 +68,9 @@ export default class BridgeNFT extends Command {
     const code: string = await provider.getCode(contractAddress)
     if (code === '0x' || code === '') {
       if (throwError) {
-        this.error(`Contract at ${contractAddress} does not exist on ${network} network`)
+        this.error(`Contract at ${contractAddress} does not exist on ${networks[network].shortKey} network`)
       } else {
-        this.log(`Contract at ${contractAddress} does not exist on ${network} network`)
+        this.log(`Contract at ${contractAddress} does not exist on ${networks[network].shortKey} network`)
       }
 
       return false
@@ -138,14 +141,20 @@ export default class BridgeNFT extends Command {
     CliUx.ux.action.stop()
     if (!deployedOnSourceChain || !deployedOnDestinationChain) {
       if (!deployedOnSourceChain) {
-        this.log('Collection does not exist on ' + sourceNetwork + ' network.')
+        this.networkMonitor.structuredLog(
+          sourceNetwork,
+          `Collection does not exist on ${networks[sourceNetwork].shortKey} network.`,
+        )
       }
 
       if (!deployedOnDestinationChain) {
-        this.log('Collection does not exist on ' + destinationNetwork + ' network.')
+        this.networkMonitor.structuredLog(
+          destinationNetwork,
+          `Collection does not exist on ${networks[destinationNetwork].shortKey} network.`,
+        )
       }
 
-      this.log('You can deploy contracts with the "create:contract" and "bridge:contract" commands.')
+      this.log('You can deploy the missing contracts with the "create:contract" or "bridge:contract" command.')
       this.exit()
     }
 
@@ -265,7 +274,7 @@ export default class BridgeNFT extends Command {
       }
 
       this.log(
-        `Cross-chain beaming has started under job hash ${jobHash}, from ${sourceNetwork} network, to ${destinationNetwork} network.`,
+        `Cross-chain beaming from ${networks[sourceNetwork].shortKey} network, to ${networks[destinationNetwork].shortKey} network has started under job hash ${jobHash}`,
       )
     }
 

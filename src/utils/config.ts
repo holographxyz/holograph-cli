@@ -2,11 +2,12 @@ import * as path from 'node:path'
 import * as fs from 'fs-extra'
 import * as inquirer from 'inquirer'
 import * as Joi from 'joi'
-import {ethers} from 'ethers'
 
-import AesEncryption from './aes-encryption'
+import {Wallet} from '@ethersproject/wallet'
 import {Environment, getEnvironment} from '@holographxyz/environment'
 import {NetworkKeys, supportedNetworks, networks} from '@holographxyz/networks'
+
+import AesEncryption from './aes-encryption'
 import {SelectOption} from './validation'
 
 export const CONFIG_FILE_NAME = 'config.json'
@@ -52,13 +53,13 @@ async function tryToUnlockWallet(
   configFile: ConfigFile,
   unlockWallet: boolean,
   unsafePassword?: string,
-): Promise<ethers.Wallet> {
-  let userWallet: ethers.Wallet | undefined
+): Promise<Wallet> {
+  let userWallet: Wallet | undefined
   if (unlockWallet) {
     // eslint-disable-next-line no-negated-condition
     if (unsafePassword !== undefined) {
       try {
-        userWallet = new ethers.Wallet(
+        userWallet = new Wallet(
           new AesEncryption(unsafePassword, configFile.user.credentials.iv).decrypt(
             configFile.user.credentials.privateKey,
           ),
@@ -68,7 +69,7 @@ async function tryToUnlockWallet(
       }
     } else {
       try {
-        userWallet = new ethers.Wallet(
+        userWallet = new Wallet(
           new AesEncryption('', configFile.user.credentials.iv).decrypt(configFile.user.credentials.privateKey),
         )
       } catch {
@@ -80,7 +81,7 @@ async function tryToUnlockWallet(
             validate: async (input: string) => {
               try {
                 // we need to check that key decoded
-                userWallet = new ethers.Wallet(
+                userWallet = new Wallet(
                   new AesEncryption(input, configFile.user.credentials.iv).decrypt(
                     configFile.user.credentials.privateKey,
                   ),
@@ -100,7 +101,7 @@ async function tryToUnlockWallet(
     }
   }
 
-  return userWallet as ethers.Wallet
+  return userWallet as Wallet
 }
 
 export function generateSupportedNetworksOptions(configNetworks?: ConfigNetworks): SelectOption[] {
@@ -122,7 +123,7 @@ export async function ensureConfigFileIsValid(
   unlockWallet = false,
 ): Promise<{
   environment: Environment
-  userWallet: ethers.Wallet
+  userWallet: Wallet
   configFile: ConfigFile
   supportedNetworksOptions: SelectOption[]
 }> {
@@ -146,7 +147,7 @@ export async function ensureConfigFileIsValid(
     }
   } catch {
     configPath = path.join(configDir, CONFIG_FILE_NAME)
-    console.log('configPath', configPath)
+    // console.debug('configPath', configPath)
   }
 
   const exists = await fs.pathExists(configPath)
@@ -157,7 +158,7 @@ export async function ensureConfigFileIsValid(
   try {
     const configFile = await fs.readJson(configPath)
     await validateBeta3Schema(configFile)
-    const userWallet: ethers.Wallet = await tryToUnlockWallet(configFile as ConfigFile, unlockWallet, unsafePassword)
+    const userWallet: Wallet = await tryToUnlockWallet(configFile as ConfigFile, unlockWallet, unsafePassword)
 
     process.stdout.write(`\n👉 Environment: ${environment}\n\n`)
     return {

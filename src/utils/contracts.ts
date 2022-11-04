@@ -1,92 +1,38 @@
-import {BigNumber, BigNumberish} from 'ethers'
-import {formatEther} from 'ethers/lib/utils'
 import * as fs from 'fs-extra'
-import {Environment} from '@holographxyz/environment'
 const path = require('node:path')
 
-export const toShort18Str = (num: string): string => {
-  return formatEther(num)
-}
+import {Environment} from '@holographxyz/environment'
 
-export const toShort18 = (num: BigNumberish): BigNumberish => {
-  return BigNumber.from(num).div(BigNumber.from('10').pow(18))
-}
-
-export const toLong18 = (num: BigNumberish): BigNumberish => {
-  return BigNumber.from(num).mul(BigNumber.from('10').pow(18))
-}
-
-export const generateRandomSalt = () => {
-  return '0x' + Date.now().toString(16).padStart(64, '0')
-}
-
-export const utf8ToBytes32 = (str: string) => {
-  return (
-    '0x' +
-    [...str]
-      .map(c =>
-        c.charCodeAt(0) < 128 ? c.charCodeAt(0).toString(16) : encodeURIComponent(c).replace(/%/g, '').toLowerCase(),
-      )
-      .join('')
-      .padStart(64, '0')
-  )
-}
-
-export const waitForTransactionComplete = async (innerFunc: () => Promise<void>): Promise<void> => {
-  try {
-    await innerFunc()
-  } catch (error: any) {
-    console.error('Getting error from waiting transaction', error)
-    if (error?.data?.message !== 'missing block number') {
-      throw error
-    }
-  }
-}
-
-export const getABIs = async (environment: string) => {
+export const getABIs = async (environment: string): Promise<any> => {
   return {
-    HolographABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/Holograph.json`)),
-    HolographFactoryABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographFactory.json`)),
-    HolographBridgeABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographBridge.json`)),
-    HolographInterfacesABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographInterfaces.json`)),
-    LayerZeroABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/LayerZeroEndpointInterface.json`)),
-    CxipNFTABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/CxipERC721.json`)),
+    CxipERC721ABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/CxipERC721.json`)),
     FaucetABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/Faucet.json`)),
+    HolographABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/Holograph.json`)),
+    HolographBridgeABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographBridge.json`)),
     HolographERC20ABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographERC20.json`)),
+    HolographERC721ABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographERC721.json`)),
+    HolographFactoryABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographFactory.json`)),
+    HolographInterfacesABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographInterfaces.json`)),
     HolographOperatorABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographOperator.json`)),
+    HolographRegistryABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographRegistry.json`)),
+    LayerZeroABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/LayerZeroEndpointInterface.json`)),
   }
 }
-
-const HOLOGRAPH_LOCALHOST_ADDRESS: string = '0xDebEaA10A84eBC04103Fe387B4AbB7c85b2509d9'.toLowerCase()
-const HOLOGRAPH_EXPERIMENTAL_ADDRESS: string = '0xC52032cDc03409A32a12D652F011D4c1b7b322Dc'.toLowerCase()
-const HOLOGRAPH_DEVELOP_ADDRESS: string = '0x3FbcE6eb11656ad25a2e2400AEE1bE2EC965521C'.toLowerCase()
-const HOLOGRAPH_TESTNET_ADDRESS: string = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
-const HOLOGRAPH_MAINNET_ADDRESS: string = '0x0000000000000000000000000000000000000000'.toLowerCase()
 
 export const HOLOGRAPH_ADDRESSES: {[key in Environment]: string} = {
-  [Environment.localhost]: HOLOGRAPH_LOCALHOST_ADDRESS,
-  [Environment.experimental]: HOLOGRAPH_EXPERIMENTAL_ADDRESS,
-  [Environment.develop]: HOLOGRAPH_DEVELOP_ADDRESS,
-  [Environment.testnet]: HOLOGRAPH_TESTNET_ADDRESS,
-  [Environment.mainnet]: HOLOGRAPH_MAINNET_ADDRESS,
+  [Environment.localhost]: '0xa3931469C1D058a98dde3b5AEc4dA002B6ca7446'.toLowerCase(),
+  [Environment.experimental]: '0x9B869476E5281C6a075A7D93ba3Adc60CDdAC443'.toLowerCase(),
+  [Environment.develop]: '0x8b0C32B59F7d620D467E36e31121733a6eb87b69'.toLowerCase(),
+  [Environment.testnet]: '0x37101ddAd4D1b19ce31A3015e07cfC0cE92E45D7'.toLowerCase(),
+  [Environment.mainnet]: '0x0000000000000000000000000000000000000000'.toLowerCase(),
 }
 
 export const FAUCET_ADDRESSES: {[key in Environment]: string} = {
-  [Environment.localhost]: '0x0000000000000000000000000000000000000000',
-  [Environment.experimental]: '0x4E5303d2a03660A01570be906F50C39f4cBd52F3',
-  [Environment.develop]: '0xcb216ff6be78cca91a183B9Fa94cA02e5c0bb12a',
-  [Environment.testnet]: '0xc25cB8504f400528823451D38628365d50494e43',
-  [Environment.mainnet]: '0xc25cB8504f400528823451D38628365d50494e43',
-} as const
-
-export const HLG_TOKEN = {
-  type: 'ERC20',
-  options: {
-    address: '0xfF54328B59b5F0d9bF281fC541D8d20102DA4266',
-    symbol: 'HLG',
-    decimals: 18,
-    image: 'https://pbs.twimg.com/profile_images/1518847219104854016/TxgaXhH4_400x400.jpg',
-  },
+  [Environment.localhost]: '0x232E8406518da66ecD5681a600f18A13E8CfE5E6',
+  [Environment.experimental]: '0xEd79cdf35016aB8ba182a3125d136726CdE686Ba',
+  [Environment.develop]: '0x07edede74dCA142db475e0b553B3cEaF86B4c3d5',
+  [Environment.testnet]: '0x2CCc77739Fd104bA131366660e53200130EF9831',
+  [Environment.mainnet]: '0x0000000000000000000000000000000000000000',
 } as const
 
 export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {

@@ -1,17 +1,14 @@
-import {JsonRpcProvider, StaticJsonRpcProvider, TransactionReceipt, Web3Provider} from '@ethersproject/providers'
-import {BigNumberish, Contract, ethers} from 'ethers'
+import {TransactionReceipt} from '@ethersproject/providers'
+import {Contract} from '@ethersproject/contracts'
+import {BigNumber, BigNumberish} from '@ethersproject/bignumber'
+
 import CoreChainService from './core-chain-service'
-import {GasFee} from '../types/interfaces'
+import {NetworkMonitor} from '../utils/network-monitor'
 
 class OperatorChainService extends CoreChainService {
   operator: Contract
-  constructor(
-    provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider,
-    wallet: ethers.Wallet,
-    chainId: number,
-    contract: Contract,
-  ) {
-    super(provider, wallet, chainId)
+  constructor(network: string, networkMonitor: NetworkMonitor, contract: Contract) {
+    super(network, networkMonitor)
     this.operator = contract
   }
 
@@ -35,38 +32,44 @@ class OperatorChainService extends CoreChainService {
     return this.operator.getBondedAmount(account)
   }
 
-  bondUtilityToken = async (operator: string, amount: BigNumberish, pod: number): Promise<TransactionReceipt> => {
-    const tx = await this.operator.bondUtilityToken(operator, amount, pod)
-    await tx.wait()
-    return tx
-  }
-
-  getBondUtilityTokenFee = async (operator: string, amount: BigNumberish, pod: number): Promise<GasFee> => {
-    const gasPrice = await this.getChainGasPrice()
-    const gasLimit = await this.operator.estimateGas.bondUtilityToken(operator, amount, pod)
-
-    return {
-      gas: gasPrice.mul(gasLimit),
-      gasPrice,
-      gasLimit,
+  unbondUtilityToken = async (receiver?: string): Promise<TransactionReceipt | null> => {
+    if (receiver === undefined) {
+      receiver = this.wallet.address
     }
+
+    return this.networkMonitor.executeTransaction({
+      network: this.network,
+      contract: this.operator,
+      methodName: 'unbondUtilityToken',
+      args: [this.wallet.address, receiver],
+      waitForReceipt: true,
+    })
   }
 
-  unbondUtilityToken = async (operator: string, receiver: string): Promise<TransactionReceipt> => {
-    const tx = await this.operator.unbondUtilityToken(operator, receiver)
-    await tx.wait()
-    return tx
+  bondUtilityToken = async (
+    operator: string,
+    amount: BigNumberish,
+    pod: number,
+  ): Promise<TransactionReceipt | null> => {
+    return this.networkMonitor.executeTransaction({
+      network: this.network,
+      contract: this.operator,
+      methodName: 'bondUtilityToken',
+      args: [operator, amount, pod],
+      waitForReceipt: true,
+    })
   }
 
-  getUnbondUtilityTokenFee = async (operator: string, receiver: string): Promise<GasFee> => {
-    const gasPrice = await this.getChainGasPrice()
-    const gasLimit = await this.operator.estimateGas.unbondUtilityToken(operator, receiver)
-
-    return {
-      gas: gasPrice.mul(gasLimit),
+  estimateGasForBondUtilityToken = async (operator: string, amount: BigNumberish, pod: number): Promise<BigNumber> => {
+    const gasPrice: BigNumber = this.getChainGasPrice()
+    const gasLimit = await this.networkMonitor.getGasLimit({
+      contract: this.operator,
+      methodName: 'bondUtilityToken',
+      args: [operator, amount, pod],
+      network: this.network,
       gasPrice,
-      gasLimit,
-    }
+    })
+    return gasPrice.mul(gasLimit as BigNumber)
   }
 }
 

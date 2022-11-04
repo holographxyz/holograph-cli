@@ -196,11 +196,10 @@ export const deploymentConfigHash = function (deploymentConfig: DeploymentConfig
 
 export const create2address = function (deploymentConfig: DeploymentConfig, factoryAddress: string): string {
   const configHash: string = deploymentConfigHash(deploymentConfig)
-  // TODO: replace HolographerOld with Holographer once new deployments are up
   const futureAddress: string =
     '0x' +
     sha3(
-      '0xff' + remove0x(factoryAddress) + remove0x(configHash) + remove0x(sha3(bytecodes[BytecodeType.HolographerOld])),
+      '0xff' + remove0x(factoryAddress) + remove0x(configHash) + remove0x(sha3(bytecodes[BytecodeType.Holographer])),
     ).slice(26)
   return futureAddress
 }

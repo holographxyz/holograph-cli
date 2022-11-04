@@ -87,11 +87,11 @@
   },
   {
     "inputs": [],
-    "name": "getBridgeRegistry",
+    "name": "getHolograph",
     "outputs": [
       {
         "internalType": "address",
-        "name": "bridgeRegistry",
+        "name": "holograph",
         "type": "address"
       }
     ],
@@ -100,15 +100,41 @@
   },
   {
     "inputs": [],
-    "name": "getSecureStorage",
+    "name": "getRegistry",
     "outputs": [
       {
         "internalType": "address",
-        "name": "secureStorage",
+        "name": "registry",
         "type": "address"
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "holograph",
+        "type": "address"
+      }
+    ],
+    "name": "setHolograph",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "registry",
+        "type": "address"
+      }
+    ],
+    "name": "setRegistry",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   }
 ]
