@@ -1,9 +1,9 @@
+import * as fs from 'fs-extra'
+import * as path from 'node:path'
 import * as inquirer from 'inquirer'
-import {CliUx, Command, Flags} from '@oclif/core'
-import {formatUnits} from '@ethersproject/units'
+import {CliUx, Flags} from '@oclif/core'
 import {TransactionDescription} from '@ethersproject/abi'
 import {BigNumber} from '@ethersproject/bignumber'
-import {Contract} from '@ethersproject/contracts'
 import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
 import {Environment} from '@holographxyz/environment'
 import {getNetworkByHolographId, networks} from '@holographxyz/networks'
@@ -13,39 +13,13 @@ import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '
 import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
 import {web3, functionSignature, sha3, zeroAddress} from '../../utils/utils'
 import {checkOptionFlag} from '../../utils/validation'
-
-interface OperatorJobDetails {
-  pod: number
-  blockTimes: number
-  operator: string
-  startBlock: number
-  startTimestamp: BigNumber
-  fallbackOperators: number[]
-}
-
-interface OperatorJob {
-  network: string
-  hash: string
-  payload: string
-  targetTime: number
-  gasLimit: BigNumber
-  gasPrice: BigNumber
-  jobDetails: OperatorJobDetails
-}
-
-interface OperatorStatus {
-  address: string
-  active: {[key: string]: boolean}
-  currentPod: {[key: string]: number}
-  podIndex: {[key: string]: number}
-  podSize: {[key: string]: number}
-}
+import {OperatorJobAwareCommand, OperatorJob} from '../../utils/operator-job'
 
 /**
  * Operator
  * Description: The primary command for operating jobs on the Holograph network.
  */
-export default class Operator extends Command {
+export default class Operator extends OperatorJobAwareCommand {
   static description = 'Listen for EVM events for jobs and process them'
   static examples = ['$ <%= config.bin %> <%= command.id %> --networks goerli fuji mumbai --mode=auto --sync']
 
@@ -70,17 +44,8 @@ export default class Operator extends Command {
    * Operator class variables
    */
   operatorMode: OperatorMode = OperatorMode.listen
-  networkMonitor!: NetworkMonitor
   environment!: Environment
-  operatorStatus: OperatorStatus = {
-    address: '',
-    active: {},
-    currentPod: {},
-    podIndex: {},
-    podSize: {},
-  }
-
-  operatorJobs: {[key: string]: OperatorJob} = {}
+  jobsFile!: string
 
   /**
    * Command Entry Point
@@ -123,6 +88,8 @@ export default class Operator extends Command {
       lastBlockFilename: 'operator-blocks.json',
     })
 
+    this.jobsFile = path.join(this.config.configDir, this.networkMonitor.environment + '.operator-job-details.json')
+
     // Load the last block height from the file
     this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
 
@@ -153,13 +120,32 @@ export default class Operator extends Command {
 
     this.operatorStatus.address = userWallet.address.toLowerCase()
 
+    this.networkMonitor.exitCallback = this.exitCallback.bind(this)
+
     CliUx.ux.action.start(`Starting operator in mode: ${OperatorMode[this.operatorMode]}`)
     await this.networkMonitor.run(true, undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
+    // check if file exists
+    if (await fs.pathExists(this.jobsFile)) {
+      // if file exists, need to add it to list of jobs to process
+      this.operatorJobs = (await fs.readJson(this.jobsFile)) as {[key: string]: OperatorJob}
+      // need to check each job and make sure it's still valid
+      for (const jobHash of Object.keys(this.operatorJobs)) {
+        this.operatorJobs[jobHash].gasLimit = BigNumber.from(this.operatorJobs[jobHash].gasLimit)
+        this.operatorJobs[jobHash].gasPrice = BigNumber.from(this.operatorJobs[jobHash].gasPrice)
+        this.operatorJobs[jobHash].jobDetails.startTimestamp = BigNumber.from(
+          this.operatorJobs[jobHash].jobDetails.startTimestamp,
+        )
+        // if job is still valid, it will stay in object, otherwise it will be removed
+        // eslint-disable-next-line no-await-in-loop
+        await this.checkJobStatus(jobHash)
+      }
+    }
+
     for (const network of this.networkMonitor.networks) {
       // instantiate all network operator job watchers
-      this.processOperatorJobs(network)
+      setTimeout(this.processOperatorJobs.bind(this, network), 60_000)
     }
 
     // Start health check server on port 6000
@@ -167,6 +153,17 @@ export default class Operator extends Command {
     if (enableHealthCheckServer) {
       startHealthcheckServer(this.networkMonitor)
     }
+  }
+
+  exitCallback(): void {
+    const jobs: {[key: string]: OperatorJob} = this.operatorJobs
+    for (const jobHash of Object.keys(jobs)) {
+      jobs[jobHash].gasLimit = BigNumber.from(jobs[jobHash].gasLimit).toHexString()
+      jobs[jobHash].gasPrice = BigNumber.from(jobs[jobHash].gasPrice).toHexString()
+      jobs[jobHash].jobDetails.startTimestamp = BigNumber.from(jobs[jobHash].jobDetails.startTimestamp).toHexString()
+    }
+
+    fs.writeFileSync(this.jobsFile, JSON.stringify(jobs, undefined, 2))
   }
 
   /**
@@ -393,127 +390,16 @@ export default class Operator extends Command {
     }
   }
 
-  getTargetTime(network: string, jobDetails: OperatorJobDetails): number {
-    let targetTime: number = new Date(BigNumber.from(jobDetails.startTimestamp).toNumber() * 1000).getTime()
-    if (jobDetails.operator !== zeroAddress && jobDetails.operator !== this.operatorStatus.address) {
-      // operator is not selected
-      // add +60 seconds to target time
-      targetTime += 60 * 1000
-
-      // ignore where operator is not in same pod
-      if (jobDetails.pod === this.operatorStatus.currentPod[network]) {
-        for (let i = 0; i < 5; i++) {
-          if (
-            jobDetails.fallbackOperators[i] >= this.operatorStatus.podSize[network] ||
-            jobDetails.fallbackOperators[i] === 0
-          ) {
-            // anyone from that pod can operate
-            break
-          } else if (jobDetails.fallbackOperators[i] === this.operatorStatus.podIndex[network]) {
-            // operator has been selected as the fallback
-            break
-          }
-
-          // add +60 seconds to target time
-          targetTime += 60 * 1000
-        }
-      } else {
-        // add time delay for 5 fallback operators to have a chance first
-        targetTime += 60 * 1000 * 5
-      }
-    }
-
-    return targetTime
-  }
-
-  async decodeOperatorJob(
-    network: string,
-    operatorJobHash: string,
-    operatorJobPayload: string,
-    tags: (string | number)[],
-  ): Promise<OperatorJob | undefined> {
-    const contract: Contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.providers[network])
-    const rawJobDetails: any[] = await contract.getJobDetails(operatorJobHash)
-    const jobDetails: OperatorJobDetails = {
-      pod: rawJobDetails[0] as number,
-      blockTimes: rawJobDetails[1] as number,
-      operator: (rawJobDetails[2] as string).toLowerCase(),
-      startBlock: rawJobDetails[3] as number,
-      startTimestamp: BigNumber.from(rawJobDetails[4]),
-      fallbackOperators: rawJobDetails[5] as number[],
-    } as OperatorJobDetails
-    if (jobDetails.startBlock > 0) {
-      this.networkMonitor.structuredLog(network, `Decoded valid job ${operatorJobHash}`, tags)
-      this.networkMonitor.structuredLog(network, `Selected operator for job is ${jobDetails.operator}`, tags)
-      const targetTime: number = this.getTargetTime(network, jobDetails)
-      // extract gasLimit and gasPrice from payload
-      const gasLimit: BigNumber = BigNumber.from('0x' + operatorJobPayload.slice(-128, -64))
-      this.networkMonitor.structuredLog(network, `Job gas limit is ${gasLimit.toNumber()}`, tags)
-      const gasPrice: BigNumber = BigNumber.from('0x' + operatorJobPayload.slice(-64))
-      this.networkMonitor.structuredLog(network, `Job maximum gas price is ${formatUnits(gasPrice, 'gwei')} GWEI`, tags)
-      const remainingTime: number = Math.round((targetTime - Date.now()) / 1000)
-      this.networkMonitor.structuredLog(
-        network,
-        `Job can be operatod ${remainingTime <= 0 ? 'immediately' : 'in ' + remainingTime + ' seconds'}`,
-        tags,
-      )
-      this.operatorJobs[operatorJobHash] = {
-        network,
-        hash: operatorJobHash,
-        payload: operatorJobPayload,
-        targetTime,
-        gasLimit,
-        gasPrice,
-        jobDetails,
-      } as OperatorJob
-      return this.operatorJobs[operatorJobHash]
-    }
-
-    this.networkMonitor.structuredLogError(
-      network,
-      `Could not decode job ${operatorJobHash} (invalid or already completed)`,
-      tags,
-    )
-
-    return undefined
-  }
-
-  updateJobTimes(): void {
-    for (const hash of Object.keys(this.operatorJobs)) {
-      const job: OperatorJob = this.operatorJobs[hash]
-      this.operatorJobs[hash].targetTime = this.getTargetTime(job.network, job.jobDetails)
-    }
-  }
-
-  /*
-    @dev defining some of the current values like: if operator is bonded on the network, which pod they are in,
-         which index position inside of the pod doe they hold (used for fallback operator calculations),
-         the current pod size (used for fallback operator calculations).
-  */
-  async updateOperatorStatus(network: string): Promise<void> {
-    const contract: Contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.providers[network])
-    this.operatorStatus.active[network] = !BigNumber.from(
-      await contract.getBondedAmount(this.operatorStatus.address),
-    ).isZero()
-    this.operatorStatus.currentPod[network] = BigNumber.from(
-      await contract.getBondedPod(this.operatorStatus.address),
-    ).toNumber()
-    this.operatorStatus.podIndex[network] = BigNumber.from(
-      await contract.getBondedPodIndex(this.operatorStatus.address),
-    ).toNumber()
-    if (this.operatorStatus.currentPod[network] > 0) {
-      this.operatorStatus.podSize[network] = BigNumber.from(
-        await contract.getPodOperatorsLength(this.operatorStatus.currentPod[network]),
-      ).toNumber()
-    }
-  }
-
   processOperatorJob = async (network: string, jobHash: string, tags: (string | number)[]): Promise<void> => {
     // if success then pass back payload hash to remove it from list
     if (await this.executeJob(jobHash, tags)) {
+      // check job status just in case
+      await this.checkJobStatus(jobHash)
       // job was a success
       this.processOperatorJobs(network, jobHash)
     } else {
+      // check job status just in case
+      await this.checkJobStatus(jobHash)
       // job failed, gotta try again
       this.processOperatorJobs(network)
     }
@@ -552,8 +438,8 @@ export default class Operator extends Command {
         // add to list of candidates
         candidates.push(job)
         // find highest gas candidate first
-        if (job.gasPrice.gt(highestGas)) {
-          highestGas = job.gasPrice
+        if (BigNumber.from(job.gasPrice).gt(highestGas)) {
+          highestGas = BigNumber.from(job.gasPrice)
         }
       }
     }
@@ -562,14 +448,21 @@ export default class Operator extends Command {
       // sort candidates by gas priority
       // returning highest gas first
       candidates.sort((a: OperatorJob, b: OperatorJob): number => {
-        return b.gasPrice.sub(a.gasPrice).toNumber()
+        return BigNumber.from(b.gasPrice).sub(BigNumber.from(a.gasPrice)).toNumber()
       })
       const compareGas: BigNumber = gasPricing.isEip1559 ? gasPricing.maxFeePerGas! : gasPricing.gasPrice!
-      if (candidates[0].jobDetails.operator === zeroAddress || candidates[0].gasPrice.gte(compareGas)) {
-        this.networkMonitor.structuredLog(network, `Sending job ${candidates[0].hash} for execution`, tags)
-        // have a valid job to do right away
-        this.processOperatorJob(network, candidates[0].hash, tags)
-      } else {
+      let foundCandidate = false
+      for (const candidate of candidates) {
+        if (candidate.jobDetails.operator === zeroAddress || BigNumber.from(candidate.gasPrice).gte(compareGas)) {
+          this.networkMonitor.structuredLog(network, `Sending job ${candidate.hash} for execution`, tags)
+          // have a valid job to do right away
+          this.processOperatorJob(network, candidate.hash, tags)
+          foundCandidate = true
+          break
+        }
+      }
+
+      if (!foundCandidate) {
         setTimeout(this.processOperatorJobs.bind(this, network), 1000)
       }
     } else {
@@ -581,47 +474,58 @@ export default class Operator extends Command {
    * Execute the job
    */
   async executeJob(jobHash: string, tags: (string | number)[]): Promise<boolean> {
-    const job: OperatorJob = this.operatorJobs[jobHash]
-    const network: string = job.network
-    this.networkMonitor.walletNonces[network] = await this.networkMonitor.wallets[network].getTransactionCount()
-    let operate = this.operatorMode === OperatorMode.auto
-    if (this.operatorMode === OperatorMode.manual) {
-      const operatorPrompt: any = await inquirer.prompt([
-        {
-          name: 'shouldContinue',
-          message: `A job is available for execution, would you like to operate?\n`,
-          type: 'confirm',
-          default: true,
-        },
-      ])
-      operate = operatorPrompt.shouldContinue
+    // quickly check that job is still valid
+    await this.checkJobStatus(jobHash)
+    if (jobHash in this.operatorJobs) {
+      const job: OperatorJob = this.operatorJobs[jobHash]
+      const network: string = job.network
+      let operate = this.operatorMode === OperatorMode.auto
+      if (this.operatorMode === OperatorMode.manual) {
+        const operatorPrompt: any = await inquirer.prompt([
+          {
+            name: 'shouldContinue',
+            message: `A job is available for execution, would you like to operate?\n`,
+            type: 'confirm',
+            default: true,
+          },
+        ])
+        operate = operatorPrompt.shouldContinue
+      }
+
+      if (operate) {
+        const gasPricing: GasPricing = this.networkMonitor.gasPrices[network]
+        const gasPrice: BigNumber = gasPricing.isEip1559 ? gasPricing.maxFeePerGas! : gasPricing.gasPrice!
+
+        const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
+          network,
+          tags,
+          contract: this.networkMonitor.operatorContract,
+          methodName: 'executeJob',
+          args: [job.payload],
+          gasPrice: gasPrice,
+          gasLimit: BigNumber.from(job.gasLimit).mul(BigNumber.from('2')),
+          canFail: false,
+          waitForReceipt: true,
+          interval: 1000,
+        })
+        if (receipt !== null && receipt.status === 1) {
+          delete this.operatorJobs[jobHash]
+        }
+
+        return receipt !== null
+      }
+
+      this.networkMonitor.structuredLog(network, 'Available job will not be executed', tags)
+      return false
     }
 
-    if (operate) {
-      const gasPricing: GasPricing = this.networkMonitor.gasPrices[network]
-      const gasPrice: BigNumber = gasPricing.isEip1559 ? gasPricing.maxFeePerGas! : gasPricing.gasPrice!
-
-      const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
-        network,
-        tags,
-        contract: this.networkMonitor.operatorContract,
-        methodName: 'executeJob',
-        args: [job.payload],
-        gasPrice: gasPrice,
-        gasLimit: job.gasLimit.mul(BigNumber.from('2')),
-      })
-      return receipt !== null
-    }
-
-    this.networkMonitor.structuredLog(network, 'Available job will not be executed', tags)
-    return false
+    return true
   }
 
   /**
    * Execute the lz message payload on the destination network
    */
   async executeLzPayload(network: string, jobHash: string, args: any[], tags: (string | number)[]): Promise<void> {
-    this.networkMonitor.walletNonces[network] = await this.networkMonitor.wallets[network].getTransactionCount()
     // If the operator is in listen mode, payloads will not be executed
     // If the operator is in manual mode, the payload must be manually executed
     // If the operator is in auto mode, the payload will be executed automatically

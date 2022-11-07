@@ -677,6 +677,7 @@ export class NetworkMonitor {
           throw new Error('Unsupported RPC provider protocol -> ' + protocol)
       }
 
+      this.walletNonces[network] = -1
       if (this.userWallet !== undefined) {
         this.wallets[network] = this.userWallet.connect(this.providers[network])
         // eslint-disable-next-line no-await-in-loop
@@ -718,6 +719,7 @@ export class NetworkMonitor {
       }
 
       this.gasPrices[network] = await initializeGasPricing(network, this.providers[network])
+      this.activated[network] = true
     }
 
     const holographABI = await fs.readJson(path.join(__dirname, `../abi/${this.environment}/Holograph.json`))
@@ -790,8 +792,6 @@ export class NetworkMonitor {
           this.localhostWallets[network],
         )
       }
-
-      this.activated[network] = false
     }
   }
 
@@ -1016,11 +1016,10 @@ export class NetworkMonitor {
       canFail: true,
     })
     if (block !== undefined && block !== null && 'transactions' in block) {
-      const recentBlock: boolean = this.currentBlockHeight[job.network] - job.block < 5
+      const recentBlock = true // this.currentBlockHeight[job.network] - job.block < 5
       if (this.verbose) {
         this.structuredLog(job.network, `Block retrieved`, job.block)
 
-        /*
         this.structuredLog(job.network, `Calculating block gas`, job.block)
         if (this.gasPrices[job.network].isEip1559) {
           this.structuredLog(
@@ -1032,7 +1031,6 @@ export class NetworkMonitor {
             job.block,
           )
         }
-        */
       }
 
       if (recentBlock) {
@@ -1058,7 +1056,6 @@ export class NetworkMonitor {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
 
-      /*
       if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
         this.structuredLog(
           job.network,
@@ -1072,7 +1069,6 @@ export class NetworkMonitor {
           job.block,
         )
       }
-      */
 
       if (interestingTransactions.length > 0) {
         if (this.verbose) {
@@ -1907,8 +1903,11 @@ export class NetworkMonitor {
             rawTx.maxFeePerGas = gasPrice!
           }
 
-          populatedTx = await this.wallets[network].populateTransaction(rawTx)
+          if ('value' in rawTx && rawTx.value!.eq(ZERO)) {
+            delete rawTx.value
+          }
 
+          populatedTx = await this.wallets[network].populateTransaction(rawTx)
           signedTx = await this.wallets[network].signTransaction(populatedTx)
           if (txHash === null) {
             txHash = keccak256(signedTx)
@@ -2171,7 +2170,6 @@ export class NetworkMonitor {
       // reset time to allow for proper transaction confirmation
       this.lastBlockJobDone[network] = Date.now()
       this.structuredLog(network, `Transaction ${tx.hash} has been submitted`, tags)
-      this.walletNonces[network]++
       const receipt: TransactionReceipt | null = await this.getTransactionReceipt({
         network,
         transactionHash: tx.hash,
@@ -2180,12 +2178,17 @@ export class NetworkMonitor {
         canFail: waitForReceipt ? false : canFail, // canFail,
       })
       if (receipt === null) {
+        if (!waitForReceipt) {
+          this.walletNonces[network]++
+        }
+
         this.structuredLog(
           network,
           `Transaction ${networks[network].explorer}/tx/${tx.hash} could not be confirmed`,
           tags,
         )
       } else {
+        this.walletNonces[network]++
         this.structuredLog(
           network,
           `Transaction ${networks[network].explorer}/tx/${receipt.transactionHash} mined and confirmed`,
