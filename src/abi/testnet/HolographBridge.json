@@ -5,6 +5,10 @@
     "type": "constructor"
   },
   {
+    "stateMutability": "payable",
+    "type": "fallback"
+  },
+  {
     "inputs": [],
     "name": "admin",
     "outputs": [
@@ -39,7 +43,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "nonce",
+        "name": "",
         "type": "uint256"
       },
       {
@@ -48,180 +52,39 @@
         "type": "uint32"
       },
       {
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      }
-    ],
-    "name": "deployIn",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      }
-    ],
-    "name": "deployIn",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint32",
-        "name": "toChain",
-        "type": "uint32"
-      },
-      {
-        "components": [
-          {
-            "internalType": "bytes32",
-            "name": "contractType",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "uint32",
-            "name": "chainType",
-            "type": "uint32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "salt",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes",
-            "name": "byteCode",
-            "type": "bytes"
-          },
-          {
-            "internalType": "bytes",
-            "name": "initCode",
-            "type": "bytes"
-          }
-        ],
-        "internalType": "struct DeploymentConfig",
-        "name": "config",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          }
-        ],
-        "internalType": "struct Verification",
-        "name": "signature",
-        "type": "tuple"
+        "internalType": "address",
+        "name": "holographableContract",
+        "type": "address"
       },
       {
         "internalType": "address",
-        "name": "signer",
+        "name": "hToken",
         "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "hTokenRecipient",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "hTokenValue",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "doNotRevert",
+        "type": "bool"
+      },
+      {
+        "internalType": "bytes",
+        "name": "bridgeInPayload",
+        "type": "bytes"
       }
     ],
-    "name": "deployOut",
+    "name": "bridgeInRequest",
     "outputs": [],
     "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint32",
-        "name": "fromChain",
-        "type": "uint32"
-      },
-      {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "from",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      }
-    ],
-    "name": "erc20in",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "nonce",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint32",
-        "name": "fromChain",
-        "type": "uint32"
-      },
-      {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "from",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      }
-    ],
-    "name": "erc20in",
-    "outputs": [],
-    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -233,155 +96,28 @@
       },
       {
         "internalType": "address",
-        "name": "token",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "from",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "to",
+        "name": "holographableContract",
         "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "amount",
+        "name": "gasLimit",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gasPrice",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "bridgeOutPayload",
+        "type": "bytes"
       }
     ],
-    "name": "erc20out",
+    "name": "bridgeOutRequest",
     "outputs": [],
     "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint32",
-        "name": "fromChain",
-        "type": "uint32"
-      },
-      {
-        "internalType": "address",
-        "name": "collection",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "from",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      }
-    ],
-    "name": "erc721in",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "nonce",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint32",
-        "name": "fromChain",
-        "type": "uint32"
-      },
-      {
-        "internalType": "address",
-        "name": "collection",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "from",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      }
-    ],
-    "name": "erc721in",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint32",
-        "name": "toChain",
-        "type": "uint32"
-      },
-      {
-        "internalType": "address",
-        "name": "collection",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "from",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "erc721out",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes",
-        "name": "_payload",
-        "type": "bytes"
-      }
-    ],
-    "name": "executeJob",
-    "outputs": [],
-    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -395,6 +131,45 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "toChain",
+        "type": "uint32"
+      },
+      {
+        "internalType": "address",
+        "name": "holographableContract",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gasLimit",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gasPrice",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "bridgeOutPayload",
+        "type": "bytes"
+      }
+    ],
+    "name": "getBridgeOutRequestPayload",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "samplePayload",
+        "type": "bytes"
+      }
+    ],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -425,12 +200,56 @@
   },
   {
     "inputs": [],
-    "name": "getInterfaces",
+    "name": "getJobNonce",
     "outputs": [
       {
-        "internalType": "address",
-        "name": "interfaces",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "jobNonce",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "name": "getMessageFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -466,7 +285,7 @@
     "inputs": [
       {
         "internalType": "bytes",
-        "name": "data",
+        "name": "initPayload",
         "type": "bytes"
       }
     ],
@@ -476,6 +295,40 @@
         "internalType": "bytes4",
         "name": "",
         "type": "bytes4"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      },
+      {
+        "internalType": "uint32",
+        "name": "toChain",
+        "type": "uint32"
+      },
+      {
+        "internalType": "address",
+        "name": "holographableContract",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes",
+        "name": "bridgeOutPayload",
+        "type": "bytes"
+      }
+    ],
+    "name": "revertedBridgeOutRequest",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "revertReason",
+        "type": "string"
       }
     ],
     "stateMutability": "nonpayable",
@@ -524,19 +377,6 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "interfaces",
-        "type": "address"
-      }
-    ],
-    "name": "setInterfaces",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
         "name": "operator",
         "type": "address"
       }
@@ -558,5 +398,9 @@
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
+  },
+  {
+    "stateMutability": "payable",
+    "type": "receive"
   }
 ]

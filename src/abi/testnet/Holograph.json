@@ -67,12 +67,12 @@
   },
   {
     "inputs": [],
-    "name": "getChainType",
+    "name": "getChainId",
     "outputs": [
       {
-        "internalType": "uint32",
-        "name": "chainType",
-        "type": "uint32"
+        "internalType": "uint256",
+        "name": "chainId",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -86,6 +86,19 @@
         "internalType": "address",
         "name": "factory",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getHolographChainId",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "holographChainId",
+        "type": "uint32"
       }
     ],
     "stateMutability": "view",
@@ -144,10 +157,23 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "getUtilityToken",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "utilityToken",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "bytes",
-        "name": "data",
+        "name": "initPayload",
         "type": "bytes"
       }
     ],
@@ -191,12 +217,12 @@
   {
     "inputs": [
       {
-        "internalType": "uint32",
-        "name": "chainType",
-        "type": "uint32"
+        "internalType": "uint256",
+        "name": "chainId",
+        "type": "uint256"
       }
     ],
-    "name": "setChainType",
+    "name": "setChainId",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -210,6 +236,19 @@
       }
     ],
     "name": "setFactory",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "holographChainId",
+        "type": "uint32"
+      }
+    ],
+    "name": "setHolographChainId",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -262,6 +301,19 @@
       }
     ],
     "name": "setTreasury",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "utilityToken",
+        "type": "address"
+      }
+    ],
+    "name": "setUtilityToken",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

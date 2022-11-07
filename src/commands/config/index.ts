@@ -1,43 +1,34 @@
-import {Command, Flags} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
-import {ethers} from 'ethers'
+
+import {Command, Flags} from '@oclif/core'
+import {Wallet} from '@ethersproject/wallet'
+import {supportedShortNetworks, networks} from '@holographxyz/networks'
+
 import {
   checkFileExists,
   ensureConfigFileIsValid,
-  isFromAndToNetworksTheSame,
-  isStringAValidURL,
-  randomASCII,
+  generateSupportedNetworksOptions,
   CONFIG_FILE_NAME,
-  validateBeta1Schema,
+  validateBeta3Schema,
 } from '../../utils/config'
+import {isStringAValidURL, randomASCII} from '../../utils/utils'
 import AesEncryption from '../../utils/aes-encryption'
-import {supportedNetworks} from '../../utils/networks'
 
 export default class Config extends Command {
   static description =
-    'Initialize the Holo command line to become an operator or to bridge collections and NFTs manually'
+    'Initialize the Holograph CLI with a config file. If no flags are passed, the CLI will prompt you for the required information.'
 
   static examples = [
-    '$ holo --defaultFrom goerli',
-    '$ holo --defaultFrom goerli --defaultTo mumbai',
-    '$ holo --privateKey abc...def',
-    '$ holo --fromFile ./config.json',
-    '$ holo --fromJson \'{"version": "beta1", ...}',
+    '$ <%= config.bin %> <%= command.id %> --privateKey abc...def',
+    '$ <%= config.bin %> <%= command.id %> --fromFile ./config.json',
+    '$ <%= config.bin %> <%= command.id %> --fromJson \'{"version": "beta3", ...}',
   ]
 
   static flags = {
-    defaultFrom: Flags.string({
-      options: supportedNetworks,
-      description: 'Default network to bridge FROM (source network)',
-    }),
-    defaultTo: Flags.string({
-      options: supportedNetworks,
-      description: 'Default network to bridge TO (destination network)',
-    }),
     network: Flags.string({
-      options: supportedNetworks,
+      options: supportedShortNetworks,
       description: 'Network to set',
     }),
     url: Flags.string({
@@ -45,86 +36,15 @@ export default class Config extends Command {
       dependsOn: ['network'],
     }),
     privateKey: Flags.string({description: 'Default account to use when sending all transactions'}),
-    fromFile: Flags.string({description: 'Location of file to load config'}),
+    fromFile: Flags.string({description: 'Path to the config file to load'}),
     fromJson: Flags.string({description: 'JSON object to use as the config'}),
   }
 
-  async loadConfigPath(configPath: string, filePath: string | undefined): Promise<void> {
-    // Check if config Dir flag is empty
-    if (filePath !== undefined) {
-      try {
-        const stats = fs.lstatSync(filePath)
-
-        this.debug(`Is file: ${stats.isFile()}`)
-        this.debug(`Is directory: ${stats.isDirectory()}`)
-        this.debug(`Is symbolic link: ${stats.isSymbolicLink()}`)
-        this.debug(`Is FIFO: ${stats.isFIFO()}`)
-        this.debug(`Is socket: ${stats.isSocket()}`)
-        this.debug(`Is character device: ${stats.isCharacterDevice()}`)
-        this.debug(`Is block device: ${stats.isBlockDevice()}`)
-
-        if (
-          stats.isFile() &&
-          !stats.isDirectory() &&
-          !stats.isSymbolicLink() &&
-          !stats.isFIFO() &&
-          !stats.isSocket() &&
-          !stats.isCharacterDevice() &&
-          !stats.isBlockDevice()
-        ) {
-          const ensureCheck = await ensureConfigFileIsValid(filePath, undefined, false)
-
-          // Since the json at the desired path is valid, we save it!
-          await fs.outputJSON(configPath, ensureCheck.configFile, {spaces: 2})
-        } else {
-          this.error(`filePath is NOT VALID FAIL`)
-        }
-      } catch (error: any) {
-        // Handle error
-        if (error.code === 'ENOENT') {
-          this.error(`The input ${filePath} is not a valid file path`)
-          // eslint-disable-next-line no-negated-condition
-        } else if (typeof error.message !== 'undefined') {
-          this.error(error.message)
-        } else {
-          this.error(`Failed to load ${filePath}`)
-        }
-
-        this.exit()
-      }
-
-      this.exit()
-    }
-  }
-
-  async loadConfigJson(configPath: string, jsonString: string | undefined): Promise<void> {
-    // Check if config Json flag is empty
-    if (jsonString !== undefined) {
-      this.log(`checking jsonString input`)
-      const output = JSON.parse(jsonString)
-      await validateBeta1Schema(output)
-      this.log(output)
-      // Since the json at the desired path is valid, we save it!
-      await fs.outputJSON(configPath, output, {spaces: 2})
-      this.exit()
-    }
-  }
-
-  validateToAndFrom(defaultTo: string | undefined, defaultFrom: string | undefined): void {
-    // Make sure default from and to networks are not the same when using flags
-    if (defaultFrom !== undefined && defaultTo !== undefined) {
-      const isValidFromAndTo = isFromAndToNetworksTheSame(defaultFrom, defaultTo)
-      if (!isValidFromAndTo) {
-        this.log('The FROM and TO networks cannot be the same')
-        this.error('Networks cannot be the same')
-      }
-    }
-  }
-
+  /**
+   * Command Entry Point
+   */
   public async run(): Promise<void> {
     const {flags} = await this.parse(Config)
-    let defaultFrom = flags.defaultFrom
-    let defaultTo = flags.defaultTo
     let privateKey = flags.privateKey
     let userWallet = null
     let currentConfigFile: any = null
@@ -140,17 +60,11 @@ export default class Config extends Command {
     await this.loadConfigPath(configPath, flags.fromFile)
     await this.loadConfigJson(configPath, flags.fromJson)
 
-    this.validateToAndFrom(defaultTo, defaultFrom)
-
     // Check if config file exists
     const isConfigExist: boolean = await checkFileExists(configPath)
 
     let userConfigTemplate: any = {
-      version: 'beta1',
-      bridge: {
-        source: defaultFrom,
-        destination: defaultTo,
-      },
+      version: 'beta3',
       networks: {},
       user: {
         credentials: {
@@ -195,48 +109,6 @@ export default class Config extends Command {
     }
 
     if (updateNetworksPrompt.update || !isConfigExist) {
-      // Array will get smaller depending on input defaultFrom and defaultTo values. I copy value so I can manipulate it
-      let remainingNetworks = supportedNetworks
-      this.debug(`remainingNetworks = ${remainingNetworks}`)
-
-      // Collect default FROM network value
-      if (defaultFrom === undefined) {
-        remainingNetworks = remainingNetworks.filter((item: string) => {
-          return item !== defaultTo
-        })
-        this.debug(`remainingNetworks = ${remainingNetworks}`)
-        const prompt: any = await inquirer.prompt([
-          {
-            name: 'defaultFrom',
-            message: 'Select the default network to bridge FROM (source network)',
-            type: 'list',
-            choices: remainingNetworks,
-          },
-        ])
-        defaultFrom = prompt.defaultFrom
-      }
-
-      // Collect default TO network value
-      if (defaultTo === undefined) {
-        remainingNetworks = remainingNetworks.filter((item: string) => {
-          return item !== defaultFrom
-        })
-        this.debug(`remainingNetworks = ${remainingNetworks}`)
-        const prompt: any = await inquirer.prompt([
-          {
-            name: 'defaultTo',
-            message: 'Select the default network to bridge TO (destination network)',
-            type: 'list',
-            choices: remainingNetworks,
-          },
-        ])
-        defaultTo = prompt.defaultTo
-      }
-
-      // Update user config with new defaultFrom and defaultTo values
-      userConfigTemplate.bridge.source = defaultFrom
-      userConfigTemplate.bridge.destination = defaultTo
-
       // Check what networks the user wants to operate on
       const prompt: any = await inquirer.prompt([
         {
@@ -244,21 +116,21 @@ export default class Config extends Command {
 
           name: 'networks',
           message: 'Which networks do you want to operate?',
-          choices: supportedNetworks,
+          choices: generateSupportedNetworksOptions(),
           validate: async (input: any) => {
-            if (input.length >= 2) {
+            if (input.length > 0) {
               return true
             }
 
-            return 'Please select at least 2 networks to operate on. Use the arrow keys and spacebar to select.'
+            return 'Please select at least 1 network. Use the arrow keys and space-bar to select.'
           },
         },
       ])
-      const networks = prompt.networks
+      const providedNetworks = prompt.networks
 
       // Remove networks the user doesn't want to operate on
       for (const network of Object.keys(userConfigTemplate.networks)) {
-        if (!networks.includes(network)) {
+        if (!providedNetworks.includes(network)) {
           delete userConfigTemplate.networks[network]
         }
       }
@@ -266,14 +138,16 @@ export default class Config extends Command {
       // Add networks to the user config
       // It's okay to await in loop because this is a synchronous operation
       /* eslint-disable no-await-in-loop */
-      for (const network of networks) {
+      for (const network of providedNetworks) {
         const prompt: any = await inquirer.prompt([
           {
             name: 'providerUrl',
-            message: `Enter the provider url for ${network}. Leave blank to keep current provider.`,
+            message: `Enter the provider url for ${networks[network].shortKey}. Leave blank to use ${
+              userConfigTemplate.networks[network]?.providerUrl || networks[network].rpc
+            } :`,
             type: 'input',
             validate: async (input: string) => {
-              if (isStringAValidURL(input) || (input === '' && isConfigExist)) {
+              if (isStringAValidURL(input) || input === '') {
                 return true
               }
 
@@ -285,6 +159,8 @@ export default class Config extends Command {
         // Leave existing providerUrl if user didn't enter a new one
         if (prompt.providerUrl !== '') {
           userConfigTemplate.networks[network] = {providerUrl: prompt.providerUrl}
+        } else if (!(network in userConfigTemplate.networks)) {
+          userConfigTemplate.networks[network] = {providerUrl: networks[network].rpc}
         }
       }
     }
@@ -313,7 +189,7 @@ export default class Config extends Command {
             type: 'password',
             validate: async (input: string) => {
               try {
-                const w = new ethers.Wallet(input)
+                const w = new Wallet(input)
                 this.debug(w)
                 return true
               } catch (error) {
@@ -324,7 +200,7 @@ export default class Config extends Command {
           },
         ])
         privateKey = prompt.privateKey
-        userWallet = new ethers.Wallet(prompt.privateKey)
+        userWallet = new Wallet(prompt.privateKey)
         iv = randomASCII(12)
       } else {
         iv = currentConfigFile.user.credentials.iv
@@ -340,9 +216,7 @@ export default class Config extends Command {
               encryption = new AesEncryption(input, iv)
               if (keyProtected) {
                 // We need to check that key decoded
-                userWallet = new ethers.Wallet(
-                  encryption.decrypt(currentConfigFile.user.credentials.privateKey) as string,
-                )
+                userWallet = new Wallet(encryption.decrypt(currentConfigFile.user.credentials.privateKey) as string)
               } else {
                 privateKey = encryption.encrypt(privateKey || '')
               }
@@ -370,5 +244,70 @@ export default class Config extends Command {
     }
 
     this.exit()
+  }
+
+  /**
+   * Load the config file from the path provided by the user
+   */
+  async loadConfigPath(configPath: string, filePath: string | undefined): Promise<void> {
+    // Check if config Dir flag is empty
+    if (filePath !== undefined) {
+      try {
+        const stats = fs.lstatSync(filePath)
+
+        this.debug(`Is file: ${stats.isFile()}`)
+        this.debug(`Is directory: ${stats.isDirectory()}`)
+        this.debug(`Is symbolic link: ${stats.isSymbolicLink()}`)
+        this.debug(`Is FIFO: ${stats.isFIFO()}`)
+        this.debug(`Is socket: ${stats.isSocket()}`)
+        this.debug(`Is character device: ${stats.isCharacterDevice()}`)
+        this.debug(`Is block device: ${stats.isBlockDevice()}`)
+
+        if (
+          stats.isFile() &&
+          !stats.isDirectory() &&
+          !stats.isSymbolicLink() &&
+          !stats.isFIFO() &&
+          !stats.isSocket() &&
+          !stats.isCharacterDevice() &&
+          !stats.isBlockDevice()
+        ) {
+          const ensureCheck = await ensureConfigFileIsValid(filePath, undefined, false)
+
+          // Since the json at the desired path is valid, we save it!
+          await fs.outputJSON(configPath, ensureCheck.configFile, {spaces: 2})
+        } else {
+          this.error(`filePath is NOT VALID FAIL`)
+        }
+      } catch (error: any) {
+        // Handle error
+        if (error.code === 'ENOENT') {
+          this.error(`The input ${filePath} is not a valid file path`)
+          // eslint-disable-next-line no-negated-condition
+        } else if (typeof error.message !== 'undefined') {
+          this.error(error.message)
+        } else {
+          this.error(`Failed to load ${filePath}`)
+        }
+      }
+
+      this.exit()
+    }
+  }
+
+  /**
+   * Load the config file from the JSON provided by the user
+   */
+  async loadConfigJson(configPath: string, jsonString: string | undefined): Promise<void> {
+    // Check if config Json flag is empty
+    if (jsonString !== undefined) {
+      this.log(`checking jsonString input`)
+      const output = JSON.parse(jsonString)
+      await validateBeta3Schema(output)
+      this.log(output)
+      // Since the json at the desired path is valid, we save it!
+      await fs.outputJSON(configPath, output, {spaces: 2})
+      this.exit()
+    }
   }
 }

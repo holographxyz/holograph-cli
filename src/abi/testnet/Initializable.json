@@ -3,7 +3,7 @@
     "inputs": [
       {
         "internalType": "bytes",
-        "name": "_data",
+        "name": "initPayload",
         "type": "bytes"
       }
     ],

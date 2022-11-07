@@ -61,6 +61,144 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "target",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gasLimit",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "payload",
+        "type": "bytes"
+      }
+    ],
+    "name": "crossChainMessage",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "defaultSendLibrary",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "name": "dstConfigLookup",
+    "outputs": [
+      {
+        "internalType": "uint128",
+        "name": "dstNativeAmtCap",
+        "type": "uint128"
+      },
+      {
+        "internalType": "uint64",
+        "name": "baseGas",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "gasPerByte",
+        "type": "uint64"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "name": "dstPriceLookup",
+    "outputs": [
+      {
+        "internalType": "uint128",
+        "name": "dstPriceRatio",
+        "type": "uint128"
+      },
+      {
+        "internalType": "uint128",
+        "name": "dstGasPriceInWei",
+        "type": "uint128"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      },
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      },
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "name": "estimateFees",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "nativeFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "zroFee",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "getAdmin",
     "outputs": [
@@ -68,6 +206,62 @@
         "internalType": "address",
         "name": "adminAddress",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "getAppConfig",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint16",
+            "name": "inboundProofLibraryVersion",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint64",
+            "name": "inboundBlockConfirmations",
+            "type": "uint64"
+          },
+          {
+            "internalType": "address",
+            "name": "relayer",
+            "type": "address"
+          },
+          {
+            "internalType": "uint16",
+            "name": "outboundProofType",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint64",
+            "name": "outboundBlockConfirmations",
+            "type": "uint64"
+          },
+          {
+            "internalType": "address",
+            "name": "oracle",
+            "type": "address"
+          }
+        ],
+        "internalType": "struct LayerZeroOverrides.ApplicationConfiguration",
+        "name": "",
+        "type": "tuple"
       }
     ],
     "stateMutability": "view",

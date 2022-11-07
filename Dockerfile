@@ -8,22 +8,22 @@ FROM $AWS_ECR_URL/$REPO_NAME:node-18.9.0
 RUN apt-get update && apt-get install -y git curl jq nano net-tools
 RUN apt install -y python3.9
 
-WORKDIR /holo-cli
+WORKDIR /holograph-cli
 
-COPY package.json /holo-cli
-COPY yarn.lock /holo-cli
-COPY . /holo-cli
+COPY package.json /holograph-cli
+COPY yarn.lock /holograph-cli
+COPY . /holograph-cli
 
 RUN yarn install --prefer-offline --silent --frozen-lockfile --non-interactive
 
 RUN yarn build
 
-RUN npm install -location=global ../holo-cli
+RUN npm install -location=global ../holograph-cli
 
 ENV CONFIG_FILE=a-super-config-file.json
 ENV PASSWORD=a-super-secret-password
-ENV HOLO_CLI_CMD=TeRmInAtOr
-ENV HOLO_INDEXER_HOST=ThE_FuTuRe
+ENV HOLOGRAPH_CLI_CMD=TeRmInAtOr
+ENV HOLOGRAPH_INDEXER_HOST=ThE_FuTuRe
 
 ENV ENABLE_DEBUG=defaul-value
 ENV ENABLE_SYNC=defaul-value
@@ -35,8 +35,8 @@ HEALTHCHECK none
 
 EXPOSE 6000
 
-RUN chmod 755 /holo-cli/entrypoint.sh
+RUN chmod 755 /holograph-cli/entrypoint.sh
 # notice: The ENTRYPOINT specifies a command that will always be executed when the container starts.
-ENTRYPOINT ["/holo-cli/entrypoint.sh"]
+ENTRYPOINT ["/holograph-cli/entrypoint.sh"]
 # notice: The CMD specifies arguments that will be fed to the ENTRYPOINT
 # https://docs.docker.com/engine/reference/builder/#understand-how-cmd-and-entrypoint-interact
