@@ -1,7 +1,6 @@
 import {BigNumberish} from '@ethersproject/bignumber'
 import {AddressZero} from '@ethersproject/constants'
 import {Contract} from '@ethersproject/contracts'
-import {JsonRpcProvider, StaticJsonRpcProvider, Web3Provider} from '@ethersproject/providers'
 import {BytesLike, ethers} from 'ethers'
 
 import {GasFee} from '../types/interfaces'

@@ -112,7 +112,7 @@ class CoreChainService {
   }
 
   waitForTransaction = async (txHash: string): Promise<TransactionReceipt> => {
-    return await this.provider.waitForTransaction(txHash)
+    return this.provider.waitForTransaction(txHash)
   }
 }
 
