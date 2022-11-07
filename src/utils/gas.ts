@@ -111,6 +111,7 @@ export function updateGasPricing(
     gasPricing.nextBlockFee = adjustBaseBlockFee(network, calculateNextBlockFee(block))
     gasPricing.maxFeePerGas = gasPricing.nextBlockFee!
     if (gasPricing.nextPriorityFee === null) {
+      gasPricing.nextPriorityFee = BigNumber.from('0')
       gasPricing.gasPrice = gasPricing.nextBlockFee
     } else {
       gasPricing.maxFeePerGas = gasPricing.nextBlockFee!.add(gasPricing.nextPriorityFee!)
