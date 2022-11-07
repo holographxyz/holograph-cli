@@ -2,7 +2,7 @@ import {Contract} from '@ethersproject/contracts'
 import {BigNumber} from '@ethersproject/bignumber'
 import {Wallet} from '@ethersproject/wallet'
 import {JsonRpcProvider, WebSocketProvider} from '@ethersproject/providers'
-import {TransactionResponse} from '@ethersproject/abstract-provider'
+import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
 import {getEnvironment} from '@holographxyz/environment'
 
 import {FAUCET_ADDRESSES, HOLOGRAPH_ADDRESSES, LZ_RELAYER_ADDRESSES, getABIs} from '../utils/contracts'
@@ -109,6 +109,10 @@ class CoreChainService {
       transactionHash: txHash,
       network: this.network,
     })
+  }
+
+  waitForTransaction = async (txHash: string): Promise<TransactionReceipt> => {
+    return await this.provider.waitForTransaction(txHash)
   }
 }
 

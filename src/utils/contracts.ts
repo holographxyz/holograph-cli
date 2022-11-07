@@ -46,3 +46,14 @@ export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
   avalancheTestnet: '0x93f54D755A063cE7bB9e6Ac47Eccc8e33411d706',
   fantom: '0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7',
 } as const
+
+export const waitForTransactionComplete = async (innerFunc: () => Promise<void>): Promise<void> => {
+  try {
+    await innerFunc()
+  } catch (error: any) {
+    console.error('Getting error from waiting transaction', error)
+    if (error?.data?.message !== 'missing block number') {
+      throw error
+    }
+  }
+}

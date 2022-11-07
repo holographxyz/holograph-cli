@@ -8,20 +8,14 @@ import {GasFee} from '../types/interfaces'
 import {waitForTransactionComplete} from '../utils/contracts'
 import {sleep} from '../utils/utils'
 import CoreChainService from './core-chain-service'
-// import {NetworkMonitor} from '../utils/network-monitor'
+import {NetworkMonitor} from '../utils/network-monitor'
 
 class NFTChainService extends CoreChainService {
   cxipNFT: Contract
 
-  constructor(
-    provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider,
-    wallet: ethers.Wallet,
-    chainId: number,
-    address: string,
-    contract?: Contract,
-  ) {
-    super(provider, wallet, chainId)
-    this.cxipNFT = contract ? contract : this.getCxipNFT(address)
+  constructor(network: string, networkMonitor: NetworkMonitor, contract: Contract) {
+    super(network, networkMonitor)
+    this.cxipNFT = contract
   }
 
   isExists = async (tokenId: number | string): Promise<boolean> => {
