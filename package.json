@@ -33,7 +33,7 @@
     "copyABI": "cp -R ./src/abi ./dist/abi",
     "setEnv": "(ls .env >> /dev/null 2>&1 && . .env ; npx replace-in-files-cli --regex=\"process.env.HOLOGRAPH_ENVIRONMENT = '[^']+'\" --replacement=\"process.env.HOLOGRAPH_ENVIRONMENT = '$HOLOGRAPH_ENVIRONMENT'\" ./bin/dev ./bin/run) || echo '.env does not exist'",
     "build": "shx rm -rf dist && tsc -b && yarn run copyABI && yarn run setEnv",
-    "lint": "eslint . --ext .ts --config .eslintrc",
+    "lint:check": "eslint . --ext .ts --config .eslintrc",
     "lint:fix": "eslint . --ext .ts --config .eslintrc --fix",
     "postpack": "shx rm -f oclif.manifest.json",
     "posttest": "yarn lint",
