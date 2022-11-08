@@ -1,16 +1,18 @@
 import * as inquirer from 'inquirer'
 
-import {CliUx, Command, Flags} from '@oclif/core'
+import {CliUx, Flags} from '@oclif/core'
 import {BigNumber} from 'ethers'
 import {TransactionResponse, TransactionReceipt} from '@ethersproject/abstract-provider'
 import {TransactionDescription} from '@ethersproject/abi'
+import {networks, supportedNetworks, supportedShortNetworks} from '@holographxyz/networks'
+
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {sha3} from '../../utils/utils'
 import {checkOptionFlag, checkTransactionHashFlag} from '../../utils/validation'
-import {networks, supportedNetworks, supportedShortNetworks} from '@holographxyz/networks'
+import {OperatorJobAwareCommand} from '../../utils/operator-job'
 
-export default class Recover extends Command {
+export default class Recover extends OperatorJobAwareCommand {
   static description = 'Attempt to re-run/recover a particular Operator Job'
   static examples = ['$ <%= config.bin %> <%= command.id %> --network="ethereumTestnetGoerli" --tx="0x..."']
   static flags = {
@@ -22,8 +24,6 @@ export default class Recover extends Command {
       description: 'The hash of transaction that we want to attempt to execute',
     }),
   }
-
-  networkMonitor!: NetworkMonitor
 
   /**
    * Command Entry Point
