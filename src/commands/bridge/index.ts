@@ -1,4 +1,5 @@
 import {Command} from '@oclif/core'
+
 import {ensureConfigFileIsValid} from '../../utils/config'
 
 export default class Bridge extends Command {

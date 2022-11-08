@@ -1,8 +1,11 @@
-import {Command, Flags} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
-import {ethers} from 'ethers'
+
+import {Command, Flags} from '@oclif/core'
+import {Wallet} from '@ethersproject/wallet'
+import {supportedShortNetworks, networks} from '@holographxyz/networks'
+
 import {
   checkFileExists,
   ensureConfigFileIsValid,
@@ -11,7 +14,6 @@ import {
   validateBeta3Schema,
 } from '../../utils/config'
 import {isStringAValidURL, randomASCII} from '../../utils/utils'
-import {supportedShortNetworks, networks} from '@holographxyz/networks'
 import AesEncryption from '../../utils/aes-encryption'
 
 export default class Config extends Command {
@@ -116,11 +118,11 @@ export default class Config extends Command {
           message: 'Which networks do you want to operate?',
           choices: generateSupportedNetworksOptions(),
           validate: async (input: any) => {
-            if (input.length >= 2) {
+            if (input.length > 0) {
               return true
             }
 
-            return 'Please select at least 2 networks to operate on. Use the arrow keys and space-bar to select.'
+            return 'Please select at least 1 network. Use the arrow keys and space-bar to select.'
           },
         },
       ])
@@ -140,7 +142,9 @@ export default class Config extends Command {
         const prompt: any = await inquirer.prompt([
           {
             name: 'providerUrl',
-            message: `Enter the provider url for ${networks[network].shortKey}. Leave blank to keep current provider.`,
+            message: `Enter the provider url for ${networks[network].shortKey}. Leave blank to use ${
+              userConfigTemplate.networks[network]?.providerUrl || networks[network].rpc
+            } :`,
             type: 'input',
             validate: async (input: string) => {
               if (isStringAValidURL(input) || input === '') {
@@ -185,7 +189,7 @@ export default class Config extends Command {
             type: 'password',
             validate: async (input: string) => {
               try {
-                const w = new ethers.Wallet(input)
+                const w = new Wallet(input)
                 this.debug(w)
                 return true
               } catch (error) {
@@ -196,7 +200,7 @@ export default class Config extends Command {
           },
         ])
         privateKey = prompt.privateKey
-        userWallet = new ethers.Wallet(prompt.privateKey)
+        userWallet = new Wallet(prompt.privateKey)
         iv = randomASCII(12)
       } else {
         iv = currentConfigFile.user.credentials.iv
@@ -212,9 +216,7 @@ export default class Config extends Command {
               encryption = new AesEncryption(input, iv)
               if (keyProtected) {
                 // We need to check that key decoded
-                userWallet = new ethers.Wallet(
-                  encryption.decrypt(currentConfigFile.user.credentials.privateKey) as string,
-                )
+                userWallet = new Wallet(encryption.decrypt(currentConfigFile.user.credentials.privateKey) as string)
               } else {
                 privateKey = encryption.encrypt(privateKey || '')
               }

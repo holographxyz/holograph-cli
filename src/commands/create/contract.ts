@@ -1,8 +1,11 @@
-import {CliUx, Command} from '@oclif/core'
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
-import {BytesLike} from 'ethers'
+
+import {CliUx, Command} from '@oclif/core'
+import {BytesLike} from '@ethersproject/bytes'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
+import {networks} from '@holographxyz/networks'
+
 import {BytecodeType, bytecodes} from '../../utils/bytecodes'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {web3, zeroAddress, generateInitCode, remove0x, sha3} from '../../utils/utils'
@@ -30,7 +33,6 @@ import {
   checkTokenIdFlag,
   checkTransactionHashFlag,
 } from '../../utils/validation'
-import {networks} from '@holographxyz/networks'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
   const codeFile: string = await checkStringFlag(undefined, prompt)
@@ -45,7 +47,7 @@ export default class Contract extends Command {
   static hidden = false
   static description = 'Deploy a Holographable contract directly to a chain'
   static examples = [
-    '$ <%= config.bin %> <%= command.id %> --deploymentType="deployedTx" --tx="0xdb8b393dd18a71b386c8de75b87310c0c8ded0c57cf6b4c5bab52873d54d1e8a" --txNetwork="ethereumTestnetGoerli"',
+    '$ <%= config.bin %> <%= command.id %> --deploymentType="deployedTx" --tx="0xdb8b393dd18a71b386c8de75b87310c0c8ded0c57cf6b4c5bab52873d54d1e8a" --txNetwork="goerli"',
   ]
 
   static flags = {

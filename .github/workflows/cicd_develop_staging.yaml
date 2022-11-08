@@ -11,8 +11,8 @@ env:
   #
   DEV_IMAGE_TAG: dev-${{ github.sha }}
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.44
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.40
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.47
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.41
   #######################################
   CLUSTER_NAME: staging
   #

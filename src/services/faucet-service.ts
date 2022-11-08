@@ -1,11 +1,10 @@
 import {Contract} from '@ethersproject/contracts'
-import {StaticJsonRpcProvider, JsonRpcProvider, Web3Provider, TransactionReceipt} from '@ethersproject/providers'
+import {TransactionReceipt} from '@ethersproject/providers'
+import {BigNumber} from '@ethersproject/bignumber'
 
-import {toShort18, toShort18Str, waitForTransactionComplete} from '../utils/contracts'
-import {getSecondsLeft} from '../utils/utils'
-
+import {getSecondsLeft, toShort18, toShort18Str} from '../utils/utils'
 import CoreChainService from './core-chain-service'
-import {BigNumberish, ethers} from 'ethers'
+import {NetworkMonitor} from '../utils/network-monitor'
 
 export interface FaucetFee {
   fee: string
@@ -21,20 +20,21 @@ export interface FaucetInfo {
 class FaucetService extends CoreChainService {
   faucet: Contract
 
-  constructor(
-    provider: JsonRpcProvider | StaticJsonRpcProvider | Web3Provider,
-    wallet: ethers.Wallet,
-    chainId: number,
-    contract?: Contract,
-  ) {
-    super(provider, wallet, chainId)
+  constructor(network: string, networkMonitor: NetworkMonitor, contract?: Contract) {
+    super(network, networkMonitor)
     this.faucet = contract ? contract : this.getFaucet()
   }
 
-  estimateGasForRequestTokens = async (): Promise<BigNumberish> => {
-    const gasPrice = await this.getChainGasPrice()
-    const gasLimit = await this.faucet.estimateGas.requestTokens()
-    return gasPrice.mul(gasLimit)
+  estimateGasForRequestTokens = async (): Promise<BigNumber> => {
+    const gasPrice: BigNumber = this.getChainGasPrice()
+    const gasLimit = await this.networkMonitor.getGasLimit({
+      contract: this.faucet,
+      methodName: 'requestTokens',
+      args: [],
+      network: this.network,
+      gasPrice,
+    })
+    return gasPrice.mul(gasLimit as BigNumber)
   }
 
   getFaucetCooldown = async (address: string): Promise<number> => {
@@ -62,10 +62,14 @@ class FaucetService extends CoreChainService {
     return {amount, cooldown, isAllowedToWithdraw}
   }
 
-  requestTokens = async (): Promise<TransactionReceipt> => {
-    const tx = await this.faucet.requestTokens()
-    await waitForTransactionComplete(tx.wait)
-    return this.waitForTransaction(tx.hash)
+  requestTokens = async (): Promise<TransactionReceipt | null> => {
+    return this.networkMonitor.executeTransaction({
+      network: this.network,
+      contract: this.faucet,
+      methodName: 'requestTokens',
+      args: [],
+      waitForReceipt: true,
+    })
   }
 }
 
