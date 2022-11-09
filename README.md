@@ -507,7 +507,7 @@ _See code: [dist/commands/status/nft.ts](https://github.com/holographxyz/hologra
 
 ## Developing
 
-If you want to build the package directly, or if you want to help [contribute](#contributing) you can do the following:
+If you want to build the package directly, or if you want to help [contribute](#contributing), please do the following:
 
 ### Install Dependencies
 
