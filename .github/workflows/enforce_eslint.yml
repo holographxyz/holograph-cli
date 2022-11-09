@@ -1,6 +1,12 @@
 name: 'Enforce Linter'
 
-on: pull_request
+on:
+  pull_request:
+    branches:
+      - main
+      - testnet
+      - develop
+      - experimental
 
 jobs:
   run-linter:
