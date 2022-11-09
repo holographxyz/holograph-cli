@@ -14,7 +14,7 @@ import path from 'node:path'
 
 export default class Contract extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
-  static description = 'Check the status of a contract across all networks defined in the config'
+  static description = 'Check the status of a contract across all networks defined in the config.'
   static examples = ['$ <%= config.bin %> <%= command.id %> --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78"']
 
   static flags = {

@@ -20,7 +20,7 @@ import {HealthCheck} from '../../base-commands/healthcheck'
  * Description: The primary command for operating jobs on the Holograph network.
  */
 export default class Operator extends OperatorJobAwareCommand {
-  static description = 'Listen for EVM events for jobs and process them'
+  static description = 'Listen for jobs and execute jobs.'
   static examples = ['$ <%= config.bin %> <%= command.id %> --networks goerli fuji mumbai --mode=auto --sync']
 
   static flags = {

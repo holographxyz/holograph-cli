@@ -3,7 +3,7 @@ import {Command} from '@oclif/core'
 import {ensureConfigFileIsValid} from '../../utils/config'
 
 export default class Bridge extends Command {
-  static description = 'Make a bridge request'
+  static description = 'Make a bridge request.'
   static examples = [
     {
       description: 'Learn how to bridge a Holographable contract',

@@ -25,7 +25,7 @@ import {GasPricing} from '../../utils/gas'
 import {generateInitCode} from '../../utils/utils'
 
 export default class BridgeNFT extends Command {
-  static description = 'Beam a Holographable NFT from source chain to destination chain.'
+  static description = 'Bridge a Holographable NFT from one network to another.'
   static examples = [
     '$ <%= config.bin %> <%= command.id %> --sourceNetwork="goerli" --destinationNetwork="fuji" --collectionAddress="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId="0x01"',
   ]

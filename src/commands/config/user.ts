@@ -1,7 +1,7 @@
 import ConfigView from './view'
 
 export default class ConfigUser extends ConfigView {
-  static description = 'View the current user information'
+  static description = 'View the current user information.'
   static examples = [
     '$ <%= config.bin %> <%= command.id %>',
     '$ <%= config.bin %> <%= command.id %> --output json',

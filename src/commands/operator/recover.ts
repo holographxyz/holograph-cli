@@ -14,7 +14,7 @@ import {OperatorJobAwareCommand} from '../../utils/operator-job'
 import {HealthCheck} from '../../base-commands/healthcheck'
 
 export default class Recover extends OperatorJobAwareCommand {
-  static description = 'Attempt to re-run/recover a particular Operator Job'
+  static description = 'Attempt to re-run/recover a specific job.'
   static examples = ['$ <%= config.bin %> <%= command.id %> --network="ethereumTestnetGoerli" --tx="0x..."']
   static flags = {
     network: Flags.string({
