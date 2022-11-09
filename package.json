@@ -123,6 +123,9 @@
     "bin": "holograph",
     "dirname": "holograph",
     "commands": "./dist/commands",
+    "hooks": {
+      "healthCheck": "./dist/hooks/healthCheck"
+    },
     "plugins": [
       "@oclif/plugin-help"
     ],

@@ -8,6 +8,7 @@ import {BigNumber} from '@ethersproject/bignumber'
 import {TransactionDescription} from '@ethersproject/abi'
 import {Block, TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
 import {hexZeroPad} from '@ethersproject/bytes'
+
 import {Environment} from '@holographxyz/environment'
 import {getNetworkByHolographId, networks} from '@holographxyz/networks'
 
@@ -32,8 +33,8 @@ import {
   decodeBridgeOutErc20Args,
   decodeBridgeOutErc721Args,
 } from '../../utils/bridge'
-import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
 import {BlockJob, FilterType, NetworkMonitor, networksFlag, warpFlag} from '../../utils/network-monitor'
+import {HealthCheck} from '../../base-commands/healthcheck'
 
 type DBJob = {
   attempts: number
@@ -58,7 +59,7 @@ type PatchOptions = {
   messages: string[]
 }
 
-export default class Indexer extends Command {
+export default class Indexer extends HealthCheck {
   static hidden = true
   static LAST_BLOCKS_FILE_NAME = 'indexer-blocks.json'
   static description = 'Listen for EVM events and update database network status'
@@ -73,8 +74,8 @@ export default class Indexer extends Command {
       default: 'http://localhost:9001',
     }),
     ...networksFlag,
-    ...healthcheckFlag,
     ...warpFlag,
+    ...HealthCheck.flags,
   }
 
   // API Params
@@ -108,6 +109,7 @@ export default class Indexer extends Command {
     const {flags} = await this.parse(Indexer)
     this.BASE_URL = flags.host
     const enableHealthCheckServer = flags.healthCheck
+    const healthCheckPort = flags.healthCheckPort
 
     this.log('Loading user configurations...')
     const {environment, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
@@ -156,9 +158,10 @@ export default class Indexer extends Command {
     await this.networkMonitor.run(!(flags.warp > 0), undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
-    // Start server
+    // Start health check server on port 6000 or healthCheckPort
+    // Can be used to monitor that the operator is online and running
     if (enableHealthCheckServer) {
-      startHealthcheckServer(this.networkMonitor)
+      await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, healthCheckPort})
     }
 
     this.processDBJobs()

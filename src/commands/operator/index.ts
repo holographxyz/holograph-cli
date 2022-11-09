@@ -10,10 +10,10 @@ import {getNetworkByHolographId, networks} from '@holographxyz/networks'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {GasPricing} from '../../utils/gas'
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
-import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
 import {web3, functionSignature, sha3, zeroAddress} from '../../utils/utils'
 import {checkOptionFlag} from '../../utils/validation'
 import {OperatorJobAwareCommand, OperatorJob} from '../../utils/operator-job'
+import {HealthCheck} from '../../base-commands/healthcheck'
 
 /**
  * Operator
@@ -24,7 +24,6 @@ export default class Operator extends OperatorJobAwareCommand {
   static examples = ['$ <%= config.bin %> <%= command.id %> --networks goerli fuji mumbai --mode=auto --sync']
 
   static flags = {
-    ...networksFlag,
     mode: Flags.string({
       description: 'The mode in which to run the operator',
       options: Object.values(OperatorMode),
@@ -34,10 +33,11 @@ export default class Operator extends OperatorJobAwareCommand {
       description: 'Start from last saved block position instead of latest block position',
       default: false,
     }),
-    ...healthcheckFlag,
     unsafePassword: Flags.string({
       description: 'Enter the plain text password for the wallet in the holograph cli config',
     }),
+    ...networksFlag,
+    ...HealthCheck.flags,
   }
 
   /**
@@ -55,6 +55,7 @@ export default class Operator extends OperatorJobAwareCommand {
 
     // Check the flags
     const enableHealthCheckServer = flags.healthCheck
+    const healthCheckPort = flags.healthCheckPort
     const syncFlag = flags.sync
     const unsafePassword = flags.unsafePassword
 
@@ -151,7 +152,7 @@ export default class Operator extends OperatorJobAwareCommand {
     // Start health check server on port 6000
     // Can be used to monitor that the operator is online and running
     if (enableHealthCheckServer) {
-      startHealthcheckServer(this.networkMonitor)
+      await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, healthCheckPort})
     }
   }
 

@@ -5,6 +5,7 @@ import {formatUnits} from '@ethersproject/units'
 
 import {NetworkMonitor} from './network-monitor'
 import {zeroAddress} from './utils'
+import {HealthCheck} from '../base-commands/healthcheck'
 
 export interface OperatorJobDetails {
   pod: number
@@ -33,7 +34,7 @@ export interface OperatorStatus {
   podSize: {[key: string]: number}
 }
 
-export abstract class OperatorJobAwareCommand extends Command {
+export abstract class OperatorJobAwareCommand extends HealthCheck {
   networkMonitor!: NetworkMonitor
   operatorStatus: OperatorStatus = {
     address: '',
