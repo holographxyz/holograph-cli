@@ -2,7 +2,7 @@ import {IncomingMessage, ServerResponse} from 'node:http'
 import http from 'node:http'
 
 import {NetworkMonitor} from '../utils/network-monitor'
-import {Config, Hook} from '@oclif/core'
+import {Config} from '@oclif/core'
 
 type startHealthCheckServerProps = {
   networkMonitor: NetworkMonitor
@@ -10,8 +10,8 @@ type startHealthCheckServerProps = {
   config: Config
 }
 
-class HealthCheck {
-  private static _instance?: HealthCheck
+class HealthCheckServer {
+  private static _instance?: HealthCheckServer
   private readonly server: http.Server
 
   private constructor(options: startHealthCheckServerProps) {
@@ -37,15 +37,15 @@ class HealthCheck {
     })
   }
 
-  static getInstance(options: startHealthCheckServerProps): HealthCheck {
-    if (!HealthCheck._instance) HealthCheck._instance = new HealthCheck(options)
+  static getInstance(options: startHealthCheckServerProps): HealthCheckServer {
+    if (!HealthCheckServer._instance) HealthCheckServer._instance = new HealthCheckServer(options)
 
-    return HealthCheck._instance
+    return HealthCheckServer._instance
   }
 }
 
 const healthCheckHook = async function (options: startHealthCheckServerProps) {
-  HealthCheck.getInstance(options)
+  HealthCheckServer.getInstance(options)
 }
 
 export default healthCheckHook
