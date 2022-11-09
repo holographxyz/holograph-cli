@@ -22,7 +22,7 @@ import Operator from '.'
  * Description: Bond and operator into a pod.
  */
 export default class Bond extends Command {
-  static description = 'Bond an operator into a pod'
+  static description = 'Bond in to a pod.'
   static examples = ['$ <%= config.bin %> <%= command.id %> --network <string> --pod <number> --amount <number>']
   static flags = {
     ...networkFlag,

@@ -1,7 +1,7 @@
 import ConfigView from './view'
 
 export default class ConfigNetworks extends ConfigView {
-  static description = 'View the current network config'
+  static description = 'View the current network config.'
   static examples = [
     '$ <%= config.bin %> <%= command.id %>',
     '$ <%= config.bin %> <%= command.id %> --output json',

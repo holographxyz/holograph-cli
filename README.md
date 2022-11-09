@@ -13,19 +13,17 @@
 
 # Overview
 
-This is a CLI is primarily for operators of the holograph network. The CLI includes tools to move NFTs between networks and view their status.
+The Holograph CLI enables you to interact with Holograph Protocol, in addition to participating as an operator in the Operator Network.
 
 <!-- toc -->
-
-- [Overview](#overview)
-- [Usage](#usage)
-- [Commands](#commands)
+* [Overview](#overview)
+* [Usage](#usage)
+* [Commands](#commands)
 <!-- tocstop -->
 
 # Usage
 
 <!-- usage -->
-
 ```sh-session
 $ npm install -g @holographxyz/cli
 $ holograph COMMAND
@@ -37,31 +35,29 @@ USAGE
   $ holograph COMMAND
 ...
 ```
-
 <!-- usagestop -->
 
 # Commands
 
 <!-- commands -->
-
-- [`holograph bridge`](#holograph-bridge)
-- [`holograph bridge:contract`](#holograph-bridgecontract)
-- [`holograph bridge:nft`](#holograph-bridgenft)
-- [`holograph config`](#holograph-config)
-- [`holograph config:networks`](#holograph-confignetworks)
-- [`holograph config:user`](#holograph-configuser)
-- [`holograph config:view`](#holograph-configview)
-- [`holograph create`](#holograph-create)
-- [`holograph create:contract`](#holograph-createcontract)
-- [`holograph create:nft`](#holograph-createnft)
-- [`holograph faucet`](#holograph-faucet)
-- [`holograph help [COMMAND]`](#holograph-help-command)
-- [`holograph operator`](#holograph-operator)
-- [`holograph operator:bond`](#holograph-operatorbond)
-- [`holograph operator:recover`](#holograph-operatorrecover)
-- [`holograph status`](#holograph-status)
-- [`holograph status:contract`](#holograph-statuscontract)
-- [`holograph status:nft`](#holograph-statusnft)
+* [`holograph bridge`](#holograph-bridge)
+* [`holograph bridge:contract`](#holograph-bridgecontract)
+* [`holograph bridge:nft`](#holograph-bridgenft)
+* [`holograph config`](#holograph-config)
+* [`holograph config:networks`](#holograph-confignetworks)
+* [`holograph config:user`](#holograph-configuser)
+* [`holograph config:view`](#holograph-configview)
+* [`holograph create`](#holograph-create)
+* [`holograph create:contract`](#holograph-createcontract)
+* [`holograph create:nft`](#holograph-createnft)
+* [`holograph faucet`](#holograph-faucet)
+* [`holograph help [COMMAND]`](#holograph-help-command)
+* [`holograph operator`](#holograph-operator)
+* [`holograph operator:bond`](#holograph-operatorbond)
+* [`holograph operator:recover`](#holograph-operatorrecover)
+* [`holograph status`](#holograph-status)
+* [`holograph status:contract`](#holograph-statuscontract)
+* [`holograph status:nft`](#holograph-statusnft)
 
 ## `holograph bridge`
 
@@ -107,7 +103,7 @@ DESCRIPTION
   file. Use the "contract:create" command to create or extract one.
 
 EXAMPLES
-  $ holograph bridge:contract --sourceNetwork="ethereumTestnetGoerli" --destinationNetwork="avalancheTestnet" --deploymentConfig="./MyContract.json"
+  $ holograph bridge:contract --sourceNetwork="goerli" --destinationNetwork="fuji" --deploymentConfig="./MyContract.json"
 ```
 
 _See code: [dist/commands/bridge/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/bridge/contract.ts)_
@@ -133,7 +129,7 @@ DESCRIPTION
   Beam a Holographable NFT from source chain to destination chain.
 
 EXAMPLES
-  $ holograph bridge:nft --sourceNetwork="ethereumTestnetGoerli" --destinationNetwork="avalancheTestnet" --collectionAddress="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId="0x01"
+  $ holograph bridge:nft --sourceNetwork="goerli" --destinationNetwork="fuji" --collectionAddress="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId="0x01"
 ```
 
 _See code: [dist/commands/bridge/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/bridge/nft.ts)_
@@ -294,7 +290,7 @@ DESCRIPTION
   Deploy a Holographable contract directly to a chain
 
 EXAMPLES
-  $ holograph create:contract --deploymentType="deployedTx" --tx="0xdb8b393dd18a71b386c8de75b87310c0c8ded0c57cf6b4c5bab52873d54d1e8a" --txNetwork="ethereumTestnetGoerli"
+  $ holograph create:contract --deploymentType="deployedTx" --tx="0xdb8b393dd18a71b386c8de75b87310c0c8ded0c57cf6b4c5bab52873d54d1e8a" --txNetwork="goerli"
 ```
 
 _See code: [dist/commands/create/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/create/contract.ts)_
@@ -322,7 +318,7 @@ DESCRIPTION
   Mint a Holographable NFT
 
 EXAMPLES
-  $ holograph create:nft --network="ethereumTestnetGoerli" --collectionAddress="0xf90c33d5ef88a9d84d4d61f62c913ba192091fe7" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"
+  $ holograph create:nft --network="goerli" --collectionAddress="0xf90c33d5ef88a9d84d4d61f62c913ba192091fe7" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"
 ```
 
 _See code: [dist/commands/create/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/create/nft.ts)_
@@ -343,7 +339,7 @@ DESCRIPTION
   Request tokens from a faucet
 
 EXAMPLES
-  $ holograph faucet --network=<network>
+  $ holograph faucet --network="goerli"
 ```
 
 _See code: [dist/commands/faucet/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/faucet/index.ts)_
@@ -366,7 +362,7 @@ DESCRIPTION
   Display help for holograph.
 ```
 
-_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.1.14/src/commands/help.ts)_
+_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.1.18/src/commands/help.ts)_
 
 ## `holograph operator`
 
@@ -374,8 +370,8 @@ Listen for EVM events for jobs and process them
 
 ```
 USAGE
-  $ holograph operator [-m listen|manual|auto] [--healthCheck] [--sync] [--unsafePassword <value>] [--networks
-    goerli|mumbai|fuji|rinkeby]
+  $ holograph operator [--networks goerli|mumbai|fuji|rinkeby] [-m listen|manual|auto] [--sync]
+    [--healthCheck] [--unsafePassword <value>]
 
 FLAGS
   -m, --mode=<option>       The mode in which to run the operator
@@ -390,7 +386,7 @@ DESCRIPTION
   Listen for EVM events for jobs and process them
 
 EXAMPLES
-  $ holograph operator --networks ethereumTestnetGoerli polygonTestnet avalancheTestnet --mode=auto
+  $ holograph operator --networks goerli fuji mumbai --mode=auto --sync
 ```
 
 _See code: [dist/commands/operator/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/operator/index.ts)_
@@ -401,13 +397,13 @@ Bond an operator into a pod
 
 ```
 USAGE
-  $ holograph operator:bond [-n goerli|mumbai|fuji|rinkeby] [--pod <value>] [--amount <value>]
+  $ holograph operator:bond [--network goerli|mumbai|fuji|rinkeby] [--pod <value>] [--amount <value>]
 
 FLAGS
-  -n, --network=<option>  The network to bond to
-                          <options: goerli|mumbai|fuji|rinkeby>
-  --amount=<value>        Amount of tokens to deposit
-  --pod=<value>           Pod number to join
+  --amount=<value>    Amount of tokens to deposit
+  --network=<option>  Name of network to use
+                      <options: goerli|mumbai|fuji|rinkeby>
+  --pod=<value>       Pod number to join
 
 DESCRIPTION
   Bond an operator into a pod
@@ -507,7 +503,6 @@ EXAMPLES
 ```
 
 _See code: [dist/commands/status/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/status/nft.ts)_
-
 <!-- commandsstop -->
 
 ## Developing
@@ -560,7 +555,7 @@ Please read the linked post if you're planning to make frequent PRs into this re
 
 The `mainnet` branch contains the code for our latest "stable" mainnet releases.
 Updates from `mainnet` always come from the `testnet` branch.
-We only ever update the `mainnet` branch when we intend to deploy code that has been tested on testnets to all mainnet networks supported by the Holograph protocol.
+We only ever update the `mainnet` branch when we intend to deploy code that has been tested on testnets to all mainnet networks supported by Holograph protocol.
 Our update process takes the form of a PR merging the `testnet` branch into the `mainnet` branch.
 
 ### The `testnet` branch

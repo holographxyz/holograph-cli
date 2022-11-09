@@ -3,7 +3,7 @@ import {Command} from '@oclif/core'
 import {ensureConfigFileIsValid} from '../../utils/config'
 
 export default class Create extends Command {
-  static description = 'Create holographable contracts and assets'
+  static description = 'Create Holographable contracts and NFTs.'
   static examples = [
     '$ <%= config.bin %> create',
     '$ <%= config.bin %> create:contract',
