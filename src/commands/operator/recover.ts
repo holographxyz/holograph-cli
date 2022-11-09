@@ -11,6 +11,7 @@ import {NetworkMonitor} from '../../utils/network-monitor'
 import {sha3} from '../../utils/utils'
 import {checkOptionFlag, checkTransactionHashFlag} from '../../utils/validation'
 import {OperatorJobAwareCommand} from '../../utils/operator-job'
+import {HealthCheck} from '../../base-commands/healthcheck'
 
 export default class Recover extends OperatorJobAwareCommand {
   static description = 'Attempt to re-run/recover a particular Operator Job'
@@ -23,12 +24,14 @@ export default class Recover extends OperatorJobAwareCommand {
     tx: Flags.string({
       description: 'The hash of transaction that we want to attempt to execute',
     }),
+    ...HealthCheck.flags,
   }
 
   /**
    * Command Entry Point
    */
   async run(): Promise<void> {
+    await super.run()
     this.log('Loading user configurations...')
     const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
       this.config.configDir,

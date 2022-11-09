@@ -24,7 +24,6 @@ export default class Operator extends OperatorJobAwareCommand {
   static examples = ['$ <%= config.bin %> <%= command.id %> --networks goerli fuji mumbai --mode=auto --sync']
 
   static flags = {
-    ...networksFlag,
     mode: Flags.string({
       description: 'The mode in which to run the operator',
       options: Object.values(OperatorMode),
@@ -34,10 +33,11 @@ export default class Operator extends OperatorJobAwareCommand {
       description: 'Start from last saved block position instead of latest block position',
       default: false,
     }),
-    ...HealthCheck.flags,
     unsafePassword: Flags.string({
       description: 'Enter the plain text password for the wallet in the holograph cli config',
     }),
+    ...networksFlag,
+    ...HealthCheck.flags,
   }
 
   /**
