@@ -598,7 +598,7 @@ export class NetworkMonitor {
     }
 
     // Catch all exit events
-    for (const eventType of [`EEXIT`, `SIGINT`, `SIGUSR1`, `SIGUSR2`, `uncaughtException`, `SIGTERM`]) {
+    for (const eventType of [`EEXIT`, `SIGINT`, `SIGUSR1`, `SIGUSR2`, `uncaughtException`, `SIGTERM`, `SIGKILL`]) {
       process.on(eventType, this.exitRouter.bind(this, {exit: true}))
     }
 
@@ -818,7 +818,7 @@ export class NetworkMonitor {
     /**
      * Before exit, save the block heights to the local db
      */
-    if ((exitCode && exitCode === 0) || exitCode === 'SIGINT') {
+    if ((exitCode && exitCode === 0) || exitCode === 'SIGINT' || exitCode === 'SIGTERM' || exitCode === 'SIGKILL') {
       if (this.exited === false) {
         this.log('')
         if (this.needToSubscribe) {
