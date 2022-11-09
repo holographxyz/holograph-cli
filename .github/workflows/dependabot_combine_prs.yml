@@ -1,7 +1,9 @@
-name: 'Combine PRs'
+name: 'Dependabot combined PR'
 
-# Controls when the action will run - in this case triggered manually
+# Controls when the action will run - in this case it run on every midnight on the 1st day of every month  AND  it also can be triggered manually
 on:
+  schedule:
+    - cron: '0 0 1 * *'
   workflow_dispatch:
     inputs:
       branchPrefix:
@@ -54,6 +56,7 @@ jobs:
                   const stateQuery = `query($owner: String!, $repo: String!, $pull_number: Int!) {
                     repository(owner: $owner, name: $repo) {
                       pullRequest(number:$pull_number) {
+                        mergeable
                         commits(last: 1) {
                           nodes {
                             commit {
@@ -71,14 +74,28 @@ jobs:
                     repo: context.repo.repo,
                     pull_number: pull['number']
                   };
+
                   const result = await github.graphql(stateQuery, vars);
                   const [{ commit }] = result.repository.pullRequest.commits.nodes;
-                  const state = commit.statusCheckRollup.state
-                  console.log('Validating status: ' + state);
-                  if(state != 'SUCCESS') {
-                    console.log('Discarding ' + branch + ' with status ' + state);
-                    statusOK = false;
+
+                  if(commit.statusCheckRollup != null){
+                    const state = commit.statusCheckRollup.state
+                    console.log('Validating status: ' + state);
+
+                    if(state != 'SUCCESS') {
+                      console.log('Discarding ' + branch + ' with status ' + state);
+                      statusOK = false;
+                    }
+                  } else {
+                    const mergeable = result.repository.pullRequest.mergeable
+                    console.log('PR does not have statusCheckRollup, but mergeability is: ' + mergeable);
+
+                    if(mergeable !== 'MERGEABLE'){
+                      console.log('Discarding ' + branch + ' with mergeability: ' + mergeable);
+                      statusOK = false;
+                    }
                   }
+
                 }
                 console.log('Checking labels: ' + branch);
                 const labels = pull['labels'];
