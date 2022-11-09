@@ -1,6 +1,12 @@
 name: 'Enforce prettier'
 
 on:
+  push:
+    branches:
+      - main
+      - testnet
+      - develop
+      - experimental
   pull_request:
     branches:
       - main
