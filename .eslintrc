@@ -9,7 +9,6 @@
     "unicorn/prefer-module": "off",
 
     // TODO: This can be removed if we decide to add jsdoc to all functions
-    "valid-jsdoc": "off",
-    "@typescript-eslint/no-explicit-any": "error"
+    "valid-jsdoc": "off"
   }
 }
