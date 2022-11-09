@@ -20,10 +20,10 @@ class HealthCheck {
     const host = '0.0.0.0'
     const port = healthCheckPort ? healthCheckPort : 6000
 
-    this.server = http.createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    this.server = http.createServer((req: IncomingMessage, res: ServerResponse) => {
       res.setHeader('Content-Type', 'application/json')
       if (req.url === '/healthcheck') {
-        const providerStatus = await networkMonitor.getProviderStatus()
+        const providerStatus = networkMonitor.getProviderStatus()
         res.writeHead(200)
         res.end(JSON.stringify({status: 'alive', providerStatus}))
       } else {
