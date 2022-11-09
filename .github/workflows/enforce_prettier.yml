@@ -3,16 +3,20 @@ name: 'Enforce prettier'
 on: pull_request
 
 jobs:
-  run-tests:
+  prettier:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js
-        uses: actions/setup-node@v3
+      - name: Checkout
+        uses: actions/checkout@v2
         with:
-          node-version: '18.4.0'
-      - name: Install dependencies
-        run: yarn install
-      - name: Prettier Check
-        run: yarn prettier:check
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+          # Make sure the value of GITHUB_TOKEN will not be persisted in repo's config
+          persist-credentials: false
+
+      - name: Prettify code
+        uses: creyD/prettier_action@v4.2
+        with:
+          prettier_options: --check src/**/*.+(js|ts)
+          dry: True
