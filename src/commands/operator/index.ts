@@ -51,7 +51,6 @@ export default class Operator extends OperatorJobAwareCommand {
    * Command Entry Point
    */
   async run(): Promise<void> {
-    await super.run()
     const {flags} = await this.parse(Operator)
 
     // Check the flags

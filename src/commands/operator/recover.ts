@@ -31,7 +31,6 @@ export default class Recover extends OperatorJobAwareCommand {
    * Command Entry Point
    */
   async run(): Promise<void> {
-    await super.run()
     this.log('Loading user configurations...')
     const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
       this.config.configDir,
