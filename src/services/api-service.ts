@@ -20,7 +20,7 @@ class ApiService {
 
   async operatorLogin(): Promise<void> {
     if (!process.env.OPERATOR_API_KEY) {
-      throw new Error('OPERATOR_API_KEY env is required')
+      throw new Error("OPERATOR_API_KEY env is required")
     }
 
     const mutation = gql`
