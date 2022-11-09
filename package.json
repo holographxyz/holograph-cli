@@ -40,7 +40,7 @@
     "prepack": "yarn build && oclif manifest && oclif readme && yarn run copyABI && yarn run setEnv",
     "test": "mocha --forbid-only \"test/**/*.test.ts\"",
     "version": "oclif readme && git add README.md",
-    "prettier:check": "prettier --loglevel error --ignore-path .gitignore --list-different .",
+    "prettier:check": "prettier --ignore-unknown --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "prettier:fix": "prettier --loglevel error --ignore-path .gitignore --write ."
   },
   "dependencies": {
