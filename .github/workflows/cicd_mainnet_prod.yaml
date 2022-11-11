@@ -11,7 +11,7 @@ env:
   #
   MAINNET_IMAGE_TAG: mainnet-e6e2431c4b4de8dd09738733c84fc4facc81efd2 #mainnet-${{ github.sha }}
   ########################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.48
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.49
   MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.43
   ########################################
   CLUSTER_NAME: prod0
@@ -154,6 +154,7 @@ jobs:
             \
             --set mainnet_rpc_config_values.private_key=${{ env.indexer_mainnet_private_key }} \
             --set mainnet_rpc_config_values.address=${{ env.indexer_mainnet_address }} \
+            --set dev_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
