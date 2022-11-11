@@ -9,7 +9,7 @@ env:
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli # notice: the same for all 3 cli apps
   #
-  MAINNET_IMAGE_TAG: mainnet-e6e2431c4b4de8dd09738733c84fc4facc81efd2 #mainnet-${{ github.sha }}
+  MAINNET_IMAGE_TAG: testnet-48b8bd3cefd212b327a9acfb1158c990f3a9825f #mainnet-${{ github.sha }}
   ########################################
   MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.49
   MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.43
