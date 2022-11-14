@@ -98,13 +98,6 @@ export default class Unbond extends Command {
     )
 
     if (possibleNetworksToUnbond.length === 0) {
-      this.log(
-        color.yellow(
-          `Your wallet ${this.userWallet.address} is not bonded on the following networks: ${supportedNetworksOptions
-            .map(networkOption => networkOption.name)
-            .join(', ')}`,
-        ),
-      )
       this.exit()
     }
 
