@@ -384,6 +384,7 @@ export class NetworkMonitor {
   currentBlockHeight: {[key: string]: number} = {}
   blockJobs: {[key: string]: BlockJob[]} = {}
   exited = false
+  lastProcessBlockDone: {[key: string]: number} = {}
   lastBlockJobDone: {[key: string]: number} = {}
   blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
   gasPrices: {[key: string]: GasPricing} = {}
@@ -468,6 +469,7 @@ export class NetworkMonitor {
         }
       }
     }
+
     return output
   }
 
@@ -580,6 +582,7 @@ export class NetworkMonitor {
       }
 
       this.lastBlockJobDone[network] = Date.now()
+      this.lastProcessBlockDone[network] = Date.now()
       this.runningProcesses += 1
       if (continuous) {
         this.needToSubscribe = true
@@ -880,6 +883,12 @@ export class NetworkMonitor {
       })
     }
 
+    // apply this logic to catch a potential processBlock failing and being dropped during a provider restart cycle
+    // allow for up to 3 provider restarts to occur before triggering this
+    if (Date.now() - this.lastProcessBlockDone[network] > TIMEOUT_THRESHOLD * 3) {
+      this.blockJobHandler(network)
+    }
+
     Promise.resolve()
   }
 
@@ -915,6 +924,7 @@ export class NetworkMonitor {
     }
 
     this.lastBlockJobDone[network] = Date.now()
+    this.lastProcessBlockDone[network] = Date.now()
     if (this.blockJobs[network].length > 0) {
       const blockJob: BlockJob = this.blockJobs[network][0] as BlockJob
       this.processBlock(blockJob)

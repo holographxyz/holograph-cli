@@ -70,13 +70,15 @@ interface RawData {
 
 const getCorrectValue = (val1: any, val2: any) => (val1 && val1 !== val2 ? val1 : val2)
 const getTxStatus = (tx?: string, currentStatus?: string) => {
-  if (currentStatus != undefined && currentStatus === TransactionStatus.COMPLETED) {
+  if (currentStatus !== undefined && currentStatus === TransactionStatus.COMPLETED) {
     return currentStatus
-  } else if (tx != undefined) {
-    return TransactionStatus.COMPLETED
-  } else {
-    TransactionStatus.PENDING
   }
+
+  if (tx !== undefined) {
+    return TransactionStatus.COMPLETED
+  }
+
+  TransactionStatus.PENDING
 }
 
 export default class Analyze extends Command {

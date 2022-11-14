@@ -2,7 +2,7 @@ import axios from 'axios'
 import dotenv from 'dotenv'
 dotenv.config()
 
-import {CliUx, Command, Flags} from '@oclif/core'
+import {CliUx, Flags} from '@oclif/core'
 import color from '@oclif/color'
 import {BigNumber} from '@ethersproject/bignumber'
 import {TransactionDescription} from '@ethersproject/abi'
