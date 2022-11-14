@@ -1025,10 +1025,10 @@ export class NetworkMonitor {
       canFail: true,
     })
     if (block !== undefined && block !== null && 'transactions' in block) {
-      const recentBlock = true // this.currentBlockHeight[job.network] - job.block < 5
+      const recentBlock = this.currentBlockHeight[job.network] - job.block < 5
       if (this.verbose) {
         this.structuredLog(job.network, `Block retrieved`, job.block)
-
+        /*
         this.structuredLog(job.network, `Calculating block gas`, job.block)
         if (this.gasPrices[job.network].isEip1559) {
           this.structuredLog(
@@ -1040,6 +1040,7 @@ export class NetworkMonitor {
             job.block,
           )
         }
+*/
       }
 
       if (recentBlock) {
@@ -1065,6 +1066,7 @@ export class NetworkMonitor {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
 
+      /*
       if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
         this.structuredLog(
           job.network,
@@ -1078,6 +1080,7 @@ export class NetworkMonitor {
           job.block,
         )
       }
+*/
 
       if (interestingTransactions.length > 0) {
         if (this.verbose) {
