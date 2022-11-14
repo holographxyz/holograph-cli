@@ -5,12 +5,11 @@ import color from '@oclif/color'
 import {BigNumber} from '@ethersproject/bignumber'
 import {TransactionReceipt} from '@ethersproject/providers'
 import {formatUnits} from '@ethersproject/units'
-import {Wallet} from 'ethers'
 const Table = require('cli-table3')
 
 import CoreChainService from '../../services/core-chain-service'
 import OperatorChainService from '../../services/operator-chain-service'
-import {ConfigFile, ensureConfigFileIsValid} from '../../utils/config'
+import {ensureConfigFileIsValid} from '../../utils/config'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {SelectOption} from '../../utils/validation'
 
@@ -30,20 +29,9 @@ export default class Unbond extends Command {
   static examples = ['$ <%= config.bin %> <%= command.id %> --network <string>']
 
   networkMonitor!: NetworkMonitor
-  configFile!: ConfigFile
-  userWallet!: Wallet
 
   async getBondInfoFromNetwork(networkOption: SelectOption): Promise<NetworkBondInfo> {
     const network = networkOption.value
-
-    this.networkMonitor = new NetworkMonitor({
-      parent: this,
-      configFile: this.configFile,
-      networks: [network],
-      debug: this.debug,
-      userWallet: this.userWallet,
-      verbose: false,
-    })
 
     CliUx.ux.action.start(`Loading ${networkOption.name} network RPC provider`)
     await this.networkMonitor.run(true)
@@ -72,8 +60,15 @@ export default class Unbond extends Command {
       undefined,
       true,
     )
-    this.configFile = configFile
-    this.userWallet = userWallet
+
+    this.networkMonitor = new NetworkMonitor({
+      parent: this,
+      configFile: configFile,
+      networks: supportedNetworksOptions.map(networkOption => networkOption.value),
+      debug: this.debug,
+      userWallet: userWallet,
+      verbose: false,
+    })
 
     const networksBondInfo: any[] = []
 
