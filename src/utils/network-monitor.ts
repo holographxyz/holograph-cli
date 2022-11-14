@@ -384,6 +384,7 @@ export class NetworkMonitor {
   currentBlockHeight: {[key: string]: number} = {}
   blockJobs: {[key: string]: BlockJob[]} = {}
   exited = false
+  lastProcessBlockDone: {[key: string]: number} = {}
   lastBlockJobDone: {[key: string]: number} = {}
   blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
   gasPrices: {[key: string]: GasPricing} = {}
@@ -468,6 +469,7 @@ export class NetworkMonitor {
         }
       }
     }
+
     return output
   }
 
@@ -580,6 +582,7 @@ export class NetworkMonitor {
       }
 
       this.lastBlockJobDone[network] = Date.now()
+      this.lastProcessBlockDone[network] = Date.now()
       this.runningProcesses += 1
       if (continuous) {
         this.needToSubscribe = true
@@ -880,6 +883,12 @@ export class NetworkMonitor {
       })
     }
 
+    // apply this logic to catch a potential processBlock failing and being dropped during a provider restart cycle
+    // allow for up to 3 provider restarts to occur before triggering this
+    if (Date.now() - this.lastProcessBlockDone[network] > TIMEOUT_THRESHOLD * 3) {
+      this.blockJobHandler(network)
+    }
+
     Promise.resolve()
   }
 
@@ -915,6 +924,7 @@ export class NetworkMonitor {
     }
 
     this.lastBlockJobDone[network] = Date.now()
+    this.lastProcessBlockDone[network] = Date.now()
     if (this.blockJobs[network].length > 0) {
       const blockJob: BlockJob = this.blockJobs[network][0] as BlockJob
       this.processBlock(blockJob)
@@ -1015,10 +1025,10 @@ export class NetworkMonitor {
       canFail: true,
     })
     if (block !== undefined && block !== null && 'transactions' in block) {
-      const recentBlock = true // this.currentBlockHeight[job.network] - job.block < 5
+      const recentBlock = this.currentBlockHeight[job.network] - job.block < 5
       if (this.verbose) {
         this.structuredLog(job.network, `Block retrieved`, job.block)
-
+        /*
         this.structuredLog(job.network, `Calculating block gas`, job.block)
         if (this.gasPrices[job.network].isEip1559) {
           this.structuredLog(
@@ -1030,6 +1040,7 @@ export class NetworkMonitor {
             job.block,
           )
         }
+*/
       }
 
       if (recentBlock) {
@@ -1055,6 +1066,7 @@ export class NetworkMonitor {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
 
+      /*
       if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
         this.structuredLog(
           job.network,
@@ -1068,6 +1080,7 @@ export class NetworkMonitor {
           job.block,
         )
       }
+*/
 
       if (interestingTransactions.length > 0) {
         if (this.verbose) {

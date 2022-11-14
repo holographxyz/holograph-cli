@@ -26,7 +26,7 @@ export const tokenValidator = /^((0x[\da-f]{1,64})|(\d{1,78}))$/i
 
 export const transactionHashValidator = /^0x[\da-f]{64}$/i
 
-export const portValidator = (port: number) => port >= 3000 && port <= 65535
+export const portValidator = (port: number) => port >= 3000 && port <= 65_535
 
 export const validateBytes = async (input: string): Promise<string> => {
   const output: string = input.trim().toLowerCase()
