@@ -24,9 +24,9 @@ interface NetworkBondInfo {
  * Description: Unbond an operator from pod.
  */
 export default class Unbond extends Command {
-  static description = 'Unbond from pod.'
+  static description = 'Un-bond an operator from a pod'
 
-  static examples = ['$ <%= config.bin %> <%= command.id %> --network <string>']
+  static examples = ['$ <%= config.bin %> <%= command.id %>']
 
   networkMonitor!: NetworkMonitor
 
