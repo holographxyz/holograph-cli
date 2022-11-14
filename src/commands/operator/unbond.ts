@@ -129,6 +129,7 @@ export default class Unbond extends Command {
       }
 
       this.log('Successfully unbonded. Exiting...')
+      this.exit()
     }
   }
 }
