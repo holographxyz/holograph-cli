@@ -468,6 +468,7 @@ export class NetworkMonitor {
         }
       }
     }
+
     return output
   }
 

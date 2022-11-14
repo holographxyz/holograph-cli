@@ -66,8 +66,6 @@ export default class Unbond extends Command {
   }
 
   async run(): Promise<void> {
-    let prompt: any
-
     this.log('Loading user configurations...')
     const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
       this.config.configDir,
@@ -77,14 +75,14 @@ export default class Unbond extends Command {
     this.configFile = configFile
     this.userWallet = userWallet
 
-    let networksBondInfo: any[] = []
+    const networksBondInfo: any[] = []
 
     // instantiate
-    var table = new Table({
+    const table = new Table({
       head: ['Network', 'Status', 'Bonded Amount'],
     })
 
-    for (let networkOption of supportedNetworksOptions) {
+    for (const networkOption of supportedNetworksOptions) {
       const info = await this.getBondInfoFromNetwork(networkOption)
       networksBondInfo.push(info)
 
@@ -110,7 +108,7 @@ export default class Unbond extends Command {
       this.exit()
     }
 
-    prompt = await inquirer.prompt([
+    const prompt: any = await inquirer.prompt([
       {
         type: 'checkbox',
 
@@ -132,7 +130,7 @@ export default class Unbond extends Command {
       providedNetworks.includes(networkInfo.networkOption.value),
     )
 
-    for (let networkToUnbond of selectedNetworksToUnbond) {
+    for (const networkToUnbond of selectedNetworksToUnbond) {
       this.log(`Unbonding from network: ${networkToUnbond.networkOption.name}`)
 
       const unbondReceipt: TransactionReceipt | null = await networkToUnbond.operatorChainService.unbondUtilityToken()
