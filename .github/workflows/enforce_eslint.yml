@@ -25,10 +25,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18.9.0'
-      - uses: webfactory/ssh-agent@v0.6.0
-        with:
-          ssh-private-key: ${{ secrets.HOLOGRAPH_GITHUB_PERSONAL_ACCESS_TOKEN }}
+          node-version: '18.4.0'
       - name: Install dependencies
         run: yarn install
       - name: Lint Check
