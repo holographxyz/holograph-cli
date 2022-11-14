@@ -11,7 +11,7 @@ env:
   #
   MAINNET_IMAGE_TAG: testnet-48b8bd3cefd212b327a9acfb1158c990f3a9825f #mainnet-${{ github.sha }}
   ########################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.50
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.51
   MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.43
   ########################################
   CLUSTER_NAME: prod0
@@ -23,21 +23,21 @@ env:
   #TODO - create new gh secret for MAINNET. should be different from staging????
   MAINNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO <-------
   #
-  MAINNET_HOLO_INDEXER_HOST: 'http://.......-holo-api.mainnet.svc.cluster.local:443' # Notice <-- OLYMPUS release from API
+  MAINNET_HOLO_INDEXER_HOST: 'http://pegasus-holo-api.testnet.svc.cluster.local:443' # Notice <-- PEGASUS release from API
   #
   # TODO -> replace them with the MAINNET specific password <---------------------------
   MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }} #TODO <-------
   MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
-  INDEXER_HOLO_CONFIG_FILE_DATA: mainnet-config-file
-  OPERATOR_HOLO_CONFIG_FILE_DATA: mainnet-config-file
+  INDEXER_HOLO_CONFIG_FILE_DATA: testnet-config-file # NOTICE <- switch to mainnet
+  OPERATOR_HOLO_CONFIG_FILE_DATA: testnet-config-file # NOTICE <- switch to mainnet
   #
-  ABI_ENVIRONMENT: mainnet
+  ABI_ENVIRONMENT: testnet # NOTICE <- switch to mainnet
   #
   MAINNET_DOMAIN: 'holograph.xyz'
   #
-  MAINNET_COMMON_NAMESPACE: mainnet # NOTICE <---
+  MAINNET_COMMON_NAMESPACE: mainnet
   #
   # INDEXER MAINNET rpc endpoints
   indexer_mainnet_fuji_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
@@ -59,6 +59,7 @@ on:
   push:
     branches:
       - 'feat/deploy-to-mainnet'
+  workflow_dispatch:
 # notice: the trigger
 #on:
 #  pull_request:
@@ -148,13 +149,13 @@ jobs:
             --set MODE=$MODE \
             --set NETWORK="${NETWORK}" \
             \
-            --set mainnet_rpc_config_values.avalancheMainnet_rpc_url=${{ env.indexer_mainnet_avalancheMainnet_rpc_url }} \
-            --set mainnet_rpc_config_values.polygonMainnet_rpc_url=${{ env.indexer_mainnet_polygonMainnet_rpc_url }} \
-            --set mainnet_rpc_config_values.ethereumMainnetGoerli_rpc_url=${{ env.indexer_mainnet_ethereumMainnetGoerli_rpc_url }} \
+            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_mainnet_avalancheMainnet_rpc_url }} \
+            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_mainnet_polygonMainnet_rpc_url }} \
+            --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.indexer_mainnet_ethereumMainnetGoerli_rpc_url }} \
             \
-            --set mainnet_rpc_config_values.private_key=${{ env.indexer_mainnet_private_key }} \
-            --set mainnet_rpc_config_values.address=${{ env.indexer_mainnet_address }} \
-            --set mainnet_rpc_config_values.version="beta3" \
+            --set testnet_rpc_config_values.private_key=${{ env.indexer_mainnet_private_key }} \
+            --set testnet_rpc_config_values.address=${{ env.indexer_mainnet_address }} \
+            --set testnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
