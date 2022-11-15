@@ -1,6 +1,6 @@
 import {Flags, Interfaces} from '@oclif/core'
 import {portValidator} from '../utils/validation'
-import {BaseCommand} from './baseCommand'
+import {BaseCommand} from './base-command'
 
 export abstract class HealthCheck extends BaseCommand {
   static flags = {

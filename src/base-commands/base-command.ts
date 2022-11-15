@@ -12,7 +12,6 @@ export abstract class BaseCommand extends Command {
   async init(): Promise<void> {
     await super.init()
     const {flags} = await this.parse(this.constructor as Interfaces.Command.Class)
-
     process.env.HOLOGRAPH_ENVIRONMENT = flags.env
   }
 }

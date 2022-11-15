@@ -12,8 +12,7 @@
     "valid-jsdoc": "off",
     "no-await-in-loop": "off",
     "unicorn/filename-case": "off",
-    "no-negated-condition": "off",
-    "no-else-return": "off",
+    // "no-else-return": "off",
     "no-eq-null": "off",
     "eqeqeq": ["error", "smart"]
   }
