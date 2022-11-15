@@ -1,7 +1,8 @@
 import {Command, Flags, Interfaces} from '@oclif/core'
 import {portValidator} from '../utils/validation'
+import {BaseCommand} from './BaseCommand'
 
-export abstract class HealthCheck extends Command {
+export abstract class HealthCheck extends BaseCommand {
   static flags = {
     healthCheck: Flags.boolean({
       description: 'Launch server on http://localhost:6000 to make sure command is still running',
@@ -11,6 +12,7 @@ export abstract class HealthCheck extends Command {
       description: 'This flag allows you to choose what port the health check sever is running on.',
       dependsOn: ['healthCheck'],
     }),
+    ...BaseCommand.flags,
   }
 
   async init(): Promise<void> {

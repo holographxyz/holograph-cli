@@ -70,7 +70,6 @@
     "@types/ws": "^8.5.3",
     "abortcontroller-polyfill": "^1.7.5",
     "axios": "^0.27.2",
-    "cli-table3": "^0.6.3",
     "cross-fetch": "^3.1.5",
     "crypto": "^1.0.1",
     "dotenv": "^16.0.3",
@@ -126,6 +125,7 @@
     "dirname": "holograph",
     "commands": "./dist/commands",
     "hooks": {
+      "init": "./dist/hooks/init/environmentSelector",
       "healthCheck": "./dist/hooks/healthCheck"
     },
     "plugins": [
