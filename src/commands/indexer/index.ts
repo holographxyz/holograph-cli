@@ -161,7 +161,7 @@ export default class Indexer extends HealthCheck {
     // Start health check server on port 6000 or healthCheckPort
     // Can be used to monitor that the operator is online and running
     if (enableHealthCheckServer) {
-      await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, healthCheckPort})
+      await this.config.runHook('health-check', {networkMonitor: this.networkMonitor, healthCheckPort})
     }
 
     this.processDBJobs()
