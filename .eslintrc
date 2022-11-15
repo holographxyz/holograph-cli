@@ -9,6 +9,12 @@
     "unicorn/prefer-module": "off",
 
     // TODO: This can be removed if we decide to add jsdoc to all functions
-    "valid-jsdoc": "off"
+    "valid-jsdoc": "off",
+    "no-await-in-loop": "off",
+    "unicorn/filename-case": "off",
+    "no-negated-condition": "off",
+    "no-else-return": "off",
+    "no-eq-null": "off",
+    "eqeqeq": ["error", "smart"]
   }
 }
