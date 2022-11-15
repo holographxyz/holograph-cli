@@ -1,4 +1,4 @@
-import {Command, Flags, Interfaces} from '@oclif/core'
+import {Flags, Interfaces} from '@oclif/core'
 import {portValidator} from '../utils/validation'
 import {BaseCommand} from './BaseCommand'
 
