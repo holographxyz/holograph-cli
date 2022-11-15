@@ -152,7 +152,7 @@ export default class Operator extends OperatorJobAwareCommand {
     // Start health check server on port 6000
     // Can be used to monitor that the operator is online and running
     if (enableHealthCheckServer) {
-      await this.config.runHook('health-check', {networkMonitor: this.networkMonitor, healthCheckPort})
+      await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, healthCheckPort})
     }
   }
 
