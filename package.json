@@ -127,6 +127,7 @@
       "init": "./dist/hooks/init/environment-selector",
       "healthCheck": "./dist/hooks/health-check"
     },
+    "helpClass": "./dist/custom-help",
     "plugins": [
       "@oclif/plugin-help"
     ],
