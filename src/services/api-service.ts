@@ -7,6 +7,9 @@ import {
   UpdateCrossChainTransactionStatusInput,
   CreateOrUpdateCrossChainTransactionResponse,
   UpdateCrossChainTransactionStatusInputWithoutData,
+  Nft,
+  NftResponse,
+  UpdateNftInput,
 } from '../types/api'
 
 class ApiService {
@@ -37,14 +40,54 @@ class ApiService {
     })
 
     const JWT = data.authOperator.accessToken
-
     if (typeof JWT === 'undefined') {
       throw new TypeError('Failed to authorize as an operator')
     }
 
     this.client.setHeader('authorization', `Bearer ${JWT}`)
-
     this.logger.log(`JWT = ${JWT}`)
+  }
+
+  async queryNftByTx(tx: string): Promise<Nft> {
+    const query = gql`
+      query($tx: String!) {
+        nftByTx(tx: $tx) {
+          id
+          tx
+        }
+      }
+    `
+    const data = await this.client.request<NftResponse>(query, {tx})
+    this.logger.debug('found: ', data.nft)
+    return data.nft
+  }
+
+  async updateNft(updateNftInput: UpdateNftInput): Promise<Nft> {
+    const mutation = gql`
+      mutation($updateNftInput: UpdateNftInput!) {
+        updateNft(updateNftInput: $updateNftInput) {
+          id
+          tx
+          name
+          description
+          status
+          collection {
+            name
+          }
+          image {
+            aws {
+              https
+            }
+          }
+        }
+      }
+    `
+    const data = await this.client.request<NftResponse>(mutation, {
+      updateNftInput: updateNftInput,
+    })
+
+    this.logger.debug('updated to:', data.nft)
+    return data.nft
   }
 
   async getCrossChainTransaction(jobHash: string): Promise<CrossChainTransaction> {
@@ -71,9 +114,7 @@ class ApiService {
       }
   `
     const data = await this.client.request<CrossChainTransactionResponse>(query, {jobHash})
-
     this.logger.debug('found: ', data.crossChainTransaction)
-
     return data.crossChainTransaction
   }
 
@@ -109,7 +150,6 @@ class ApiService {
     })
 
     this.logger.debug('updated to:', data.createOrUpdateCrossChainTransaction)
-
     return data.createOrUpdateCrossChainTransaction
   }
 }

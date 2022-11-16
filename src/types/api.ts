@@ -56,3 +56,48 @@ export interface CrossChainTransaction {
   sourceAddress?: string
   data?: string
 }
+
+export enum NftStatus {
+  'DRAFT' = 'DRAFT',
+  'SIGNED' = 'SIGNED',
+  'MINTING' = 'MINTING',
+  'MINTED' = 'MINTED',
+  'FAILED' = 'FAILED',
+  'BRIDGING' = 'BRIDGING',
+}
+
+export enum TokenType {
+  'ERC721' = 'ERC721',
+  'ERC1155' = 'ERC1155',
+}
+
+export type Nft = {
+  id: string
+  createdAt: Date
+  updatedAt: Date
+  userId: string
+  collectionId: string
+  name: string
+  description: string | null
+  creator: string | null
+  type: TokenType
+  ipfsImageCid: string | null
+  ipfsMetadataCid: string | null
+  awsUrl: string | null
+  arweaveUrl: string | null
+  fileExtension: string | null
+  chainId: number | null
+  status: NftStatus
+  isActive: boolean
+  contractAddress: string | null
+  owner: string | null
+  tx: string | null
+  isDeployed: boolean | null
+  tokenId: string | null
+}
+
+export interface NftResponse {
+  nft: Nft
+}
+
+export type UpdateNftInput = Omit<Nft, 'id'>
