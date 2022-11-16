@@ -35,6 +35,8 @@ import {
 } from '../../utils/bridge'
 import {BlockJob, FilterType, NetworkMonitor, networksFlag, warpFlag} from '../../utils/network-monitor'
 import {HealthCheck} from '../../base-commands/healthcheck'
+import ApiService from '../../services/api-service'
+import {Logger} from '../../types/api'
 
 type DBJob = {
   attempts: number
@@ -82,6 +84,7 @@ export default class Indexer extends HealthCheck {
   BASE_URL!: string
   JWT!: string
   DELAY = 20_000
+  apiService!: ApiService | undefined
   apiColor = color.keyword('orange')
   errorColor = color.keyword('red')
   networkMonitor!: NetworkMonitor
@@ -137,8 +140,24 @@ export default class Indexer extends HealthCheck {
         this.error('Failed to authorize as an operator')
       }
 
+      // Create API Service for GraphQL requests
+      try {
+        const logger: Logger = {
+          log: this.log,
+          warn: this.warn,
+          debug: this.debug,
+          error: this.error,
+          jsonEnabled: () => false,
+        }
+        this.apiService = new ApiService(this.BASE_URL, logger)
+        await this.apiService.operatorLogin()
+      } catch (error: any) {
+        this.error(error)
+      }
+
       this.debug(`process.env.OPERATOR_API_KEY = ${process.env.OPERATOR_API_KEY}`)
       this.debug(`this.JWT = ${this.JWT}`)
+      this.log(this.apiColor(`API: Successfully authenticated as an operator`))
     }
 
     this.networkMonitor = new NetworkMonitor({

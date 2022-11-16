@@ -58,7 +58,7 @@ class ApiService {
       }
     `
     const data = await this.client.request<NftResponse>(query, {tx})
-    this.logger.debug('found: ', data.nft)
+    this.logger.debug('Found NFT: ', data.nft)
     return data.nft
   }
 
@@ -86,7 +86,7 @@ class ApiService {
       updateNftInput: updateNftInput,
     })
 
-    this.logger.debug('updated to:', data.nft)
+    this.logger.debug('Updated NFT', data.nft)
     return data.nft
   }
 
@@ -114,7 +114,7 @@ class ApiService {
       }
   `
     const data = await this.client.request<CrossChainTransactionResponse>(query, {jobHash})
-    this.logger.debug('found: ', data.crossChainTransaction)
+    this.logger.debug('Found cross chain transaction:', data.crossChainTransaction)
     return data.crossChainTransaction
   }
 
@@ -149,7 +149,7 @@ class ApiService {
       createOrUpdateCrossChainTransactionInput: updateCrossChainTransactionStatusInput,
     })
 
-    this.logger.debug('updated to:', data.createOrUpdateCrossChainTransaction)
+    this.logger.debug('Updated cross chain transaction:', data.createOrUpdateCrossChainTransaction)
     return data.createOrUpdateCrossChainTransaction
   }
 }
