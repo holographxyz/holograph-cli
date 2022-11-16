@@ -10,7 +10,6 @@ export abstract class HealthCheck extends Command {
     healthCheckPort: Flags.integer({
       description: 'This flag allows you to choose what port the health check sever is running on.',
       dependsOn: ['healthCheck'],
-      default: 6000,
     }),
   }
 
@@ -19,7 +18,7 @@ export abstract class HealthCheck extends Command {
     const {flags} = await this.parse(this.constructor as Interfaces.Command.Class)
 
     const enableHealthCheckServer = flags.healthCheck
-    const healthCheckPort = flags.healthCheckPort
+    const healthCheckPort = flags.healthCheckPort || 6000
 
     if (enableHealthCheckServer && !portValidator(healthCheckPort)) {
       this.error('The port should be in the [3000, 65535] range.')
