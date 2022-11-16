@@ -52,7 +52,7 @@ type DBJobMap = {
 }
 
 type PatchOptions = {
-  responseData: any
+  responseData: unknown
   network: string
   query: string
   data: any
@@ -273,7 +273,6 @@ export default class Indexer extends HealthCheck {
   }
 
   async processTransactions(job: BlockJob, transactions: TransactionResponse[]): Promise<void> {
-    /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
         const tags: (string | number)[] = []
@@ -875,7 +874,7 @@ export default class Indexer extends HealthCheck {
   }
 
   async updateContractCallback(
-    responseData: any,
+    responseData: unknown,
     transaction: TransactionResponse,
     network: string,
     contractAddress: string,
@@ -1035,7 +1034,7 @@ export default class Indexer extends HealthCheck {
   }
 
   async updateERC721Callback(
-    responseData: any,
+    responseData: unknown,
     transaction: TransactionResponse,
     network: string,
     contractAddress: string,
@@ -1174,7 +1173,7 @@ export default class Indexer extends HealthCheck {
   }
 
   async updateCrossChainTransactionCallback(
-    responseData: any,
+    responseData: unknown,
     transaction: TransactionResponse,
     network: string,
     fromNetwork: string,

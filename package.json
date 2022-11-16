@@ -125,7 +125,7 @@
     "commands": "./dist/commands",
     "hooks": {
       "init": "./dist/hooks/init/environment-selector",
-      "healthCheck": "./dist/hooks/healthCheck"
+      "healthCheck": "./dist/hooks/health-check"
     },
     "plugins": [
       "@oclif/plugin-help"

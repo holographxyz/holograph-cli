@@ -44,7 +44,7 @@ class HealthCheckServer {
   }
 }
 
-const healthCheckHook = async function (options: startHealthCheckServerProps) {
+const healthCheckHook = async function (options: startHealthCheckServerProps): Promise<void> {
   HealthCheckServer.getInstance(options)
 }
 
