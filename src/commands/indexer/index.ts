@@ -1065,11 +1065,11 @@ export default class Indexer extends HealthCheck {
     tokenId: string,
     tags: (string | number)[],
   ): Promise<void> {
-    const data = JSON.stringify({
-      chainId: transaction.chainId,
-      status: 'MINTED',
-      tx: transaction.hash,
-    })
+    // const data = JSON.stringify({
+    //   chainId: transaction.chainId,
+    //   status: 'MINTED',
+    //   tx: transaction.hash,
+    // })
     this.networkMonitor.structuredLog(
       network,
       `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`,
@@ -1081,7 +1081,7 @@ export default class Indexer extends HealthCheck {
       tags,
     )
 
-    // TODO: Replace patch request with graphql mutation
+    // // TODO: Replace patch request with graphql mutation
     // await this.sendPatchRequest(
     //   {
     //     responseData,
