@@ -6,14 +6,22 @@ export default class CustomHelp extends Help {
       return super.formatCommand(command)
     }
 
-    command.examples = command.examples?.map(example => example + ' --env mainnet|testnet|develop|experimental')
+    command.examples = command.examples?.map(example => {
+      if (typeof example === 'string') {
+        example += ' --env mainnet|testnet|develop|experimental'
+      } else if (typeof example.command === 'string') {
+        example.command += ' --env mainnet|testnet|develop|experimental'
+      }
+
+      return example
+    })
 
     command.flags = {
       ...command.flags,
       env: {
         name: 'env',
         type: 'option',
-        description: 'Space separated list of networks to use',
+        description: 'Holograph environment to use',
         options: ['mainnet', 'testnet', 'develop', 'experimental'],
         default: 'testnet',
       },
