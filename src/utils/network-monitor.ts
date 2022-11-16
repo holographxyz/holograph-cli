@@ -1044,7 +1044,7 @@ export class NetworkMonitor {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
 
-      const priorityFees: BigNumber = this.gasPrices[job.network].nextPriorityFee!
+      // const priorityFees: BigNumber = this.gasPrices[job.network].nextPriorityFee!
       if (this.verbose && block.transactions.length === 0) {
         this.structuredLog(job.network, `Zero transactions in block`, job.block)
       }
