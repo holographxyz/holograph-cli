@@ -72,9 +72,7 @@ export enum TokenType {
 }
 
 export type Nft = {
-  id: string
-  createdAt: Date
-  updatedAt: Date
+  id?: string
   userId: string
   collectionId: string
   name: string

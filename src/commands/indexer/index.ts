@@ -36,7 +36,7 @@ import {
 import {BlockJob, FilterType, NetworkMonitor, networksFlag, warpFlag} from '../../utils/network-monitor'
 import {HealthCheck} from '../../base-commands/healthcheck'
 import ApiService from '../../services/api-service'
-import {Logger} from '../../types/api'
+import {Logger, NftStatus, UpdateNftInput} from '../../types/api'
 
 type DBJob = {
   attempts: number
@@ -141,6 +141,7 @@ export default class Indexer extends HealthCheck {
       }
 
       // Create API Service for GraphQL requests
+      // TODO: Migrate all requests to use ApiService and GraphQL
       try {
         const logger: Logger = {
           log: this.log,
@@ -153,6 +154,10 @@ export default class Indexer extends HealthCheck {
         await this.apiService.operatorLogin()
       } catch (error: any) {
         this.error(error)
+      }
+
+      if (this.apiService === undefined) {
+        throw new Error('API service is not defined')
       }
 
       this.debug(`process.env.OPERATOR_API_KEY = ${process.env.OPERATOR_API_KEY}`)
@@ -170,8 +175,9 @@ export default class Indexer extends HealthCheck {
       warp: flags.warp,
     })
 
+    // TODO: It doesn't seems like this sync is working
     // Indexer always synchronizes missed blocks
-    this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
+    // this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
 
     CliUx.ux.action.start(`Starting indexer`)
     await this.networkMonitor.run(!(flags.warp > 0), undefined, this.filterBuilder)
@@ -214,7 +220,6 @@ export default class Indexer extends HealthCheck {
         networkDependant: false,
       },
     ]
-    return Promise.resolve()
   }
 
   async processDBJob(timestamp: number, job: DBJob): Promise<void> {
@@ -1076,22 +1081,22 @@ export default class Indexer extends HealthCheck {
       tags,
     )
 
-    await this.sendPatchRequest(
-      {
-        responseData,
-        network,
-        query: `${this.BASE_URL}/v1/nfts/${responseData.id}`,
-        data,
-        messages: [
-          `PATCH collection ${contractAddress} tokeId ${tokenId}`,
-          `Successfully updated NFT collection ${contractAddress} and tokeId ${tokenId}`,
-          `Failed to update the database for collection ${contractAddress} and tokeId ${tokenId}`,
-          `collection ${contractAddress} and tokeId ${tokenId}`,
-        ],
-      },
-      tags,
-    )
-    Promise.resolve()
+    // TODO: Replace patch request with graphql mutation
+    // await this.sendPatchRequest(
+    //   {
+    //     responseData,
+    //     network,
+    //     query: `${this.BASE_URL}/v1/nfts/${responseData.id}`,
+    //     data,
+    //     messages: [
+    //       `PATCH collection ${contractAddress} tokeId ${tokenId}`,
+    //       `Successfully updated NFT collection ${contractAddress} and tokeId ${tokenId}`,
+    //       `Failed to update the database for collection ${contractAddress} and tokeId ${tokenId}`,
+    //       `collection ${contractAddress} and tokeId ${tokenId}`,
+    //     ],
+    //   },
+    //   tags,
+    // )
   }
 
   async updateBridgedERC721(
@@ -1172,23 +1177,49 @@ export default class Indexer extends HealthCheck {
       }`,
       tags,
     )
-    this.networkMonitor.structuredLog(network, `Sending minted nft job to DBJobManager ${contractAddress}`, tags)
+    console.log('$$$$$$$$$$$$')
+    const nft = await this.apiService!.queryNftByTx(transaction.hash)
+    console.log(nft)
+    console.log('$$$$$$$$$$$$')
 
-    const job: DBJob = {
-      attempts: 3,
-      network,
-      timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
-      query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
-      message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
-      callback: this.updateERC721Callback,
-      arguments: [transaction, network, contractAddress, tokenId, tags],
-      tags,
-    }
-    if (!(job.timestamp in this.dbJobMap)) {
-      this.dbJobMap[job.timestamp] = []
+    if (nft !== undefined) {
+      this.networkMonitor.structuredLog(
+        network,
+        `API: Requesting to update NFT with transaction hash ${transaction.hash}`,
+        tags,
+      )
+
+      // Include the on chain data in the update input
+      const nftInput: UpdateNftInput = nft
+      nftInput.status = NftStatus.MINTED
+      nftInput.chainId = transaction.chainId
+      nftInput.tx = transaction.hash
+      const response = await this.apiService!.updateNft(nftInput)
+      console.log(response)
+      this.networkMonitor.structuredLog(
+        network,
+        `Successfully updated NFT with transaction hash ${transaction.hash}`,
+        tags,
+      )
     }
 
-    this.dbJobMap[job.timestamp].push(job)
+    // TODO: Reenable once all db jobs are migrated to graphql
+    // this.networkMonitor.structuredLog(network, `Sending minted nft job to DBJobManager ${contractAddress}`, tags)
+    // const job: DBJob = {
+    //   attempts: 3,
+    //   network,
+    //   timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
+    //   query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
+    //   message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
+    //   callback: this.updateERC721Callback,
+    //   arguments: [transaction, network, contractAddress, tokenId, tags],
+    //   tags,
+    // }
+    // if (!(job.timestamp in this.dbJobMap)) {
+    //   this.dbJobMap[job.timestamp] = []
+    // }
+
+    // this.dbJobMap[job.timestamp].push(job)
   }
 
   async updateCrossChainTransactionCallback(
@@ -1386,10 +1417,7 @@ export default class Indexer extends HealthCheck {
           network,
           `Unknown cross chain type event ${crossChainTxType}. Will not process`,
         )
-        return
     }
-
-    return Promise.resolve()
   }
 
   async updateCrossChainTransaction(

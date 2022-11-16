@@ -45,7 +45,7 @@ class ApiService {
     }
 
     this.client.setHeader('authorization', `Bearer ${JWT}`)
-    this.logger.log(`JWT = ${JWT}`)
+    this.logger.log(`Operator JWT: ${JWT}`)
   }
 
   async queryNftByTx(tx: string): Promise<Nft> {
