@@ -31,14 +31,13 @@
   ],
   "scripts": {
     "copyABI": "cp -R ./src/abi ./dist/abi",
-    "setEnv": "(ls .env >> /dev/null 2>&1 && . .env ; npx replace-in-files-cli --regex=\"process.env.HOLOGRAPH_ENVIRONMENT = '[^']+'\" --replacement=\"process.env.HOLOGRAPH_ENVIRONMENT = '$HOLOGRAPH_ENVIRONMENT'\" ./bin/dev ./bin/run) || echo '.env does not exist'",
-    "build": "shx rm -rf dist && tsc -b && yarn run copyABI && yarn run setEnv",
+    "build": "shx rm -rf dist && tsc -b && yarn run copyABI",
     "lint": "eslint . --ext .ts --config .eslintrc",
     "lint:fix": "eslint . --ext .ts --config .eslintrc --fix",
     "prepare": "husky install",
     "postpack": "shx rm -f oclif.manifest.json",
     "posttest": "yarn lint",
-    "prepack": "yarn build && oclif manifest && oclif readme && yarn run copyABI && yarn run setEnv",
+    "prepack": "yarn build && oclif manifest && oclif readme && yarn run copyABI",
     "test": "mocha --forbid-only \"test/**/*.test.ts\"",
     "version": "oclif readme && git add README.md",
     "prettier:check": "prettier --ignore-unknown --check \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -125,8 +124,8 @@
     "dirname": "holograph",
     "commands": "./dist/commands",
     "hooks": {
-      "init": "./dist/hooks/init/environmentSelector",
-      "healthCheck": "./dist/hooks/healthCheck"
+      "init": "./dist/hooks/init/environment-selector",
+      "healthCheck": "./dist/hooks/health-check"
     },
     "plugins": [
       "@oclif/plugin-help"

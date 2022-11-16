@@ -139,7 +139,6 @@ export default class Operator extends OperatorJobAwareCommand {
           this.operatorJobs[jobHash].jobDetails.startTimestamp,
         )
         // if job is still valid, it will stay in object, otherwise it will be removed
-        // eslint-disable-next-line no-await-in-loop
         await this.checkJobStatus(jobHash)
       }
     }
@@ -196,7 +195,6 @@ export default class Operator extends OperatorJobAwareCommand {
 
     // for first time init, get operator status details
     for (const network of this.networkMonitor.networks) {
-      /* eslint-disable no-await-in-loop */
       this.operatorStatus.active[network] = false
       this.operatorStatus.currentPod[network] = 0
       this.operatorStatus.podIndex[network] = 0
@@ -209,7 +207,6 @@ export default class Operator extends OperatorJobAwareCommand {
    * Process the transactions in each block job
    */
   async processTransactions(job: BlockJob, transactions: TransactionResponse[]): Promise<void> {
-    /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
         const tags: (string | number)[] = []

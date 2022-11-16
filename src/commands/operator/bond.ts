@@ -147,7 +147,6 @@ export default class Bond extends Command {
     // Get the bond amounts for each pod
     const allPodBondAmounts: PodBondAmounts[] = []
     for (let i = 1; i <= totalPods; i++) {
-      // eslint-disable-next-line no-await-in-loop
       allPodBondAmounts.push(await operator.getPodBondAmounts(i))
     }
 

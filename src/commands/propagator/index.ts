@@ -152,7 +152,6 @@ export default class Propagator extends HealthCheck {
           checkNetworks.splice(checkNetworks.indexOf(network), 1)
         }
 
-        // eslint-disable-next-line no-await-in-loop
         let tx = await this.networkMonitor.getTransaction({
           transactionHash: data.tx,
           network,
@@ -164,7 +163,6 @@ export default class Propagator extends HealthCheck {
           if (tx === null) {
             this.networkMonitor.structuredLog(network, `Transaction ${data.tx} is on wrong network`)
             network = checkNetwork
-            // eslint-disable-next-line no-await-in-loop
             tx = await this.networkMonitor.getTransaction({
               transactionHash: data.tx,
               network,
@@ -180,7 +178,6 @@ export default class Propagator extends HealthCheck {
         if (tx === null) {
           this.networkMonitor.structuredLog(network, `Could not find ${data.tx} on any network`)
         } else {
-          // eslint-disable-next-line no-await-in-loop
           await this.handleContractDeployedEvents(tx, network)
         }
       }
@@ -207,7 +204,6 @@ export default class Propagator extends HealthCheck {
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
-    /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
         this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${transaction.blockNumber}`)

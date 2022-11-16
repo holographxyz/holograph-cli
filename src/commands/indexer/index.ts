@@ -273,7 +273,6 @@ export default class Indexer extends HealthCheck {
   }
 
   async processTransactions(job: BlockJob, transactions: TransactionResponse[]): Promise<void> {
-    /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
         const tags: (string | number)[] = []

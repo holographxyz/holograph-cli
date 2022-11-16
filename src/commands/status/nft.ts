@@ -160,20 +160,17 @@ export default class Nft extends Command {
       const provider = this.providers[network]
       const registry = this.registryContract.connect(provider)
       const erc721 = this.erc721Contract.connect(provider)
-      // eslint-disable-next-line no-await-in-loop
       const code = await provider.getCode(this.contractAddress, 'latest')
       const token = ethers.BigNumber.from(this.tokenId)
       if (code === '0x') {
         // do nothing
       } else {
         d.deployed = true
-        // eslint-disable-next-line no-await-in-loop
+
         d.valid = await registry.isHolographedContract(this.contractAddress)
         if (d.valid) {
-          // eslint-disable-next-line no-await-in-loop
           d.exists = await erc721.exists(token.toHexString())
           if (d.exists) {
-            // eslint-disable-next-line no-await-in-loop
             d.owner = await erc721.ownerOf(token.toHexString())
             d.link = (networks[network].explorer || '') + '/token/' + this.contractAddress + '?a=' + token.toString()
           }
