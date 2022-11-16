@@ -52,7 +52,7 @@ type DBJobMap = {
 }
 
 type PatchOptions = {
-  responseData: unknown
+  responseData: any
   network: string
   query: string
   data: any
@@ -874,7 +874,7 @@ export default class Indexer extends HealthCheck {
   }
 
   async updateContractCallback(
-    responseData: unknown,
+    responseData: any,
     transaction: TransactionResponse,
     network: string,
     contractAddress: string,
@@ -1034,7 +1034,7 @@ export default class Indexer extends HealthCheck {
   }
 
   async updateERC721Callback(
-    responseData: unknown,
+    responseData: any,
     transaction: TransactionResponse,
     network: string,
     contractAddress: string,
@@ -1173,7 +1173,7 @@ export default class Indexer extends HealthCheck {
   }
 
   async updateCrossChainTransactionCallback(
-    responseData: unknown,
+    responseData: any,
     transaction: TransactionResponse,
     network: string,
     fromNetwork: string,
