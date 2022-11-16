@@ -70,15 +70,16 @@ interface RawData {
 
 const getCorrectValue = (val1: any, val2: any) => (val1 && val1 !== val2 ? val1 : val2)
 const getTxStatus = (tx?: string, currentStatus?: string) => {
-  if (currentStatus !== undefined && currentStatus === TransactionStatus.COMPLETED) {
-    return currentStatus
+  let status: TransactionStatus
+  if (typeof currentStatus === 'string' && currentStatus === TransactionStatus.COMPLETED) {
+    status = currentStatus
+  } else if (typeof tx === 'string') {
+    status = TransactionStatus.COMPLETED
+  } else {
+    status = TransactionStatus.PENDING
   }
 
-  if (tx !== undefined) {
-    return TransactionStatus.COMPLETED
-  }
-
-  TransactionStatus.PENDING
+  return status
 }
 
 export default class Analyze extends Command {
@@ -200,7 +201,6 @@ export default class Analyze extends Command {
             let endBlock: number = scopeJob.endBlock
             // Allow syncing up to current block height if endBlock is set to 0
             if (endBlock === 0) {
-              /* eslint-disable no-await-in-loop */
               endBlock = await this.networkMonitor.providers[network].getBlockNumber()
             }
 
@@ -444,7 +444,6 @@ export default class Analyze extends Command {
    * Process the transactions in each block job
    */
   async processTransactions(job: BlockJob, transactions: TransactionResponse[]): Promise<void> {
-    /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
         const tags: (string | number)[] = []

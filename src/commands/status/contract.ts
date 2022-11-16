@@ -130,16 +130,13 @@ export default class Contract extends Command {
       const provider = this.providers[network]
       const registry = this.registryContract.connect(provider)
       const ownable = this.ownableContract.connect(provider)
-      // eslint-disable-next-line no-await-in-loop
       const code = await provider.getCode(this.contractAddress, 'latest')
       if (code === '0x') {
         // do nothing
       } else {
         d.deployed = true
-        // eslint-disable-next-line no-await-in-loop
         d.valid = await registry.isHolographedContract(this.contractAddress)
         d.link = (networks[network].explorer || '') + '/address/' + this.contractAddress
-        // eslint-disable-next-line no-await-in-loop
         d.owner = await ownable.getOwner()
       }
 

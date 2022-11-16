@@ -682,10 +682,8 @@ export class NetworkMonitor {
       this.walletNonces[network] = -1
       if (this.userWallet !== undefined) {
         this.wallets[network] = this.userWallet.connect(this.providers[network])
-        // eslint-disable-next-line no-await-in-loop
         this.walletNonces[network] = await this.getNonce({
           network,
-          // eslint-disable-next-line no-await-in-loop
           walletAddress: await this.wallets[network].getAddress(),
           canFail: false,
         })
@@ -696,7 +694,6 @@ export class NetworkMonitor {
           this.structuredLog(network, `Starting Operator from ${this.warp} blocks back...`)
         }
 
-        /* eslint-disable no-await-in-loop */
         const currentBlock: number = await this.providers[network].getBlockNumber()
         this.blockJobs[network] = []
         for (let n = currentBlock - this.warp, nl = currentBlock; n <= nl; n++) {
@@ -868,7 +865,7 @@ export class NetworkMonitor {
         break
       case 'wss:':
         this.ws[network].close(1012, 'Block Job Handler has been inactive longer than threshold time.')
-        //        this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint, false)
+        //  this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint, false)
         break
       default:
         throw new Error('Unsupported RPC provider protocol -> ' + protocol)
@@ -1047,8 +1044,7 @@ export class NetworkMonitor {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const priorityFees: BigNumber = this.gasPrices[job.network].nextPriorityFee!
+      // const priorityFees: BigNumber = this.gasPrices[job.network].nextPriorityFee!
       if (this.verbose && block.transactions.length === 0) {
         this.structuredLog(job.network, `Zero transactions in block`, job.block)
       }
