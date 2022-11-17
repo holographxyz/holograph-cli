@@ -1057,48 +1057,6 @@ export default class Indexer extends HealthCheck {
     )
   }
 
-  async updateERC721Callback(
-    responseData: any,
-    transaction: TransactionResponse,
-    network: string,
-    contractAddress: string,
-    tokenId: string,
-    tags: (string | number)[],
-  ): Promise<void> {
-    // const data = JSON.stringify({
-    //   chainId: transaction.chainId,
-    //   status: 'MINTED',
-    //   tx: transaction.hash,
-    // })
-    this.networkMonitor.structuredLog(
-      network,
-      `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`,
-      tags,
-    )
-    this.networkMonitor.structuredLog(
-      network,
-      `API: Requesting to update NFT with collection ${contractAddress} and tokeId ${tokenId} and id ${responseData.id}`,
-      tags,
-    )
-
-    // // TODO: Replace patch request with graphql mutation
-    // await this.sendPatchRequest(
-    //   {
-    //     responseData,
-    //     network,
-    //     query: `${this.BASE_URL}/v1/nfts/${responseData.id}`,
-    //     data,
-    //     messages: [
-    //       `PATCH collection ${contractAddress} tokeId ${tokenId}`,
-    //       `Successfully updated NFT collection ${contractAddress} and tokeId ${tokenId}`,
-    //       `Failed to update the database for collection ${contractAddress} and tokeId ${tokenId}`,
-    //       `collection ${contractAddress} and tokeId ${tokenId}`,
-    //     ],
-    //   },
-    //   tags,
-    // )
-  }
-
   async updateBridgedERC721(
     direction: string,
     transaction: TransactionResponse,
@@ -1167,7 +1125,6 @@ export default class Indexer extends HealthCheck {
     tags: (string | number)[],
   ): Promise<void> {
     const tokenId = hexZeroPad(erc721TransferEvent[2].toHexString(), 32)
-
     this.networkMonitor.structuredLog(
       network,
       `Indexer identified a minted an ERC721 NFT. Holographer minted a new NFT on ${capitalize(
@@ -1177,10 +1134,7 @@ export default class Indexer extends HealthCheck {
       }`,
       tags,
     )
-    console.log('$$$$$$$$$$$$')
-    const nft = await this.apiService!.queryNftByTx(transaction.hash)
-    console.log(nft)
-    console.log('$$$$$$$$$$$$')
+    let nft = await this.apiService?.queryNftByTx(transaction.hash)
 
     if (nft !== undefined) {
       this.networkMonitor.structuredLog(
@@ -1194,13 +1148,8 @@ export default class Indexer extends HealthCheck {
       nftInput.status = NftStatus.MINTED
       nftInput.chainId = transaction.chainId
       nftInput.tx = transaction.hash
-      const response = await this.apiService!.updateNft(nftInput)
-      console.log(response)
-      this.networkMonitor.structuredLog(
-        network,
-        `Successfully updated NFT with transaction hash ${transaction.hash}`,
-        tags,
-      )
+      nft = await this.apiService?.updateNft(nftInput)
+      this.networkMonitor.structuredLog(network, `Successfully updated NFT with transaction hash ${nft?.tx}`, tags)
     }
 
     // TODO: Reenable once all db jobs are migrated to graphql
@@ -1220,6 +1169,48 @@ export default class Indexer extends HealthCheck {
     // }
 
     // this.dbJobMap[job.timestamp].push(job)
+  }
+
+  async updateERC721Callback(
+    responseData: any,
+    transaction: TransactionResponse,
+    network: string,
+    contractAddress: string,
+    tokenId: string,
+    tags: (string | number)[],
+  ): Promise<void> {
+    const data = JSON.stringify({
+      chainId: transaction.chainId,
+      status: 'MINTED',
+      tx: transaction.hash,
+    })
+    this.networkMonitor.structuredLog(
+      network,
+      `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`,
+      tags,
+    )
+    this.networkMonitor.structuredLog(
+      network,
+      `API: Requesting to update NFT with collection ${contractAddress} and tokeId ${tokenId} and id ${responseData.id}`,
+      tags,
+    )
+
+    // TODO: Replace patch request with graphql mutation
+    await this.sendPatchRequest(
+      {
+        responseData,
+        network,
+        query: `${this.BASE_URL}/v1/nfts/${responseData.id}`,
+        data,
+        messages: [
+          `PATCH collection ${contractAddress} tokeId ${tokenId}`,
+          `Successfully updated NFT collection ${contractAddress} and tokeId ${tokenId}`,
+          `Failed to update the database for collection ${contractAddress} and tokeId ${tokenId}`,
+          `collection ${contractAddress} and tokeId ${tokenId}`,
+        ],
+      },
+      tags,
+    )
   }
 
   async updateCrossChainTransactionCallback(

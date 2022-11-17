@@ -8,8 +8,9 @@ import {
   CreateOrUpdateCrossChainTransactionResponse,
   UpdateCrossChainTransactionStatusInputWithoutData,
   Nft,
-  NftResponse,
   UpdateNftInput,
+  NftQueryResponse,
+  NftMutationResponse,
 } from '../types/api'
 
 class ApiService {
@@ -33,7 +34,7 @@ class ApiService {
         }
       }
     `
-    const data = await this.client.request<AuthOperatorResponse>(mutation, {
+    const data: AuthOperatorResponse = await this.client.request(mutation, {
       authOperatorInput: {
         hash: process.env.OPERATOR_API_KEY,
       },
@@ -54,12 +55,17 @@ class ApiService {
         nftByTx(tx: $tx) {
           id
           tx
+          status
+          chainId
         }
       }
     `
-    const data = await this.client.request<NftResponse>(query, {tx})
-    this.logger.debug('Found NFT: ', data.nft)
-    return data.nft
+    try {
+      const data: NftQueryResponse = await this.client.request(query, {tx})
+      return data.nftByTx
+    } catch (error: any) {
+      this.logger.error(error)
+    }
   }
 
   async updateNft(updateNftInput: UpdateNftInput): Promise<Nft> {
@@ -68,26 +74,17 @@ class ApiService {
         updateNft(updateNftInput: $updateNftInput) {
           id
           tx
-          name
-          description
           status
-          collection {
-            name
-          }
-          image {
-            aws {
-              https
-            }
-          }
+          chainId
         }
       }
     `
-    const data = await this.client.request<NftResponse>(mutation, {
+    const data: NftMutationResponse = await this.client.request(mutation, {
       updateNftInput: updateNftInput,
     })
 
-    this.logger.debug('Updated NFT', data.nft)
-    return data.nft
+    this.logger.debug('Updated NFT', data.updateNft)
+    return data.updateNft
   }
 
   async getCrossChainTransaction(jobHash: string): Promise<CrossChainTransaction> {
@@ -113,7 +110,7 @@ class ApiService {
         }
       }
   `
-    const data = await this.client.request<CrossChainTransactionResponse>(query, {jobHash})
+    const data: CrossChainTransactionResponse = await this.client.request(query, {jobHash})
     this.logger.debug('Found cross chain transaction:', data.crossChainTransaction)
     return data.crossChainTransaction
   }
@@ -145,7 +142,7 @@ class ApiService {
           }
         }
     `
-    const data = await this.client.request<CreateOrUpdateCrossChainTransactionResponse>(mutation, {
+    const data: CreateOrUpdateCrossChainTransactionResponse = await this.client.request(mutation, {
       createOrUpdateCrossChainTransactionInput: updateCrossChainTransactionStatusInput,
     })
 

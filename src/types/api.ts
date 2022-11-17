@@ -94,8 +94,12 @@ export type Nft = {
   tokenId: string | null
 }
 
-export interface NftResponse {
-  nft: Nft
+export interface NftQueryResponse {
+  nftByTx: Nft
+}
+
+export interface NftMutationResponse {
+  updateNft: Nft
 }
 
 export type UpdateNftInput = Omit<Nft, 'id'>
