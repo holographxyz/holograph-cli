@@ -1,0 +1,34 @@
+name: 'Enforce prettier'
+
+on:
+  push:
+    branches:
+      - main
+      - testnet
+      - develop
+      - experimental
+  pull_request:
+    branches:
+      - main
+      - testnet
+      - develop
+      - experimental
+
+jobs:
+  prettier:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+          # Make sure the value of GITHUB_TOKEN will not be persisted in repo's config
+          persist-credentials: false
+
+      - name: Prettify code
+        uses: creyD/prettier_action@v4.2
+        with:
+          prettier_options: --check src/**/*.+(js|ts)
+          dry: True

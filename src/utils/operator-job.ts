@@ -1,10 +1,10 @@
-import {Command} from '@oclif/core'
 import {BigNumber, BigNumberish} from '@ethersproject/bignumber'
 import {Contract} from '@ethersproject/contracts'
 import {formatUnits} from '@ethersproject/units'
 
 import {NetworkMonitor} from './network-monitor'
 import {zeroAddress} from './utils'
+import {HealthCheck} from '../base-commands/healthcheck'
 
 export interface OperatorJobDetails {
   pod: number
@@ -33,7 +33,7 @@ export interface OperatorStatus {
   podSize: {[key: string]: number}
 }
 
-export abstract class OperatorJobAwareCommand extends Command {
+export abstract class OperatorJobAwareCommand extends HealthCheck {
   networkMonitor!: NetworkMonitor
   operatorStatus: OperatorStatus = {
     address: '',
@@ -162,10 +162,12 @@ export abstract class OperatorJobAwareCommand extends Command {
   }
 
   async checkJobStatus(operatorJobHash: string): Promise<void> {
-    const job: OperatorJob = this.operatorJobs[operatorJobHash]
-    if ((await this.decodeOperatorJob(job.network, job.hash, job.payload, [] as string[])) === undefined) {
-      // job is no longer active/valid, need to remove it from list
-      delete this.operatorJobs[job.hash]
+    if (operatorJobHash !== undefined && operatorJobHash !== '' && operatorJobHash in this.operatorJobs) {
+      const job: OperatorJob = this.operatorJobs[operatorJobHash]
+      if ((await this.decodeOperatorJob(job.network, job.hash, job.payload, [] as string[])) === undefined) {
+        // job is no longer active/valid, need to remove it from list
+        delete this.operatorJobs[job.hash]
+      }
     }
   }
 }

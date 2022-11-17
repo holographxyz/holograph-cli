@@ -10,21 +10,20 @@ import {getNetworkByHolographId, networks} from '@holographxyz/networks'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {GasPricing} from '../../utils/gas'
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
-import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
 import {web3, functionSignature, sha3, zeroAddress} from '../../utils/utils'
 import {checkOptionFlag} from '../../utils/validation'
 import {OperatorJobAwareCommand, OperatorJob} from '../../utils/operator-job'
+import {HealthCheck} from '../../base-commands/healthcheck'
 
 /**
  * Operator
  * Description: The primary command for operating jobs on the Holograph network.
  */
 export default class Operator extends OperatorJobAwareCommand {
-  static description = 'Listen for EVM events for jobs and process them'
+  static description = 'Listen for jobs and execute jobs.'
   static examples = ['$ <%= config.bin %> <%= command.id %> --networks goerli fuji mumbai --mode=auto --sync']
 
   static flags = {
-    ...networksFlag,
     mode: Flags.string({
       description: 'The mode in which to run the operator',
       options: Object.values(OperatorMode),
@@ -34,10 +33,11 @@ export default class Operator extends OperatorJobAwareCommand {
       description: 'Start from last saved block position instead of latest block position',
       default: false,
     }),
-    ...healthcheckFlag,
     unsafePassword: Flags.string({
       description: 'Enter the plain text password for the wallet in the holograph cli config',
     }),
+    ...networksFlag,
+    ...HealthCheck.flags,
   }
 
   /**
@@ -55,6 +55,7 @@ export default class Operator extends OperatorJobAwareCommand {
 
     // Check the flags
     const enableHealthCheckServer = flags.healthCheck
+    const healthCheckPort = flags.healthCheckPort
     const syncFlag = flags.sync
     const unsafePassword = flags.unsafePassword
 
@@ -138,7 +139,6 @@ export default class Operator extends OperatorJobAwareCommand {
           this.operatorJobs[jobHash].jobDetails.startTimestamp,
         )
         // if job is still valid, it will stay in object, otherwise it will be removed
-        // eslint-disable-next-line no-await-in-loop
         await this.checkJobStatus(jobHash)
       }
     }
@@ -151,7 +151,7 @@ export default class Operator extends OperatorJobAwareCommand {
     // Start health check server on port 6000
     // Can be used to monitor that the operator is online and running
     if (enableHealthCheckServer) {
-      startHealthcheckServer(this.networkMonitor)
+      await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, healthCheckPort})
     }
   }
 
@@ -195,7 +195,6 @@ export default class Operator extends OperatorJobAwareCommand {
 
     // for first time init, get operator status details
     for (const network of this.networkMonitor.networks) {
-      /* eslint-disable no-await-in-loop */
       this.operatorStatus.active[network] = false
       this.operatorStatus.currentPod[network] = 0
       this.operatorStatus.podIndex[network] = 0
@@ -208,7 +207,6 @@ export default class Operator extends OperatorJobAwareCommand {
    * Process the transactions in each block job
    */
   async processTransactions(job: BlockJob, transactions: TransactionResponse[]): Promise<void> {
-    /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
         const tags: (string | number)[] = []
