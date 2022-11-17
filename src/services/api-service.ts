@@ -56,6 +56,7 @@ class ApiService {
   }
 
   async sendMutationRequest(mutation: string, props: any): Promise<any> {
+    console.log('Sending mutation request', mutation, props)
     return this.client.request(mutation, props)
   }
 

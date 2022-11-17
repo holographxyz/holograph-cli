@@ -44,6 +44,7 @@ type DBJob = {
   timestamp: number
   network: string
   query: string
+  identifier?: string
   message: string
   callback: (...args: any[]) => Promise<void>
   arguments: any[]
@@ -226,25 +227,26 @@ export default class Indexer extends HealthCheck {
   }
 
   async processDBJob(timestamp: number, job: DBJob): Promise<void> {
+    console.log(`Processing DB Job: ${JSON.stringify(job)}`)
     this.networkMonitor.structuredLog(job.network, job.message)
-    let res: any
+    let response: any
     if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
       this.networkMonitor.structuredLog(job.network, `Should make an API GET call with query ${job.query}`, job.tags)
       await job.callback.bind(this)('', ...job.arguments)
       this.processDBJobs()
     } else {
       try {
-        res = await axios.get(job.query, {
-          maxRedirects: 0,
-          headers: {
-            Authorization: `Bearer ${this.JWT}`,
-            'Content-Type': 'application/json',
-          },
-        })
-        this.networkMonitor.structuredLog(job.network, `GET response ${JSON.stringify(res.data)}`, job.tags)
-        await job.callback.bind(this)(res.data, ...job.arguments)
+        // TODO: Migrate all requests to use ApiService and GraphQL
+        // Need to figure out how to send generic query requests in each job
+        // It will require building job.query in each method that sends a job into the dbJobMap queue
+        response = await this.apiService.sendQueryRequest(job.query, job.identifier)
+        // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+        this.networkMonitor.structuredLog(job.network, `Query response ${JSON.stringify(response)}`, job.tags)
+        await job.callback.bind(this)(response, ...job.arguments)
         this.processDBJobs()
       } catch (error: any) {
+        // TODO: Refactor Error with GQL
         this.networkMonitor.structuredLogError(job.network, error.response.data, [
           ...job.tags,
           this.errorColor(`Failed to GET ${job.query}`),
@@ -1105,7 +1107,7 @@ export default class Indexer extends HealthCheck {
       attempts: 0,
       network,
       timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
-      query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
+      query: this.apiService.baseUrl,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
       callback: this.updateERC721Callback,
       arguments: [transaction, network, contractAddress, tokenId, tags],
@@ -1152,31 +1154,37 @@ export default class Indexer extends HealthCheck {
       }`,
       tags,
     )
-    const nft = await this.apiService.queryNftByTx(transaction.hash)
-    if (nft !== undefined) {
-      this.networkMonitor.structuredLog(
-        network,
-        `API: Requesting to update NFT with transaction hash ${transaction.hash}`,
-        tags,
-      )
-
-      this.networkMonitor.structuredLog(network, `Sending minted nft job to DBJobManager ${contractAddress}`, tags)
-      const job: DBJob = {
-        attempts: 3,
-        network,
-        timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
-        query: this.apiService.baseUrl,
-        message: `API: Requesting to update NFT with transaction hash ${transaction.hash}`,
-        callback: this.updateERC721Callback,
-        arguments: [transaction, network, contractAddress, nft, tags],
-        tags,
+    const query = gql`
+      query($tx: String!) {
+        nftByTx(tx: $tx) {
+          id
+          tx
+          status
+          chainId
+        }
       }
-      if (!(job.timestamp in this.dbJobMap)) {
-        this.dbJobMap[job.timestamp] = []
-      }
-
-      this.dbJobMap[job.timestamp].push(job)
+    `
+    this.networkMonitor.structuredLog(
+      network,
+      `Sending minted nft with tx ${transaction.hash} job to DBJobManager`,
+      tags,
+    )
+    const job: DBJob = {
+      attempts: 3,
+      network,
+      timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
+      query,
+      message: `API: Requesting to update NFT with transaction hash ${transaction.hash}`,
+      callback: this.updateERC721Callback,
+      arguments: [transaction, network, contractAddress, tags],
+      identifier: transaction.hash,
+      tags,
     }
+    if (!(job.timestamp in this.dbJobMap)) {
+      this.dbJobMap[job.timestamp] = []
+    }
+
+    this.dbJobMap[job.timestamp].push(job)
   }
 
   async updateERC721Callback(
@@ -1193,6 +1201,8 @@ export default class Indexer extends HealthCheck {
       tags,
     )
 
+    console.log('TESTING updateERC721Callback', responseData)
+
     const mutation = gql`
     mutation($updateNftInput: UpdateNftInput!) {
       updateNft(updateNftInput: $updateNftInput) {
@@ -1202,15 +1212,20 @@ export default class Indexer extends HealthCheck {
         chainId
       }
     }
-  `
+    `
+
+    console.log('MUTATION', mutation)
 
     // Include the on chain data in the update input
     const input: any = nft
     input.status = NftStatus.MINTED
     input.chainId = transaction.chainId
     input.tx = transaction.hash
+
+    console.log('INPUT', input)
     nft = await this.apiService.sendMutationRequest(mutation, input)
     this.networkMonitor.structuredLog(network, `Successfully updated NFT with transaction hash ${nft?.tx}`, tags)
+    console.log('NFT', nft)
 
     // TODO: Replace patch request with graphql mutation above
     // TODO: Need to think about how to handle messages and errors
@@ -1473,41 +1488,41 @@ export default class Indexer extends HealthCheck {
     this.dbJobMap[job.timestamp].push(job)
   }
 
-  async sendPatchRequest(options: PatchOptions, tags: (string | number)[]): Promise<void> {
-    const responseData = options.responseData
-    const network = options.network
-    const query = options.query
-    const data = options.data
-    const messages = options.messages
-    const params = {
-      maxRedirects: 0,
-      headers: {
-        Authorization: `Bearer ${this.JWT}`,
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    }
-    if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
-      this.networkMonitor.structuredLog(
-        network,
-        `Should make an API PATCH call to ${query} with data ${JSON.stringify(data)}`,
-        tags,
-      )
-    } else {
-      try {
-        const patchRes = await axios.patch(query, data, params)
-        this.networkMonitor.structuredLog(
-          network,
-          `${messages} and id ${responseData.id} response ${JSON.stringify(patchRes.data)}`,
-          tags,
-        )
-        this.networkMonitor.structuredLog(network, messages[1])
-      } catch (error: any) {
-        this.networkMonitor.structuredLog(network, messages[2])
-        this.networkMonitor.structuredLogError(network, error.response.data, this.errorColor(messages[3]))
-      }
-    }
-  }
+  // async sendPatchRequest(options: PatchOptions, tags: (string | number)[]): Promise<void> {
+  //   const responseData = options.responseData
+  //   const network = options.network
+  //   const query = options.query
+  //   const data = options.data
+  //   const messages = options.messages
+  //   const params = {
+  //     maxRedirects: 0,
+  //     headers: {
+  //       Authorization: `Bearer ${this.JWT}`,
+  //       'Content-Type': 'application/json',
+  //     },
+  //     data: data,
+  //   }
+  //   if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
+  //     this.networkMonitor.structuredLog(
+  //       network,
+  //       `Should make an API PATCH call to ${query} with data ${JSON.stringify(data)}`,
+  //       tags,
+  //     )
+  //   } else {
+  //     try {
+  //       const patchRes = await axios.patch(query, data, params)
+  //       this.networkMonitor.structuredLog(
+  //         network,
+  //         `${messages} and id ${responseData.id} response ${JSON.stringify(patchRes.data)}`,
+  //         tags,
+  //       )
+  //       this.networkMonitor.structuredLog(network, messages[1])
+  //     } catch (error: any) {
+  //       this.networkMonitor.structuredLog(network, messages[2])
+  //       this.networkMonitor.structuredLogError(network, error.response.data, this.errorColor(messages[3]))
+  //     }
+  //   }
+  // }
 
   async sendMutationRequest(options: PatchOptions, tags: (string | number)[]): Promise<void> {
     const responseData = options.responseData
