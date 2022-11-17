@@ -16,9 +16,11 @@ import {
 class ApiService {
   logger: Logger
   client: GraphQLClient
+  baseUrl: string
 
   constructor(baseURL: string, logger: Logger) {
     this.logger = logger
+    this.baseUrl = baseURL
     this.client = new GraphQLClient(`${baseURL}/graphql`)
   }
 
@@ -47,6 +49,14 @@ class ApiService {
 
     this.client.setHeader('authorization', `Bearer ${JWT}`)
     this.logger.log(`Operator JWT: ${JWT}`)
+  }
+
+  async sendQueryRequest(query: string, props: any): Promise<any> {
+    return this.client.request(query, props)
+  }
+
+  async sendMutationRequest(mutation: string, props: any): Promise<any> {
+    return this.client.request(mutation, props)
   }
 
   async queryNftByTx(tx: string): Promise<Nft> {

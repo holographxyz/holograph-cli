@@ -36,7 +36,8 @@ import {
 import {BlockJob, FilterType, NetworkMonitor, networksFlag, warpFlag} from '../../utils/network-monitor'
 import {HealthCheck} from '../../base-commands/healthcheck'
 import ApiService from '../../services/api-service'
-import {Logger, NftStatus, UpdateNftInput} from '../../types/api'
+import {Logger, Nft, NftStatus} from '../../types/api'
+import {gql} from 'graphql-request'
 
 type DBJob = {
   attempts: number
@@ -54,6 +55,8 @@ type DBJobMap = {
 }
 
 type PatchOptions = {
+  mutation: any
+  input: any
   responseData: any
   network: string
   query: string
@@ -84,7 +87,7 @@ export default class Indexer extends HealthCheck {
   BASE_URL!: string
   JWT!: string
   DELAY = 20_000
-  apiService!: ApiService | undefined
+  apiService!: ApiService
   apiColor = color.keyword('orange')
   errorColor = color.keyword('red')
   networkMonitor!: NetworkMonitor
@@ -905,7 +908,7 @@ export default class Indexer extends HealthCheck {
     deploymentConfig: DeploymentConfig,
     tags: (string | number)[],
   ): Promise<void> {
-    const data = JSON.stringify({
+    const input = {
       contractAddress,
       // TODO: decide if this should be included in API call
       // contractCreator: deploymentConfig.signer,
@@ -916,28 +919,43 @@ export default class Indexer extends HealthCheck {
       blockNumber: transaction.blockNumber,
       // TODO: decide if this should be included in API call
       // blockTimestamp: transaction.timestamp,
-    })
+    }
     this.networkMonitor.structuredLog(network, `Successfully found Collection with address ${contractAddress}`, tags)
     this.networkMonitor.structuredLog(
       network,
       `API: Requesting to update Collection ${contractAddress} with id ${responseData.id}`,
       tags,
     )
-    await this.sendPatchRequest(
-      {
-        responseData,
-        network,
-        query: `${this.BASE_URL}/v1/collections/${responseData.id}`,
-        data,
-        messages: [
-          `PATCH response for collection ${contractAddress}`,
-          `Successfully updated collection ${contractAddress} chainId to ${transaction.chainId}`,
-          `Failed to update the Holograph database ${contractAddress}`,
-          contractAddress,
-        ],
-      },
-      tags,
-    )
+
+    const mutation = gql`
+    mutation($updateCollectionInput: UpdateCollectionInput!) {
+      updateCollection(updateCollectionInput: $updateCollectionInput) {
+        name
+        description
+        status
+      }
+    }
+  `
+
+    await this.apiService.sendMutationRequest(mutation, input)
+
+    // TODO: Replace patch request with graphql mutation above
+    // TODO: Need to think about how to handle messages and errors
+    // await this.sendPatchRequest(
+    //   {
+    //     responseData,
+    //     network,
+    //     query: `${this.BASE_URL}/v1/collections/${responseData.id}`,
+    //     data,
+    //     messages: [
+    //       `PATCH response for collection ${contractAddress}`,
+    //       `Successfully updated collection ${contractAddress} chainId to ${transaction.chainId}`,
+    //       `Failed to update the Holograph database ${contractAddress}`,
+    //       contractAddress,
+    //     ],
+    //   },
+    //   tags,
+    // )
   }
 
   async updateDeployedContract(
@@ -1134,8 +1152,7 @@ export default class Indexer extends HealthCheck {
       }`,
       tags,
     )
-    let nft = await this.apiService?.queryNftByTx(transaction.hash)
-
+    const nft = await this.apiService.queryNftByTx(transaction.hash)
     if (nft !== undefined) {
       this.networkMonitor.structuredLog(
         network,
@@ -1143,74 +1160,75 @@ export default class Indexer extends HealthCheck {
         tags,
       )
 
-      // Include the on chain data in the update input
-      const nftInput: UpdateNftInput = nft
-      nftInput.status = NftStatus.MINTED
-      nftInput.chainId = transaction.chainId
-      nftInput.tx = transaction.hash
-      nft = await this.apiService?.updateNft(nftInput)
-      this.networkMonitor.structuredLog(network, `Successfully updated NFT with transaction hash ${nft?.tx}`, tags)
+      this.networkMonitor.structuredLog(network, `Sending minted nft job to DBJobManager ${contractAddress}`, tags)
+      const job: DBJob = {
+        attempts: 3,
+        network,
+        timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
+        query: this.apiService.baseUrl,
+        message: `API: Requesting to update NFT with transaction hash ${transaction.hash}`,
+        callback: this.updateERC721Callback,
+        arguments: [transaction, network, contractAddress, nft, tags],
+        tags,
+      }
+      if (!(job.timestamp in this.dbJobMap)) {
+        this.dbJobMap[job.timestamp] = []
+      }
+
+      this.dbJobMap[job.timestamp].push(job)
     }
-
-    // TODO: Reenable once all db jobs are migrated to graphql
-    // this.networkMonitor.structuredLog(network, `Sending minted nft job to DBJobManager ${contractAddress}`, tags)
-    // const job: DBJob = {
-    //   attempts: 3,
-    //   network,
-    //   timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
-    //   query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
-    //   message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
-    //   callback: this.updateERC721Callback,
-    //   arguments: [transaction, network, contractAddress, tokenId, tags],
-    //   tags,
-    // }
-    // if (!(job.timestamp in this.dbJobMap)) {
-    //   this.dbJobMap[job.timestamp] = []
-    // }
-
-    // this.dbJobMap[job.timestamp].push(job)
   }
 
   async updateERC721Callback(
     responseData: any,
     transaction: TransactionResponse,
     network: string,
-    contractAddress: string,
-    tokenId: string,
+    nft: Nft | undefined,
     tags: (string | number)[],
   ): Promise<void> {
-    const data = JSON.stringify({
-      chainId: transaction.chainId,
-      status: 'MINTED',
-      tx: transaction.hash,
-    })
+    this.networkMonitor.structuredLog(network, `Successfully found NFT with tx ${nft?.tx} `, tags)
     this.networkMonitor.structuredLog(
       network,
-      `Successfully found NFT with tokenId ${tokenId} from ${contractAddress}`,
-      tags,
-    )
-    this.networkMonitor.structuredLog(
-      network,
-      `API: Requesting to update NFT with collection ${contractAddress} and tokeId ${tokenId} and id ${responseData.id}`,
+      `API: Requesting to update NFT with ${nft?.tx} and id ${responseData.id}`,
       tags,
     )
 
-    // TODO: Replace patch request with graphql mutation
-    await this.sendPatchRequest(
-      {
-        responseData,
-        network,
-        query: `${this.BASE_URL}/v1/nfts/${responseData.id}`,
-        data,
-        messages: [
-          `PATCH collection ${contractAddress} tokeId ${tokenId}`,
-          `Successfully updated NFT collection ${contractAddress} and tokeId ${tokenId}`,
-          `Failed to update the database for collection ${contractAddress} and tokeId ${tokenId}`,
-          `collection ${contractAddress} and tokeId ${tokenId}`,
-        ],
-      },
-      tags,
-    )
+    const mutation = gql`
+    mutation($updateNftInput: UpdateNftInput!) {
+      updateNft(updateNftInput: $updateNftInput) {
+        id
+        tx
+        status
+        chainId
+      }
+    }
+  `
+
+    // Include the on chain data in the update input
+    const input: any = nft
+    input.status = NftStatus.MINTED
+    input.chainId = transaction.chainId
+    input.tx = transaction.hash
+    nft = await this.apiService.sendMutationRequest(mutation, input)
+    this.networkMonitor.structuredLog(network, `Successfully updated NFT with transaction hash ${nft?.tx}`, tags)
+
+    // TODO: Replace patch request with graphql mutation above
+    // TODO: Need to think about how to handle messages and errors
+    // await this.sendPatchRequest(
+    //   {
+    //     responseData,
+    //     network,
+    //     query: `${this.BASE_URL}/v1/nfts/${responseData.id}`,
+    //     data,
+    //     messages: [
+    //       `PATCH NFT: collection ${contractAddress} tokeId ${tokenId}`,
+    //       `Successfully updated NFT collection ${contractAddress} and tokeId ${tokenId}`,
+    //       `Failed to update the database for collection ${contractAddress} and tokeId ${tokenId}`,
+    //       `collection ${contractAddress} and tokeId ${tokenId}`,
+    //     ],
+    //   },
+    //   tags,
+    // )
   }
 
   async updateCrossChainTransactionCallback(
@@ -1481,6 +1499,38 @@ export default class Indexer extends HealthCheck {
         this.networkMonitor.structuredLog(
           network,
           `${messages} and id ${responseData.id} response ${JSON.stringify(patchRes.data)}`,
+          tags,
+        )
+        this.networkMonitor.structuredLog(network, messages[1])
+      } catch (error: any) {
+        this.networkMonitor.structuredLog(network, messages[2])
+        this.networkMonitor.structuredLogError(network, error.response.data, this.errorColor(messages[3]))
+      }
+    }
+  }
+
+  async sendMutationRequest(options: PatchOptions, tags: (string | number)[]): Promise<void> {
+    const responseData = options.responseData
+    const network = options.network
+    const query = options.query
+    const mutation = options.mutation
+    const input = options.input
+    const messages = options.messages
+    if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
+      this.networkMonitor.structuredLog(
+        network,
+        `Environment is ${this.environment}: Skipping GraphQL mutation call to ${query} with data ${JSON.stringify(
+          input,
+        )}`,
+        tags,
+      )
+    } else {
+      try {
+        // TODO Replace Patch with Mutation
+        const response = await this.apiService.sendMutationRequest(mutation, input)
+        this.networkMonitor.structuredLog(
+          network,
+          `${messages} and id ${responseData.id} response ${JSON.stringify(response.data)}`,
           tags,
         )
         this.networkMonitor.structuredLog(network, messages[1])
