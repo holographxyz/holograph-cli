@@ -1,4 +1,4 @@
-name: Deploy holoclis to staging
+name: Deploy holoclis to staging[develop]
 
 permissions:
   id-token: write
@@ -32,7 +32,6 @@ env:
   INDEXER_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
   OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
   #
-#  ABI_ENVIRONMENT: develop #deleteme
   HOLOGRAPH_ENVIRONMENT: develop
   #
   STG_DOMAIN: 'cxipchain.xyz'
