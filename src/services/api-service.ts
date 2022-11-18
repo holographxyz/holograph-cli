@@ -52,12 +52,26 @@ class ApiService {
   }
 
   async sendQueryRequest(query: string, props: any): Promise<any> {
-    return this.client.request(query, props)
+    console.log('Sending query request', query, props)
+    try {
+      const response = await this.client.request(query, props)
+      return response
+    } catch (error: any) {
+      console.log('Error sending query request', error)
+      this.logger.error(error)
+    }
   }
 
   async sendMutationRequest(mutation: string, props: any): Promise<any> {
     console.log('Sending mutation request', mutation, props)
-    return this.client.request(mutation, props)
+    try {
+      const response = await this.client.request(mutation, props)
+      console.log(response)
+      return response
+    } catch (error: any) {
+      console.log('Error sending mutation request', error)
+      this.logger.error(error)
+    }
   }
 
   async queryNftByTx(tx: string): Promise<Nft> {

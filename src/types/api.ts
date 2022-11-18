@@ -102,4 +102,4 @@ export interface NftMutationResponse {
   updateNft: Nft
 }
 
-export type UpdateNftInput = Omit<Nft, 'id'>
+export type UpdateNftInput = {updateNftInput: Omit<Nft, 'id'>}
