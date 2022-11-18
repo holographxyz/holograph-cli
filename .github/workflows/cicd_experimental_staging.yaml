@@ -11,7 +11,7 @@ env:
   #
   DEV_IMAGE_TAG: dev-${{ github.sha }}
   #######################################
-  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.40
+  STG_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.44
   #######################################
   CLUSTER_NAME: staging
   #
@@ -24,7 +24,7 @@ env:
   # set the RPC endpoints config files
   OPERATOR_HOLO_CONFIG_FILE_DATA: exp-config-file
   #
-  ABI_ENVIRONMENT: experimental
+  HOLOGRAPH_ENVIRONMENT: experimental
   #
   STG_DOMAIN: 'cxipchain.xyz'
   #
@@ -128,7 +128,7 @@ jobs:
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.STG_HOLO_OPERATOR_PASSWORD }} \
-            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set ENABLE_SYNC=$ENABLE_SYNC \
@@ -173,3 +173,4 @@ jobs:
             ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
             echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
             curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+
