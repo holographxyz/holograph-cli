@@ -212,7 +212,7 @@ export default class Indexer extends HealthCheck {
     this.networkMonitor.structuredLog(job.network, job.message)
     let response: any
     if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
-      this.networkMonitor.structuredLog(job.network, `Should make an API GET call with query ${job.query}`, job.tags)
+      this.networkMonitor.structuredLog(job.network, `Should make an API query ${job.query}`, job.tags)
       await job.callback.bind(this)('', ...job.arguments)
       this.processDBJobs()
     } else {
@@ -1100,14 +1100,26 @@ export default class Indexer extends HealthCheck {
     )
     this.networkMonitor.structuredLog(network, `Sending bridged nft job to DBJobManager ${contractAddress}`, tags)
 
+    const query = gql`
+    query($contractAddress: String!, $tokenId: String!) {
+      nftByContractAddressAndTokenId(contractAddress: $contractAddress, tokenId: $tokenId) {
+        id
+        contractAddress
+        tokenId
+        chainId
+      }
+    }
+    `
+
     const job: DBJob = {
       attempts: 0,
       network,
       timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
-      query: this.apiService.baseUrl,
+      query,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
-      callback: this.updateERC721Callback,
+      callback: this.updateBridgedERC721Callback,
       arguments: [transaction, network, contractAddress, tokenId, tags],
+      identifier: {contractAddress: contractAddress, tokenId: tokenId},
       tags,
     }
     if (!(job.timestamp in this.dbJobMap)) {
@@ -1214,6 +1226,45 @@ export default class Indexer extends HealthCheck {
     input.updateNftInput.chainId = transaction.chainId
     input.updateNftInput.tx = transaction.hash
     const response = await this.apiService.sendMutationRequest(mutation, input)
+    this.networkMonitor.structuredLog(
+      network,
+      `Successfully updated NFT with transaction hash ${response.updateNft?.tx}`,
+      tags,
+    )
+  }
+
+  async updateBridgedERC721Callback(
+    responseData: any,
+    transaction: TransactionResponse,
+    network: string,
+    tags: (string | number)[],
+  ): Promise<void> {
+    this.networkMonitor.structuredLog(
+      network,
+      `Successfully found NFT with contract address ${responseData.nftByContractAddressAndTokenId.contractAddress} and token id ${responseData.nftByContractAddressAndTokenId.tokenId} `,
+      tags,
+    )
+    this.networkMonitor.structuredLog(
+      network,
+      `API: Requesting to update NFT with ${responseData.nftByContractAddressAndTokenId.tx} and id ${responseData.nftByContractAddressAndTokenId.id}`,
+      tags,
+    )
+
+    const mutation = gql`
+    mutation($updateNftInput: UpdateNftInput!) {
+      updateNft(updateNftInput: $updateNftInput) {
+        id
+        tx
+        status
+        chainId
+      }
+    }
+    `
+
+    const input: UpdateNftInput = {updateNftInput: responseData.nftByContractAddressAndTokenId}
+    const response = await this.apiService.sendMutationRequest(mutation, input)
+
+    console.log(response)
     this.networkMonitor.structuredLog(
       network,
       `Successfully updated NFT with transaction hash ${response.updateNft?.tx}`,
@@ -1428,11 +1479,21 @@ export default class Indexer extends HealthCheck {
       `Sending cross chain transaction job to DBJobManager ${contractAddress}`,
       tags,
     )
+
+    const query = gql`
+    query($contractAddress: String!, $tokenId: String!) {
+      nftByContractAddressAndTokenId(contractAddress: $contractAddress, tokenId: $tokenId) {
+        id
+        contractAddress
+        tokenId
+      }
+    }
+    `
     const job: DBJob = {
       attempts: 0,
       network,
       timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
-      query: `${this.BASE_URL}/v1/nfts/${contractAddress}/${tokenId}`,
+      query,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
       callback: this.updateCrossChainTransactionCallback,
       arguments: [
@@ -1446,6 +1507,7 @@ export default class Indexer extends HealthCheck {
         operatorJobHash,
         tags,
       ],
+      identifier: {contractAddress, tokenId},
       tags,
     }
     if (!(job.timestamp in this.dbJobMap)) {
@@ -1454,42 +1516,6 @@ export default class Indexer extends HealthCheck {
 
     this.dbJobMap[job.timestamp].push(job)
   }
-
-  // async sendPatchRequest(options: PatchOptions, tags: (string | number)[]): Promise<void> {
-  //   const responseData = options.responseData
-  //   const network = options.network
-  //   const query = options.query
-  //   const data = options.data
-  //   const messages = options.messages
-  //   const params = {
-  //     maxRedirects: 0,
-  //     headers: {
-  //       Authorization: `Bearer ${this.JWT}`,
-  //       'Content-Type': 'application/json',
-  //     },
-  //     data: data,
-  //   }
-  //   if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
-  //     this.networkMonitor.structuredLog(
-  //       network,
-  //       `Should make an API PATCH call to ${query} with data ${JSON.stringify(data)}`,
-  //       tags,
-  //     )
-  //   } else {
-  //     try {
-  //       const patchRes = await axios.patch(query, data, params)
-  //       this.networkMonitor.structuredLog(
-  //         network,
-  //         `${messages} and id ${responseData.id} response ${JSON.stringify(patchRes.data)}`,
-  //         tags,
-  //       )
-  //       this.networkMonitor.structuredLog(network, messages[1])
-  //     } catch (error: any) {
-  //       this.networkMonitor.structuredLog(network, messages[2])
-  //       this.networkMonitor.structuredLogError(network, error.response.data, this.errorColor(messages[3]))
-  //     }
-  //   }
-  // }
 
   async sendMutationRequest(options: PatchOptions, tags: (string | number)[]): Promise<void> {
     const responseData = options.responseData
