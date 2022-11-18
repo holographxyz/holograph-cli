@@ -219,12 +219,7 @@ export default class Indexer extends HealthCheck {
       try {
         console.log('Testing processDBJob')
         console.log(`Making API call with query ${job.query}`)
-
-        // TODO: Migrate all requests to use ApiService and GraphQL
-        // Need to figure out how to send generic query requests in each job
-        // It will require building job.query in each method that sends a job into the dbJobMap queue
         response = await this.apiService.sendQueryRequest(job.query, job.identifier)
-        // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
         console.log(response)
 
@@ -896,24 +891,27 @@ export default class Indexer extends HealthCheck {
     deploymentConfig: DeploymentConfig,
     tags: (string | number)[],
   ): Promise<void> {
-    const input = {
-      contractAddress,
-      // TODO: decide if this should be included in API call
-      // contractCreator: deploymentConfig.signer,
-      chainId: transaction.chainId,
-      status: 'DEPLOYED',
-      salt: deploymentConfig.config.salt,
-      tx: transaction.hash,
-      blockNumber: transaction.blockNumber,
-      // TODO: decide if this should be included in API call
-      // blockTimestamp: transaction.timestamp,
-    }
     this.networkMonitor.structuredLog(network, `Successfully found Collection with address ${contractAddress}`, tags)
     this.networkMonitor.structuredLog(
       network,
       `API: Requesting to update Collection ${contractAddress} with id ${responseData.id}`,
       tags,
     )
+
+    const input = {
+      updateCollectionInput: {
+        id: responseData.collectionByContractAddress.id,
+        contractAddress,
+        // TODO: decide if this should be included in API call
+        // contractCreator: deploymentConfig.signer,
+        chainId: transaction.chainId,
+        status: 'DEPLOYED',
+        salt: deploymentConfig.config.salt,
+        tx: transaction.hash,
+        // TODO: decide if this should be included in API call
+        // blockTimestamp: transaction.timestamp,
+      },
+    }
 
     const mutation = gql`
     mutation($updateCollectionInput: UpdateCollectionInput!) {
@@ -924,10 +922,9 @@ export default class Indexer extends HealthCheck {
         status
         chainId
         tx
-        blockNumber
       }
     }
-  `
+    `
 
     const response = await this.apiService.sendMutationRequest(mutation, input)
     console.log(response)
@@ -936,24 +933,6 @@ export default class Indexer extends HealthCheck {
       `API: Successfully updated Collection ${contractAddress} with id ${responseData.id}`,
       tags,
     )
-
-    // TODO: Replace patch request with graphql mutation above
-    // TODO: Need to think about how to handle messages and errors
-    // await this.sendPatchRequest(
-    //   {
-    //     responseData,
-    //     network,
-    //     query: `${this.BASE_URL}/v1/collections/${responseData.id}`,
-    //     data,
-    //     messages: [
-    //       `PATCH response for collection ${contractAddress}`,
-    //       `Successfully updated collection ${contractAddress} chainId to ${transaction.chainId}`,
-    //       `Failed to update the Holograph database ${contractAddress}`,
-    //       contractAddress,
-    //     ],
-    //   },
-    //   tags,
-    // )
   }
 
   async updateDeployedContract(
@@ -985,14 +964,25 @@ export default class Indexer extends HealthCheck {
       tags,
     )
 
+    const query = gql`
+    query($contractAddress: String!) {
+      collectionByContractAddress(contractAddress: $contractAddress) {
+        id
+        contractAddress
+        name
+      }
+    }
+    `
+
     const job: DBJob = {
       attempts: 0,
       network,
       timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
       message: `API: Requesting to get Collection with address ${contractAddress}`,
-      query: `${this.BASE_URL}/v1/collections/contract/${contractAddress}`,
+      query,
       callback: this.updateContractCallback,
       arguments: [transaction, network, contractAddress, deploymentConfig, tags],
+      identifier: {contractAddress: contractAddress},
       tags,
     }
     if (!(job.timestamp in this.dbJobMap)) {
@@ -1037,14 +1027,25 @@ export default class Indexer extends HealthCheck {
         tags,
       )
 
+      const query = gql`
+      query($contractAddress: String!) {
+        collectionByContractAddress(contractAddress: $contractAddress) {
+          id
+          contractAddress
+          name
+        }
+      }
+      `
+
       const job: DBJob = {
         attempts: 0,
         network,
         timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
-        query: `${this.BASE_URL}/v1/collections/contract/${contractAddress}`,
+        query,
         message: `API: Requesting to get Collection with address ${contractAddress}`,
         callback: this.updateContractCallback,
         arguments: [transaction, network, contractAddress, deploymentConfig, tags],
+        identifier: {contractAddress: contractAddress},
         tags,
       }
       if (!(job.timestamp in this.dbJobMap)) {
@@ -1187,7 +1188,6 @@ export default class Indexer extends HealthCheck {
     responseData: any,
     transaction: TransactionResponse,
     network: string,
-    nft: Nft | undefined,
     tags: (string | number)[],
   ): Promise<void> {
     this.networkMonitor.structuredLog(network, `Successfully found NFT with tx ${transaction.hash} `, tags)
@@ -1196,8 +1196,6 @@ export default class Indexer extends HealthCheck {
       `API: Requesting to update NFT with ${responseData.nftByTx.tx} and id ${responseData.nftByTx.id}`,
       tags,
     )
-
-    console.log('TESTING updateERC721Callback', responseData)
 
     const mutation = gql`
     mutation($updateNftInput: UpdateNftInput!) {
@@ -1210,23 +1208,17 @@ export default class Indexer extends HealthCheck {
     }
     `
 
-    console.log('MUTATION', mutation)
-
     // Include the on chain data in the update input
     const input: UpdateNftInput = {updateNftInput: responseData.nftByTx}
     input.updateNftInput.status = NftStatus.MINTED
     input.updateNftInput.chainId = transaction.chainId
     input.updateNftInput.tx = transaction.hash
-
-    console.log('INPUT', input)
     const response = await this.apiService.sendMutationRequest(mutation, input)
-    console.log('Done updating NFT', nft)
     this.networkMonitor.structuredLog(
       network,
       `Successfully updated NFT with transaction hash ${response.updateNft?.tx}`,
       tags,
     )
-    console.log('NFT', nft)
   }
 
   async updateCrossChainTransactionCallback(

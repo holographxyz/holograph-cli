@@ -103,3 +103,32 @@ export interface NftMutationResponse {
 }
 
 export type UpdateNftInput = {updateNftInput: Omit<Nft, 'id'>}
+
+export enum CollectionStatus {
+  'DRAFT' = 'DRAFT',
+  'SIGNED' = 'SIGNED',
+  'DEPLOYED' = 'DEPLOYED',
+  'FAILED' = 'FAILED',
+}
+
+export type Collection = {
+  id: string
+  createdAt: Date
+  updatedAt: Date
+  type: TokenType
+  tx: string | null
+  contractAddress: string | null
+  isActive: boolean
+  isDeployed: boolean | null
+  name: string
+  symbol: string
+  description: string | null
+  royaltyPercentage: number
+  chainId: number | null
+  chainIds: number[]
+  salt: string | null
+  status: CollectionStatus
+  userId: string
+}
+
+export type UpdateCollectionInput = {updateCollectionInput: Omit<Collection, 'id'>}
