@@ -35,7 +35,7 @@ import {
 import {BlockJob, FilterType, NetworkMonitor, networksFlag, warpFlag} from '../../utils/network-monitor'
 import {HealthCheck} from '../../base-commands/healthcheck'
 import ApiService from '../../services/api-service'
-import {Logger, Nft, NftStatus, UpdateCrossChainTransactionStatusInput, UpdateNftInput} from '../../types/api'
+import {Logger, NftStatus, UpdateCrossChainTransactionStatusInput, UpdateNftInput} from '../../types/api'
 import {gql} from 'graphql-request'
 
 type DBJob = {
