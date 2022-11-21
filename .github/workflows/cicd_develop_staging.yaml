@@ -1,4 +1,4 @@
-name: Deploy holoclis to staging
+name: Deploy holoclis to staging[develop]
 
 permissions:
   id-token: write
@@ -11,7 +11,7 @@ env:
   #
   DEV_IMAGE_TAG: dev-${{ github.sha }}
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.47
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.53
   STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.44
   #######################################
   CLUSTER_NAME: staging
@@ -32,7 +32,6 @@ env:
   INDEXER_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
   OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
   #
-#  ABI_ENVIRONMENT: develop #deleteme
   HOLOGRAPH_ENVIRONMENT: develop
   #
   STG_DOMAIN: 'cxipchain.xyz'
@@ -195,7 +194,7 @@ jobs:
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.STG_HOLOGRAPH_OPERATOR_PASSWORD }} \
-            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set ENABLE_SYNC=$ENABLE_SYNC \
