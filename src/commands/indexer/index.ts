@@ -159,7 +159,7 @@ export default class Indexer extends HealthCheck {
       warp: flags.warp,
     })
 
-    // TODO: It doesn't seems like this sync is working
+    // TODO: It doesn't seems like sync is working
     // Indexer always synchronizes missed blocks
     // this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
 
@@ -964,7 +964,6 @@ export default class Indexer extends HealthCheck {
       `Sending deployed collection job to DBJobManager ${contractAddress}`,
       tags,
     )
-
     const query = gql`
     query($contractAddress: String!) {
       collectionByContractAddress(contractAddress: $contractAddress) {
@@ -1026,7 +1025,6 @@ export default class Indexer extends HealthCheck {
         `Sending bridged collection job to DBJobManager ${contractAddress}`,
         tags,
       )
-
       const query = gql`
       query($contractAddress: String!) {
         collectionByContractAddress(contractAddress: $contractAddress) {
@@ -1099,7 +1097,6 @@ export default class Indexer extends HealthCheck {
       tags,
     )
     this.networkMonitor.structuredLog(network, `Sending bridged nft job to DBJobManager ${contractAddress}`, tags)
-
     const query = gql`
     query($contractAddress: String!, $tokenId: String!) {
       nftByContractAddressAndTokenId(contractAddress: $contractAddress, tokenId: $tokenId) {
@@ -1110,7 +1107,6 @@ export default class Indexer extends HealthCheck {
       }
     }
     `
-
     const job: DBJob = {
       attempts: 0,
       network,
