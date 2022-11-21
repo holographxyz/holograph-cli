@@ -57,10 +57,9 @@ type DBJobMap = {
 type PatchOptions = {
   mutation: any
   input: any
-  responseData: any
+  data: any
   network: string
   query: string
-  data: any
   messages: string[]
 }
 
@@ -208,31 +207,32 @@ export default class Indexer extends HealthCheck {
   }
 
   async processDBJob(timestamp: number, job: DBJob): Promise<void> {
-    console.log(`Processing DB Job: ${JSON.stringify(job)}`)
     this.networkMonitor.structuredLog(job.network, job.message)
     let response: any
     if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
-      this.networkMonitor.structuredLog(job.network, `Should make an API query ${job.query}`, job.tags)
+      this.networkMonitor.structuredLog(
+        job.network,
+        `Environment is ${this.environment}: Skipping GraphQL call to ${job.query} with input ${JSON.stringify(
+          job.arguments,
+        )}
+        )}`,
+        job.tags,
+      )
       await job.callback.bind(this)('', ...job.arguments)
       this.processDBJobs()
     } else {
+      response = await this.apiService.sendQueryRequest(job.query, job.identifier)
       try {
-        console.log('Testing processDBJob')
-        console.log(`Making API call with query ${job.query}`)
-        response = await this.apiService.sendQueryRequest(job.query, job.identifier)
-
-        console.log(response)
-
         this.networkMonitor.structuredLog(job.network, `Query response ${JSON.stringify(response)}`, job.tags)
         await job.callback.bind(this)(response, ...job.arguments)
         this.processDBJobs()
       } catch (error: any) {
-        // TODO: Refactor Error with GQL
-        this.networkMonitor.structuredLogError(job.network, error.response.data, [
+        this.networkMonitor.structuredLogError(job.network, error, [
           ...job.tags,
-          this.errorColor(`Failed to GET ${job.query}`),
+          this.errorColor(`Request failed with errors ${job.query}`),
         ])
-        // one second interval
+
+        // Sleep for 1 second and add job back to the queue
         await sleep(1000)
         this.processDBJobs(timestamp, job)
       }
@@ -248,7 +248,7 @@ export default class Indexer extends HealthCheck {
       job.attempts += 1
       this.networkMonitor.structuredLog(
         job.network,
-        `JOB ${job.query} is being executed with attempt ${job.attempts}`,
+        `Job ${job.query} is being executed with attempt ${job.attempts}`,
         job.tags,
       )
       if (job.attempts >= 10) {
@@ -884,7 +884,7 @@ export default class Indexer extends HealthCheck {
   }
 
   async updateContractCallback(
-    responseData: any,
+    data: any,
     transaction: TransactionResponse,
     network: string,
     contractAddress: string,
@@ -894,13 +894,13 @@ export default class Indexer extends HealthCheck {
     this.networkMonitor.structuredLog(network, `Successfully found Collection with address ${contractAddress}`, tags)
     this.networkMonitor.structuredLog(
       network,
-      `API: Requesting to update Collection ${contractAddress} with id ${responseData.id}`,
+      `API: Requesting to update Collection ${contractAddress} with id ${data.id}`,
       tags,
     )
 
     const input = {
       updateCollectionInput: {
-        id: responseData.collectionByContractAddress.id,
+        id: data.collectionByContractAddress.id,
         contractAddress,
         // TODO: decide if this should be included in API call
         // contractCreator: deploymentConfig.signer,
@@ -927,10 +927,11 @@ export default class Indexer extends HealthCheck {
     `
 
     const response = await this.apiService.sendMutationRequest(mutation, input)
-    console.log(response)
     this.networkMonitor.structuredLog(
       network,
-      `API: Successfully updated Collection ${contractAddress} with id ${responseData.id}`,
+      `API: Successfully updated Collection ${contractAddress} with id ${data.id}. Response: ${JSON.stringify(
+        response,
+      )}`,
       tags,
     )
   }
@@ -973,7 +974,6 @@ export default class Indexer extends HealthCheck {
       }
     }
     `
-
     const job: DBJob = {
       attempts: 0,
       network,
@@ -1197,7 +1197,7 @@ export default class Indexer extends HealthCheck {
   }
 
   async updateERC721Callback(
-    responseData: any,
+    data: any,
     transaction: TransactionResponse,
     network: string,
     tags: (string | number)[],
@@ -1205,10 +1205,9 @@ export default class Indexer extends HealthCheck {
     this.networkMonitor.structuredLog(network, `Successfully found NFT with tx ${transaction.hash} `, tags)
     this.networkMonitor.structuredLog(
       network,
-      `API: Requesting to update NFT with ${responseData.nftByTx.tx} and id ${responseData.nftByTx.id}`,
+      `API: Requesting to update NFT with ${data.nftByTx.tx} and id ${data.nftByTx.id}`,
       tags,
     )
-
     const mutation = gql`
     mutation($updateNftInput: UpdateNftInput!) {
       updateNft(updateNftInput: $updateNftInput) {
@@ -1219,34 +1218,42 @@ export default class Indexer extends HealthCheck {
       }
     }
     `
-
     // Include the on chain data in the update input
-    const input: UpdateNftInput = {updateNftInput: responseData.nftByTx}
+    const input: UpdateNftInput = {updateNftInput: data.nftByTx}
     input.updateNftInput.status = NftStatus.MINTED
     input.updateNftInput.chainId = transaction.chainId
     input.updateNftInput.tx = transaction.hash
-    const response = await this.apiService.sendMutationRequest(mutation, input)
-    this.networkMonitor.structuredLog(
-      network,
-      `Successfully updated NFT with transaction hash ${response.updateNft?.tx}`,
-      tags,
-    )
+
+    try {
+      const response = await this.apiService.sendMutationRequest(mutation, input)
+      this.networkMonitor.structuredLog(
+        network,
+        `Successfully updated NFT with transaction hash ${response.updateNft?.tx}`,
+        tags,
+      )
+    } catch (error: any) {
+      this.networkMonitor.structuredLog(network, `API: Failed to update NFT with tx ${data.nftByTx.tx}`, tags)
+      this.networkMonitor.structuredLogError(network, error, [
+        ...tags,
+        this.errorColor(`Cross chain transaction ${data.nftByTx.tx}`),
+      ])
+    }
   }
 
   async updateBridgedERC721Callback(
-    responseData: any,
+    data: any,
     transaction: TransactionResponse,
     network: string,
     tags: (string | number)[],
   ): Promise<void> {
     this.networkMonitor.structuredLog(
       network,
-      `Successfully found NFT with contract address ${responseData.nftByContractAddressAndTokenId.contractAddress} and token id ${responseData.nftByContractAddressAndTokenId.tokenId} `,
+      `Successfully found NFT with contract address ${data.nftByContractAddressAndTokenId.contractAddress} and token id ${data.nftByContractAddressAndTokenId.tokenId} `,
       tags,
     )
     this.networkMonitor.structuredLog(
       network,
-      `API: Requesting to update NFT with ${responseData.nftByContractAddressAndTokenId.tx} and id ${responseData.nftByContractAddressAndTokenId.id}`,
+      `API: Requesting to update NFT with ${data.nftByContractAddressAndTokenId.tx} and id ${data.nftByContractAddressAndTokenId.id}`,
       tags,
     )
 
@@ -1261,19 +1268,17 @@ export default class Indexer extends HealthCheck {
     }
     `
 
-    const input: UpdateNftInput = {updateNftInput: responseData.nftByContractAddressAndTokenId}
+    const input: UpdateNftInput = {updateNftInput: data.nftByContractAddressAndTokenId}
     const response = await this.apiService.sendMutationRequest(mutation, input)
-
-    console.log(response)
     this.networkMonitor.structuredLog(
       network,
-      `Successfully updated NFT with transaction hash ${response.updateNft?.tx}`,
+      `Successfully updated NFT with transaction hash ${response.updateNft?.tx}. Response: ${JSON.stringify(response)}`,
       tags,
     )
   }
 
   async updateCrossChainTransactionCallback(
-    responseData: any,
+    data: any,
     transaction: TransactionResponse,
     network: string,
     fromNetwork: string,
@@ -1292,13 +1297,13 @@ export default class Indexer extends HealthCheck {
 
     // Get and convert the destination chain id from network name to chain id
     const destinationChainid = networks[toNetwork].chain
-    let data
 
+    let input
     this.networkMonitor.structuredLog(network, `Cross chain transaction type is ${crossChainTxType}`, tags)
     // Set the columns to update based on the type of cross-chain transaction
     switch (crossChainTxType) {
       case 'bridgeOut':
-        data = {
+        input = {
           jobHash,
           jobType: 'ERC721',
           sourceTx: transaction.hash,
@@ -1306,53 +1311,52 @@ export default class Indexer extends HealthCheck {
           sourceChainId: transaction.chainId,
           sourceStatus: 'COMPLETED',
           sourceAddress: transaction.from,
-          nftId: responseData.id,
-          collectionId: responseData.collectionId,
+          nftId: data.id,
+          collectionId: data.collectionId,
           // Include the destination chain id if the transaction is a bridge out
           messageChainId: destinationChainid,
           operatorChainId: destinationChainid,
         } as UpdateCrossChainTransactionStatusInput
         this.networkMonitor.structuredLog(
           network,
-          this.apiColor(`API: Requesting to update CrossChainTransaction with ${jobHash} for brigdeOut`),
+          this.apiColor(`API: Requesting to update cross chain transaction with ${jobHash} for brigdeOut`),
           tags,
         )
 
         if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
           this.networkMonitor.structuredLog(
             network,
-            `Should make an mutation call to "${this.BASE_URL}/v1/cross-chain-transactions" with data ${data}`,
+            `Environment is ${
+              this.environment
+            }: Skipping GraphQL call to update cross chain transaction with input ${JSON.stringify(input)}
+            )}`,
             tags,
           )
         } else {
           try {
-            const req = await this.apiService.updateCrossChainTransactionStatus(data)
+            const response = await this.apiService.updateCrossChainTransactionStatus(input)
             this.networkMonitor.structuredLog(
               network,
-              this.apiColor(`API: Mutation CrossChainTransaction ${jobHash} response ${JSON.stringify(req)}`),
+              this.apiColor(`API: Mutation cross chain transaction ${jobHash} response ${JSON.stringify(response)}`),
               tags,
             )
             this.networkMonitor.structuredLog(
               network,
-              `Successfully updated CrossChainTransaction ${jobHash} ID ${req}`,
+              `Successfully updated cross chain transaction ${jobHash} ID ${response}`,
               tags,
             )
           } catch (error: any) {
-            this.networkMonitor.structuredLog(
-              network,
-              `Failed to update the database for CrossChainTransaction ${jobHash}`,
-              tags,
-            )
-            this.networkMonitor.structuredLogError(network, error.response.data, [
+            this.networkMonitor.structuredLog(network, `API: Failed to update cross chain transaction ${jobHash}`, tags)
+            this.networkMonitor.structuredLogError(network, error, [
               ...tags,
-              this.errorColor(`CrossChainTransaction ${jobHash}`),
+              this.errorColor(`Cross chain transaction ${jobHash}`),
             ])
           }
         }
 
         break
       case 'relayMessage':
-        data = {
+        input = {
           jobHash,
           jobType: 'ERC721',
           messageTx: transaction.hash,
@@ -1360,50 +1364,49 @@ export default class Indexer extends HealthCheck {
           messageChainId: transaction.chainId,
           messageStatus: 'COMPLETED',
           messageAddress: transaction.from,
-          nftId: responseData.id,
-          collectionId: responseData.collectionId,
+          nftId: data.id,
+          collectionId: data.collectionId,
         } as UpdateCrossChainTransactionStatusInput
 
         this.networkMonitor.structuredLog(
           network,
-          this.apiColor(`API: Mutation CrossChainTransaction with ${jobHash} for relayMessage`),
+          this.apiColor(`API: Mutation cross chain transaction with ${jobHash} for relayMessage`),
           tags,
         )
         if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
           this.networkMonitor.structuredLog(
             network,
-            `Should make an API POST call to "${this.BASE_URL}/v1/cross-chain-transactions" with data ${data}`,
+            `Environment is ${
+              this.environment
+            }: Skipping GraphQL call to update cross chain transaction with input ${JSON.stringify(input)}
+            )}`,
             tags,
           )
         } else {
           try {
-            const req = await this.apiService.updateCrossChainTransactionStatus(data)
+            const req = await this.apiService.updateCrossChainTransactionStatus(input)
             this.networkMonitor.structuredLog(
               network,
-              this.apiColor(`API: POST CrossChainTransaction ${jobHash} response ${JSON.stringify(req)}`),
+              this.apiColor(`API: POST cross chain transaction ${jobHash} response ${JSON.stringify(req)}`),
               tags,
             )
             this.networkMonitor.structuredLog(
               network,
-              `Successfully updated CrossChainTransaction ${jobHash} ID ${req}`,
+              `Successfully updated cross chain transaction ${jobHash} ID ${req}`,
               tags,
             )
           } catch (error: any) {
-            this.networkMonitor.structuredLog(
-              network,
-              `Failed to update the database for CrossChainTransaction ${jobHash}`,
-              tags,
-            )
-            this.networkMonitor.structuredLogError(network, error.response.data, [
+            this.networkMonitor.structuredLog(network, `API: Failed to update cross chain transaction ${jobHash}`, tags)
+            this.networkMonitor.structuredLogError(network, error, [
               ...tags,
-              this.errorColor(`CrossChainTransaction ${jobHash}`),
+              this.errorColor(`Cross chain transaction ${jobHash}`),
             ])
           }
         }
 
         break
       case 'bridgeIn':
-        data = {
+        input = {
           jobHash,
           jobType: 'ERC721',
           operatorTx: transaction.hash,
@@ -1411,43 +1414,42 @@ export default class Indexer extends HealthCheck {
           operatorChainId: transaction.chainId,
           operatorStatus: 'COMPLETED',
           operatorAddress: transaction.from,
-          nftId: responseData.id,
-          collectionId: responseData.collectionId,
+          nftId: data.id,
+          collectionId: data.collectionId,
         } as UpdateCrossChainTransactionStatusInput
 
         this.networkMonitor.structuredLog(
           network,
-          this.apiColor(`API: Mutation CrossChainTransaction with ${jobHash} for bridgeIn`),
+          this.apiColor(`API:Cross chain transaction mutation with ${jobHash} for bridgeIn`),
           tags,
         )
         if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
           this.networkMonitor.structuredLog(
             network,
-            `Should make an API POST call to "${this.BASE_URL}/v1/cross-chain-transactions" with data ${data}`,
+            `Environment is ${
+              this.environment
+            }: Skipping GraphQL call to update cross chain transaction with input ${JSON.stringify(input)}
+            )}`,
             tags,
           )
         } else {
           try {
-            const req = await this.apiService.updateCrossChainTransactionStatus(data)
+            const req = await this.apiService.updateCrossChainTransactionStatus(input)
             this.networkMonitor.structuredLog(
               network,
-              this.apiColor(`API: POST CrossChainTransaction ${jobHash} response ${JSON.stringify(req.data)}`),
+              this.apiColor(`API: Cross chain transaction ${jobHash} mutation response ${JSON.stringify(req.input)}`),
               tags,
             )
             this.networkMonitor.structuredLog(
               network,
-              `Successfully updated CrossChainTransaction ${jobHash} ID ${req}`,
+              `Successfully updated cross chain transaction ${jobHash} ID ${req}`,
               tags,
             )
           } catch (error: any) {
-            this.networkMonitor.structuredLog(
-              network,
-              `Failed to update the database for CrossChainTransaction ${jobHash}`,
-              tags,
-            )
-            this.networkMonitor.structuredLogError(network, error.response.data, [
+            this.networkMonitor.structuredLog(network, `API: Failed to update cross chain transaction ${jobHash}`, tags)
+            this.networkMonitor.structuredLogError(network, error, [
               ...tags,
-              this.errorColor(`CrossChainTransaction ${jobHash}`),
+              this.errorColor(`Cross chain transaction ${jobHash}`),
             ])
           }
         }
@@ -1518,7 +1520,7 @@ export default class Indexer extends HealthCheck {
   }
 
   async sendMutationRequest(options: PatchOptions, tags: (string | number)[]): Promise<void> {
-    const responseData = options.responseData
+    const data = options.data
     const network = options.network
     const query = options.query
     const mutation = options.mutation
@@ -1534,17 +1536,16 @@ export default class Indexer extends HealthCheck {
       )
     } else {
       try {
-        // TODO Replace Patch with Mutation
         const response = await this.apiService.sendMutationRequest(mutation, input)
         this.networkMonitor.structuredLog(
           network,
-          `${messages} and id ${responseData.id} response ${JSON.stringify(response)}`,
+          `${messages} and id ${data.id} response ${JSON.stringify(response)}`,
           tags,
         )
         this.networkMonitor.structuredLog(network, messages[1])
       } catch (error: any) {
         this.networkMonitor.structuredLog(network, messages[2])
-        this.networkMonitor.structuredLogError(network, error.response.data, this.errorColor(messages[3]))
+        this.networkMonitor.structuredLogError(network, error, this.errorColor(messages[3]))
       }
     }
   }

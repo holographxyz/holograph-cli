@@ -5,7 +5,7 @@ import {
   CrossChainTransactionResponse,
   CrossChainTransaction,
   UpdateCrossChainTransactionStatusInput,
-  CreateOrUpdateCrossChainTransactionResponse,
+  UpsertCrossChainTransactionReponse,
   UpdateCrossChainTransactionStatusInputWithoutData,
   Nft,
   UpdateNftInput,
@@ -21,7 +21,7 @@ class ApiService {
   constructor(baseURL: string, logger: Logger) {
     this.logger = logger
     this.baseUrl = baseURL
-    this.client = new GraphQLClient(`${baseURL}/graphql`)
+    this.client = new GraphQLClient(`${baseURL}/graphql`, {errorPolicy: 'none'})
   }
 
   async operatorLogin(): Promise<void> {
@@ -52,25 +52,20 @@ class ApiService {
   }
 
   async sendQueryRequest(query: string, props: any): Promise<any> {
-    console.log('Sending query request', query, props)
+    this.logger.log(`Sending query request ${query} with props ${props}`)
     try {
-      const response = await this.client.request(query, props)
-      return response
+      return await this.client.request(query, props)
     } catch (error: any) {
-      console.log('Error sending query request', error)
-      this.logger.error(error)
+      this.logger.error(`Error sending query request ${error}`)
     }
   }
 
   async sendMutationRequest(mutation: string, props: any): Promise<any> {
-    console.log('Sending mutation request', mutation, props)
+    this.logger.log(`Sending mutation request ${mutation} with props ${JSON.stringify(props)}`)
     try {
-      const response = await this.client.request(mutation, props)
-      console.log(response)
-      return response
+      return await this.client.request(mutation, props)
     } catch (error: any) {
-      console.log('Error sending mutation request', error)
-      this.logger.error(error)
+      this.logger.error(`Error sending mutation request ${error}`)
     }
   }
 
@@ -89,7 +84,7 @@ class ApiService {
       const data: NftQueryResponse = await this.client.request(query, {tx})
       return data.nftByTx
     } catch (error: any) {
-      this.logger.error(error)
+      this.logger.error(`Error sending query request ${error}`)
     }
   }
 
@@ -108,7 +103,7 @@ class ApiService {
       updateNftInput: updateNftInput,
     })
 
-    this.logger.debug('Updated NFT', data.updateNft)
+    this.logger.log('Updated NFT', data.updateNft)
     return data.updateNft
   }
 
@@ -144,7 +139,7 @@ class ApiService {
     updateCrossChainTransactionStatusInput:
       | UpdateCrossChainTransactionStatusInput
       | UpdateCrossChainTransactionStatusInputWithoutData,
-  ): Promise<CrossChainTransaction> {
+  ): Promise<any> {
     const mutation = gql`
         mutation CreateOrUpdateCrossChainTransaction($createOrUpdateCrossChainTransactionInput: CreateOrUpdateCrossChainTransactionInput!) {
           createOrUpdateCrossChainTransaction(createOrUpdateCrossChainTransactionInput: $createOrUpdateCrossChainTransactionInput) {
@@ -167,7 +162,7 @@ class ApiService {
           }
         }
     `
-    const data: CreateOrUpdateCrossChainTransactionResponse = await this.client.request(mutation, {
+    const data: UpsertCrossChainTransactionReponse = await this.client.request(mutation, {
       createOrUpdateCrossChainTransactionInput: updateCrossChainTransactionStatusInput,
     })
 

@@ -23,7 +23,7 @@ export interface CrossChainTransactionResponse {
   crossChainTransaction: CrossChainTransaction
 }
 
-export interface CreateOrUpdateCrossChainTransactionResponse {
+export interface UpsertCrossChainTransactionReponse {
   createOrUpdateCrossChainTransaction: CrossChainTransaction
 }
 
