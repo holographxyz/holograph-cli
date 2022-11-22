@@ -54,15 +54,6 @@ type DBJobMap = {
   [key: number]: DBJob[]
 }
 
-type PatchOptions = {
-  mutation: any
-  input: any
-  data: any
-  network: string
-  query: string
-  messages: string[]
-}
-
 export default class Indexer extends HealthCheck {
   static hidden = true
   static LAST_BLOCKS_FILE_NAME = 'indexer-blocks.json'
@@ -1565,37 +1556,6 @@ export default class Indexer extends HealthCheck {
     }
 
     this.dbJobMap[job.timestamp].push(job)
-  }
-
-  async sendMutationRequest(options: PatchOptions, tags: (string | number)[]): Promise<void> {
-    const data = options.data
-    const network = options.network
-    const query = options.query
-    const mutation = options.mutation
-    const input = options.input
-    const messages = options.messages
-    if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
-      this.networkMonitor.structuredLog(
-        network,
-        `Environment is ${this.environment}: Skipping GraphQL mutation call to ${query} with data ${JSON.stringify(
-          input,
-        )}`,
-        tags,
-      )
-    } else {
-      try {
-        const response = await this.apiService.sendMutationRequest(mutation, input)
-        this.networkMonitor.structuredLog(
-          network,
-          `${messages} and id ${data.id} response ${JSON.stringify(response)}`,
-          tags,
-        )
-        this.networkMonitor.structuredLog(network, messages[1])
-      } catch (error: any) {
-        this.networkMonitor.structuredLog(network, messages[2])
-        this.networkMonitor.structuredLogError(network, error, this.errorColor(messages[3]))
-      }
-    }
   }
 
   async getBlockTimestamp(network: string, blockNumber: number): Promise<number> {
