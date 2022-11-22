@@ -7,6 +7,10 @@ import {
   UpdateCrossChainTransactionStatusInput,
   CreateOrUpdateCrossChainTransactionResponse,
   UpdateCrossChainTransactionStatusInputWithoutData,
+  Nft,
+  UpdateNftInput,
+  NftQueryResponse,
+  NftMutationResponse,
 } from '../types/api'
 
 class ApiService {
@@ -30,21 +34,57 @@ class ApiService {
         }
       }
     `
-    const data = await this.client.request<AuthOperatorResponse>(mutation, {
+    const data: AuthOperatorResponse = await this.client.request(mutation, {
       authOperatorInput: {
         hash: process.env.OPERATOR_API_KEY,
       },
     })
 
     const JWT = data.authOperator.accessToken
-
     if (typeof JWT === 'undefined') {
       throw new TypeError('Failed to authorize as an operator')
     }
 
     this.client.setHeader('authorization', `Bearer ${JWT}`)
+    this.logger.log(`Operator JWT: ${JWT}`)
+  }
 
-    this.logger.log(`JWT = ${JWT}`)
+  async queryNftByTx(tx: string): Promise<Nft> {
+    const query = gql`
+      query($tx: String!) {
+        nftByTx(tx: $tx) {
+          id
+          tx
+          status
+          chainId
+        }
+      }
+    `
+    try {
+      const data: NftQueryResponse = await this.client.request(query, {tx})
+      return data.nftByTx
+    } catch (error: any) {
+      this.logger.error(error)
+    }
+  }
+
+  async updateNft(updateNftInput: UpdateNftInput): Promise<Nft> {
+    const mutation = gql`
+      mutation($updateNftInput: UpdateNftInput!) {
+        updateNft(updateNftInput: $updateNftInput) {
+          id
+          tx
+          status
+          chainId
+        }
+      }
+    `
+    const data: NftMutationResponse = await this.client.request(mutation, {
+      updateNftInput: updateNftInput,
+    })
+
+    this.logger.debug('Updated NFT', data.updateNft)
+    return data.updateNft
   }
 
   async getCrossChainTransaction(jobHash: string): Promise<CrossChainTransaction> {
@@ -70,10 +110,8 @@ class ApiService {
         }
       }
   `
-    const data = await this.client.request<CrossChainTransactionResponse>(query, {jobHash})
-
-    this.logger.debug('found: ', data.crossChainTransaction)
-
+    const data: CrossChainTransactionResponse = await this.client.request(query, {jobHash})
+    this.logger.debug('Found cross chain transaction:', data.crossChainTransaction)
     return data.crossChainTransaction
   }
 
@@ -104,12 +142,11 @@ class ApiService {
           }
         }
     `
-    const data = await this.client.request<CreateOrUpdateCrossChainTransactionResponse>(mutation, {
+    const data: CreateOrUpdateCrossChainTransactionResponse = await this.client.request(mutation, {
       createOrUpdateCrossChainTransactionInput: updateCrossChainTransactionStatusInput,
     })
 
-    this.logger.debug('updated to:', data.createOrUpdateCrossChainTransaction)
-
+    this.logger.debug('Updated cross chain transaction:', data.createOrUpdateCrossChainTransaction)
     return data.createOrUpdateCrossChainTransaction
   }
 }
