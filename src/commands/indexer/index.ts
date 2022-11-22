@@ -512,9 +512,14 @@ export default class Indexer extends HealthCheck {
                   throw new Error(`Deployment addresses ${contractAddress} and ${deploymentEvent[0]} do not match!`)
                 }
 
-                this.networkMonitor.structuredLog(network, `updateBridgedContract`, tags)
+                const direction = 'in'
+                this.networkMonitor.structuredLog(
+                  network,
+                  `Calling updateBridgedContract with direction ${direction}`,
+                  tags,
+                )
                 await this.updateBridgedContract(
-                  'in',
+                  direction,
                   transaction,
                   network,
                   fromNetwork,
@@ -543,9 +548,14 @@ export default class Indexer extends HealthCheck {
                 if (erc20TransferEvent === undefined) {
                   this.networkMonitor.structuredLog(network, `Could not find a valid ERC20 Transfer event`, tags)
                 } else {
-                  this.networkMonitor.structuredLog(network, `updateBridgedERC20`, tags)
+                  const direction = 'in'
+                  this.networkMonitor.structuredLog(
+                    network,
+                    `Calling updateBridgedERC20 with direction ${direction}`,
+                    tags,
+                  )
                   await this.updateBridgedERC20(
-                    'in',
+                    direction,
                     transaction,
                     network,
                     fromNetwork,
@@ -558,7 +568,7 @@ export default class Indexer extends HealthCheck {
                 }
               } else if (contractType === 'HolographERC721') {
                 this.networkMonitor.structuredLog(network, `BridgeInRequest identified as ERC721 transfer`, tags)
-                // BRIDGE IN ERC721 NFT
+                // Bridge i
                 const erc721BeamInfo: BridgeInErc721Args = decodeBridgeInErc721Args(bridgeInPayload)
                 const erc721TransferEvent: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(
                   receipt,
@@ -568,8 +578,14 @@ export default class Indexer extends HealthCheck {
                   this.networkMonitor.structuredLog(network, `Could not find a valid ERC721 Transfer event`, tags)
                 } else {
                   this.networkMonitor.structuredLog(network, `updateBridgedERC721`, tags)
+                  const direction = 'in'
+                  this.networkMonitor.structuredLog(
+                    network,
+                    `Calling updateBridgedERC721 with direction ${direction}`,
+                    tags,
+                  )
                   await this.updateBridgedERC721(
-                    'in',
+                    direction,
                     transaction,
                     network,
                     fromNetwork,
@@ -663,13 +679,19 @@ export default class Indexer extends HealthCheck {
           const bridgeOutPayload: string = bridgeOut.bridgeOutPayload
           const holographableContractAddress: string = bridgeOut.holographableContract.toLowerCase()
           if (holographableContractAddress === this.networkMonitor.factoryAddress) {
-            // BRIDGE OUT CONTRACT DEPLOYMENT
+            // Bridge out contract deployment
             const deploymentConfig: DeploymentConfig = decodeDeploymentConfig(bridgeOutPayload)
             const deploymentHash: string = deploymentConfigHash(deploymentConfig)
             const contractAddress = create2address(deploymentConfig, this.networkMonitor.factoryAddress)
             const deploymentEvent: string[] = [contractAddress, deploymentHash]
+            const direction = 'out'
+            this.networkMonitor.structuredLog(
+              network,
+              `Calling updateBridgedContract with direction ${direction}`,
+              tags,
+            )
             await this.updateBridgedContract(
-              'out',
+              direction,
               transaction,
               network,
               toNetwork,
@@ -686,7 +708,7 @@ export default class Indexer extends HealthCheck {
             )
             const contractType: string = toAscii(slot)
             if (contractType === 'HolographERC20') {
-              // BRIDGE OUT ERC20 TOKENS
+              // Bridge out ERC20 token
               const erc20BeamInfo: BridgeOutErc20Args = decodeBridgeOutErc20Args(bridgeOutPayload)
               const erc20TransferEvent: any[] | undefined = this.networkMonitor.decodeErc20TransferEvent(
                 receipt,
@@ -699,9 +721,15 @@ export default class Indexer extends HealthCheck {
                   tags,
                 )
               } else {
-                // we do not currently capture
+                // We do not currently capture bridge events for ERC20 tokens
+                const direction = 'out'
+                this.networkMonitor.structuredLog(
+                  network,
+                  `Calling updateBridgedERC20 with direction ${direction}`,
+                  tags,
+                )
                 await this.updateBridgedERC20(
-                  'out',
+                  direction,
                   transaction,
                   network,
                   toNetwork,
@@ -713,7 +741,7 @@ export default class Indexer extends HealthCheck {
                 )
               }
             } else if (contractType === 'HolographERC721') {
-              // BRIDGE IN ERC721 NFT
+              // Bridge in ERC721 token
               const erc721BeamInfo: BridgeOutErc721Args = decodeBridgeOutErc721Args(bridgeOutPayload)
               const erc721TransferEvent: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(
                 receipt,
@@ -726,8 +754,14 @@ export default class Indexer extends HealthCheck {
                   tags,
                 )
               } else {
+                const direction = 'out'
+                this.networkMonitor.structuredLog(
+                  network,
+                  `Calling updateBridgedERC721 with direction ${direction}`,
+                  tags,
+                )
                 await this.updateBridgedERC721(
-                  'out',
+                  direction,
                   transaction,
                   network,
                   fromNetwork,
@@ -783,7 +817,7 @@ export default class Indexer extends HealthCheck {
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `No AvailableOperatorJob event found`, tags)
       } else {
-        // check that operatorJobPayload and operatorJobHash are the same
+        // Check that operatorJobPayload and operatorJobHash are the same
         if (sha3(operatorJobPayload) !== operatorJobHash) {
           throw new Error('The hashed operatorJobPayload does not equal operatorJobHash!')
         }
@@ -799,14 +833,20 @@ export default class Indexer extends HealthCheck {
           const bridgeInPayload: string = bridgeIn.bridgeInPayload
           const holographableContractAddress: string = bridgeIn.holographableContract.toLowerCase()
 
-          // BRIDGE OUT CONTRACT DEPLOYMENT
+          // Bridge out contract deployment
           if (holographableContractAddress === this.networkMonitor.factoryAddress) {
             const deploymentConfig: DeploymentConfig = decodeDeploymentConfig(bridgeInPayload)
             const deploymentHash: string = deploymentConfigHash(deploymentConfig)
             const contractAddress = create2address(deploymentConfig, this.networkMonitor.factoryAddress)
             const deploymentEvent: string[] = [contractAddress, deploymentHash]
+            const direction = 'msg'
+            this.networkMonitor.structuredLog(
+              network,
+              `Calling updateBridgedContract with direction ${direction}`,
+              tags,
+            )
             await this.updateBridgedContract(
-              'msg',
+              direction,
               transaction,
               network,
               toNetwork,
@@ -823,7 +863,7 @@ export default class Indexer extends HealthCheck {
             )
             const contractType: string = toAscii(slot)
             if (contractType === 'HolographERC20') {
-              // BRIDGE OUT ERC20 TOKENS
+              // Bridge out ERC20 token
               const erc20BeamInfo: BridgeOutErc20Args = decodeBridgeOutErc20Args(bridgeInPayload)
               const erc20TransferEvent: any[] | undefined = this.networkMonitor.decodeErc20TransferEvent(
                 receipt,
@@ -836,9 +876,15 @@ export default class Indexer extends HealthCheck {
                   tags,
                 )
               } else {
-                // we do not currently capture
+                // We do not currently capture bridge events for ERC
+                const direction = 'msg'
+                this.networkMonitor.structuredLog(
+                  network,
+                  `Calling updateBridgedERC20 with direction ${direction}`,
+                  tags,
+                )
                 await this.updateBridgedERC20(
-                  'msg',
+                  direction,
                   transaction,
                   network,
                   toNetwork,
@@ -850,10 +896,16 @@ export default class Indexer extends HealthCheck {
                 )
               }
             } else if (contractType === 'HolographERC721') {
-              // BRIDGE IN ERC721 NFT
+              // Bridge in ERC721 token
               const erc721BeamInfo: BridgeInErc721Args = decodeBridgeInErc721Args(bridgeInPayload)
+              const direction = 'msg'
+              this.networkMonitor.structuredLog(
+                network,
+                `Calling updateBridgedERC721 with direction ${direction}`,
+                tags,
+              )
               await this.updateBridgedERC721(
-                'msg',
+                direction,
                 transaction,
                 network,
                 fromNetwork,
@@ -944,7 +996,7 @@ export default class Indexer extends HealthCheck {
     deploymentConfig: DeploymentConfig,
     tags: (string | number)[],
   ): Promise<void> {
-    // here we need to extract origin chain from config
+    // Here we need to extract origin chain from config
     // to know if this is the main deployment chain for the contract or not
     // this would allow us to update the db contract deployment tx and to set chain column
     this.networkMonitor.structuredLog(
@@ -1002,9 +1054,9 @@ export default class Indexer extends HealthCheck {
     operatorJobHash: string,
     tags: (string | number)[],
   ): Promise<void> {
-    // not updating DB for any initial call outs since there is no beam status table for this yet
+    // Not updating DB for any initial call outs since there is no beam status table for this yet
     if (direction === 'in') {
-      // here we need to extract origin chain from config
+      // Here we need to extract origin chain from config
       // to know if this is the main deployment chain for the contract or not
       // this would allow us to update the db contract deployment tx and to set chain column
       this.networkMonitor.structuredLog(
@@ -1380,15 +1432,15 @@ export default class Indexer extends HealthCheck {
           )
         } else {
           try {
-            const req = await this.apiService.updateCrossChainTransactionStatus(input)
+            const response = await this.apiService.updateCrossChainTransactionStatus(input)
             this.networkMonitor.structuredLog(
               network,
-              this.apiColor(`API: POST cross chain transaction ${jobHash} response ${JSON.stringify(req)}`),
+              this.apiColor(`API: Cross chain transaction ${jobHash} mutation response ${JSON.stringify(response)}`),
               tags,
             )
             this.networkMonitor.structuredLog(
               network,
-              `Successfully updated cross chain transaction ${jobHash} ID ${req}`,
+              `Successfully updated cross chain transaction with job hash ${jobHash}`,
               tags,
             )
           } catch (error: any) {
@@ -1430,22 +1482,22 @@ export default class Indexer extends HealthCheck {
           )
         } else {
           try {
-            const req = await this.apiService.updateCrossChainTransactionStatus(input)
+            const response = await this.apiService.updateCrossChainTransactionStatus(input)
             this.networkMonitor.structuredLog(
               network,
-              this.apiColor(`API: Cross chain transaction ${jobHash} mutation response ${JSON.stringify(req.input)}`),
+              this.apiColor(`API: Cross chain transaction ${jobHash} mutation response ${JSON.stringify(response)}`),
               tags,
             )
             this.networkMonitor.structuredLog(
               network,
-              `Successfully updated cross chain transaction ${jobHash} ID ${req}`,
+              `Successfully updated cross chain transaction with job hash ${jobHash}`,
               tags,
             )
           } catch (error: any) {
             this.networkMonitor.structuredLog(network, `API: Failed to update cross chain transaction ${jobHash}`, tags)
             this.networkMonitor.structuredLogError(network, error, [
               ...tags,
-              this.errorColor(`Cross chain transaction ${jobHash}`),
+              this.errorColor(`CrossChainTransaction ${jobHash}`),
             ])
           }
         }
