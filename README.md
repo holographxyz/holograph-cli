@@ -31,7 +31,7 @@ $ npm install -g @holographxyz/cli
 $ holograph COMMAND
 running command...
 $ holograph (--version)
-@holographxyz/cli/0.0.9 darwin-arm64 node-v18.9.0
+@holographxyz/cli/0.0.11 darwin-arm64 node-v18.9.0
 $ holograph --help [COMMAND]
 USAGE
   $ holograph COMMAND
@@ -82,7 +82,7 @@ USAGE
 
 ## `holograph bridge`
 
-Make a bridge request
+Make a bridge request.
 
 ```
 USAGE
@@ -110,7 +110,7 @@ COMMANDS
   bridge:nft       Bridge a Holographable NFT from one network to another.
 ```
 
-_See code: [dist/commands/bridge/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/bridge/index.ts)_
+_See code: [dist/commands/bridge/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/bridge/index.ts)_
 
 ## `holograph bridge:contract`
 
@@ -140,11 +140,11 @@ EXAMPLES
   $ holograph bridge:contract --sourceNetwork="goerli" --destinationNetwork="fuji" --deploymentConfig="./MyContract.json" --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/bridge/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/bridge/contract.ts)_
+_See code: [dist/commands/bridge/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/bridge/contract.ts)_
 
 ## `holograph bridge:nft`
 
-Beam a Holographable NFT from source chain to destination chain.
+Bridge a Holographable NFT from one network to another.
 
 ```
 USAGE
@@ -168,7 +168,7 @@ EXAMPLES
   $ holograph bridge:nft --sourceNetwork="goerli" --destinationNetwork="fuji" --collectionAddress="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId="0x01" --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/bridge/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/bridge/nft.ts)_
+_See code: [dist/commands/bridge/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/bridge/nft.ts)_
 
 ## `holograph config`
 
@@ -199,92 +199,98 @@ EXAMPLES
   $ holograph config --fromJson '{"version": "beta3", ...}
 ```
 
-_See code: [dist/commands/config/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/config/index.ts)_
+_See code: [dist/commands/config/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/config/index.ts)_
 
 ## `holograph config:networks`
 
-View the current network config
+View the current network config.
 
 ```
 USAGE
-  $ holograph config:networks [--output clean|json|yaml]
+  $ holograph config:networks [--output clean|json|yaml] [--env mainnet|testnet|develop|experimental]
 
 FLAGS
+  --env=<option>     [default: testnet] Holograph environment to use
+                     <options: mainnet|testnet|develop|experimental>
   --output=<option>  Output format
                      <options: clean|json|yaml>
 
 DESCRIPTION
-  View the current network config
+  View the current network config.
 
 EXAMPLES
-  $ holograph config:networks
+  $ holograph config:networks --env mainnet|testnet|develop|experimental
 
-  $ holograph config:networks --output json
+  $ holograph config:networks --output json --env mainnet|testnet|develop|experimental
 
-  $ holograph config:networks --output yaml
+  $ holograph config:networks --output yaml --env mainnet|testnet|develop|experimental
 
-  $ holograph config:networks --output clean
+  $ holograph config:networks --output clean --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/config/networks.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/config/networks.ts)_
+_See code: [dist/commands/config/networks.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/config/networks.ts)_
 
 ## `holograph config:user`
 
-View the current user information
+View the current user information.
 
 ```
 USAGE
-  $ holograph config:user [--output clean|json|yaml]
+  $ holograph config:user [--output clean|json|yaml] [--env mainnet|testnet|develop|experimental]
 
 FLAGS
+  --env=<option>     [default: testnet] Holograph environment to use
+                     <options: mainnet|testnet|develop|experimental>
   --output=<option>  Output format
                      <options: clean|json|yaml>
 
 DESCRIPTION
-  View the current user information
+  View the current user information.
 
 EXAMPLES
-  $ holograph config:user
+  $ holograph config:user --env mainnet|testnet|develop|experimental
 
-  $ holograph config:user --output json
+  $ holograph config:user --output json --env mainnet|testnet|develop|experimental
 
-  $ holograph config:user --output yaml
+  $ holograph config:user --output yaml --env mainnet|testnet|develop|experimental
 
-  $ holograph config:user --output clean
+  $ holograph config:user --output clean --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/config/user.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/config/user.ts)_
+_See code: [dist/commands/config/user.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/config/user.ts)_
 
 ## `holograph config:view`
 
-View the current configuration state of the Holograph command line
+View the current config state of the Holograph CLI.
 
 ```
 USAGE
-  $ holograph config:view [--output clean|json|yaml]
+  $ holograph config:view [--output clean|json|yaml] [--env mainnet|testnet|develop|experimental]
 
 FLAGS
+  --env=<option>     [default: testnet] Holograph environment to use
+                     <options: mainnet|testnet|develop|experimental>
   --output=<option>  Output format
                      <options: clean|json|yaml>
 
 DESCRIPTION
-  View the current configuration state of the Holograph command line
+  View the current config state of the Holograph CLI.
 
 EXAMPLES
-  $ holograph config:view
+  $ holograph config:view --env mainnet|testnet|develop|experimental
 
-  $ holograph config:view --output json
+  $ holograph config:view --output json --env mainnet|testnet|develop|experimental
 
-  $ holograph config:view --output yaml
+  $ holograph config:view --output yaml --env mainnet|testnet|develop|experimental
 
-  $ holograph config:view --output clean
+  $ holograph config:view --output clean --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/config/view.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/config/view.ts)_
+_See code: [dist/commands/config/view.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/config/view.ts)_
 
 ## `holograph create`
 
-Create holographable contracts and assets
+Create Holographable contracts and NFTs.
 
 ```
 USAGE
@@ -309,11 +315,11 @@ COMMANDS
   create:nft       Mint a Holographable NFT.
 ```
 
-_See code: [dist/commands/create/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/create/index.ts)_
+_See code: [dist/commands/create/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/create/index.ts)_
 
 ## `holograph create:contract`
 
-Deploy a Holographable contract directly to a chain
+Deploy a Holographable contract.
 
 ```
 USAGE
@@ -340,11 +346,11 @@ EXAMPLES
   $ holograph create:contract --deploymentType="deployedTx" --tx="0xdb8b393dd18a71b386c8de75b87310c0c8ded0c57cf6b4c5bab52873d54d1e8a" --txNetwork="goerli" --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/create/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/create/contract.ts)_
+_See code: [dist/commands/create/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/create/contract.ts)_
 
 ## `holograph create:nft`
 
-Mint a Holographable NFT
+Mint a Holographable NFT.
 
 ```
 USAGE
@@ -369,11 +375,11 @@ EXAMPLES
   $ holograph create:nft --network="goerli" --collectionAddress="0xf90c33d5ef88a9d84d4d61f62c913ba192091fe7" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json" --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/create/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/create/nft.ts)_
+_See code: [dist/commands/create/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/create/nft.ts)_
 
 ## `holograph faucet`
 
-Request tokens from a faucet
+Request Testnet HLG from a faucet.
 
 ```
 USAGE
@@ -392,7 +398,7 @@ EXAMPLES
   $ holograph faucet --network="goerli" --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/faucet/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/faucet/index.ts)_
+_See code: [dist/commands/faucet/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/faucet/index.ts)_
 
 ## `holograph help [COMMAND]`
 
@@ -400,13 +406,15 @@ Display help for holograph.
 
 ```
 USAGE
-  $ holograph help [COMMAND] [-n]
+  $ holograph help [COMMAND] [-n] [--env mainnet|testnet|develop|experimental]
 
 ARGUMENTS
   COMMAND  Command to show help for.
 
 FLAGS
   -n, --nested-commands  Include all nested commands in the output.
+  --env=<option>         [default: testnet] Holograph environment to use
+                         <options: mainnet|testnet|develop|experimental>
 
 DESCRIPTION
   Display help for holograph.
@@ -416,7 +424,7 @@ _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.1.1
 
 ## `holograph operator`
 
-Listen for EVM events for jobs and process them
+Listen for jobs and execute jobs.
 
 ```
 USAGE
@@ -447,11 +455,11 @@ COMMANDS
   operator:unbond   Un-bond an operator from a pod
 ```
 
-_See code: [dist/commands/operator/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/operator/index.ts)_
+_See code: [dist/commands/operator/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/operator/index.ts)_
 
 ## `holograph operator:bond`
 
-Bond an operator into a pod
+Bond in to a pod.
 
 ```
 USAGE
@@ -473,11 +481,11 @@ EXAMPLES
   $ holograph operator:bond --network <string> --pod <number> --amount <number> --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/operator/bond.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/operator/bond.ts)_
+_See code: [dist/commands/operator/bond.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/operator/bond.ts)_
 
 ## `holograph operator:recover`
 
-Attempt to re-run/recover a particular Operator Job
+Attempt to re-run/recover a specific job.
 
 ```
 USAGE
@@ -500,7 +508,28 @@ EXAMPLES
   $ holograph operator:recover --network="ethereumTestnetGoerli" --tx="0x..." --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/operator/recover.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/operator/recover.ts)_
+_See code: [dist/commands/operator/recover.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/operator/recover.ts)_
+
+## `holograph operator:unbond`
+
+Un-bond an operator from a pod
+
+```
+USAGE
+  $ holograph operator:unbond [--env mainnet|testnet|develop|experimental]
+
+FLAGS
+  --env=<option>  [default: testnet] Holograph environment to use
+                  <options: mainnet|testnet|develop|experimental>
+
+DESCRIPTION
+  Un-bond an operator from a pod
+
+EXAMPLES
+  $ holograph operator:unbond --env mainnet|testnet|develop|experimental
+```
+
+_See code: [dist/commands/operator/unbond.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/operator/unbond.ts)_
 
 ## `holograph operator:unbond`
 
@@ -525,7 +554,7 @@ _See code: [dist/commands/operator/unbond.ts](https://github.com/holographxyz/ho
 
 ## `holograph status`
 
-Get the status of a contract or NFT
+Get the status of a contract or NFT.
 
 ```
 USAGE
@@ -552,11 +581,11 @@ COMMANDS
   status:nft       Check the status of an NFT across all networks defined in the config.
 ```
 
-_See code: [dist/commands/status/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/status/index.ts)_
+_See code: [dist/commands/status/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/status/index.ts)_
 
 ## `holograph status:contract`
 
-Check the status of a contract across all networks defined in the config
+Check the status of a contract across all networks defined in the config.
 
 ```
 USAGE
@@ -576,11 +605,11 @@ EXAMPLES
   $ holograph status:contract --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78" --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/status/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/status/contract.ts)_
+_See code: [dist/commands/status/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/status/contract.ts)_
 
 ## `holograph status:nft`
 
-Check the status of an nft across all networks defined in the config
+Check the status of an NFT across all networks defined in the config.
 
 ```
 USAGE
@@ -602,7 +631,7 @@ EXAMPLES
   $ holograph status:nft --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78" --id=1 --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/status/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.9/dist/commands/status/nft.ts)_
+_See code: [dist/commands/status/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/status/nft.ts)_
 
 <!-- commandsstop -->
 
