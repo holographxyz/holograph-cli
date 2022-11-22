@@ -5,7 +5,7 @@ import {
   CrossChainTransactionResponse,
   CrossChainTransaction,
   UpdateCrossChainTransactionStatusInput,
-  CreateOrUpdateCrossChainTransactionResponse,
+  UpsertCrossChainTransactionReponse,
   UpdateCrossChainTransactionStatusInputWithoutData,
   Nft,
   UpdateNftInput,
@@ -16,10 +16,12 @@ import {
 class ApiService {
   logger: Logger
   client: GraphQLClient
+  baseUrl: string
 
   constructor(baseURL: string, logger: Logger) {
     this.logger = logger
-    this.client = new GraphQLClient(`${baseURL}/graphql`)
+    this.baseUrl = baseURL
+    this.client = new GraphQLClient(`${baseURL}/graphql`, {errorPolicy: 'none'})
   }
 
   async operatorLogin(): Promise<void> {
@@ -49,6 +51,24 @@ class ApiService {
     this.logger.log(`Operator JWT: ${JWT}`)
   }
 
+  async sendQueryRequest(query: string, props: any): Promise<any> {
+    this.logger.log(`Sending query request ${query} with props ${props}`)
+    try {
+      return await this.client.request(query, props)
+    } catch (error: any) {
+      this.logger.error(`Error sending query request ${error}`)
+    }
+  }
+
+  async sendMutationRequest(mutation: string, props: any): Promise<any> {
+    this.logger.log(`Sending mutation request ${mutation} with props ${JSON.stringify(props)}`)
+    try {
+      return await this.client.request(mutation, props)
+    } catch (error: any) {
+      this.logger.error(`Error sending mutation request ${error}`)
+    }
+  }
+
   async queryNftByTx(tx: string): Promise<Nft> {
     const query = gql`
       query($tx: String!) {
@@ -64,7 +84,7 @@ class ApiService {
       const data: NftQueryResponse = await this.client.request(query, {tx})
       return data.nftByTx
     } catch (error: any) {
-      this.logger.error(error)
+      this.logger.error(`Error sending query request ${error}`)
     }
   }
 
@@ -83,7 +103,7 @@ class ApiService {
       updateNftInput: updateNftInput,
     })
 
-    this.logger.debug('Updated NFT', data.updateNft)
+    this.logger.log('Updated NFT', data.updateNft)
     return data.updateNft
   }
 
@@ -119,7 +139,7 @@ class ApiService {
     updateCrossChainTransactionStatusInput:
       | UpdateCrossChainTransactionStatusInput
       | UpdateCrossChainTransactionStatusInputWithoutData,
-  ): Promise<CrossChainTransaction> {
+  ): Promise<any> {
     const mutation = gql`
         mutation CreateOrUpdateCrossChainTransaction($createOrUpdateCrossChainTransactionInput: CreateOrUpdateCrossChainTransactionInput!) {
           createOrUpdateCrossChainTransaction(createOrUpdateCrossChainTransactionInput: $createOrUpdateCrossChainTransactionInput) {
@@ -142,7 +162,7 @@ class ApiService {
           }
         }
     `
-    const data: CreateOrUpdateCrossChainTransactionResponse = await this.client.request(mutation, {
+    const data: UpsertCrossChainTransactionReponse = await this.client.request(mutation, {
       createOrUpdateCrossChainTransactionInput: updateCrossChainTransactionStatusInput,
     })
 
