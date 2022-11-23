@@ -37,6 +37,8 @@ export type UpdateCrossChainTransactionStatusInput = Omit<CrossChainTransaction,
 export type UpdateCrossChainTransactionStatusInputWithoutData = Omit<CrossChainTransaction, 'id' | 'data'>
 export interface CrossChainTransaction {
   id?: string
+  nftId?: string
+  collectionId?: string
   jobType: string
   jobHash: string
   sourceChainId?: number

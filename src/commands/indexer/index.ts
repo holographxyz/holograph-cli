@@ -1144,6 +1144,7 @@ export default class Indexer extends HealthCheck {
     query($contractAddress: String!, $tokenId: String!) {
       nftByContractAddressAndTokenId(contractAddress: $contractAddress, tokenId: $tokenId) {
         id
+        collectionId
         contractAddress
         tokenId
         chainId
@@ -1317,7 +1318,7 @@ export default class Indexer extends HealthCheck {
   }
 
   async updateCrossChainTransactionCallback(
-    data: any,
+    data: any, // NftByContractddressAndTokenIdQuery
     transaction: TransactionResponse,
     network: string,
     fromNetwork: string,
@@ -1358,7 +1359,11 @@ export default class Indexer extends HealthCheck {
         } as UpdateCrossChainTransactionStatusInput
         this.networkMonitor.structuredLog(
           network,
-          this.apiColor(`API: Requesting to update cross chain transaction with ${jobHash} for brigdeOut`),
+          this.apiColor(
+            `API: Requesting to update cross chain transaction with ${jobHash} for brigdeOut with input ${JSON.stringify(
+              input,
+            )}`,
+          ),
           tags,
         )
 
@@ -1409,7 +1414,11 @@ export default class Indexer extends HealthCheck {
 
         this.networkMonitor.structuredLog(
           network,
-          this.apiColor(`API: Mutation cross chain transaction with ${jobHash} for relayMessage`),
+          this.apiColor(
+            `API: Mutation cross chain transaction with ${jobHash} for relayMessage with input ${JSON.stringify(
+              input,
+            )}`,
+          ),
           tags,
         )
         if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
@@ -1459,7 +1468,9 @@ export default class Indexer extends HealthCheck {
 
         this.networkMonitor.structuredLog(
           network,
-          this.apiColor(`API:Cross chain transaction mutation with ${jobHash} for bridgeIn`),
+          this.apiColor(
+            `API:Cross chain transaction mutation with ${jobHash} for bridgeIn with input ${JSON.stringify(input)}`,
+          ),
           tags,
         )
         if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
@@ -1525,6 +1536,7 @@ export default class Indexer extends HealthCheck {
     query($contractAddress: String!, $tokenId: String!) {
       nftByContractAddressAndTokenId(contractAddress: $contractAddress, tokenId: $tokenId) {
         id
+        collectionId
         contractAddress
         tokenId
       }
