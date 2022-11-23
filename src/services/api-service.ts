@@ -52,7 +52,7 @@ class ApiService {
   }
 
   async sendQueryRequest(query: string, props: any): Promise<any> {
-    this.logger.log(`Sending query request ${query} with props ${props}`)
+    this.logger.log(`Sending query request ${query} with props ${JSON.stringify(props)}`)
     try {
       return await this.client.request(query, props)
     } catch (error: any) {
@@ -112,6 +112,8 @@ class ApiService {
       query GetCrossChainTx ($jobHash: String!)  {
         crossChainTransaction(jobHash: $jobHash) {
             id
+            nftId
+            collectionId
             jobType
             jobHash
             sourceBlockNumber
@@ -144,6 +146,8 @@ class ApiService {
         mutation CreateOrUpdateCrossChainTransaction($createOrUpdateCrossChainTransactionInput: CreateOrUpdateCrossChainTransactionInput!) {
           createOrUpdateCrossChainTransaction(createOrUpdateCrossChainTransactionInput: $createOrUpdateCrossChainTransactionInput) {
             id
+            nftId
+            collectionId
             jobType
             jobHash
             sourceBlockNumber
