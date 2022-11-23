@@ -1386,7 +1386,7 @@ export default class Indexer extends HealthCheck {
             )
             this.networkMonitor.structuredLog(
               network,
-              `Successfully updated cross chain transaction ${jobHash} ID ${response}`,
+              `Successfully updated cross chain transaction with ${jobHash}. Response: ${JSON.stringify(response)}`,
               tags,
             )
           } catch (error: any) {
@@ -1440,7 +1440,7 @@ export default class Indexer extends HealthCheck {
             )
             this.networkMonitor.structuredLog(
               network,
-              `Successfully updated cross chain transaction with job hash ${jobHash}`,
+              `Successfully updated cross chain transaction with ${jobHash}. Response: ${JSON.stringify(response)}`,
               tags,
             )
           } catch (error: any) {
@@ -1492,7 +1492,7 @@ export default class Indexer extends HealthCheck {
             )
             this.networkMonitor.structuredLog(
               network,
-              `Successfully updated cross chain transaction with job hash ${jobHash}`,
+              `Successfully updated cross chain transaction with ${jobHash}. Response: ${JSON.stringify(response)}`,
               tags,
             )
           } catch (error: any) {
