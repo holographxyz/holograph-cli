@@ -1144,10 +1144,12 @@ export default class Indexer extends HealthCheck {
     query($contractAddress: String!, $tokenId: String!) {
       nftByContractAddressAndTokenId(contractAddress: $contractAddress, tokenId: $tokenId) {
         id
+        tx
+        chainId
+        status
         collectionId
         contractAddress
         tokenId
-        chainId
       }
     }
     `
@@ -1293,7 +1295,7 @@ export default class Indexer extends HealthCheck {
     )
     this.networkMonitor.structuredLog(
       network,
-      `API: Requesting to update NFT with ${data.nftByContractAddressAndTokenId.tx} and id ${data.nftByContractAddressAndTokenId.id}`,
+      `API: Requesting to update NFT with id ${data.nftByContractAddressAndTokenId.id} and tx ${data.nftByContractAddressAndTokenId.tx}`,
       tags,
     )
 
@@ -1318,7 +1320,7 @@ export default class Indexer extends HealthCheck {
   }
 
   async updateCrossChainTransactionCallback(
-    data: any, // NftByContractddressAndTokenIdQuery
+    data: any, // NftByContractAddressAndTokenIdQuery
     transaction: TransactionResponse,
     network: string,
     fromNetwork: string,
@@ -1351,8 +1353,8 @@ export default class Indexer extends HealthCheck {
           sourceChainId: transaction.chainId,
           sourceStatus: 'COMPLETED',
           sourceAddress: transaction.from,
-          nftId: data.id,
-          collectionId: data.collectionId,
+          nftId: data.nftByContractAddressAndTokenId.id,
+          collectionId: data.nftByContractAddressAndTokenId.collectionId,
           // Include the destination chain id if the transaction is a bridge out
           messageChainId: destinationChainid,
           operatorChainId: destinationChainid,
@@ -1408,8 +1410,8 @@ export default class Indexer extends HealthCheck {
           messageChainId: transaction.chainId,
           messageStatus: 'COMPLETED',
           messageAddress: transaction.from,
-          nftId: data.id,
-          collectionId: data.collectionId,
+          nftId: data.nftByContractAddressAndTokenId.id,
+          collectionId: data.nftByContractAddressAndTokenId.collectionId,
         } as UpdateCrossChainTransactionStatusInput
 
         this.networkMonitor.structuredLog(
@@ -1462,8 +1464,8 @@ export default class Indexer extends HealthCheck {
           operatorChainId: transaction.chainId,
           operatorStatus: 'COMPLETED',
           operatorAddress: transaction.from,
-          nftId: data.id,
-          collectionId: data.collectionId,
+          nftId: data.nftByContractAddressAndTokenId.id,
+          collectionId: data.nftByContractAddressAndTokenId.collectionId,
         } as UpdateCrossChainTransactionStatusInput
 
         this.networkMonitor.structuredLog(
@@ -1536,6 +1538,9 @@ export default class Indexer extends HealthCheck {
     query($contractAddress: String!, $tokenId: String!) {
       nftByContractAddressAndTokenId(contractAddress: $contractAddress, tokenId: $tokenId) {
         id
+        tx
+        chainId
+        status
         collectionId
         contractAddress
         tokenId
