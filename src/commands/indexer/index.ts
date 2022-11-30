@@ -1141,17 +1141,17 @@ export default class Indexer extends HealthCheck {
     )
     this.networkMonitor.structuredLog(network, `Sending bridged nft job to DBJobManager ${contractAddress}`, tags)
     const query = gql`
-    query($contractAddress: String!, $tokenId: String!) {
-      nftByContractAddressAndTokenId(contractAddress: $contractAddress, tokenId: $tokenId) {
-        id
-        tx
-        chainId
-        status
-        collectionId
-        contractAddress
-        tokenId
+      query($contractAddress: String!, $tokenId: String!) {
+        nftByContractAddressAndTokenId(contractAddress: $contractAddress, tokenId: $tokenId) {
+          id
+          tx
+          chainId
+          status
+          collectionId
+          contractAddress
+          tokenId
+        }
       }
-    }
     `
     const job: DBJob = {
       attempts: 0,
@@ -1205,6 +1205,17 @@ export default class Indexer extends HealthCheck {
       }`,
       tags,
     )
+
+    this.networkMonitor.structuredLog(network, `Checking if contract ${contractAddress} is on registry ...`, tags)
+    const isHolographable = await this.networkMonitor.registryContract.isHolographedContract(contractAddress)
+
+    if (isHolographable === false) {
+      this.networkMonitor.structuredLog(network, `Contract ${contractAddress} is not on registry`, tags)
+      return
+    }
+
+    this.networkMonitor.structuredLog(network, `Contract ${contractAddress} is on registry`, tags)
+
     const query = gql`
       query($tx: String!) {
         nftByTx(tx: $tx) {
