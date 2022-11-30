@@ -1207,12 +1207,15 @@ export default class Indexer extends HealthCheck {
       tags,
     )
 
+    this.networkMonitor.structuredLog(network, `Checking if contract ${contractAddress} is on registry ...`, tags)
     const isHolographable = await this.networkMonitor.registryContract.isHolographedContract(contractAddress)
 
     if (isHolographable === false) {
-      this.networkMonitor.structuredLog(network, `Contract ${contractAddress} is not holographable`, tags)
+      this.networkMonitor.structuredLog(network, `Contract is not on registry`, tags)
       return
     }
+
+    this.networkMonitor.structuredLog(network, `Contract is on registry`, tags)
 
     const query = gql`
       query($tx: String!) {
