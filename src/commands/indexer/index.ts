@@ -1160,7 +1160,7 @@ export default class Indexer extends HealthCheck {
       query,
       message: `API: Requesting to get NFT with tokenId ${tokenId} from ${contractAddress}`,
       callback: this.updateBridgedERC721Callback,
-      arguments: [transaction, network, contractAddress, tokenId, tags],
+      arguments: [transaction, network, direction, contractAddress, tokenId, tags],
       identifier: {contractAddress: contractAddress, tokenId: tokenId},
       tags,
     }
@@ -1286,6 +1286,7 @@ export default class Indexer extends HealthCheck {
     data: any,
     transaction: TransactionResponse,
     network: string,
+    direction: string,
     tags: (string | number)[],
   ): Promise<void> {
     this.networkMonitor.structuredLog(
@@ -1309,6 +1310,19 @@ export default class Indexer extends HealthCheck {
       }
     }
     `
+
+    // Set the status and chainId of the NFT
+    let status
+    if (direction === 'in') {
+      status = NftStatus.MINTED
+    } else if (direction === 'out') {
+      status = NftStatus.BRIDGING
+    } else {
+      status = NftStatus.BRIDGING
+    }
+
+    data.nftByContractAddressAndTokenId.status = status
+    data.nftByContractAddressAndTokenId.chainId = transaction.chainId
 
     const input: UpdateNftInput = {updateNftInput: data.nftByContractAddressAndTokenId}
     const response = await this.apiService.sendMutationRequest(mutation, input)
