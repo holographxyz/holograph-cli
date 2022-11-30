@@ -1187,7 +1187,6 @@ export default class Indexer extends HealthCheck {
     )
   }
 
-  // TODO: aqui
   async updateMintedERC721(
     transaction: TransactionResponse,
     network: string,
@@ -1211,11 +1210,11 @@ export default class Indexer extends HealthCheck {
     const isHolographable = await this.networkMonitor.registryContract.isHolographedContract(contractAddress)
 
     if (isHolographable === false) {
-      this.networkMonitor.structuredLog(network, `Contract is not on registry`, tags)
+      this.networkMonitor.structuredLog(network, `Contract ${contractAddress} is not on registry`, tags)
       return
     }
 
-    this.networkMonitor.structuredLog(network, `Contract is on registry`, tags)
+    this.networkMonitor.structuredLog(network, `Contract ${contractAddress} is on registry`, tags)
 
     const query = gql`
       query($tx: String!) {
