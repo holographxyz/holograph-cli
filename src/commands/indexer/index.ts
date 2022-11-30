@@ -1141,17 +1141,17 @@ export default class Indexer extends HealthCheck {
     )
     this.networkMonitor.structuredLog(network, `Sending bridged nft job to DBJobManager ${contractAddress}`, tags)
     const query = gql`
-    query($contractAddress: String!, $tokenId: String!) {
-      nftByContractAddressAndTokenId(contractAddress: $contractAddress, tokenId: $tokenId) {
-        id
-        tx
-        chainId
-        status
-        collectionId
-        contractAddress
-        tokenId
+      query($contractAddress: String!, $tokenId: String!) {
+        nftByContractAddressAndTokenId(contractAddress: $contractAddress, tokenId: $tokenId) {
+          id
+          tx
+          chainId
+          status
+          collectionId
+          contractAddress
+          tokenId
+        }
       }
-    }
     `
     const job: DBJob = {
       attempts: 0,
@@ -1187,6 +1187,7 @@ export default class Indexer extends HealthCheck {
     )
   }
 
+  // TODO: aqui
   async updateMintedERC721(
     transaction: TransactionResponse,
     network: string,
@@ -1205,6 +1206,14 @@ export default class Indexer extends HealthCheck {
       }`,
       tags,
     )
+
+    const isHolographable = await this.networkMonitor.registryContract.isHolographedContract(contractAddress)
+
+    if (isHolographable === false) {
+      this.networkMonitor.structuredLog(network, `Contract ${contractAddress} is not holographable`, tags)
+      return
+    }
+
     const query = gql`
       query($tx: String!) {
         nftByTx(tx: $tx) {
