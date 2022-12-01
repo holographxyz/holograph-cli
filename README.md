@@ -29,7 +29,7 @@ $ npm install -g @holographxyz/cli
 $ holograph COMMAND
 running command...
 $ holograph (--version)
-@holographxyz/cli/0.0.11 darwin-arm64 node-v18.9.0
+@holographxyz/cli/0.0.12 darwin-arm64 node-v18.9.0
 $ holograph --help [COMMAND]
 USAGE
   $ holograph COMMAND
@@ -85,7 +85,7 @@ EXAMPLES
     $ holograph bridge:nft --help --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/bridge/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/bridge/index.ts)_
+_See code: [dist/commands/bridge/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/bridge/index.ts)_
 
 ## `holograph bridge:contract`
 
@@ -113,7 +113,7 @@ EXAMPLES
   $ holograph bridge:contract --sourceNetwork="goerli" --destinationNetwork="fuji" --deploymentConfig="./MyContract.json" --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/bridge/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/bridge/contract.ts)_
+_See code: [dist/commands/bridge/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/bridge/contract.ts)_
 
 ## `holograph bridge:nft`
 
@@ -142,7 +142,7 @@ EXAMPLES
   $ holograph bridge:nft --sourceNetwork="goerli" --destinationNetwork="fuji" --collectionAddress="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId="0x01" --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/bridge/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/bridge/nft.ts)_
+_See code: [dist/commands/bridge/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/bridge/nft.ts)_
 
 ## `holograph config`
 
@@ -173,7 +173,7 @@ EXAMPLES
   $ holograph config --fromJson '{"version": "beta3", ...}
 ```
 
-_See code: [dist/commands/config/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/config/index.ts)_
+_See code: [dist/commands/config/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/config/index.ts)_
 
 ## `holograph config:networks`
 
@@ -202,7 +202,7 @@ EXAMPLES
   $ holograph config:networks --output clean --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/config/networks.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/config/networks.ts)_
+_See code: [dist/commands/config/networks.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/config/networks.ts)_
 
 ## `holograph config:user`
 
@@ -231,7 +231,7 @@ EXAMPLES
   $ holograph config:user --output clean --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/config/user.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/config/user.ts)_
+_See code: [dist/commands/config/user.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/config/user.ts)_
 
 ## `holograph config:view`
 
@@ -260,7 +260,7 @@ EXAMPLES
   $ holograph config:view --output clean --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/config/view.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/config/view.ts)_
+_See code: [dist/commands/config/view.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/config/view.ts)_
 
 ## `holograph create`
 
@@ -285,7 +285,7 @@ EXAMPLES
   $ holograph create:nft --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/create/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/create/index.ts)_
+_See code: [dist/commands/create/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/create/index.ts)_
 
 ## `holograph create:contract`
 
@@ -316,7 +316,7 @@ EXAMPLES
   $ holograph create:contract --deploymentType="deployedTx" --tx="0xdb8b393dd18a71b386c8de75b87310c0c8ded0c57cf6b4c5bab52873d54d1e8a" --txNetwork="goerli" --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/create/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/create/contract.ts)_
+_See code: [dist/commands/create/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/create/contract.ts)_
 
 ## `holograph create:nft`
 
@@ -346,7 +346,7 @@ EXAMPLES
   $ holograph create:nft --network="goerli" --collectionAddress="0xf90c33d5ef88a9d84d4d61f62c913ba192091fe7" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json" --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/create/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/create/nft.ts)_
+_See code: [dist/commands/create/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/create/nft.ts)_
 
 ## `holograph faucet`
 
@@ -369,7 +369,7 @@ EXAMPLES
   $ holograph faucet --network="goerli" --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/faucet/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/faucet/index.ts)_
+_See code: [dist/commands/faucet/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/faucet/index.ts)_
 
 ## `holograph help [COMMAND]`
 
@@ -408,8 +408,7 @@ FLAGS
   --env=<option>             [default: testnet] Holograph environment to use
                              <options: mainnet|testnet|develop|experimental>
   --healthCheck              Launch server on http://localhost:6000 to make sure command is still running
-  --healthCheckPort=<value>  [default: 6000] This flag allows you to choose what port the health check sever is running
-                             on.
+  --healthCheckPort=<value>  This flag allows you to choose what port the health check sever is running on.
   --networks=<option>...     Space separated list of networks to use
                              <options: goerli|mumbai|fuji|rinkeby>
   --sync                     Start from last saved block position instead of latest block position
@@ -422,7 +421,7 @@ EXAMPLES
   $ holograph operator --networks goerli fuji mumbai --mode=auto --sync --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/operator/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/operator/index.ts)_
+_See code: [dist/commands/operator/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/operator/index.ts)_
 
 ## `holograph operator:bond`
 
@@ -448,7 +447,7 @@ EXAMPLES
   $ holograph operator:bond --network <string> --pod <number> --amount <number> --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/operator/bond.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/operator/bond.ts)_
+_See code: [dist/commands/operator/bond.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/operator/bond.ts)_
 
 ## `holograph operator:recover`
 
@@ -463,8 +462,7 @@ FLAGS
   --env=<option>             [default: testnet] Holograph environment to use
                              <options: mainnet|testnet|develop|experimental>
   --healthCheck              Launch server on http://localhost:6000 to make sure command is still running
-  --healthCheckPort=<value>  [default: 6000] This flag allows you to choose what port the health check sever is running
-                             on.
+  --healthCheckPort=<value>  This flag allows you to choose what port the health check sever is running on.
   --network=<option>         The network on which the transaction was executed
                              <options: goerli|mumbai|fuji|rinkeby>
   --tx=<value>               The hash of transaction that we want to attempt to execute
@@ -476,7 +474,7 @@ EXAMPLES
   $ holograph operator:recover --network="ethereumTestnetGoerli" --tx="0x..." --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/operator/recover.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/operator/recover.ts)_
+_See code: [dist/commands/operator/recover.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/operator/recover.ts)_
 
 ## `holograph operator:unbond`
 
@@ -497,7 +495,7 @@ EXAMPLES
   $ holograph operator:unbond --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/operator/unbond.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/operator/unbond.ts)_
+_See code: [dist/commands/operator/unbond.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/operator/unbond.ts)_
 
 ## `holograph status`
 
@@ -524,7 +522,7 @@ EXAMPLES
     $ holograph status:nft --help --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/status/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/status/index.ts)_
+_See code: [dist/commands/status/index.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/status/index.ts)_
 
 ## `holograph status:contract`
 
@@ -549,7 +547,7 @@ EXAMPLES
   $ holograph status:contract --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78" --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/status/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/status/contract.ts)_
+_See code: [dist/commands/status/contract.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/status/contract.ts)_
 
 ## `holograph status:nft`
 
@@ -575,7 +573,7 @@ EXAMPLES
   $ holograph status:nft --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78" --id=1 --env mainnet|testnet|develop|experimental
 ```
 
-_See code: [dist/commands/status/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.11/dist/commands/status/nft.ts)_
+_See code: [dist/commands/status/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/status/nft.ts)_
 <!-- commandsstop -->
 
 ## Developing

@@ -86,7 +86,7 @@ export default class Analyze extends Command {
   static hidden = true
   static description = 'Extract all operator jobs and get their status'
   static examples = [
-    `$ <%= config.bin %> <%= command.id %> --scope='{"network":"goerli","startBlock":10857626,"endBlock":11138178}' --scope='{"network":"mumbai","startBlock":26758573,"endBlock":27457918}' --scope='{"network":"fuji","startBlock":11406945,"endBlock":12192217}'`,
+    `$ <%= config.bin %> <%= command.id %> --scope='{"network":"goerli","startBlock":10857626,"endBlock":11138178}' --scope='{"network":"mumbai","startBlock":26758573,"endBlock":27457918}' --scope='{"network":"fuji","startBlock":11406945,"endBlock":12192217}' --updateApiUrl='https://api.holograph.xyz'`,
   ]
 
   static flags = {
@@ -104,8 +104,8 @@ export default class Analyze extends Command {
       default: `./${getEnvironment()}.analyzeResults.json`,
       multiple: false,
     }),
-    updateApiOn: Flags.string({
-      description: 'Update DB cross-chain table with correct beam status',
+    updateApiUrl: Flags.string({
+      description: 'Update database cross-chain table with correct beam status',
     }),
   }
 
@@ -124,14 +124,14 @@ export default class Analyze extends Command {
    */
   async run(): Promise<void> {
     const {flags} = await this.parse(Analyze)
-    const updateApiOn = flags.updateApiOn as string
+    const updateApiUrl = flags.updateApiUrl
 
     this.log('Loading user configurations...')
     const {environment, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
     this.log('User configurations loaded.')
     this.environment = environment
 
-    if (updateApiOn) {
+    if (updateApiUrl !== undefined) {
       try {
         const logger: Logger = {
           log: this.log,
@@ -140,7 +140,7 @@ export default class Analyze extends Command {
           error: this.error,
           jsonEnabled: () => false,
         }
-        this.apiService = new ApiService(updateApiOn, logger)
+        this.apiService = new ApiService(updateApiUrl, logger)
         await this.apiService.operatorLogin()
       } catch (error: any) {
         this.error(error)
@@ -333,7 +333,7 @@ export default class Analyze extends Command {
    */
   async updateBeamStatusDB(beam: AvailableJob, rawData?: RawData): Promise<void> {
     if (this.apiService === undefined) {
-      return
+      throw new Error('API service is not defined')
     }
 
     let crossChainTx: CrossChainTransaction
