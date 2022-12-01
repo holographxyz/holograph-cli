@@ -16,16 +16,14 @@
 The Holograph CLI enables you to interact with Holograph Protocol, in addition to participating as an operator in the Operator Network.
 
 <!-- toc -->
-
-- [Overview](#overview)
-- [Usage](#usage)
-- [Commands](#commands)
+* [Overview](#overview)
+* [Usage](#usage)
+* [Commands](#commands)
 <!-- tocstop -->
 
 # Usage
 
 <!-- usage -->
-
 ```sh-session
 $ npm install -g @holographxyz/cli
 $ holograph COMMAND
@@ -37,7 +35,6 @@ USAGE
   $ holograph COMMAND
 ...
 ```
-
 <!-- usagestop -->
 
 # Commands
