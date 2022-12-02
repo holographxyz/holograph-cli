@@ -150,6 +150,9 @@ export default class Indexer extends HealthCheck {
       warp: flags.warp,
     })
 
+    this.apiService.setStructuredLog(this.networkMonitor.structuredLog)
+    this.apiService.setStructuredLogError(this.networkMonitor.structuredLogError)
+
     // TODO: It doesn't seems like sync is working
     // Indexer always synchronizes missed blocks
     // this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
@@ -198,7 +201,7 @@ export default class Indexer extends HealthCheck {
   }
 
   async processDBJob(timestamp: number, job: DBJob): Promise<void> {
-    this.networkMonitor.structuredLog(job.network, job.message)
+    this.networkMonitor.structuredLog(job.network, job.message, job.tags)
     let response: any
     if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
       this.networkMonitor.structuredLog(
@@ -212,7 +215,8 @@ export default class Indexer extends HealthCheck {
       await job.callback.bind(this)('', ...job.arguments)
       this.processDBJobs()
     } else {
-      response = await this.apiService.sendQueryRequest(job.query, job.identifier)
+      const structuredLogInfo = {network: job.network, tagId: job.tags}
+      response = await this.apiService.sendQueryRequest(job.query, job.identifier, structuredLogInfo)
       try {
         this.networkMonitor.structuredLog(job.network, `Query response ${JSON.stringify(response)}`, job.tags)
         await job.callback.bind(this)(response, ...job.arguments)
@@ -233,6 +237,7 @@ export default class Indexer extends HealthCheck {
   processDBJobs(timestamp?: number, job?: DBJob): void {
     if (timestamp !== undefined && job !== undefined) {
       if (!(timestamp in this.dbJobMap)) {
+        this.networkMonitor.structuredLog(job.network, `Adding ${timestamp} to dbJobMap`, job.tags)
         this.dbJobMap[timestamp] = []
       }
 
@@ -251,8 +256,14 @@ export default class Indexer extends HealthCheck {
         )
       } else if (job.attempts >= 9) {
         // push to end of array as a final attempt
+        this.networkMonitor.structuredLog(
+          job.network,
+          `Final attempt to add job to timestamp ${timestamp} at dbJobMap`,
+          job.tags,
+        )
         this.dbJobMap[timestamp].push(job)
       } else {
+        this.networkMonitor.structuredLog(job.network, `Adding job to timestamp ${timestamp} at dbJobMap`, job.tags)
         this.dbJobMap[timestamp].unshift(job)
       }
     }
@@ -261,14 +272,40 @@ export default class Indexer extends HealthCheck {
     if (timestamps.length > 0) {
       timestamps.sort(this.numericSort)
       const timestamp: number = timestamps[0]
+
+      if (job === undefined) {
+        this.log(`Checking if jobs exist for timestamp ${timestamp}...`)
+      } else {
+        this.networkMonitor.structuredLog(job.network, `Checking if jobs exist for timestamp ${timestamp}...`, job.tags)
+      }
+
       if (this.dbJobMap[timestamp].length > 0) {
         const job: DBJob = this.dbJobMap[timestamp].shift()!
+
+        if (job === undefined) {
+          this.log(`Processing job...`)
+        } else {
+          this.networkMonitor.structuredLog(job.network, `Processing job...`, job.tags)
+        }
+
         this.processDBJob(timestamp, job)
       } else {
+        if (job === undefined) {
+          this.log(`No jobs found`)
+        } else {
+          this.networkMonitor.structuredLog(job.network, `No jobs found`, job.tags)
+        }
+
         delete this.dbJobMap[timestamp]
         setTimeout(this.processDBJobs.bind(this), 1000)
       }
     } else {
+      if (job === undefined) {
+        this.log(`No timestamps found, setting timeout...`)
+      } else {
+        this.networkMonitor.structuredLog(job.network, `No timestamps found, setting timeout...`, job.tags)
+      }
+
       setTimeout(this.processDBJobs.bind(this), 1000)
     }
   }
@@ -1206,15 +1243,23 @@ export default class Indexer extends HealthCheck {
       tags,
     )
 
-    this.networkMonitor.structuredLog(network, `Checking if contract ${contractAddress} is on registry ...`, tags)
-    const isHolographable = await this.networkMonitor.registryContract.isHolographedContract(contractAddress)
+    this.networkMonitor.structuredLog(network, `Checking if contract ${contractAddress} is in registry ...`, tags)
+    const isHolographable: boolean = await this.networkMonitor.registryContract.isHolographedContract(contractAddress)
 
     if (isHolographable === false) {
-      this.networkMonitor.structuredLog(network, `Contract ${contractAddress} is not on registry`, tags)
+      this.networkMonitor.structuredLog(
+        network,
+        `Contract ${contractAddress} is not in registry at ${this.environment}`,
+        tags,
+      )
       return
     }
 
-    this.networkMonitor.structuredLog(network, `Contract ${contractAddress} is on registry`, tags)
+    this.networkMonitor.structuredLog(
+      network,
+      `Contract ${contractAddress} is in registry at ${this.environment}`,
+      tags,
+    )
 
     const query = gql`
       query($tx: String!) {
