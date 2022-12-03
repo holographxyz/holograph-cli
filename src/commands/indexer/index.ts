@@ -1211,7 +1211,7 @@ export default class Indexer extends HealthCheck {
 
     if (isHolographable === false) {
       this.networkMonitor.structuredLog(network, `Contract ${contractAddress} is not on registry`, tags)
-      return
+      // return
     }
 
     this.networkMonitor.structuredLog(network, `Contract ${contractAddress} is on registry`, tags)
