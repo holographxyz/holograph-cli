@@ -16,7 +16,7 @@ import {ensureConfigFileIsValid} from '../../utils/config'
 import {checkOptionFlag} from '../../utils/validation'
 
 export default class Faucet extends Command {
-  static description = 'Request tokens from a faucet'
+  static description = 'Request Testnet HLG from a faucet.'
   static examples = ['$ <%= config.bin %> <%= command.id %> --network="goerli"']
   static flags = {
     ...networkFlag,

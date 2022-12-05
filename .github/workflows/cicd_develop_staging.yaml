@@ -1,4 +1,4 @@
-name: Deploy holoclis to staging
+name: Deploy holoclis to staging[develop]
 
 permissions:
   id-token: write
@@ -32,7 +32,7 @@ env:
   INDEXER_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
   OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
   #
-  ABI_ENVIRONMENT: develop # same for all apps [indexer,operator]
+  HOLOGRAPH_ENVIRONMENT: develop
   #
   STG_DOMAIN: 'cxipchain.xyz'
   #
@@ -138,7 +138,7 @@ jobs:
             --set holo_indexer_password=${{ env.STG_HOLOGRAPH_INDEXER_PASSWORD }} \
             --set HOLO_INDEXER_HOST=${{ env.STG_HOLOGRAPH_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY }} \
-            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set HEALTHCHECK=$HEALTHCHECK \
@@ -194,7 +194,7 @@ jobs:
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.STG_HOLOGRAPH_OPERATOR_PASSWORD }} \
-            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set ENABLE_SYNC=$ENABLE_SYNC \

@@ -1,7 +1,7 @@
 import * as fs from 'fs-extra'
 import * as inquirer from 'inquirer'
 
-import {CliUx, Command, Flags} from '@oclif/core'
+import {CliUx, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
@@ -11,7 +11,7 @@ import {capitalize} from '../../utils/utils'
 import {DeploymentConfig, decodeDeploymentConfigInput} from '../../utils/contract-deployment'
 
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
-import {healthcheckFlag, startHealthcheckServer} from '../../utils/health-check-server'
+import {HealthCheck} from '../../base-commands/healthcheck'
 
 type RecoveryData = {
   // eslint-disable-next-line camelcase
@@ -23,7 +23,7 @@ type RecoveryData = {
   contract_address: string
 }
 
-export default class Propagator extends Command {
+export default class Propagator extends HealthCheck {
   static hidden = true
   static description = 'Listen for EVM events deploys collections to the supported networks'
   static examples = [
@@ -36,7 +36,6 @@ export default class Propagator extends Command {
       options: ['listen', 'manual', 'auto'],
       char: 'm',
     }),
-    ...healthcheckFlag,
     sync: Flags.boolean({
       description: 'Start from last saved block position instead of latest block position',
       default: false,
@@ -53,6 +52,7 @@ export default class Propagator extends Command {
     recoverFile: Flags.string({
       description: 'Filename reference to JSON array of RecoveryData objects to manually ensure propagation',
     }),
+    ...HealthCheck.flags,
   }
 
   crossDeployments: string[] = []
@@ -66,6 +66,7 @@ export default class Propagator extends Command {
     const {flags} = await this.parse(Propagator)
 
     const enableHealthCheckServer = flags.healthCheck
+    const healthCheckPort = flags.healthCheckPort
     const syncFlag = flags.sync
     const unsafePassword = flags.unsafePassword
 
@@ -151,7 +152,6 @@ export default class Propagator extends Command {
           checkNetworks.splice(checkNetworks.indexOf(network), 1)
         }
 
-        // eslint-disable-next-line no-await-in-loop
         let tx = await this.networkMonitor.getTransaction({
           transactionHash: data.tx,
           network,
@@ -163,7 +163,6 @@ export default class Propagator extends Command {
           if (tx === null) {
             this.networkMonitor.structuredLog(network, `Transaction ${data.tx} is on wrong network`)
             network = checkNetwork
-            // eslint-disable-next-line no-await-in-loop
             tx = await this.networkMonitor.getTransaction({
               transactionHash: data.tx,
               network,
@@ -179,7 +178,6 @@ export default class Propagator extends Command {
         if (tx === null) {
           this.networkMonitor.structuredLog(network, `Could not find ${data.tx} on any network`)
         } else {
-          // eslint-disable-next-line no-await-in-loop
           await this.handleContractDeployedEvents(tx, network)
         }
       }
@@ -187,9 +185,10 @@ export default class Propagator extends Command {
       this.log('Done running recovery jobs')
     }
 
-    // Start server
+    // Start health check server on port 6000 or healthCheckPort
+    // Can be used to monitor that the operator is online and running
     if (enableHealthCheckServer) {
-      startHealthcheckServer(this.networkMonitor)
+      await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, healthCheckPort})
     }
   }
 
@@ -205,7 +204,6 @@ export default class Propagator extends Command {
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
-    /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
         this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${transaction.blockNumber}`)

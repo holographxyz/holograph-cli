@@ -9,6 +9,9 @@
     "unicorn/prefer-module": "off",
 
     // TODO: This can be removed if we decide to add jsdoc to all functions
-    "valid-jsdoc": "off"
+    "valid-jsdoc": "off",
+
+    // TODO: This can be removed if we refactor network functions to call async functions outside of loops
+    "no-await-in-loop": "off"
   }
 }

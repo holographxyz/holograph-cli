@@ -8,7 +8,7 @@ import {capitalize} from '../../utils/utils'
 import {supportedFormats} from '../../utils/output-format'
 
 export default class ConfigView extends Command {
-  static description = 'View the current configuration state of the Holograph command line'
+  static description = 'View the current config state of the Holograph CLI.'
   static examples = [
     '$ <%= config.bin %> <%= command.id %>',
     '$ <%= config.bin %> <%= command.id %> --output json',

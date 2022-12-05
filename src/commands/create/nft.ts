@@ -22,7 +22,7 @@ import {
 import {TokenUriTypeIndex} from '../../utils/asset-deployment'
 
 export default class NFT extends Command {
-  static description = 'Mint a Holographable NFT'
+  static description = 'Mint a Holographable NFT.'
   static examples = [
     '$ <%= config.bin %> <%= command.id %> --network="goerli" --collectionAddress="0xf90c33d5ef88a9d84d4d61f62c913ba192091fe7" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"',
   ]

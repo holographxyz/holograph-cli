@@ -131,7 +131,7 @@ export function randomASCII(bytes: number): string {
 }
 
 export function isStringAValidURL(s: string): boolean {
-  const protocols = ['http', 'https', 'wss']
+  const protocols = ['http:', 'https:', 'wss:']
   try {
     const result = new URL(s)
     return result.protocol ? protocols.includes(result.protocol) : false

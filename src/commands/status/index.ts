@@ -2,7 +2,7 @@ import {Command} from '@oclif/core'
 import {ensureConfigFileIsValid} from '../../utils/config'
 
 export default class Status extends Command {
-  static description = 'Get the status of a contract or NFT'
+  static description = 'Get the status of a contract or NFT.'
   static examples = [
     {
       description: 'Learn how to get the status of a contract',

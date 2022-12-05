@@ -20,6 +20,8 @@ RUN yarn build
 
 RUN npm install -location=global ../holograph-cli
 
+# experimental / develop / testnet / mainnet
+ENV HOLOGRAPH_ENVIRONMENT=a-super-fancy-environment
 ENV CONFIG_FILE=a-super-config-file.json
 ENV PASSWORD=a-super-secret-password
 ENV HOLOGRAPH_CLI_CMD=TeRmInAtOr
