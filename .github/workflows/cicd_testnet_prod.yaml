@@ -23,7 +23,7 @@ env:
   #TODO - create new gh secret for prod. should be different from staging????
   TESTNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
-  TESTNET_HOLO_INDEXER_HOST: 'http://pegasus-holo-api.testnet.svc.cluster.local:443' # Notice <-- PEGASUS release from API
+  TESTNET_HOLO_INDEXER_HOST: 'http://pegasus-holo-api.testnet.svc.cluster.local:443' # Notice <-- the release from API
   #
   # TODO -> replace them with the PROD specific password <---------------------------
   TESTNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
