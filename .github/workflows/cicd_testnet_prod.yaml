@@ -11,8 +11,8 @@ env:
   #
   TESTNET_IMAGE_TAG: testnet-${{ github.sha }}
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.46
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.41
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.55
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.44
   #######################################
   CLUSTER_NAME: prod0
   #
