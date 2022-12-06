@@ -127,7 +127,7 @@ jobs:
           RELEASE_NAME: indexer-main # notice
           ENABLE_DEBUG: 'true'
           HEALTHCHECK: 'true'
-          MODE: 'auto'
+          MODE: 'listen'
           NETWORK: 'fuji mumbai goerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
@@ -188,7 +188,7 @@ jobs:
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
           HEALTHCHECK: 'true'
-          MODE: 'auto'
+          MODE: 'listen'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
