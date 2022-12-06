@@ -20,7 +20,7 @@ env:
   AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
   ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }}
   #
-  #TODO - create new gh secret for prod. should be different from staging????
+  #TODO - create new gh secret for TESTNET. should be different from staging????
   TESTNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
   TESTNET_HOLO_INDEXER_HOST: 'http://pegasus-holo-api.testnet.svc.cluster.local:443' # Notice <-- the release from API
@@ -39,14 +39,14 @@ env:
   #
   TESTNET_COMMON_NAMESPACE: testnet # NOTICE <---
   #
-  # INDEXER TESTNET
+  # INDEXER TESTNET rpc endpoints
   indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
   indexer_testnet_polygonTestnet_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
   indexer_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_GOERLI_RPC_URL }}
   #
   indexer_testnet_private_key: ${{ secrets.INDEXER_PROD_PRIVATE_KEY }}
   indexer_testnet_address: ${{ secrets.INDEXER_PROD_ADDRESS }}
-  # OPERATOR TESTNET
+  # OPERATOR TESTNET rpc endpoints
   operator_testnet_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_FUJI_RPC_URL }}
   operator_testnet_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_MUMBAI_RPC_URL }}
   operator_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_GOERLI_RPC_URL }}
@@ -71,8 +71,8 @@ on:
     types: [closed]
 
 jobs:
-  deploy-to-prod0-testnet:
-    name: Deploy-to-prod0[testnet]
+  deploy-to-prod-testnet:
+    name: Deploy-to-prod[testnet]
     runs-on: ubuntu-latest
 
     steps:
@@ -125,7 +125,7 @@ jobs:
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
       ######
-      - name: -> Deploy INDEXER cli in prod [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
+      - name: -> Deploy INDEXER cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer-testnet #notice
@@ -139,6 +139,7 @@ jobs:
             helm upgrade --install $RELEASE_NAME \
             holo-indexer-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.TESTNET_COMMON_NAMESPACE }} \
+            \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
@@ -158,6 +159,7 @@ jobs:
             \
             --set testnet_rpc_config_values.private_key=${{ env.indexer_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.indexer_testnet_address }} \
+            --set testnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
@@ -183,7 +185,7 @@ jobs:
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
       ######
-      - name: -> Deploy OPERATOR cli in prod [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
+      - name: -> Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: operator-testnet #notice
@@ -197,6 +199,7 @@ jobs:
             helm upgrade --install $RELEASE_NAME \
             holo-operator-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.TESTNET_COMMON_NAMESPACE }} \
+            \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
@@ -234,7 +237,7 @@ jobs:
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
-            echo "------------------------- Last 5 Helm releases -------------------------"
+            echo "------------------------- Last n Helm releases -------------------------"
             echo "--INDEXER--"
             helm history $INDEXER_RELEASE_NAME  -n ${{ env.TESTNET_COMMON_NAMESPACE }} --max 3
             echo "--OPERATOR--"

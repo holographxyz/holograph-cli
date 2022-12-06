@@ -7,9 +7,9 @@ permissions:
 env:
   AWS_REGION: us-west-2
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
-  ECR_REPOSITORY: holo-cli # notice: the same for all 3 cli apps
+  ECR_REPOSITORY: holo-cli # notice: the same for all cli apps
   #
-  MAINNET_IMAGE_TAG: testnet-48b8bd3cefd212b327a9acfb1158c990f3a9825f #mainnet-${{ github.sha }}
+  MAINNET_IMAGE_TAG: testnet-02c8b0c4ef76c4e9105ac529c254dd1aa3ad82eb #mainnet-${{ github.sha }}
   ########################################
   MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.55
   MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.44
@@ -59,7 +59,6 @@ on:
   push:
     branches:
       - 'feat/deploy-to-mainnet'
-  workflow_dispatch:
 # notice: the trigger
 #on:
 #  pull_request:
@@ -108,67 +107,68 @@ jobs:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             kubectl create namespace ${{ env.MAINNET_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-#      #
-#      #
-#      # NOTICE: --- INDEXER ---
-#      - name: Pull the holo-indexer helm chart version x.x.x from ECR
-#        shell: bash
-#        env:
-#          #
-#          CHART_REPO: holo-indexer
-#          CHART_VERSION: ${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }}
-#          #
-#          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-#        run: |
-#          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-#      ######
-#      - name: -> Deploy INDEXER cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          RELEASE_NAME: indexer-main #notice
-#          ENABLE_DEBUG: 'true'
-#          HEALTHCHECK: 'true'
-#          MODE: 'auto'
-#          NETWORK: 'fuji mumbai goerli'
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            helm upgrade --install $RELEASE_NAME \
-#            holo-indexer-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
-#            -n ${{ env.MAINNET_COMMON_NAMESPACE }} \
-#            --set image.repository=${{ env.ECR_REPOSITORY }} \
-#            --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
-#            --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
-#            --set holo_indexer_password=${{ env.MAINNET_HOLO_INDEXER_PASSWORD }} \
-#            --set HOLO_INDEXER_HOST=${{ env.MAINNET_HOLO_INDEXER_HOST }} \
-#            --set OPERATOR_API_KEY=${{ env.MAINNET_HOLO_INDEXER_OPERATOR_API_KEY }} \
-#            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
-#            \
-#            --set ENABLE_DEBUG=$ENABLE_DEBUG \
-#            --set HEALTHCHECK=$HEALTHCHECK \
-#            --set MODE=$MODE \
-#            --set NETWORK="${NETWORK}" \
-#            \
-#            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_mainnet_avalancheMainnet_rpc_url }} \
-#            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_mainnet_polygonMainnet_rpc_url }} \
-#            --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.indexer_mainnet_ethereumMainnetGoerli_rpc_url }} \
-#            \
-#            --set testnet_rpc_config_values.private_key=${{ env.indexer_mainnet_private_key }} \
-#            --set testnet_rpc_config_values.address=${{ env.indexer_mainnet_address }} \
-#            --set testnet_rpc_config_values.version="beta3" \
-#            \
-#            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-#            --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
-#            --set datadog_tags.version=chart-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
-#            \
-#            --values .github/values_for_prod_alb_ingress.yaml \
-#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-#            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
-#            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
-#            --set ingress.blue_green_deployment=false
-#      #
-#      #
+      #
+      #
+      # NOTICE: --- INDEXER ---
+      - name: Pull the holo-indexer helm chart version x.x.x from ECR
+        shell: bash
+        env:
+          #
+          CHART_REPO: holo-indexer
+          CHART_VERSION: ${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }}
+          #
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
+      ######
+      - name: -> Deploy INDEXER cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          RELEASE_NAME: indexer-main # notice
+          ENABLE_DEBUG: 'true'
+          HEALTHCHECK: 'true'
+          MODE: 'auto'
+          NETWORK: 'fuji mumbai goerli'
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            helm upgrade --install $RELEASE_NAME \
+            holo-indexer-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
+            -n ${{ env.MAINNET_COMMON_NAMESPACE }} \
+            \
+            --set image.repository=${{ env.ECR_REPOSITORY }} \
+            --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
+            --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
+            --set holo_indexer_password=${{ env.MAINNET_HOLO_INDEXER_PASSWORD }} \
+            --set HOLO_INDEXER_HOST=${{ env.MAINNET_HOLO_INDEXER_HOST }} \
+            --set OPERATOR_API_KEY=${{ env.MAINNET_HOLO_INDEXER_OPERATOR_API_KEY }} \
+            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            \
+            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set HEALTHCHECK=$HEALTHCHECK \
+            --set MODE=$MODE \
+            --set NETWORK="${NETWORK}" \
+            \
+            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_mainnet_avalancheMainnet_rpc_url }} \
+            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_mainnet_polygonMainnet_rpc_url }} \
+            --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.indexer_mainnet_ethereumMainnetGoerli_rpc_url }} \
+            \
+            --set testnet_rpc_config_values.private_key=${{ env.indexer_mainnet_private_key }} \
+            --set testnet_rpc_config_values.address=${{ env.indexer_mainnet_address }} \
+            --set testnet_rpc_config_values.version="beta3" \
+            \
+            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
+            --set datadog_tags.version=chart-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
+            \
+            --values .github/values_for_prod_alb_ingress.yaml \
+            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
+            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
+            --set ingress.blue_green_deployment=false
+      #
+      #
       # NOTICE: --- OPERATOR ---
       - name: Pull the holo-operator helm chart version x.x.x from ECR
         shell: bash
@@ -184,7 +184,7 @@ jobs:
       - name: -> Deploy OPERATOR cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: operator-main #notice
+          RELEASE_NAME: operator-main # notice
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
           HEALTHCHECK: 'true'
@@ -195,6 +195,7 @@ jobs:
             helm upgrade --install $RELEASE_NAME \
             holo-operator-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.MAINNET_COMMON_NAMESPACE }} \
+            \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
@@ -223,31 +224,31 @@ jobs:
             --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
             --set ingress.blue_green_deployment=false
 
-#      - name: -> Info for the new deployments
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          INDEXER_RELEASE_NAME: indexer
-#          OPERATOR_RELEASE_NAME: operator
-#          LB_URL: 'https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com'
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            echo "------------------------- Last 5 Helm releases -------------------------"
-#            echo "--INDEXER--"
-#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.MAINNET_COMMON_NAMESPACE }} --max 3
-#            echo "--OPERATOR--"
-#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.MAINNET_COMMON_NAMESPACE }} --max 3
-#
-#            echo "------------------------ Newly deployed image [same for all apps] ------------------------ "
-#            echo "$MAINNET_IMAGE_TAG"
-#
-#            echo "------------------------ Healthchecks ------------------------"
-#            sleep 55
-#
-#            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-#
-#            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+      - name: -> Info for the new deployments
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          INDEXER_RELEASE_NAME: indexer-main
+          OPERATOR_RELEASE_NAME: operator-main
+          LB_URL: 'https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com'
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            echo "------------------------- Last n Helm releases -------------------------"
+            echo "--INDEXER--"
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.MAINNET_COMMON_NAMESPACE }} --max 3
+            echo "--OPERATOR--"
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.MAINNET_COMMON_NAMESPACE }} --max 3
+
+            echo "------------------------ Newly deployed image [same for all apps] ------------------------ "
+            echo "$MAINNET_IMAGE_TAG"
+
+            echo "------------------------ Healthchecks ------------------------"
+            sleep 55
+
+            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }}
+            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+
+            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }}
+            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
