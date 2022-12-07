@@ -233,10 +233,10 @@ export default class Indexer extends HealthCheck {
           this.processDBJobs(timestamp, job)
         }
       } catch (extError: any) {
-          this.networkMonitor.structuredLogError(job.network, extError, [
-            ...job.tags,
-            this.errorColor(`SendQueryRequest failed with errors ${job.query}`),
-          ])
+        this.networkMonitor.structuredLogError(job.network, extError, [
+          ...job.tags,
+          this.errorColor(`SendQueryRequest failed with errors ${job.query}`),
+        ])
         // Sleep for 1 second and add job back to the queue
         await sleep(1000)
         this.processDBJobs(timestamp, job)

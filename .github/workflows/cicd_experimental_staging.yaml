@@ -173,4 +173,3 @@ jobs:
             ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
             echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
             curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-
