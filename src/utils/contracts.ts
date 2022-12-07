@@ -22,7 +22,7 @@ export const getABIs = async (environment: string): Promise<any> => {
 export const HOLOGRAPH_ADDRESSES: {[key in Environment]: string} = {
   [Environment.localhost]: '0xa3931469C1D058a98dde3b5AEc4dA002B6ca7446'.toLowerCase(),
   [Environment.experimental]: '0x199728d88a68856868f50FC259F01Bb4D2672Da9'.toLowerCase(),
-  [Environment.develop]: '0x8b0C32B59F7d620D467E36e31121733a6eb87b69'.toLowerCase(),
+  [Environment.develop]: '0xfeb058C063C8666414B52DF5c5De1b4B37228a25'.toLowerCase(),
   [Environment.testnet]: '0x37101ddAd4D1b19ce31A3015e07cfC0cE92E45D7'.toLowerCase(),
   [Environment.mainnet]: '0x0000000000000000000000000000000000000000'.toLowerCase(),
 }
@@ -30,7 +30,7 @@ export const HOLOGRAPH_ADDRESSES: {[key in Environment]: string} = {
 export const FAUCET_ADDRESSES: {[key in Environment]: string} = {
   [Environment.localhost]: '0x232E8406518da66ecD5681a600f18A13E8CfE5E6',
   [Environment.experimental]: '0x122C44eB91D149E6F495eD7cC3a5603eA05b593e',
-  [Environment.develop]: '0x07edede74dCA142db475e0b553B3cEaF86B4c3d5',
+  [Environment.develop]: '0xEcf5aC0544fFCCCab8EbF1f003a326DdCCD50852',
   [Environment.testnet]: '0x2CCc77739Fd104bA131366660e53200130EF9831',
   [Environment.mainnet]: '0x0000000000000000000000000000000000000000',
 } as const
