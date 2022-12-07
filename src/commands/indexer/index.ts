@@ -216,17 +216,27 @@ export default class Indexer extends HealthCheck {
       this.processDBJobs()
     } else {
       const structuredLogInfo = {network: job.network, tagId: job.tags}
-      response = await this.apiService.sendQueryRequest(job.query, job.identifier, structuredLogInfo)
       try {
-        this.networkMonitor.structuredLog(job.network, `Query response ${JSON.stringify(response)}`, job.tags)
-        await job.callback.bind(this)(response, ...job.arguments)
-        this.processDBJobs()
-      } catch (error: any) {
-        this.networkMonitor.structuredLogError(job.network, error, [
-          ...job.tags,
-          this.errorColor(`Request failed with errors ${job.query}`),
-        ])
+        response = await this.apiService.sendQueryRequest(job.query, job.identifier, structuredLogInfo)
+        try {
+          this.networkMonitor.structuredLog(job.network, `Query response ${JSON.stringify(response)}`, job.tags)
+          await job.callback.bind(this)(response, ...job.arguments)
+          this.processDBJobs()
+        } catch (error: any) {
+          this.networkMonitor.structuredLogError(job.network, error, [
+            ...job.tags,
+            this.errorColor(`Request failed with errors ${job.query}`),
+          ])
 
+          // Sleep for 1 second and add job back to the queue
+          await sleep(1000)
+          this.processDBJobs(timestamp, job)
+        }
+      } catch (extError: any) {
+          this.networkMonitor.structuredLogError(job.network, extError, [
+            ...job.tags,
+            this.errorColor(`SendQueryRequest failed with errors ${job.query}`),
+          ])
         // Sleep for 1 second and add job back to the queue
         await sleep(1000)
         this.processDBJobs(timestamp, job)
@@ -1290,7 +1300,7 @@ export default class Indexer extends HealthCheck {
       query,
       message: `API: Requesting to update NFT with transaction hash ${transaction.hash}`,
       callback: this.updateERC721Callback,
-      arguments: [transaction, network, contractAddress, tags],
+      arguments: [transaction, network, tags],
       identifier: {tx: transaction.hash},
       tags,
     }
