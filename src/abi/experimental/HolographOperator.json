@@ -370,6 +370,19 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "getMinGasPrice",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "minGasPrice",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -559,44 +572,6 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "blockTime",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "baseBondAmount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "podMultiplier",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "operatorThreshold",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "operatorThresholdStep",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "operatorThresholdDivisor",
-        "type": "uint256"
-      }
-    ],
-    "name": "resetOperator",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
         "name": "gasLimit",
         "type": "uint256"
       },
@@ -697,6 +672,19 @@
       }
     ],
     "name": "setMessagingModule",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "minGasPrice",
+        "type": "uint256"
+      }
+    ],
+    "name": "setMinGasPrice",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

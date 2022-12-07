@@ -286,7 +286,7 @@
         "type": "bytes"
       }
     ],
-    "name": "initPA1D",
+    "name": "initHolographRoyalties",
     "outputs": [
       {
         "internalType": "bytes4",
