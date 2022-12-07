@@ -1243,16 +1243,23 @@ export default class Indexer extends HealthCheck {
       tags,
     )
 
-    this.networkMonitor.structuredLog(network, `Checking if contract ${contractAddress} is in registry ...`, tags)
+    this.networkMonitor.structuredLog(network, `Checking if contract ${contractAddress} is on registry ...`, tags)
+
+    this.networkMonitor.structuredLog(
+      network,
+      `registry Contract address = ${this.networkMonitor.registryContract.address}`,
+      tags,
+    )
     const isHolographable: boolean = await this.networkMonitor.registryContract.isHolographedContract(contractAddress)
+    this.networkMonitor.structuredLog(
+      network,
+      `isHolographable = ${isHolographable} with type = ${typeof isHolographable}`,
+      tags,
+    )
 
     if (isHolographable === false) {
-      this.networkMonitor.structuredLog(
-        network,
-        `Contract ${contractAddress} is not in registry at ${this.environment}`,
-        tags,
-      )
-      return
+      this.networkMonitor.structuredLog(network, `Contract ${contractAddress} is not on registry`, tags)
+      // return
     }
 
     this.networkMonitor.structuredLog(
