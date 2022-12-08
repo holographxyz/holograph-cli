@@ -9,7 +9,7 @@ env:
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli # notice: the same for all cli apps
   #
-  MAINNET_IMAGE_TAG: testnet-02c8b0c4ef76c4e9105ac529c254dd1aa3ad82eb #mainnet-${{ github.sha }}
+  MAINNET_IMAGE_TAG: mainnet-${{ github.sha }}
   ########################################
   MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.55
   MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.44
@@ -30,10 +30,10 @@ env:
   MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
-  INDEXER_HOLO_CONFIG_FILE_DATA: testnet-config-file # NOTICE <- switch to mainnet
-  OPERATOR_HOLO_CONFIG_FILE_DATA: testnet-config-file # NOTICE <- switch to mainnet
+  INDEXER_HOLO_CONFIG_FILE_DATA: dev-config-file # NOTICE <- switch to mainnet
+  OPERATOR_HOLO_CONFIG_FILE_DATA: dev-config-file # NOTICE <- switch to mainnet
   #
-  HOLOGRAPH_ENVIRONMENT: testnet # NOTICE <- switch to mainnet
+  HOLOGRAPH_ENVIRONMENT: develop # NOTICE <- switch to mainnet
   #
   MAINNET_DOMAIN: 'holograph.xyz'
   #
@@ -85,13 +85,13 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-#      - name: Build image
-#        run: |
-#          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
-#          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }} .
-#
-#      - name: Push image
-#        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }}
+      - name: Build image
+        run: |
+          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
+          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }} .
+
+      - name: Push image
+        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
         # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -127,7 +127,7 @@ jobs:
           RELEASE_NAME: indexer-main # notice
           ENABLE_DEBUG: 'true'
           HEALTHCHECK: 'true'
-          MODE: 'listen'
+          MODE: 'auto'
           NETWORK: 'fuji mumbai goerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
@@ -188,7 +188,7 @@ jobs:
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
           HEALTHCHECK: 'true'
-          MODE: 'listen'
+          MODE: 'auto'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
