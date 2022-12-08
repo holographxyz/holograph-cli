@@ -150,8 +150,8 @@ export default class Indexer extends HealthCheck {
       warp: flags.warp,
     })
 
-    this.apiService.setStructuredLog(this.networkMonitor.structuredLog)
-    this.apiService.setStructuredLogError(this.networkMonitor.structuredLogError)
+    this.apiService.setStructuredLog(this.networkMonitor.structuredLog.bind(this.networkMonitor))
+    this.apiService.setStructuredLogError(this.networkMonitor.structuredLogError.bind(this.networkMonitor))
 
     // TODO: It doesn't seems like sync is working
     // Indexer always synchronizes missed blocks
