@@ -216,6 +216,11 @@ export default class Indexer extends HealthCheck {
       this.processDBJobs()
     } else {
       const structuredLogInfo = {network: job.network, tagId: job.tags}
+      this.networkMonitor.structuredLog(
+        job.network,
+        `Querying ${job.query} identifier ${job.identifier} - arguments ${job.arguments}, `,
+        job.tags,
+      )
       try {
         response = await this.apiService.sendQueryRequest(job.query, job.identifier, structuredLogInfo)
         try {
@@ -284,7 +289,7 @@ export default class Indexer extends HealthCheck {
       const timestamp: number = timestamps[0]
 
       if (job === undefined) {
-        this.log(`Checking if jobs exist for timestamp ${timestamp}...`)
+        this.networkMonitor.structuredLog(`Checking if jobs exist for timestamp ${timestamp}...`, 'No tags')
       } else {
         this.networkMonitor.structuredLog(job.network, `Checking if jobs exist for timestamp ${timestamp}...`, job.tags)
       }
@@ -293,7 +298,7 @@ export default class Indexer extends HealthCheck {
         const job: DBJob = this.dbJobMap[timestamp].shift()!
 
         if (job === undefined) {
-          this.log(`Processing job...`)
+          this.networkMonitor.structuredLog(`Processing job...`, 'No tags'')
         } else {
           this.networkMonitor.structuredLog(job.network, `Processing job...`, job.tags)
         }
@@ -301,7 +306,7 @@ export default class Indexer extends HealthCheck {
         this.processDBJob(timestamp, job)
       } else {
         if (job === undefined) {
-          this.log(`No jobs found`)
+          this.networkMonitor.structuredLog(`No jobs found`, 'No tags')
         } else {
           this.networkMonitor.structuredLog(job.network, `No jobs found`, job.tags)
         }
@@ -311,7 +316,7 @@ export default class Indexer extends HealthCheck {
       }
     } else {
       if (job === undefined) {
-        this.log(`No timestamps found, setting timeout...`)
+        this.networkMonitor.structuredLog(`No timestamps found, setting timeout...`, 'No tags')
       } else {
         this.networkMonitor.structuredLog(job.network, `No timestamps found, setting timeout...`, job.tags)
       }
