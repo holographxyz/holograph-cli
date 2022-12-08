@@ -246,7 +246,7 @@ export default class Indexer extends HealthCheck {
 
   processDBJobs(timestamp?: number, job?: DBJob): void {
     if (timestamp !== undefined && job !== undefined) {
-      timestamp += 30;
+      timestamp += 30
       if (!(timestamp in this.dbJobMap)) {
         this.networkMonitor.structuredLog(job.network, `Adding ${timestamp} to dbJobMap`, job.tags)
         this.dbJobMap[timestamp] = []
