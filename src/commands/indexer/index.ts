@@ -289,7 +289,7 @@ export default class Indexer extends HealthCheck {
       const timestamp: number = timestamps[0]
 
       if (job === undefined) {
-        this.networkMonitor.structuredLog(`Checking if jobs exist for timestamp ${timestamp}...`, 'No tags')
+        this.log(`Checking if jobs exist for timestamp ${timestamp}...`)
       } else {
         this.networkMonitor.structuredLog(job.network, `Checking if jobs exist for timestamp ${timestamp}...`, job.tags)
       }
@@ -298,7 +298,7 @@ export default class Indexer extends HealthCheck {
         const job: DBJob = this.dbJobMap[timestamp].shift()!
 
         if (job === undefined) {
-          this.networkMonitor.structuredLog(`Processing job...`, 'No tags')
+          this.log(`Processing job...`)
         } else {
           this.networkMonitor.structuredLog(job.network, `Processing job...`, job.tags)
         }
@@ -306,7 +306,7 @@ export default class Indexer extends HealthCheck {
         this.processDBJob(timestamp, job)
       } else {
         if (job === undefined) {
-          this.networkMonitor.structuredLog(`No jobs found`, 'No tags')
+          this.log(`No jobs found`)
         } else {
           this.networkMonitor.structuredLog(job.network, `No jobs found`, job.tags)
         }
@@ -316,7 +316,7 @@ export default class Indexer extends HealthCheck {
       }
     } else {
       if (job === undefined) {
-        this.networkMonitor.structuredLog(`No timestamps found, setting timeout...`, 'No tags')
+        this.log(`No timestamps found, setting timeout...`)
       } else {
         this.networkMonitor.structuredLog(job.network, `No timestamps found, setting timeout...`, job.tags)
       }
