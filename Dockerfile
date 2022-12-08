@@ -32,7 +32,7 @@ ENV ENABLE_SYNC=defaul-value
 ENV HEALTHCHECK=defaul-value
 ENV MODE=defaul-value
 #
-ENV IS_UNSAFE=true
+ENV ENABLE_UNSAFE=defaul-value
 
 # we use liveness/readiness probes in k8s
 HEALTHCHECK none
