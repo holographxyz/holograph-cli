@@ -69,6 +69,57 @@
     "inputs": [
       {
         "internalType": "uint32",
+        "name": "chainId",
+        "type": "uint32"
+      }
+    ],
+    "name": "getGasParameters",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "msgBaseGas",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "msgGasPerByte",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "jobBaseGas",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "jobGasPerByte",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "minGasPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxGasLimit",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct GasParameters",
+        "name": "gasParameters",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
         "name": "toChain",
         "type": "uint32"
       },
@@ -107,32 +158,6 @@
         "internalType": "address",
         "name": "interfaces",
         "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getJobBaseGas",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "jobBaseGas",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getJobGasPerByte",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "jobGasPerByte",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -189,32 +214,6 @@
       {
         "internalType": "uint256",
         "name": "dstGasPrice",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getMsgBaseGas",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "msgBaseGas",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getMsgGasPerByte",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "msgGasPerByte",
         "type": "uint256"
       }
     ],
@@ -348,6 +347,106 @@
   {
     "inputs": [
       {
+        "internalType": "uint32[]",
+        "name": "chainIds",
+        "type": "uint32[]"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "msgBaseGas",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "msgGasPerByte",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "jobBaseGas",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "jobGasPerByte",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "minGasPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxGasLimit",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct GasParameters[]",
+        "name": "gasParameters",
+        "type": "tuple[]"
+      }
+    ],
+    "name": "setGasParameters",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "chainId",
+        "type": "uint32"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "msgBaseGas",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "msgGasPerByte",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "jobBaseGas",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "jobGasPerByte",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "minGasPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxGasLimit",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct GasParameters",
+        "name": "gasParameters",
+        "type": "tuple"
+      }
+    ],
+    "name": "setGasParameters",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "interfaces",
         "type": "address"
@@ -361,64 +460,12 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "jobBaseGas",
-        "type": "uint256"
-      }
-    ],
-    "name": "setJobBaseGas",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "jobGasPerByte",
-        "type": "uint256"
-      }
-    ],
-    "name": "setJobGasPerByte",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "address",
         "name": "lZEndpoint",
         "type": "address"
       }
     ],
     "name": "setLZEndpoint",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "msgBaseGas",
-        "type": "uint256"
-      }
-    ],
-    "name": "setMsgBaseGas",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "msgGasPerByte",
-        "type": "uint256"
-      }
-    ],
-    "name": "setMsgGasPerByte",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

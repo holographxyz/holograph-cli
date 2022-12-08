@@ -1259,6 +1259,7 @@ export default class Indexer extends HealthCheck {
     )
 
     this.networkMonitor.structuredLog(network, `Checking if contract ${contractAddress} is on registry ...`, tags)
+
     this.networkMonitor.structuredLog(
       network,
       `registry Contract address = ${this.networkMonitor.registryContract.address}`,
