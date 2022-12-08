@@ -72,7 +72,6 @@ class ApiService {
   }
 
   async sendQueryRequest(query: string, props: any, structuredLogInfo?: StructuredLogInfo): Promise<any> {
-    process.stdout.write(JSON.stringify(structuredLogInfo))
     if (this.logger.structuredLog !== undefined && structuredLogInfo !== undefined) {
       this.logger.structuredLog(
         structuredLogInfo.network,
@@ -86,7 +85,6 @@ class ApiService {
     try {
       return await this.client.request(query, props)
     } catch (error: any) {
-      process.stdout.write(JSON.stringify(error))
       if (this.logger.structuredLogError !== undefined && structuredLogInfo !== undefined) {
         this.logger.structuredLogError(structuredLogInfo.network, error, [
           ...(structuredLogInfo.tagId as (string | number)[]),
