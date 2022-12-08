@@ -218,7 +218,9 @@ export default class Indexer extends HealthCheck {
       const structuredLogInfo = {network: job.network, tagId: job.tags}
       this.networkMonitor.structuredLog(
         job.network,
-        `Querying ${job.query} identifier ${job.identifier} - arguments ${job.arguments}, `,
+        `Querying ${job.query} identifier ${JSON.stringify(job.identifier)} - arguments ${JSON.stringify(
+          job.arguments,
+        )}, `,
         job.tags,
       )
       try {
