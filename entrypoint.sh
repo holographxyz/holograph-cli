@@ -35,7 +35,7 @@ holograph config --fromFile $CONFIG_FILE
 # notice: run the specified app
 if [[ $HOLO_CLI_CMD == "operator" ]]
 then
-  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD
+  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD --unsafe=$IS_UNSAFE
 
 elif [[ $HOLO_CLI_CMD == "propagator" ]]
 then
@@ -43,7 +43,7 @@ then
 
 elif [[ $HOLO_CLI_CMD == "indexer" ]]
 then
-  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_INDEXER_HOST $HEALTHCHECK
+  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_INDEXER_HOST $HEALTHCHECK --unsafe=$IS_UNSAFE
 
 else
   echo
