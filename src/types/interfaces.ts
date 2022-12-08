@@ -73,3 +73,8 @@ export interface GasFee {
   gasLimit: BigNumberish
   gas: BigNumberish
 }
+
+export interface StructuredLogInfo {
+  network: string
+  tagId?: string | number | (number | string)[]
+}
