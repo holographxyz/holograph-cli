@@ -72,6 +72,7 @@ class ApiService {
   }
 
   async sendQueryRequest(query: string, props: any, structuredLogInfo?: StructuredLogInfo): Promise<any> {
+    process.stdout.write(JSON.stringify(structuredLogInfo))
     // if (this.logger.structuredLog !== undefined && structuredLogInfo !== undefined) {
     //   this.logger.structuredLog(
     //     structuredLogInfo.network,
