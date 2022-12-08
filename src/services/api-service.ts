@@ -72,29 +72,27 @@ class ApiService {
   }
 
   async sendQueryRequest(query: string, props: any, structuredLogInfo?: StructuredLogInfo): Promise<any> {
-    process.stdout.write(JSON.stringify(structuredLogInfo))
-    // if (this.logger.structuredLog !== undefined && structuredLogInfo !== undefined) {
-    //   this.logger.structuredLog(
-    //     structuredLogInfo.network,
-    //     `Sending query request ${query} with props ${JSON.stringify(props)}`,
-    //     structuredLogInfo.tagId,
-    //   )
-    // } else {
-    //   this.logger.log(`Sending query request ${query} with props ${JSON.stringify(props)}`)
-    // }
+    if (this.logger.structuredLog !== undefined && structuredLogInfo !== undefined) {
+      this.logger.structuredLog(
+        structuredLogInfo.network,
+        `Sending query request ${query} with props ${JSON.stringify(props)}`,
+        structuredLogInfo.tagId,
+      )
+    } else {
+      this.logger.log(`Sending query request ${query} with props ${JSON.stringify(props)}`)
+    }
 
     try {
       return await this.client.request(query, props)
     } catch (error: any) {
-      process.stdout.write(JSON.stringify(error))
-      // if (this.logger.structuredLogError !== undefined && structuredLogInfo !== undefined) {
-      //   this.logger.structuredLogError(structuredLogInfo.network, error, [
-      //     ...(structuredLogInfo.tagId as (string | number)[]),
-      //     this.errorColor(`Error sending query request`),
-      //   ])
-      // } else {
-      //   this.logger.error(`Error sending query request ${error}`)
-      // }
+      if (this.logger.structuredLogError !== undefined && structuredLogInfo !== undefined) {
+        this.logger.structuredLogError(structuredLogInfo.network, error, [
+          ...(structuredLogInfo.tagId as (string | number)[]),
+          this.errorColor(`Error sending query request`),
+        ])
+      } else {
+        this.logger.error(`Error sending query request ${error}`)
+      }
     }
   }
 

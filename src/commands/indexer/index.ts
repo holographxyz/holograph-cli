@@ -216,13 +216,6 @@ export default class Indexer extends HealthCheck {
       this.processDBJobs()
     } else {
       const structuredLogInfo = {network: job.network, tagId: job.tags}
-      this.networkMonitor.structuredLog(
-        job.network,
-        `Querying ${job.query} identifier ${JSON.stringify(job.identifier)} - arguments ${JSON.stringify(
-          job.arguments,
-        )}, `,
-        job.tags,
-      )
       try {
         response = await this.apiService.sendQueryRequest(job.query, job.identifier, structuredLogInfo)
         try {
@@ -253,6 +246,11 @@ export default class Indexer extends HealthCheck {
 
   processDBJobs(timestamp?: number, job?: DBJob): void {
     if (timestamp !== undefined && job !== undefined) {
+      /*
+       * @dev Temporary addition to unblock other DB jobs from getting delayed when current DB job fails.
+       *      Remove this once proper Registry checks are implemented for cxipMint events.
+       */
+      timestamp += 30
       if (!(timestamp in this.dbJobMap)) {
         this.networkMonitor.structuredLog(job.network, `Adding ${timestamp} to dbJobMap`, job.tags)
         this.dbJobMap[timestamp] = []
@@ -1261,6 +1259,7 @@ export default class Indexer extends HealthCheck {
     )
 
     this.networkMonitor.structuredLog(network, `Checking if contract ${contractAddress} is on registry ...`, tags)
+
     this.networkMonitor.structuredLog(
       network,
       `registry Contract address = ${this.networkMonitor.registryContract.address}`,
