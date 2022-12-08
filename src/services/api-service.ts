@@ -1,3 +1,4 @@
+import color from '@oclif/color'
 import {gql, GraphQLClient} from 'graphql-request'
 import {
   Logger,
@@ -12,16 +13,35 @@ import {
   NftQueryResponse,
   NftMutationResponse,
 } from '../types/api'
+import {AbstractError} from '../types/errors'
+import {StructuredLogInfo} from '../types/interfaces'
 
 class ApiService {
   logger: Logger
   client: GraphQLClient
   baseUrl: string
+  errorColor = color.keyword('red')
 
   constructor(baseURL: string, logger: Logger) {
     this.logger = logger
     this.baseUrl = baseURL
     this.client = new GraphQLClient(`${baseURL}/graphql`, {errorPolicy: 'none'})
+  }
+
+  setStructuredLog(
+    structuredLog: (network: string, msg: string, tagId?: string | number | (number | string)[]) => void,
+  ) {
+    this.logger.structuredLog = structuredLog
+  }
+
+  setStructuredLogError(
+    structuredLogError: (
+      network: string,
+      error: string | Error | AbstractError,
+      tagId?: string | number | (number | string)[],
+    ) => void,
+  ) {
+    this.logger.structuredLogError = structuredLogError
   }
 
   async operatorLogin(): Promise<void> {
@@ -51,12 +71,30 @@ class ApiService {
     this.logger.log(`Operator JWT: ${JWT}`)
   }
 
-  async sendQueryRequest(query: string, props: any): Promise<any> {
-    this.logger.log(`Sending query request ${query} with props ${JSON.stringify(props)}`)
+  async sendQueryRequest(query: string, props: any, structuredLogInfo?: StructuredLogInfo): Promise<any> {
+    process.stdout.write(JSON.stringify(structuredLogInfo))
+    // if (this.logger.structuredLog !== undefined && structuredLogInfo !== undefined) {
+    //   this.logger.structuredLog(
+    //     structuredLogInfo.network,
+    //     `Sending query request ${query} with props ${JSON.stringify(props)}`,
+    //     structuredLogInfo.tagId,
+    //   )
+    // } else {
+    //   this.logger.log(`Sending query request ${query} with props ${JSON.stringify(props)}`)
+    // }
+
     try {
       return await this.client.request(query, props)
     } catch (error: any) {
-      this.logger.error(`Error sending query request ${error}`)
+      process.stdout.write(JSON.stringify(error))
+      // if (this.logger.structuredLogError !== undefined && structuredLogInfo !== undefined) {
+      //   this.logger.structuredLogError(structuredLogInfo.network, error, [
+      //     ...(structuredLogInfo.tagId as (string | number)[]),
+      //     this.errorColor(`Error sending query request`),
+      //   ])
+      // } else {
+      //   this.logger.error(`Error sending query request ${error}`)
+      // }
     }
   }
 
