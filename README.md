@@ -16,14 +16,16 @@
 The Holograph CLI enables you to interact with Holograph Protocol, in addition to participating as an operator in the Operator Network.
 
 <!-- toc -->
-* [Overview](#overview)
-* [Usage](#usage)
-* [Commands](#commands)
+
+- [Overview](#overview)
+- [Usage](#usage)
+- [Commands](#commands)
 <!-- tocstop -->
 
 # Usage
 
 <!-- usage -->
+
 ```sh-session
 $ npm install -g @holographxyz/cli
 $ holograph COMMAND
@@ -35,30 +37,32 @@ USAGE
   $ holograph COMMAND
 ...
 ```
+
 <!-- usagestop -->
 
 # Commands
 
 <!-- commands -->
-* [`holograph bridge`](#holograph-bridge)
-* [`holograph bridge:contract`](#holograph-bridgecontract)
-* [`holograph bridge:nft`](#holograph-bridgenft)
-* [`holograph config`](#holograph-config)
-* [`holograph config:networks`](#holograph-confignetworks)
-* [`holograph config:user`](#holograph-configuser)
-* [`holograph config:view`](#holograph-configview)
-* [`holograph create`](#holograph-create)
-* [`holograph create:contract`](#holograph-createcontract)
-* [`holograph create:nft`](#holograph-createnft)
-* [`holograph faucet`](#holograph-faucet)
-* [`holograph help [COMMAND]`](#holograph-help-command)
-* [`holograph operator`](#holograph-operator)
-* [`holograph operator:bond`](#holograph-operatorbond)
-* [`holograph operator:recover`](#holograph-operatorrecover)
-* [`holograph operator:unbond`](#holograph-operatorunbond)
-* [`holograph status`](#holograph-status)
-* [`holograph status:contract`](#holograph-statuscontract)
-* [`holograph status:nft`](#holograph-statusnft)
+
+- [`holograph bridge`](#holograph-bridge)
+- [`holograph bridge:contract`](#holograph-bridgecontract)
+- [`holograph bridge:nft`](#holograph-bridgenft)
+- [`holograph config`](#holograph-config)
+- [`holograph config:networks`](#holograph-confignetworks)
+- [`holograph config:user`](#holograph-configuser)
+- [`holograph config:view`](#holograph-configview)
+- [`holograph create`](#holograph-create)
+- [`holograph create:contract`](#holograph-createcontract)
+- [`holograph create:nft`](#holograph-createnft)
+- [`holograph faucet`](#holograph-faucet)
+- [`holograph help [COMMAND]`](#holograph-help-command)
+- [`holograph operator`](#holograph-operator)
+- [`holograph operator:bond`](#holograph-operatorbond)
+- [`holograph operator:recover`](#holograph-operatorrecover)
+- [`holograph operator:unbond`](#holograph-operatorunbond)
+- [`holograph status`](#holograph-status)
+- [`holograph status:contract`](#holograph-statuscontract)
+- [`holograph status:nft`](#holograph-statusnft)
 
 ## `holograph bridge`
 
@@ -574,6 +578,7 @@ EXAMPLES
 ```
 
 _See code: [dist/commands/status/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/status/nft.ts)_
+
 <!-- commandsstop -->
 
 ## Developing

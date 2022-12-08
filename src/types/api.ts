@@ -1,4 +1,5 @@
 import {PrettyPrintableError} from '@oclif/core/lib/interfaces'
+import {AbstractError} from './errors'
 
 export interface Logger {
   log: (message?: string, ...args: any[]) => void
@@ -12,6 +13,12 @@ export interface Logger {
     } & PrettyPrintableError,
   ) => never
   jsonEnabled: () => boolean
+  structuredLog?: (network: string, msg: string, tagId?: string | number | (number | string)[]) => void
+  structuredLogError?: (
+    network: string,
+    error: string | Error | AbstractError,
+    tagId?: string | number | (number | string)[],
+  ) => void
 }
 export interface AuthOperatorResponse {
   authOperator: {
