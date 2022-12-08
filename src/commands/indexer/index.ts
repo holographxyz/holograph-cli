@@ -298,7 +298,7 @@ export default class Indexer extends HealthCheck {
         const job: DBJob = this.dbJobMap[timestamp].shift()!
 
         if (job === undefined) {
-          this.networkMonitor.structuredLog(`Processing job...`, 'No tags'')
+          this.networkMonitor.structuredLog(`Processing job...`, 'No tags')
         } else {
           this.networkMonitor.structuredLog(job.network, `Processing job...`, job.tags)
         }
