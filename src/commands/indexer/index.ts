@@ -150,8 +150,8 @@ export default class Indexer extends HealthCheck {
       warp: flags.warp,
     })
 
-    this.apiService.setStructuredLog(this.networkMonitor.structuredLog.bind(this.networkMonitor))
-    this.apiService.setStructuredLogError(this.networkMonitor.structuredLogError.bind(this.networkMonitor))
+    this.apiService.setStructuredLog(this.networkMonitor.structuredLog)
+    this.apiService.setStructuredLogError(this.networkMonitor.structuredLogError)
 
     // TODO: It doesn't seems like sync is working
     // Indexer always synchronizes missed blocks
@@ -216,13 +216,6 @@ export default class Indexer extends HealthCheck {
       this.processDBJobs()
     } else {
       const structuredLogInfo = {network: job.network, tagId: job.tags}
-      this.networkMonitor.structuredLog(
-        job.network,
-        `Querying ${job.query} identifier ${JSON.stringify(job.identifier)} - arguments ${JSON.stringify(
-          job.arguments,
-        )}, `,
-        job.tags,
-      )
       try {
         response = await this.apiService.sendQueryRequest(job.query, job.identifier, structuredLogInfo)
         try {
@@ -253,6 +246,7 @@ export default class Indexer extends HealthCheck {
 
   processDBJobs(timestamp?: number, job?: DBJob): void {
     if (timestamp !== undefined && job !== undefined) {
+      timestamp += 30
       if (!(timestamp in this.dbJobMap)) {
         this.networkMonitor.structuredLog(job.network, `Adding ${timestamp} to dbJobMap`, job.tags)
         this.dbJobMap[timestamp] = []
@@ -1261,6 +1255,7 @@ export default class Indexer extends HealthCheck {
     )
 
     this.networkMonitor.structuredLog(network, `Checking if contract ${contractAddress} is on registry ...`, tags)
+
     this.networkMonitor.structuredLog(
       network,
       `registry Contract address = ${this.networkMonitor.registryContract.address}`,
