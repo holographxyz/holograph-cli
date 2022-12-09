@@ -21,13 +21,12 @@ env:
   ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }}
   #
   #TODO - create new gh secret for MAINNET. should be different from staging????
-  MAINNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO <-------
+  MAINNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO for MAINNET
   #
-  MAINNET_HOLO_INDEXER_HOST: 'http://kabamaru-holo-api.mainnet.svc.cluster.local:443' # Notice <-- the release from API
+  MAINNET_HOLO_INDEXER_HOST: 'http://kabamaru-holo-api.mainnet.svc.cluster.local:443' #  #TODO -> for MAINNET aNotice <-- the release from API
   #
-  # TODO -> replace them with the MAINNET specific password <---------------------------
-  MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }} #TODO <-------
-  MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
+  MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}     #TODO -> for MAINNET
+  MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.DEV_HOLO_OPERATOR_PASSWORD }}   #TODO -> for MAINNET
   #
   # set the RPC endpoints config files
   INDEXER_HOLO_CONFIG_FILE_DATA: dev-config-file # NOTICE <- switch to mainnet
