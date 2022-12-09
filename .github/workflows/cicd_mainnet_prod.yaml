@@ -40,19 +40,19 @@ env:
   MAINNET_COMMON_NAMESPACE: mainnet
   #
   # INDEXER MAINNET rpc endpoints
-  indexer_mainnet_avalancheMainnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
-  indexer_mainnet_polygonMainnet_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
-  indexer_mainnet_ethereumMainnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_GOERLI_RPC_URL }}
+  indexer_mainnet_avalancheMainnet_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }} #TODO -> for MAINNET
+  indexer_mainnet_polygonMainnet_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }} #TODO -> for MAINNET
+  indexer_mainnet_ethereumMainnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }} #TODO -> for MAINNET
   #
-  indexer_mainnet_private_key: ${{ secrets.INDEXER_PROD_PRIVATE_KEY }}
-  indexer_mainnet_address: ${{ secrets.INDEXER_PROD_ADDRESS }}
+  indexer_mainnet_private_key: ${{ secrets.INDEXER_DEV_PRIVATE_KEY }} #TODO -> for MAINNET
+  indexer_mainnet_address: ${{ secrets.INDEXER_DEV_ADDRESS }} #TODO -> for MAINNET
   # OPERATOR MAINNET rpc endpoints
-  operator_mainnet_avalancheMainnet_rpc_url: ${{ secrets.OPERATOR_PROD_FUJI_RPC_URL }}
-  operator_mainnet_polygonMainnet_rpc_url: ${{ secrets.OPERATOR_PROD_MUMBAI_RPC_URL }}
-  operator_mainnet_ethereumMainnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_GOERLI_RPC_URL }}
+  operator_mainnet_avalancheMainnet_rpc_url: ${{ secrets.OPERATOR_DEV_FUJI_RPC_URL }} #TODO -> for MAINNET
+  operator_mainnet_polygonMainnet_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }} #TODO -> for MAINNET
+  operator_mainnet_ethereumMainnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_GOERLI_RPC_URL }} #TODO -> for MAINNET
   #
-  operator_mainnet_private_key: ${{ secrets.OPERATOR_PROD_PRIVATE_KEY }}
-  operator_mainnet_address: ${{ secrets.OPERATOR_PROD_ADDRESS }}
+  operator_mainnet_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }} #TODO -> for MAINNET
+  operator_mainnet_address: ${{ secrets.OPERATOR_DEV_ADDRESS }} #TODO -> for MAINNET
 
 # notice: the trigger
 on:
