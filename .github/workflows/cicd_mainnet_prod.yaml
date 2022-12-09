@@ -12,7 +12,7 @@ env:
   MAINNET_IMAGE_TAG: mainnet-${{ github.sha }}
   ########################################
   MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.55
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.44
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.45
   ########################################
   CLUSTER_NAME: prod0
   #
