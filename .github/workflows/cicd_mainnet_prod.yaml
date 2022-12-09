@@ -11,8 +11,8 @@ env:
   #
   MAINNET_IMAGE_TAG: mainnet-${{ github.sha }}
   ########################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.55
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.45
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.56
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.46
   ########################################
   CLUSTER_NAME: prod0
   #
@@ -20,38 +20,37 @@ env:
   AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
   ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }}
   #
-  #TODO - create new gh secret for MAINNET. should be different from staging????
-  MAINNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO for MAINNET
+  MAINNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_MAINNET_OPERATOR_API_KEY }}
   #
-  MAINNET_HOLO_INDEXER_HOST: 'http://kabamaru-holo-api.mainnet.svc.cluster.local:443' #  #TODO -> for MAINNET aNotice <-- the release from API
+  MAINNET_HOLO_INDEXER_HOST: 'http://kabamaru-holo-api.mainnet.svc.cluster.local:443' # Notice <-- the release from API
   #
-  MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}     #TODO -> for MAINNET
-  MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.DEV_HOLO_OPERATOR_PASSWORD }}   #TODO -> for MAINNET
+  MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.MAINNET_HOLO_INDEXER_PASSWORD }}   # notice: same password for now
+  MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.MAINNET_HOLO_OPERATOR_PASSWORD }} # notice: same password for now
   #
   # set the RPC endpoints config files
-  INDEXER_HOLO_CONFIG_FILE_DATA: dev-config-file # NOTICE <- switch to mainnet
-  OPERATOR_HOLO_CONFIG_FILE_DATA: dev-config-file # NOTICE <- switch to mainnet
+  INDEXER_HOLO_CONFIG_FILE_DATA: mainnet-config-file
+  OPERATOR_HOLO_CONFIG_FILE_DATA: mainnet-config-file
   #
-  HOLOGRAPH_ENVIRONMENT: develop # NOTICE <- switch to mainnet
+  HOLOGRAPH_ENVIRONMENT: mainnet # TODO <- switch to mainnet
   #
   MAINNET_DOMAIN: 'holograph.xyz'
   #
   MAINNET_COMMON_NAMESPACE: mainnet
   #
-  # INDEXER MAINNET rpc endpoints
-  indexer_mainnet_avalancheMainnet_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }} #TODO -> for MAINNET
-  indexer_mainnet_polygonMainnet_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }} #TODO -> for MAINNET
-  indexer_mainnet_ethereumMainnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }} #TODO -> for MAINNET
+  ### INDEXER MAINNET rpc endpoints
+  indexer_mainnet_avalancheMainnet_rpc_url: ${{ secrets.INDEXER_MAINNET_AVALANCHE_RPC_URL }}
+  indexer_mainnet_polygonMainnet_rpc_url: ${{ secrets.INDEXER_MAINNET_POLYGON_RPC_URL }}
+  indexer_mainnet_ethereumMainnetGoerli_rpc_url: ${{ secrets.INDEXER_MAINNET_ETHEREUM_RPC_URL }}
   #
-  indexer_mainnet_private_key: ${{ secrets.INDEXER_DEV_PRIVATE_KEY }} #TODO -> for MAINNET
-  indexer_mainnet_address: ${{ secrets.INDEXER_DEV_ADDRESS }} #TODO -> for MAINNET
-  # OPERATOR MAINNET rpc endpoints
-  operator_mainnet_avalancheMainnet_rpc_url: ${{ secrets.OPERATOR_DEV_FUJI_RPC_URL }} #TODO -> for MAINNET
-  operator_mainnet_polygonMainnet_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }} #TODO -> for MAINNET
-  operator_mainnet_ethereumMainnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_GOERLI_RPC_URL }} #TODO -> for MAINNET
+  indexer_mainnet_private_key: ${{ secrets.INDEXER_MAINNET_PRIVATE_KEY }}
+  indexer_mainnet_address: ${{ secrets.INDEXER_MAINNET_ADDRESS }}
+  ### OPERATOR MAINNET rpc endpoints
+  operator_mainnet_avalancheMainnet_rpc_url: ${{ secrets.OPERATOR_MAINNET_AVALANCHE_RPC_URL }}
+  operator_mainnet_polygonMainnet_rpc_url: ${{ secrets.OPERATOR_MAINNET_POLYGON_RPC_URL }}
+  operator_mainnet_ethereumMainnetGoerli_rpc_url: ${{ secrets.OPERATOR_MAINNET_ETHEREUM_RPC_URL }}
   #
-  operator_mainnet_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }} #TODO -> for MAINNET
-  operator_mainnet_address: ${{ secrets.OPERATOR_DEV_ADDRESS }} #TODO -> for MAINNET
+  operator_mainnet_private_key: ${{ secrets.OPERATOR_MAINNET_PRIVATE_KEY }}
+  operator_mainnet_address: ${{ secrets.OPERATOR_MAINNET_ADDRESS }}
 
 # notice: the trigger
 on:
@@ -93,7 +92,7 @@ jobs:
         run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
-        # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
+        # TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ env.AWS_KEY_ID }} #notice: unique for each env
@@ -127,7 +126,7 @@ jobs:
           ENABLE_DEBUG: 'true'
           HEALTHCHECK: 'true'
           MODE: 'auto'
-          NETWORK: 'fuji mumbai goerli'
+          NETWORK: 'ethereum avalanche polygon'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -148,13 +147,13 @@ jobs:
             --set MODE=$MODE \
             --set NETWORK="${NETWORK}" \
             \
-            --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_mainnet_avalancheMainnet_rpc_url }} \
-            --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_mainnet_polygonMainnet_rpc_url }} \
-            --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.indexer_mainnet_ethereumMainnetGoerli_rpc_url }} \
+            --set mainnet_rpc_config_values.avalancheMainnet_rpc_url=${{ env.indexer_mainnet_avalancheMainnet_rpc_url }} \
+            --set mainnet_rpc_config_values.polygonMainnet_rpc_url=${{ env.indexer_mainnet_polygonMainnet_rpc_url }} \
+            --set mainnet_rpc_config_values.ethereumMainnetGoerli_rpc_url=${{ env.indexer_mainnet_ethereumMainnetGoerli_rpc_url }} \
             \
-            --set dev_rpc_config_values.private_key=${{ env.indexer_mainnet_private_key }} \
-            --set dev_rpc_config_values.address=${{ env.indexer_mainnet_address }} \
-            --set dev_rpc_config_values.version="beta3" \
+            --set mainnet_rpc_config_values.private_key=${{ env.indexer_mainnet_private_key }} \
+            --set mainnet_rpc_config_values.address=${{ env.indexer_mainnet_address }} \
+            --set mainnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
@@ -206,12 +205,12 @@ jobs:
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
             \
-            --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_mainnet_avalancheMainnet_rpc_url }} \
-            --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_mainnet_polygonMainnet_rpc_url }} \
-            --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.operator_mainnet_ethereumMainnetGoerli_rpc_url }} \
+            --set mainnet_rpc_config_values.avalancheMainnet_rpc_url=${{ env.operator_mainnet_avalancheMainnet_rpc_url }} \
+            --set mainnet_rpc_config_values.polygonMainnet_rpc_url=${{ env.operator_mainnet_polygonMainnet_rpc_url }} \
+            --set mainnet_rpc_config_values.ethereumMainnetGoerli_rpc_url=${{ env.operator_mainnet_ethereumMainnetGoerli_rpc_url }} \
             \
-            --set dev_rpc_config_values.private_key=${{ env.operator_mainnet_private_key }} \
-            --set dev_rpc_config_values.address=${{ env.operator_mainnet_address }} \
+            --set mainnet_rpc_config_values.private_key=${{ env.operator_mainnet_private_key }} \
+            --set mainnet_rpc_config_values.address=${{ env.operator_mainnet_address }} \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.version=chart-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
