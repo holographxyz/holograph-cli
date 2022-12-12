@@ -9,9 +9,9 @@ env:
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli # notice: the same for all cli apps
   #
-  MAINNET_IMAGE_TAG: mainnet-${{ github.sha }}
+  MAINNET_IMAGE_TAG: mainnet-2d5ed6c61fab8a1a01928620303212a7a68afff2 #mainnet-${{ github.sha }}
   ########################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.56
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.57
   MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.46
   ########################################
   CLUSTER_NAME: prod0
@@ -38,9 +38,9 @@ env:
   MAINNET_COMMON_NAMESPACE: mainnet
   #
   ### INDEXER MAINNET rpc endpoints
-  indexer_mainnet_avalancheMainnet_rpc_url: ${{ secrets.INDEXER_MAINNET_AVALANCHE_RPC_URL }}
-  indexer_mainnet_polygonMainnet_rpc_url: ${{ secrets.INDEXER_MAINNET_POLYGON_RPC_URL }}
-  indexer_mainnet_ethereumMainnetGoerli_rpc_url: ${{ secrets.INDEXER_MAINNET_ETHEREUM_RPC_URL }}
+  indexer_mainnet_avalanche_rpc_url: ${{ secrets.INDEXER_MAINNET_AVALANCHE_RPC_URL }}
+  indexer_mainnet_polygon_rpc_url: ${{ secrets.INDEXER_MAINNET_POLYGON_RPC_URL }}
+  indexer_mainnet_ethereum_rpc_url: ${{ secrets.INDEXER_MAINNET_ETHEREUM_RPC_URL }}
   #
   indexer_mainnet_private_key: ${{ secrets.INDEXER_MAINNET_PRIVATE_KEY }}
   indexer_mainnet_address: ${{ secrets.INDEXER_MAINNET_ADDRESS }}
@@ -83,13 +83,13 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build image
-        run: |
-          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
-          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }} .
-
-      - name: Push image
-        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }}
+#      - name: Build image
+#        run: |
+#          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
+#          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }} .
+#
+#      - name: Push image
+#        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
         # TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -126,7 +126,7 @@ jobs:
           ENABLE_DEBUG: 'true'
           HEALTHCHECK: 'true'
           MODE: 'auto'
-          NETWORK: 'ethereum avalanche polygon'
+          NETWORK: 'avax matic'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -147,9 +147,9 @@ jobs:
             --set MODE=$MODE \
             --set NETWORK="${NETWORK}" \
             \
-            --set mainnet_rpc_config_values.avalancheMainnet_rpc_url=${{ env.indexer_mainnet_avalancheMainnet_rpc_url }} \
-            --set mainnet_rpc_config_values.polygonMainnet_rpc_url=${{ env.indexer_mainnet_polygonMainnet_rpc_url }} \
-            --set mainnet_rpc_config_values.ethereumMainnetGoerli_rpc_url=${{ env.indexer_mainnet_ethereumMainnetGoerli_rpc_url }} \
+            --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.indexer_mainnet_avalanche_rpc_url }} \
+            --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.indexer_mainnet_polygon_rpc_url }} \
+            --set mainnet_rpc_config_values.ethereum_rpc_url=${{ env.indexer_mainnet_ethereum_rpc_url }} \
             \
             --set mainnet_rpc_config_values.private_key=${{ env.indexer_mainnet_private_key }} \
             --set mainnet_rpc_config_values.address=${{ env.indexer_mainnet_address }} \
@@ -158,6 +158,9 @@ jobs:
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
             --set datadog_tags.version=chart-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
+            \
+            --set autoscaling.minReplicas=2 \
+            --set autoscaling.maxReplicas=2 \
             \
             --values .github/values_for_prod_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
