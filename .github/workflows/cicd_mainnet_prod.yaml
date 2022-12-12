@@ -12,7 +12,7 @@ env:
   MAINNET_IMAGE_TAG: mainnet-2d5ed6c61fab8a1a01928620303212a7a68afff2 #mainnet-${{ github.sha }}
   ########################################
   MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.57
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.47
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.48
   ########################################
   CLUSTER_NAME: prod0
   #
@@ -190,6 +190,9 @@ jobs:
           ENABLE_SYNC: 'true'
           HEALTHCHECK: 'true'
           MODE: 'auto'
+          AVALANCHE_NETWORK: "avax"
+          POLYGON_NETWORK  : "matic"
+          ETHEREUM_NETWORK : "waaat??" #TODO
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -207,6 +210,9 @@ jobs:
             --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
+            --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
+            --set POLYGON_NETWORK=$POLYGON_NETWORK \
+            --set ETHEREUM_NETWORK=$ETHEREUM_NETWORK \
             \
             --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.operator_mainnet_avalanche_rpc_url }} \
             --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.operator_mainnet_polygon_rpc_url }} \
