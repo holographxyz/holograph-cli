@@ -29,7 +29,7 @@ else
   echo "HEALTHCHECK=${HEALTHCHECK}"
 fi
 
-if [[ $ENABLE_UNSAFE == 'true' ]] && [[ $ABI_ENVIRONMENT == "mainnet" ]]
+if [[ $ENABLE_UNSAFE == 'true' ]] && [[ $HOLOGRAPH_ENVIRONMENT == "mainnet" ]]
 then
   export ENABLE_UNSAFE='--unsafe'
   echo "ENABLE_UNSAFE=${ENABLE_UNSAFE}"
