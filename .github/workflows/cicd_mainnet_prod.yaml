@@ -9,7 +9,7 @@ env:
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli # notice: the same for all cli apps
   #
-  MAINNET_IMAGE_TAG: mainnet-2d5ed6c61fab8a1a01928620303212a7a68afff2 #mainnet-${{ github.sha }}
+  MAINNET_IMAGE_TAG: mainnet-${{ github.sha }}
   ########################################
   MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.58
   MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.48
@@ -83,13 +83,13 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-#      - name: Build image
-#        run: |
-#          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
-#          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }} .
-#
-#      - name: Push image
-#        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }}
+      - name: Build image
+        run: |
+          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
+          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }} .
+
+      - name: Push image
+        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
         # TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -159,8 +159,8 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
             --set datadog_tags.version=chart-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
             \
-            --set autoscaling.minReplicas=2 \
-            --set autoscaling.maxReplicas=2 \
+            --set autoscaling.minReplicas=3 \
+            --set autoscaling.maxReplicas=5 \
             \
             --set LivenessProbeCommand="if [ \$(curl localhost:6000/healthcheck | jq -r '.providerStatus.polygon') != CONNECTED ] ;then exit 1 ;fi && if [ \$(curl localhost:6000/healthcheck | jq -r '.providerStatus.avalanche') != CONNECTED ] ;then exit 1 ;fi" \
             \
@@ -194,7 +194,7 @@ jobs:
           MODE: 'auto'
           AVALANCHE_NETWORK: "avax"
           POLYGON_NETWORK  : "matic"
-          ETHEREUM_NETWORK : "waaat??" #TODO
+          ETHEREUM_NETWORK : "eth"
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
