@@ -23,15 +23,15 @@ export const HOLOGRAPH_ADDRESSES: {[key in Environment]: string} = {
   [Environment.localhost]: '0xa3931469C1D058a98dde3b5AEc4dA002B6ca7446'.toLowerCase(),
   [Environment.experimental]: '0x199728d88a68856868f50FC259F01Bb4D2672Da9'.toLowerCase(),
   [Environment.develop]: '0xfeb058C063C8666414B52DF5c5De1b4B37228a25'.toLowerCase(),
-  [Environment.testnet]: '0x37101ddAd4D1b19ce31A3015e07cfC0cE92E45D7'.toLowerCase(),
-  [Environment.mainnet]: '0x0000000000000000000000000000000000000000'.toLowerCase(),
+  [Environment.testnet]: '0x388b4b79145B8409360589BE2B1e7bDB8a5f9f57'.toLowerCase(),
+  [Environment.mainnet]: '0xE236E8E4283795E85b3021198Af69ddED9e132CD'.toLowerCase(),
 }
 
 export const FAUCET_ADDRESSES: {[key in Environment]: string} = {
   [Environment.localhost]: '0x232E8406518da66ecD5681a600f18A13E8CfE5E6',
   [Environment.experimental]: '0x122C44eB91D149E6F495eD7cC3a5603eA05b593e',
   [Environment.develop]: '0xEcf5aC0544fFCCCab8EbF1f003a326DdCCD50852',
-  [Environment.testnet]: '0x2CCc77739Fd104bA131366660e53200130EF9831',
+  [Environment.testnet]: '0xD9AF5eeec34E7F20255d09a6145a92a3C93e6B51',
   [Environment.mainnet]: '0x0000000000000000000000000000000000000000',
 } as const
 

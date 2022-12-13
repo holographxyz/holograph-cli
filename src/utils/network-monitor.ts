@@ -411,6 +411,10 @@ export class NetworkMonitor {
     ethereumTestnetGoerli: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     polygonTestnet: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     avalancheTestnet: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
+
+    ethereum: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
+    polygon: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
+    avalanche: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
   }
 
   needToSubscribe = false
