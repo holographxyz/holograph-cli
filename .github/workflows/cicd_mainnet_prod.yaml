@@ -11,8 +11,8 @@ env:
   #
   MAINNET_IMAGE_TAG: mainnet-${{ github.sha }}
   ########################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.58
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.48
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.59
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.49
   ########################################
   CLUSTER_NAME: prod0
   #
@@ -127,6 +127,7 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           NETWORK: 'avax matic'
+          ENABLE_UNSAFE: 'true'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -146,6 +147,7 @@ jobs:
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
             --set NETWORK="${NETWORK}" \
+            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             \
             --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.indexer_mainnet_avalanche_rpc_url }} \
             --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.indexer_mainnet_polygon_rpc_url }} \
@@ -195,6 +197,7 @@ jobs:
           AVALANCHE_NETWORK: "avax"
           POLYGON_NETWORK  : "matic"
           ETHEREUM_NETWORK : "eth"
+          ENABLE_UNSAFE: 'true'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -215,6 +218,7 @@ jobs:
             --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
             --set POLYGON_NETWORK=$POLYGON_NETWORK \
             --set ETHEREUM_NETWORK=$ETHEREUM_NETWORK \
+            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             \
             --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.operator_mainnet_avalanche_rpc_url }} \
             --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.operator_mainnet_polygon_rpc_url }} \
