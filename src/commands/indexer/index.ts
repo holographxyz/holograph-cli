@@ -1265,6 +1265,7 @@ export default class Indexer extends HealthCheck {
       `registry Contract address = ${this.networkMonitor.registryContract.address}`,
       tags,
     )
+
     const isHolographable: boolean = await this.networkMonitor.registryContract.isHolographedContract(contractAddress)
     this.networkMonitor.structuredLog(
       network,

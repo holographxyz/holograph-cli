@@ -321,6 +321,19 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "getSourceContract",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "sourceContract",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "string",
@@ -392,7 +405,7 @@
         "type": "bytes"
       }
     ],
-    "name": "initPA1D",
+    "name": "initHolographRoyalties",
     "outputs": [
       {
         "internalType": "bytes4",
