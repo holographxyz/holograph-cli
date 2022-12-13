@@ -1,20 +1,58 @@
-#!/bin/sh
+#!/bin/bash
+
+echo "-- The env vars are below... --"
+# notice: set the env vars
+if [[ $ENABLE_DEBUG == 'true' ]]
+then
+  export ENABLE_DEBUG='env DEBUG=\*'
+  echo "ENABLE_DEBUG=${ENABLE_DEBUG}"
+else
+  export ENABLE_DEBUG=""
+  echo "ENABLE_DEBUG=${ENABLE_DEBUG}"
+fi
+
+if [[ $ENABLE_SYNC == 'true' ]]
+then
+  export ENABLE_SYNC="--sync"
+  echo "ENABLE_SYNC=${ENABLE_SYNC}"
+else
+  export ENABLE_SYNC=""
+  echo "ENABLE_SYNC=${ENABLE_SYNC}"
+fi
+
+if [[ $HEALTHCHECK == 'true' ]]
+then
+  export HEALTHCHECK="--healthCheck"
+  echo "HEALTHCHECK=${HEALTHCHECK}"
+else
+  export HEALTHCHECK=""
+  echo "HEALTHCHECK=${HEALTHCHECK}"
+fi
+
+if [[ $ENABLE_UNSAFE == 'true' ]] && [[ $HOLOGRAPH_ENVIRONMENT == "mainnet" ]]
+then
+  export ENABLE_UNSAFE='--unsafe'
+  echo "ENABLE_UNSAFE=${ENABLE_UNSAFE}"
+else
+  export ENABLE_UNSAFE=""
+  echo "ENABLE_UNSAFE=${ENABLE_UNSAFE}"
+fi
 
 # notice: configure
-holo config --fromFile $CONFIG_FILE
+holograph config --fromFile $CONFIG_FILE
 
 # notice: run the specified app
-if [ $HOLO_CLI_MODE == "operator" ]
+if [[ $HOLO_CLI_CMD == "operator" ]]
 then
-  holo $HOLO_CLI_MODE --mode auto --sync --healthCheck --unsafePassword $PASSWORD
+  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD $ENABLE_UNSAFE
 
-elif [ $HOLO_CLI_MODE == "propagator" ]
+elif [[ $HOLO_CLI_CMD == "propagator" ]]
 then
-  holo $HOLO_CLI_MODE --mode auto --sync --healthCheck --unsafePassword $PASSWORD
+  eval $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holograph $HOLO_CLI_CMD --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD
 
-elif [ $HOLO_CLI_MODE == "indexer" ]
+elif [[ $HOLO_CLI_CMD == "indexer" ]]
 then
-  holo $HOLO_CLI_MODE --host=$HOLO_INDEXER_HOST --healthCheck
+  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_INDEXER_HOST $HEALTHCHECK $ENABLE_UNSAFE
 
 else
   echo

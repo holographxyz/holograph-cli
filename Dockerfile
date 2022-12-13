@@ -1,33 +1,46 @@
-# notice: use image from our own rgistry, cause Dockerhub imposes a pull limit and breaks the workflow
-ARG AWS_ECR_URL=177635894328.dkr.ecr.us-west-2.amazonaws.com
+ARG AWS_ECR_URL=default-value-in-dockerfile
 ARG REPO_NAME=misc
-FROM $AWS_ECR_URL/$REPO_NAME:node-18.4.0-alpine
 
-RUN apk update && apk add git curl
+FROM $AWS_ECR_URL/$REPO_NAME:node-18.9.0
 
-WORKDIR /holo-cli
+#RUN apk update && apk add git curl jq
+#RUN apk add --update python3 make g++ && rm -rf /var/cache/apk/*
+RUN apt-get update && apt-get install -y git curl jq nano net-tools
+RUN apt install -y python3.9
 
-COPY package.json /holo-cli
-COPY yarn.lock /holo-cli
-COPY . /holo-cli
+WORKDIR /holograph-cli
 
-RUN yarn add https://github.com/ethereumjs/ethereumjs-abi.git
+COPY package.json /holograph-cli
+COPY yarn.lock /holograph-cli
+COPY . /holograph-cli
+
 RUN yarn install --prefer-offline --silent --frozen-lockfile --non-interactive
 
 RUN yarn build
 
-RUN npm install -location=global ../holo-cli
+RUN npm install -location=global ../holograph-cli
 
+# experimental / develop / testnet / mainnet
+ENV HOLOGRAPH_ENVIRONMENT=a-super-fancy-environment
 ENV CONFIG_FILE=a-super-config-file.json
 ENV PASSWORD=a-super-secret-password
+ENV HOLOGRAPH_CLI_CMD=TeRmInAtOr
+ENV HOLOGRAPH_INDEXER_HOST=ThE_FuTuRe
+#
+ENV ENABLE_DEBUG=defaul-value
+ENV ENABLE_SYNC=defaul-value
+ENV HEALTHCHECK=defaul-value
+ENV MODE=defaul-value
+#
+ENV ENABLE_UNSAFE=defaul-value
 
-ENV HOLO_CLI_MODE=TeRmInAtOr
-ENV HOLO_INDEXER_HOST=ThE_FuTuRe
+# we use liveness/readiness probes in k8s
+HEALTHCHECK none
 
 EXPOSE 6000
 
-RUN chmod 755 /holo-cli/entrypoint.sh
+RUN chmod 755 /holograph-cli/entrypoint.sh
 # notice: The ENTRYPOINT specifies a command that will always be executed when the container starts.
-ENTRYPOINT ["/holo-cli/entrypoint.sh"]
+ENTRYPOINT ["/holograph-cli/entrypoint.sh"]
 # notice: The CMD specifies arguments that will be fed to the ENTRYPOINT
 # https://docs.docker.com/engine/reference/builder/#understand-how-cmd-and-entrypoint-interact

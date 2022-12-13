@@ -7,14 +7,25 @@ import {ethers} from 'ethers'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {addressValidator, tokenValidator} from '../../utils/validation'
+import {Environment, getEnvironment} from '@holographxyz/environment'
+import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
+import {networks} from '@holographxyz/networks'
+import path from 'node:path'
 
 export default class Nft extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
-  static description = 'Check the status of an nft across all enabled networks'
-  static examples = ['$ holo status:nft --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78" --id=1']
+  static description = 'Check the status of an NFT across all networks defined in the config.'
+  static examples = [
+    '$ <%= config.bin %> <%= command.id %> --address="0x5059bf8E4De43ccc0C27ebEc9940e2310E071A78" --id=1',
+  ]
+
   static flags = {
-    address: Flags.string({description: 'The address of contract to check status of'}),
-    id: Flags.string({description: 'Token ID to check'}),
+    address: Flags.string({
+      description: 'The address of contract to check status of',
+    }),
+    id: Flags.string({
+      description: 'Token ID to check',
+    }),
     output: Flags.string({
       options: ['csv', 'json', 'yaml', ''],
       description: 'Define table output type',
@@ -27,19 +38,12 @@ export default class Nft extends Command {
 
   registryAddress!: string
   supportedNetworks: string[] = []
-  blockExplorers: {[key: string]: string} = {
-    rinkeby: 'https://rinkeby.etherscan.io/',
-    mumbai: 'https://mumbai.polygonscan.com/',
-    fuji: 'https://testnet.snowtrace.io/',
-  }
-
   providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   holograph!: ethers.Contract
   registryContract!: ethers.Contract
   erc721Contract!: ethers.Contract
-  HOLOGRAPH_ADDRESS = '0xD11a467dF6C80835A1223473aB9A48bF72eFCF4D'.toLowerCase()
 
-  async initializeEthers(configFile: ConfigFile): Promise<void> {
+  async initializeEthers(configFile: ConfigFile, environment: Environment): Promise<void> {
     for (let i = 0, l = this.supportedNetworks.length; i < l; i++) {
       const network = this.supportedNetworks[i]
       const rpcEndpoint = (configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork).providerUrl
@@ -57,21 +61,23 @@ export default class Nft extends Command {
       }
     }
 
-    const holographABI = await fs.readJson('./src/abi/Holograph.json')
+    const holographABI = await fs.readJson(path.join(__dirname, `../../abi/${environment}/Holograph.json`))
     this.holograph = new ethers.Contract(
-      this.HOLOGRAPH_ADDRESS,
+      HOLOGRAPH_ADDRESSES[environment],
       holographABI,
       this.providers[this.supportedNetworks[0]],
     )
 
-    const holographRegistryABI = await fs.readJson('./src/abi/HolographRegistry.json')
+    const holographRegistryABI = await fs.readJson(
+      path.join(__dirname, `../../abi/${environment}/HolographRegistry.json`),
+    )
     this.registryAddress = await this.holograph.getRegistry()
     this.registryContract = new ethers.Contract(
       this.registryAddress,
       holographRegistryABI,
       this.providers[this.supportedNetworks[0]],
     )
-    const erc721ABI = await fs.readJson('./src/abi/ERC721Holograph.json')
+    const erc721ABI = await fs.readJson(path.join(__dirname, `../../abi/${environment}/ERC721Holograph.json`))
     this.erc721Contract = new ethers.Contract(
       this.contractAddress,
       erc721ABI,
@@ -119,8 +125,12 @@ export default class Nft extends Command {
     }
   }
 
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     this.log('Loading user configurations...')
+    const environment = getEnvironment()
     const {configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
     this.log('User configurations loaded.')
 
@@ -132,7 +142,7 @@ export default class Nft extends Command {
 
     this.supportedNetworks = Object.keys(configFile.networks)
 
-    await this.initializeEthers(configFile)
+    await this.initializeEthers(configFile, environment)
 
     // data we want
     // network -- deployed -- valid -- address -- explorer link
@@ -150,22 +160,19 @@ export default class Nft extends Command {
       const provider = this.providers[network]
       const registry = this.registryContract.connect(provider)
       const erc721 = this.erc721Contract.connect(provider)
-      // eslint-disable-next-line no-await-in-loop
       const code = await provider.getCode(this.contractAddress, 'latest')
       const token = ethers.BigNumber.from(this.tokenId)
       if (code === '0x') {
         // do nothing
       } else {
         d.deployed = true
-        // eslint-disable-next-line no-await-in-loop
+
         d.valid = await registry.isHolographedContract(this.contractAddress)
         if (d.valid) {
-          // eslint-disable-next-line no-await-in-loop
           d.exists = await erc721.exists(token.toHexString())
           if (d.exists) {
-            // eslint-disable-next-line no-await-in-loop
             d.owner = await erc721.ownerOf(token.toHexString())
-            d.link = this.blockExplorers[network] + 'token/' + this.contractAddress + '?a=' + token.toString()
+            d.link = (networks[network].explorer || '') + '/token/' + this.contractAddress + '?a=' + token.toString()
           }
         }
       }

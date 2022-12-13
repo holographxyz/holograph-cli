@@ -27,7 +27,6 @@ export default class AesEncryption {
     const key = Buffer.concat([Buffer.from(this.AesKey, bufferEncryption)], 32)
     const iv = Buffer.concat([Buffer.from(this.AesIV, bufferEncryption)], 16)
     const decipher = crypto.createDecipheriv(encryptionType, key, iv)
-    const deciphered: string = decipher.update(buff).toString() + decipher.final().toString()
-    return deciphered
+    return decipher.update(buff).toString() + decipher.final().toString()
   }
 }

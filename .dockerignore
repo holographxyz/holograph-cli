@@ -1,0 +1,10 @@
+# System excludes
+.git
+.idea
+
+# Project excludes
+node_modules
+test
+.husky
+.github
+.env*

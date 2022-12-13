@@ -1,14 +1,17 @@
+import * as fs from 'fs-extra'
 import * as inquirer from 'inquirer'
 
-import {CliUx, Command, Flags} from '@oclif/core'
+import {CliUx, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 
-import {decodeDeploymentConfigInput, capitalize, DeploymentConfig} from '../../utils/utils'
+import {getNetworkByChainId, supportedNetworks} from '@holographxyz/networks'
+import {capitalize} from '../../utils/utils'
+import {DeploymentConfig, decodeDeploymentConfigInput} from '../../utils/contract-deployment'
 
-import {networkFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
-import {startHealthcheckServer} from '../../utils/health-check-server'
+import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
+import {HealthCheck} from '../../base-commands/healthcheck'
 
 type RecoveryData = {
   // eslint-disable-next-line camelcase
@@ -20,47 +23,50 @@ type RecoveryData = {
   contract_address: string
 }
 
-export default class Propagator extends Command {
-  static description = 'Listen for EVM events deploys collections to ther supported networks'
-  static examples = ['$ holo propagator --networks="rinkeby mumbai fuji" --mode=auto']
+export default class Propagator extends HealthCheck {
+  static hidden = true
+  static description = 'Listen for EVM events deploys collections to the supported networks'
+  static examples = [
+    '$ <%= config.bin %> <%= command.id %> --networks ethereumTestnetRinkeby polygonTestnet avalancheTestnet --mode=auto',
+  ]
+
   static flags = {
     mode: Flags.string({
       description: 'The mode in which to run the propagator',
       options: ['listen', 'manual', 'auto'],
       char: 'm',
     }),
-    healthCheck: Flags.boolean({
-      description: 'Launch server on http://localhost:6000 to make sure command is still running',
-      default: false,
-    }),
     sync: Flags.boolean({
       description: 'Start from last saved block position instead of latest block position',
       default: false,
     }),
     unsafePassword: Flags.string({
-      description: 'Enter the plain text password for the wallet in the holo cli config',
+      description: 'Enter the plain text password for the wallet in the holograph cli config',
     }),
     ...warpFlag,
-    ...networkFlag,
+    ...networksFlag,
     recover: Flags.string({
       description: 'Provide a JSON array of RecoveryData objects to manually ensure propagation',
       default: '[]',
     }),
+    recoverFile: Flags.string({
+      description: 'Filename reference to JSON array of RecoveryData objects to manually ensure propagation',
+    }),
+    ...HealthCheck.flags,
   }
 
   crossDeployments: string[] = []
-
-  /**
-   * Propagator class variables
-   */
   operatorMode: OperatorMode = OperatorMode.listen
-
   networkMonitor!: NetworkMonitor
 
+  /**
+   * Command Entry Point
+   */
   async run(): Promise<void> {
     const {flags} = await this.parse(Propagator)
 
     const enableHealthCheckServer = flags.healthCheck
+    const healthCheckPort = flags.healthCheckPort
     const syncFlag = flags.sync
     const unsafePassword = flags.unsafePassword
 
@@ -127,40 +133,51 @@ export default class Propagator extends Command {
     await this.networkMonitor.run(!(flags.warp > 0), undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
-    const recoveryData = JSON.parse(flags.recover as string) as RecoveryData[]
+    let recoveryData: RecoveryData[] = JSON.parse(flags.recover as string) as RecoveryData[]
+    const recoverDataFileString: string | undefined = flags.recoverFile
+    if (recoverDataFileString !== undefined && recoverDataFileString !== '') {
+      if (fs.existsSync(recoverDataFileString)) {
+        recoveryData = (await fs.readJson(recoverDataFileString)) as RecoveryData[]
+      } else {
+        throw new Error('The recoverFile does not exist')
+      }
+    }
+
     if (recoveryData.length > 0) {
       this.log(`Manually running ${recoveryData.length} recovery jobs`)
       for (const data of recoveryData) {
-        const network = data.chain_id === 4 ? 'rinkeby' : data.chain_id === 43_113 ? 'mumbai' : 'fuji'
-        // eslint-disable-next-line no-await-in-loop
-        let tx = await this.networkMonitor.providers[network].getTransaction(data.tx)
-        if (tx === null) {
-          // we need to try alternatives
-          this.networkMonitor.structuredLog(network, `${data.tx} is on wrong network`)
-          const checkNetworks: string[] =
-            network === 'rinkeby'
-              ? ['fuji', 'mumbai']
-              : network === 'fuji'
-              ? ['rinkeby', 'mumbai']
-              : ['rinkeby', 'fuji']
-          // eslint-disable-next-line no-await-in-loop
-          tx = await this.networkMonitor.providers[checkNetworks[0]].getTransaction(data.tx)
+        let network: string = getNetworkByChainId(data.chain_id).key
+        const checkNetworks: string[] = supportedNetworks
+        if (checkNetworks.includes(network)) {
+          checkNetworks.splice(checkNetworks.indexOf(network), 1)
+        }
+
+        let tx = await this.networkMonitor.getTransaction({
+          transactionHash: data.tx,
+          network,
+          canFail: true,
+          attempts: 10,
+          interval: 500,
+        })
+        for (const checkNetwork of checkNetworks) {
           if (tx === null) {
-            this.networkMonitor.structuredLog(checkNetworks[0], `${data.tx} is on wrong network`)
-            // eslint-disable-next-line no-await-in-loop
-            tx = await this.networkMonitor.providers[checkNetworks[1]].getTransaction(data.tx)
-            if (tx === null) {
-              this.networkMonitor.structuredLog(checkNetworks[1], `${data.tx} is on wrong network`)
-            } else {
-              // eslint-disable-next-line no-await-in-loop
-              await this.handleContractDeployedEvents(tx, checkNetworks[1])
-            }
+            this.networkMonitor.structuredLog(network, `Transaction ${data.tx} is on wrong network`)
+            network = checkNetwork
+            tx = await this.networkMonitor.getTransaction({
+              transactionHash: data.tx,
+              network,
+              canFail: true,
+              attempts: 10,
+              interval: 500,
+            })
           } else {
-            // eslint-disable-next-line no-await-in-loop
-            await this.handleContractDeployedEvents(tx, checkNetworks[0])
+            break
           }
+        }
+
+        if (tx === null) {
+          this.networkMonitor.structuredLog(network, `Could not find ${data.tx} on any network`)
         } else {
-          // eslint-disable-next-line no-await-in-loop
           await this.handleContractDeployedEvents(tx, network)
         }
       }
@@ -168,9 +185,10 @@ export default class Propagator extends Command {
       this.log('Done running recovery jobs')
     }
 
-    // Start server
+    // Start health check server on port 6000 or healthCheckPort
+    // Can be used to monitor that the operator is online and running
     if (enableHealthCheckServer) {
-      startHealthcheckServer({networkMonitor: this.networkMonitor})
+      await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, healthCheckPort})
     }
   }
 
@@ -182,11 +200,10 @@ export default class Propagator extends Command {
         networkDependant: false,
       },
     ]
-    Promise.resolve()
+    return Promise.resolve()
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
-    /* eslint-disable no-await-in-loop */
     if (transactions.length > 0) {
       for (const transaction of transactions) {
         this.debug(`Processing transaction ${transaction.hash} on ${job.network} at block ${transaction.blockNumber}`)
@@ -207,7 +224,12 @@ export default class Propagator extends Command {
     transaction: ethers.providers.TransactionResponse,
     network: string,
   ): Promise<void> {
-    const receipt = await this.networkMonitor.providers[network].getTransactionReceipt(transaction.hash)
+    const receipt: ethers.ContractReceipt | null = await this.networkMonitor.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -217,7 +239,10 @@ export default class Propagator extends Command {
         network,
         `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`,
       )
-      const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(receipt)
+      const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(
+        receipt,
+        this.networkMonitor.factoryAddress,
+      )
       if (deploymentInfo === undefined) {
         this.networkMonitor.structuredLog(network, `BridgeableContractDeployed event not found in ${transaction.hash}`)
       } else {
@@ -254,91 +279,35 @@ export default class Propagator extends Command {
       (contractCode === '0x' || contractCode === '' || contractCode === undefined) &&
       !(await registry.callStatic.isHolographedContract(deploymentAddress, {blockTag: 'latest'}))
     ) {
-      const factory: ethers.Contract = this.networkMonitor.factoryContract.connect(this.networkMonitor.wallets[network])
-      this.networkMonitor.structuredLog(network, `Calculating gas price for collection ${deploymentAddress}`)
-      let gasLimit
-      try {
-        gasLimit = await factory.estimateGas.deployHolographableContract(
-          deploymentConfig.config,
-          deploymentConfig.signature,
-          deploymentConfig.signer,
-        )
-      } catch (error: any) {
-        this.networkMonitor.structuredLog(network, `Calculating Gas has failed for collection ${deploymentAddress}`)
-        this.networkMonitor.structuredLogError(network, error, deploymentAddress)
-        return
-      }
-
-      // setting default gas price in case network is unknown
-      let gasPrice = ethers.utils.parseUnits('10', 'gwei')
-      try {
-        // Hack for Mumbai because a variable gas price is causing the deployment to take a long time to process
-        if (network === 'mumbai') {
-          gasPrice = ethers.utils.parseUnits('150', 'gwei')
-        } else {
-          const gasPriceBase = await this.networkMonitor.providers[network].getGasPrice()
-          gasPrice = gasPriceBase.add(gasPriceBase.div(ethers.BigNumber.from('4'))) // gasPrice = gasPriceBase * 1.25
-        }
-      } catch (error: any) {
-        this.networkMonitor.structuredLog(network, `Failed to compute gas price for collection = ${deploymentAddress}`)
-        this.networkMonitor.structuredLogError(network, error, deploymentAddress)
-        return
-      }
-
-      this.networkMonitor.structuredLog(
+      const deployReceipt: ethers.providers.TransactionReceipt | null = await this.networkMonitor.executeTransaction({
         network,
-        `Gas price in Gwei = ${ethers.utils.formatUnits(gasPrice, 'gwei')} for collection ${deploymentAddress}`,
-      )
-      this.networkMonitor.structuredLog(
-        network,
-        `Transaction is estimated to cost a total of ${ethers.utils.formatUnits(
-          gasLimit.mul(gasPrice),
-          'ether',
-        )} native gas tokens (in ether) for collection ${deploymentAddress}`,
-      )
-
-      try {
-        const deployRawTx = await factory.populateTransaction.deployHolographableContract(
-          deploymentConfig.config,
-          deploymentConfig.signature,
-          deploymentConfig.signer,
-          {gasPrice, gasLimit},
-        )
-        deployRawTx.nonce = this.networkMonitor.walletNonces[network]
-        const deployTx = await this.networkMonitor.wallets[network].sendTransaction(deployRawTx)
-        this.debug(deployTx)
+        contract: this.networkMonitor.factoryContract,
+        methodName: 'deployHolographableContract',
+        args: [deploymentConfig.config, deploymentConfig.signature, deploymentConfig.signer],
+      })
+      if (deployReceipt === null) {
+        this.networkMonitor.structuredLog(network, `Submitting tx for collection ${deploymentAddress} failed`)
+      } else {
         this.networkMonitor.structuredLog(
           network,
-          `Transaction created with hash ${deployTx.hash} for collection ${deploymentAddress}`,
+          `Transaction minted with hash ${deployReceipt.transactionHash} for collection ${deploymentAddress}`,
         )
-        this.networkMonitor.walletNonces[network]++
-        deployTx.wait().then((deployReceipt: ethers.providers.TransactionReceipt) => {
-          this.debug(deployReceipt)
+        const deploymentInfo: any[] | undefined = this.networkMonitor.decodeBridgeableContractDeployedEvent(
+          deployReceipt as ethers.providers.TransactionReceipt,
+          this.networkMonitor.factoryAddress,
+        )
+        if (deploymentInfo === undefined) {
           this.networkMonitor.structuredLog(
             network,
-            `Transaction minted with hash ${deployReceipt.transactionHash} for collection ${deploymentAddress}`,
+            `Failed extracting BridgeableContractDeployedEvent for collection ${deploymentAddress}`,
           )
-          let collectionAddress
-          for (let i = 0, l = deployReceipt.logs.length; i < l; i++) {
-            const log = deployReceipt.logs[i]
-            if (
-              log.topics.length === 3 &&
-              log.topics[0] === '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b'
-            ) {
-              collectionAddress = '0x' + log.topics[1].slice(26)
-              break
-            }
-          }
-
+        } else {
+          const collectionAddress = deploymentInfo[0] as string
           this.networkMonitor.structuredLog(
             network,
             `Successfully deployed collection ${collectionAddress} = ${deploymentAddress}`,
           )
-        })
-        return
-      } catch (error: any) {
-        this.networkMonitor.structuredLog(network, `Submitting tx for collection ${deploymentAddress} failed`)
-        this.networkMonitor.structuredLogError(network, error, deploymentAddress)
+        }
       }
     } else {
       this.networkMonitor.structuredLog(network, `Collection ${deploymentAddress} already deployed`)
