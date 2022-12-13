@@ -161,8 +161,8 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
             --set datadog_tags.version=chart-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
             \
-            --set autoscaling.minReplicas=3 \
-            --set autoscaling.maxReplicas=5 \
+            --set autoscaling.minReplicas=2 \
+            --set autoscaling.maxReplicas=2 \
             \
             --set LivenessProbeCommand="if [ \$(curl localhost:6000/healthcheck | jq -r '.providerStatus.polygon') != CONNECTED ] ;then exit 1 ;fi && if [ \$(curl localhost:6000/healthcheck | jq -r '.providerStatus.avalanche') != CONNECTED ] ;then exit 1 ;fi" \
             \
