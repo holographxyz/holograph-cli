@@ -12,7 +12,7 @@ env:
   MAINNET_IMAGE_TAG: mainnet-${{ github.sha }}
   ########################################
   MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.59
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.50
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.51
   ########################################
   CLUSTER_NAME: prod0
   #
@@ -24,8 +24,8 @@ env:
   #
   MAINNET_HOLO_INDEXER_HOST: 'http://rhea-holo-api.mainnet.svc.cluster.local:443' # Notice <-- the release from API
   #
-  MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.MAINNET_HOLO_INDEXER_PASSWORD }}   # notice: same password for now
-  MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.MAINNET_HOLO_OPERATOR_PASSWORD }} # notice: same password for now
+  MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.MAINNET_HOLO_INDEXER_PASSWORD }}
+  MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.MAINNET_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
   INDEXER_HOLO_CONFIG_FILE_DATA: mainnet-config-file
@@ -132,7 +132,7 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'true'
-          NETWORK: 'avax matic'
+          NETWORK: 'avax matic eth'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
