@@ -22,7 +22,7 @@ env:
   #
   MAINNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_MAINNET_OPERATOR_API_KEY }}
   #
-  MAINNET_HOLO_INDEXER_HOST: 'http://kabamaru-holo-api.mainnet.svc.cluster.local:443' # Notice <-- the release from API
+  MAINNET_HOLO_INDEXER_HOST: 'http://rhea-holo-api.mainnet.svc.cluster.local:443' # Notice <-- the release from API
   #
   MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.MAINNET_HOLO_INDEXER_PASSWORD }}   # notice: same password for now
   MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.MAINNET_HOLO_OPERATOR_PASSWORD }} # notice: same password for now
@@ -31,11 +31,11 @@ env:
   INDEXER_HOLO_CONFIG_FILE_DATA: mainnet-config-file
   OPERATOR_HOLO_CONFIG_FILE_DATA: mainnet-config-file
   #
-  HOLOGRAPH_ENVIRONMENT: mainnet # TODO <- switch to mainnet
+  HOLOGRAPH_ENVIRONMENT: mainnet
   #
   MAINNET_DOMAIN: 'holograph.xyz'
   #
-  MAINNET_COMMON_NAMESPACE: mainnet
+  MAINNET_COMMON_NAMESPACE: mainnet # NOTICE <---
   #
   ### INDEXER MAINNET rpc endpoints
   indexer_mainnet_avalanche_rpc_url: ${{ secrets.INDEXER_MAINNET_AVALANCHE_RPC_URL }}
@@ -52,17 +52,21 @@ env:
   operator_mainnet_private_key: ${{ secrets.OPERATOR_MAINNET_PRIVATE_KEY }}
   operator_mainnet_address: ${{ secrets.OPERATOR_MAINNET_ADDRESS }}
 
+## notice: the trigger
+#on:
+#  push:
+#    branches:
+#      - 'something'
+#      # Excluded branches
+#      - '!develop'
+#      - '!main'
+#      - '!master'
 # notice: the trigger
 on:
-  push:
+  pull_request:
     branches:
-      - 'feat/deploy-to-mainnet'
-# notice: the trigger
-#on:
-#  pull_request:
-#    branches:
-#      - 'mainnet'
-#    types: [closed]
+      - 'mainnet'
+    types: [closed]
 
 jobs:
   deploy-to-prod-mainnet:
@@ -123,11 +127,12 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: indexer-main # notice
+          #
           ENABLE_DEBUG: 'true'
           HEALTHCHECK: 'true'
           MODE: 'auto'
-          NETWORK: 'avax matic'
           ENABLE_UNSAFE: 'true'
+          NETWORK: 'avax matic'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -190,14 +195,15 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: operator-main # notice
+          #
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
           HEALTHCHECK: 'true'
           MODE: 'auto'
+          ENABLE_UNSAFE: 'true'
           AVALANCHE_NETWORK: "avax"
           POLYGON_NETWORK  : "matic"
           ETHEREUM_NETWORK : "eth"
-          ENABLE_UNSAFE: 'true'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -215,10 +221,11 @@ jobs:
             --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
+            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            \
             --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
             --set POLYGON_NETWORK=$POLYGON_NETWORK \
             --set ETHEREUM_NETWORK=$ETHEREUM_NETWORK \
-            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             \
             --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.operator_mainnet_avalanche_rpc_url }} \
             --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.operator_mainnet_polygon_rpc_url }} \
@@ -252,7 +259,7 @@ jobs:
             echo "--OPERATOR--"
             helm history $OPERATOR_RELEASE_NAME -n ${{ env.MAINNET_COMMON_NAMESPACE }} --max 3
 
-            echo "------------------------ Newly deployed image [same for all apps] ------------------------ "
+            echo "------------------------ Newly deployed image [same for all clis] ------------------------ "
             echo "$MAINNET_IMAGE_TAG"
 
             echo "------------------------ Healthchecks ------------------------"
