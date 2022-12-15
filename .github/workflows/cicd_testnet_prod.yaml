@@ -11,21 +11,20 @@ env:
   #
   TESTNET_IMAGE_TAG: testnet-${{ github.sha }}
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.55
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.45
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.59
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.51
   #######################################
   CLUSTER_NAME: prod0
   #
   AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
-  ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }}
+  ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }} # TIP: the 2 CERTs are separated with \, in Github secret
   #
   #TODO - create new gh secret for TESTNET. should be different from staging????
   TESTNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
-  TESTNET_HOLO_INDEXER_HOST: 'http://pegasus-holo-api.testnet.svc.cluster.local:443' # Notice <-- the release from API
+  TESTNET_HOLO_INDEXER_HOST: 'http://rhea-holo-api.testnet.svc.cluster.local:443' # Notice <-- the release from API
   #
-  # TODO -> replace them with the PROD specific password <---------------------------
   TESTNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
   TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
   #
@@ -58,12 +57,12 @@ env:
 #on:
 #  push:
 #    branches:
-#      - 'feat/holo-448-holocli-env-separation'
+#      - 'something'
 #      # Excluded branches
 #      - '!develop'
 #      - '!main'
 #      - '!master'
-## notice: the trigger
+# notice: the trigger
 on:
   pull_request:
     branches:
@@ -98,7 +97,7 @@ jobs:
         run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.TESTNET_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
-        # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
+        # TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ env.AWS_KEY_ID }} #notice: unique for each env
@@ -128,10 +127,12 @@ jobs:
       - name: -> Deploy INDEXER cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: indexer-testnet #notice
+          RELEASE_NAME: indexer-testnet # notice
+          #
           ENABLE_DEBUG: 'true'
           HEALTHCHECK: 'true'
           MODE: 'auto'
+          ENABLE_UNSAFE: 'false'
           NETWORK: 'fuji mumbai goerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
@@ -152,6 +153,7 @@ jobs:
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
             --set NETWORK="${NETWORK}" \
+            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             \
             --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_testnet_avalancheTestnet_rpc_url }} \
             --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_testnet_polygonTestnet_rpc_url }} \
@@ -164,6 +166,9 @@ jobs:
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
             --set datadog_tags.version=chart-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
+            \
+            --set autoscaling.minReplicas=1 \
+            --set autoscaling.maxReplicas=1 \
             \
             --values .github/values_for_prod_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
@@ -188,11 +193,16 @@ jobs:
       - name: -> Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: operator-testnet #notice
+          RELEASE_NAME: operator-testnet # notice
+          #
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
           HEALTHCHECK: 'true'
           MODE: 'auto'
+          ENABLE_UNSAFE: 'false'
+          AVALANCHE_NETWORK: "fuji"
+          POLYGON_NETWORK  : "mumbai"
+          ETHEREUM_NETWORK : "goerli"
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -210,6 +220,11 @@ jobs:
             --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
+            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            \
+            --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
+            --set POLYGON_NETWORK=$POLYGON_NETWORK \
+            --set ETHEREUM_NETWORK=$ETHEREUM_NETWORK \
             \
             --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_testnet_avalancheTestnet_rpc_url }} \
             --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_testnet_polygonTestnet_rpc_url }} \
@@ -243,7 +258,7 @@ jobs:
             echo "--OPERATOR--"
             helm history $OPERATOR_RELEASE_NAME -n ${{ env.TESTNET_COMMON_NAMESPACE }} --max 3
 
-            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+            echo "------------------------ Newly deployed image [same for all clis] ------------------------"
             echo "$TESTNET_IMAGE_TAG"
 
             echo "------------------------ Healthchecks ------------------------"
