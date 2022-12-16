@@ -176,98 +176,98 @@ jobs:
             --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
             --set ingress.blue_green_deployment=false
-#      #
-#      #
-#      # NOTICE: --- OPERATOR ---
-#      - name: Pull the holo-operator helm chart version x.x.x from ECR
-#        shell: bash
-#        env:
-#          #
-#          CHART_REPO: holo-operator
-#          CHART_VERSION: ${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }}
-#          #
-#          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-#        run: |
-#          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-#      ######
-#      - name: -> Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          RELEASE_NAME: rhea-operator-testnet # notice
-#          #
-#          ENABLE_DEBUG: 'true'
-#          ENABLE_SYNC: 'true'
-#          HEALTHCHECK: 'true'
-#          MODE: 'auto'
-#          ENABLE_UNSAFE: 'false'
-#          AVALANCHE_NETWORK: "fuji"
-#          POLYGON_NETWORK  : "mumbai"
-#          ETHEREUM_NETWORK : "goerli"
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            helm upgrade --install $RELEASE_NAME \
-#            holo-operator-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
-#            -n ${{ env.TESTNET_COMMON_NAMESPACE }} \
-#            \
-#            --set image.repository=${{ env.ECR_REPOSITORY }} \
-#            --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
-#            --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
-#            --set holo_operator_password=${{ env.TESTNET_HOLO_OPERATOR_PASSWORD }} \
-#            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
-#            \
-#            --set ENABLE_DEBUG=$ENABLE_DEBUG \
-#            --set ENABLE_SYNC=$ENABLE_SYNC \
-#            --set HEALTHCHECK=$HEALTHCHECK \
-#            --set MODE=$MODE \
-#            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
-#            \
-#            --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
-#            --set POLYGON_NETWORK=$POLYGON_NETWORK \
-#            --set ETHEREUM_NETWORK=$ETHEREUM_NETWORK \
-#            \
-#            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_testnet_avalancheTestnet_rpc_url }} \
-#            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_testnet_polygonTestnet_rpc_url }} \
-#            --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.operator_testnet_ethereumTestnetGoerli_rpc_url }} \
-#            \
-#            --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
-#            --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
-#            \
-#            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-#            --set datadog_tags.version=chart-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
-#            \
-#            --values .github/values_for_prod_alb_ingress.yaml \
-#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-#            --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
-#            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-#            --set ingress.blue_green_deployment=false
-#
-#      - name: -> Info for the new deployments
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          INDEXER_RELEASE_NAME: rhea-indexer-testnet
-#          OPERATOR_RELEASE_NAME: rhea-operator-testnet
-#          LB_URL: 'https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com'
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            echo "------------------------- Last n Helm releases -------------------------"
-#            echo "--INDEXER--"
-#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.TESTNET_COMMON_NAMESPACE }} --max 3
-#            echo "--OPERATOR--"
-#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.TESTNET_COMMON_NAMESPACE }} --max 3
-#
-#            echo "------------------------ Newly deployed image [same for all clis] ------------------------"
-#            echo "$TESTNET_IMAGE_TAG"
-#
-#            echo "------------------------ Healthchecks ------------------------"
-#            sleep 55
-#
-#            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-#
-#            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+      #
+      #
+      # NOTICE: --- OPERATOR ---
+      - name: Pull the holo-operator helm chart version x.x.x from ECR
+        shell: bash
+        env:
+          #
+          CHART_REPO: holo-operator
+          CHART_VERSION: ${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }}
+          #
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
+      ######
+      - name: -> Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          RELEASE_NAME: rhea-operator-testnet # notice
+          #
+          ENABLE_DEBUG: 'true'
+          ENABLE_SYNC: 'true'
+          HEALTHCHECK: 'true'
+          MODE: 'auto'
+          ENABLE_UNSAFE: 'false'
+          AVALANCHE_NETWORK: "fuji"
+          POLYGON_NETWORK  : "mumbai"
+          ETHEREUM_NETWORK : "goerli"
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            helm upgrade --install $RELEASE_NAME \
+            holo-operator-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
+            -n ${{ env.TESTNET_COMMON_NAMESPACE }} \
+            \
+            --set image.repository=${{ env.ECR_REPOSITORY }} \
+            --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
+            --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
+            --set holo_operator_password=${{ env.TESTNET_HOLO_OPERATOR_PASSWORD }} \
+            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
+            \
+            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set ENABLE_SYNC=$ENABLE_SYNC \
+            --set HEALTHCHECK=$HEALTHCHECK \
+            --set MODE=$MODE \
+            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            \
+            --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
+            --set POLYGON_NETWORK=$POLYGON_NETWORK \
+            --set ETHEREUM_NETWORK=$ETHEREUM_NETWORK \
+            \
+            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_testnet_avalancheTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_testnet_polygonTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.operator_testnet_ethereumTestnetGoerli_rpc_url }} \
+            \
+            --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
+            --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
+            \
+            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.version=chart-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
+            \
+            --values .github/values_for_prod_alb_ingress.yaml \
+            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+            --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
+            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
+            --set ingress.blue_green_deployment=false
+
+      - name: -> Info for the new deployments
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          INDEXER_RELEASE_NAME: rhea-indexer-testnet
+          OPERATOR_RELEASE_NAME: rhea-operator-testnet
+          LB_URL: 'https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com'
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            echo "------------------------- Last n Helm releases -------------------------"
+            echo "--INDEXER--"
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.TESTNET_COMMON_NAMESPACE }} --max 3
+            echo "--OPERATOR--"
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.TESTNET_COMMON_NAMESPACE }} --max 3
+
+            echo "------------------------ Newly deployed image [same for all clis] ------------------------"
+            echo "$TESTNET_IMAGE_TAG"
+
+            echo "------------------------ Healthchecks ------------------------"
+            sleep 55
+
+            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }}
+            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+
+            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }}
+            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
