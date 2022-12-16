@@ -54,20 +54,20 @@ env:
   operator_testnet_address: ${{ secrets.OPERATOR_PROD_ADDRESS }}
 
 # notice: the trigger
-on:
-  push:
-    branches:
-      - 'fix/rename-cli-releases-for-testnet-to-rhea'
-      # Excluded branches
-      - '!develop'
-      - '!main'
-      - '!master'
-# notice: the trigger
 #on:
-#  pull_request:
+#  push:
 #    branches:
-#      - 'testnet'
-#    types: [closed]
+#      - 'fix/rename-cli-releases-for-testnet-to-rhea'
+#      # Excluded branches
+#      - '!develop'
+#      - '!main'
+#      - '!master'
+# notice: the trigger
+on:
+  pull_request:
+    branches:
+      - 'testnet'
+    types: [closed]
 
 jobs:
   deploy-to-prod-testnet:
