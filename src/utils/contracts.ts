@@ -31,7 +31,7 @@ export const FAUCET_ADDRESSES: {[key in Environment]: string} = {
   [Environment.localhost]: '0x232E8406518da66ecD5681a600f18A13E8CfE5E6',
   [Environment.experimental]: '0x122C44eB91D149E6F495eD7cC3a5603eA05b593e',
   [Environment.develop]: '0xb934d4B23F70fd8EB99cc8E9629285060cB4C9F2',
-  [Environment.testnet]: '0x316b89F1805D9eEFd2A89D63e2712b02C2549231',
+  [Environment.testnet]: '0xe54b42B7002D58bA5C9df2BCc5b8a520B8b94463',
   [Environment.mainnet]: '0x0000000000000000000000000000000000000000',
 } as const
 
