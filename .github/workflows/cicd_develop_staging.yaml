@@ -12,7 +12,7 @@ env:
   DEV_IMAGE_TAG: dev-86fae69d67be56b1c52e9de7044db86fcad98ffd #dev-${{ github.sha }}
   #######################################
   STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.61
-  INDEXER_RELEASE_NAME: alex3-indexer-dev
+  INDEXER_RELEASE_NAME: vitto4-indexer-dev
 #  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.
 #  INDEXER_OPERATOR_NAME: kostas1-operator-dev
   #######################################
