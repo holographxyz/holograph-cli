@@ -9,7 +9,7 @@ env:
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli-dev # notice: the same for all 3 cli apps
   #
-  DEV_IMAGE_TAG: dev-${{ github.sha }}
+  DEV_IMAGE_TAG: dev-86fae69d67be56b1c52e9de7044db86fcad98ffd #dev-${{ github.sha }}
   #######################################
   STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.60
   INDEXER_RELEASE_NAME: kostas1-indexer-dev
