@@ -61,7 +61,7 @@ export const NETWORK_COLORS: Record<string, string> = {
   polygon: '#B026FF ',
   ethereumTestnetRinkeby: '##83EEFF',
   ethereumTestnetGoerli: '#83EEFF',
-  etheterum: '##83EEFF',
+  ethereum: '##83EEFF',
 }
 
 export const rgbToHex = (rgb: number): string => {
