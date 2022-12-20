@@ -23,7 +23,7 @@ env:
   #TODO - create new gh secret for TESTNET. should be different from staging????
   TESTNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
-  TESTNET_HOLO_INDEXER_HOST: 'http://rhea-holo-api.testnet.svc.cluster.local:443' # Notice <-- the release from API
+  TESTNET_HOLO_INDEXER_HOST: 'http://testrhea-holo-api.testnet.svc.cluster.local:443' # Notice <-- the release from API
   #
   TESTNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
   TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
@@ -57,7 +57,7 @@ env:
 #on:
 #  push:
 #    branches:
-#      - 'something'
+#      - 'fix/rename-cli-releases-for-testnet-to-rhea'
 #      # Excluded branches
 #      - '!develop'
 #      - '!main'
@@ -127,7 +127,7 @@ jobs:
       - name: -> Deploy INDEXER cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: indexer-testnet # notice
+          RELEASE_NAME: rhea-indexer-testnet # notice
           #
           ENABLE_DEBUG: 'true'
           HEALTHCHECK: 'true'
@@ -193,7 +193,7 @@ jobs:
       - name: -> Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: operator-testnet # notice
+          RELEASE_NAME: rhea-operator-testnet # notice
           #
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
@@ -246,8 +246,8 @@ jobs:
       - name: -> Info for the new deployments
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          INDEXER_RELEASE_NAME: indexer-testnet
-          OPERATOR_RELEASE_NAME: operator-testnet
+          INDEXER_RELEASE_NAME: rhea-indexer-testnet
+          OPERATOR_RELEASE_NAME: rhea-operator-testnet
           LB_URL: 'https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
