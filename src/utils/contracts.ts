@@ -24,7 +24,7 @@ export const HOLOGRAPH_ADDRESSES: {[key in Environment]: string} = {
   [Environment.experimental]: '0x199728d88a68856868f50FC259F01Bb4D2672Da9'.toLowerCase(),
   [Environment.develop]: '0x8dd0A4D129f03F1251574E545ad258dE26cD5e97'.toLowerCase(),
   [Environment.testnet]: '0x6429b42da2a06aA1C46710509fC96E846F46181e'.toLowerCase(),
-  [Environment.mainnet]: '0xE236E8E4283795E85b3021198Af69ddED9e132CD'.toLowerCase(),
+  [Environment.mainnet]: '0x6429b42da2a06aA1C46710509fC96E846F46181e'.toLowerCase(),
 }
 
 export const FAUCET_ADDRESSES: {[key in Environment]: string} = {
