@@ -315,9 +315,7 @@ export default class Indexer extends HealthCheck {
         setTimeout(this.processDBJobs.bind(this), 1000)
       }
     } else {
-      if (job === undefined) {
-        this.log(`No timestamps found, setting timeout...`)
-      } else {
+      if (job !== undefined) {
         this.networkMonitor.structuredLog(job.network, `No timestamps found, setting timeout...`, job.tags)
       }
 

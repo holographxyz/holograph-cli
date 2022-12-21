@@ -638,7 +638,7 @@ export class NetworkMonitor {
         this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
       }
 
-      this.structuredLog(network, `Websocket is closed. Restarting connection for ${networks[network].shortKey}`)
+      this.structuredLog(network, `Websocket is closed. Restarting connection for ${networks[network].key}`)
       // terminate the existing websocket
       this.ws[network].terminate()
       restart()
@@ -646,7 +646,7 @@ export class NetworkMonitor {
   }
 
   failoverWebSocketProvider(network: string, rpcEndpoint: string, subscribe: boolean): void {
-    this.log('this.providers', networks[network].shortKey)
+    this.log('this.providers', networks[network].key)
     this.ws[network] = new WebSocket(rpcEndpoint)
     keepAlive({
       debug: this.debug,
@@ -1143,7 +1143,7 @@ export class NetworkMonitor {
     const timestampColor = color.keyword('green')
     this.log(
       `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
-        capitalize(networks[network].shortKey),
+        capitalize(networks[network].key),
       )}]${cleanTags(tagId)} ${msg}`,
     )
   }
@@ -1170,7 +1170,7 @@ export class NetworkMonitor {
 
     this.warn(
       `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
-        capitalize(networks[network].shortKey),
+        capitalize(networks[network].key),
       )}] [${errorColor('error')}]${cleanTags(tagId)} ${errorMessage}`,
     )
   }
