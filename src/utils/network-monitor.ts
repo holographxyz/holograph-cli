@@ -37,7 +37,7 @@ export const warpFlag = {
 export const networksFlag = {
   networks: Flags.string({
     description: 'Space separated list of networks to use',
-    options: supportedShortNetworks,
+    options: supportedNetworks.concat(...supportedShortNetworks),
     required: false,
     multiple: true,
   }),
@@ -46,7 +46,7 @@ export const networksFlag = {
 export const networkFlag = {
   network: Flags.string({
     description: 'Name of network to use',
-    options: supportedShortNetworks,
+    options: supportedNetworks.concat(...supportedShortNetworks),
     multiple: false,
     required: false,
   }),
