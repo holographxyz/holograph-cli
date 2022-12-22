@@ -526,6 +526,16 @@ export default class Indexer extends HealthCheck {
         if (operatorJobHash === undefined) {
           this.networkMonitor.structuredLog(network, `Could not find bridgeInRequest in ${transaction.hash}`, tags)
         } else {
+          const finishedOperatorJobEvent = this.networkMonitor.decodeFinishedOperatorJobEvent(receipt)
+
+          if (finishedOperatorJobEvent !== undefined) {
+            this.networkMonitor.structuredLog(
+              network,
+              `FinishedOperatorJob Event: {"tx": ${transaction.hash}, "jobHash": ${finishedOperatorJobEvent[0]}, "operator": ${finishedOperatorJobEvent[1]} }`,
+              tags,
+            )
+          }
+
           const failedOperatorJobEvent = this.networkMonitor.decodeFailedOperatorJobEvent(receipt)
 
           if (failedOperatorJobEvent !== undefined) {
