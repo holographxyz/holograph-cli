@@ -37,7 +37,6 @@ export const FAUCET_ADDRESSES: {[key in Environment]: string} = {
 
 export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
   ethereum: '0x66A71Dcef29A0fFBDBE3c6a460a3B5BC225Cd675',
-  ethereumTestnetRinkeby: '0x79a63d6d8BBD5c6dfc774dA79bCcD948EAcb53FA',
   ethereumTestnetGoerli: '0xbfD2135BFfbb0B5378b56643c2Df8a87552Bfa23',
   polygon: '0x3c2269811836af69497E5F486A85D7316753cf62',
   polygonTestnet: '0xf69186dfBa60DdB133E91E9A4B5673624293d8F8',
