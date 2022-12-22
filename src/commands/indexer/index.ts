@@ -510,6 +510,7 @@ export default class Indexer extends HealthCheck {
       this.networkMonitor.structuredLog(network, `Checking for executeJob function`, tags)
       const parsedTransaction: TransactionDescription =
         this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
+
       if (parsedTransaction.name === 'executeJob') {
         this.networkMonitor.structuredLog(network, `Extracting bridgeInRequest from transaction`, tags)
         const args: any[] | undefined = Object.values(parsedTransaction.args)
@@ -519,6 +520,16 @@ export default class Indexer extends HealthCheck {
         if (operatorJobHash === undefined) {
           this.networkMonitor.structuredLog(network, `Could not find bridgeInRequest in ${transaction.hash}`, tags)
         } else {
+          const failedOperatorJobEvent = this.networkMonitor.decodeFailedOperatorJobEvent(receipt)
+
+          if (failedOperatorJobEvent !== undefined) {
+            this.networkMonitor.structuredLog(
+              network,
+              `FailedOperator Event: {"tx": ${transaction.hash}, "jobHash": ${failedOperatorJobEvent} }`,
+              tags,
+            )
+          }
+
           this.networkMonitor.structuredLog(network, `Decoding bridgeInRequest`, tags)
           const bridgeTransaction: TransactionDescription | null =
             this.networkMonitor.bridgeContract.interface.parseTransaction({data: operatorJobPayload!})
