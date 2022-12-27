@@ -56,29 +56,26 @@ env:
   operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
   operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
 
-## notice: the trigger
-#on:
-#  push:
-#    branches:
-#      - 'feat/set-new-datadog-tags'
-##      - 'develop'
-#      # Excluded branches
-#      - '!testnet'
-#      - '!main'
-#      - '!master'
-
-#TODO test the merge=true condition
+# notice: the trigger
 on:
-  pull_request:
+  push:
     branches:
       - 'feat/set-new-datadog-tags'
-#      - 'testnet'
-    types: [closed]
-#TODO test the merge=true condition
+#      - 'develop'
+      # Excluded branches
+      - '!testnet'
+      - '!main'
+      - '!master'
+# notice: the trigger
+#on:
+#  pull_request:
+#    branches:
+##      - 'testnet'
+#    types: [closed]
 
 jobs:
   deploy-to-staging:
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
     name: Deploy-to-staging[dev]
     runs-on: ubuntu-latest
 
