@@ -407,7 +407,6 @@ export class NetworkMonitor {
   LAYERZERO_RECEIVERS: {[key: string]: string} = {
     localhost: '0x830e22aa238b6aeD78087FaCea8Bb95c6b7A7E2a'.toLowerCase(),
     localhost2: '0x830e22aa238b6aeD78087FaCea8Bb95c6b7A7E2a'.toLowerCase(),
-    ethereumTestnetRinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     ethereumTestnetGoerli: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     polygonTestnet: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     avalancheTestnet: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
