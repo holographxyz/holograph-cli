@@ -56,7 +56,6 @@ env:
   operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
   operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
 
-# notice: the trigger
 on:
   push:
     branches:
