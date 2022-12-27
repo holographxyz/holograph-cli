@@ -165,3 +165,6 @@ export const utf8ToBytes32 = (str: string): string => {
       .padStart(64, '0')
   )
 }
+
+// turns multi-line query into single line and removes extra spaces
+export const cleanRequest = (query: any) => JSON.stringify(query).replace(/\s+/g, ' ')
