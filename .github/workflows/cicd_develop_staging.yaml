@@ -80,7 +80,7 @@ on:
 
 jobs:
   deploy-to-staging:
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true # no workflow runs when some PR is just closed without being merged
     name: Deploy-to-staging[dev]
     runs-on: ubuntu-latest
 
