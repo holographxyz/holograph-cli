@@ -224,8 +224,8 @@ jobs:
       - name: -> Info for the new deployments
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          INDEXER_RELEASE_NAME : ${{ .env.INDEXER_RELEASE_NAME }}
-          OPERATOR_RELEASE_NAME: ${{ .env.OPERATOR_RELEASE_NAME }}
+          INDEXER_RELEASE_NAME : ${{ env.INDEXER_RELEASE_NAME }}
+          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
           LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
