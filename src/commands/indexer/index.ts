@@ -150,8 +150,10 @@ export default class Indexer extends HealthCheck {
       warp: flags.warp,
     })
 
-    this.apiService.setStructuredLog(this.networkMonitor.structuredLog.bind(this.networkMonitor))
-    this.apiService.setStructuredLogError(this.networkMonitor.structuredLogError.bind(this.networkMonitor))
+    if (this.apiService !== undefined) {
+      this.apiService.setStructuredLog(this.networkMonitor.structuredLog.bind(this.networkMonitor))
+      this.apiService.setStructuredLogError(this.networkMonitor.structuredLogError.bind(this.networkMonitor))
+    }
 
     // TODO: It doesn't seems like sync is working
     // Indexer always synchronizes missed blocks
@@ -202,7 +204,6 @@ export default class Indexer extends HealthCheck {
 
   async processDBJob(timestamp: number, job: DBJob): Promise<void> {
     this.networkMonitor.structuredLog(job.network, job.message, job.tags)
-    let response: any
     if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
       this.networkMonitor.structuredLog(
         job.network,
@@ -217,20 +218,29 @@ export default class Indexer extends HealthCheck {
     } else {
       const structuredLogInfo = {network: job.network, tagId: job.tags}
       try {
-        response = await this.apiService.sendQueryRequest(job.query, job.identifier, structuredLogInfo)
-        try {
-          this.networkMonitor.structuredLog(job.network, `Query response ${JSON.stringify(response)}`, job.tags)
-          await job.callback.bind(this)(response, ...job.arguments)
-          this.processDBJobs()
-        } catch (error: any) {
-          this.networkMonitor.structuredLogError(job.network, error, [
-            ...job.tags,
-            this.errorColor(`Request failed with errors ${job.query}`),
-          ])
+        const rawResponse = await this.apiService.sendQueryRequest(job.query, job.identifier, structuredLogInfo)
 
-          // Sleep for 1 second and add job back to the queue
-          await sleep(1000)
-          this.processDBJobs(timestamp, job)
+        if (rawResponse !== undefined) {
+          const {data: response, headers} = rawResponse
+
+          const requestId = headers.get('x-request-id') ?? ''
+          try {
+            this.networkMonitor.structuredLog(job.network, `Query response ${JSON.stringify(response)}`, [
+              ...job.tags,
+              requestId,
+            ])
+            await job.callback.bind(this)(response, ...job.arguments)
+            this.processDBJobs()
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(job.network, error, [
+              ...job.tags,
+              this.errorColor(`Request failed with errors ${job.query}`),
+            ])
+
+            // Sleep for 1 second and add job back to the queue
+            await sleep(1000)
+            this.processDBJobs(timestamp, job)
+          }
         }
       } catch (extError: any) {
         this.networkMonitor.structuredLogError(job.network, extError, [
@@ -315,9 +325,7 @@ export default class Indexer extends HealthCheck {
         setTimeout(this.processDBJobs.bind(this), 1000)
       }
     } else {
-      if (job === undefined) {
-        this.log(`No timestamps found, setting timeout...`)
-      } else {
+      if (job !== undefined) {
         this.networkMonitor.structuredLog(job.network, `No timestamps found, setting timeout...`, job.tags)
       }
 
@@ -508,6 +516,7 @@ export default class Indexer extends HealthCheck {
       this.networkMonitor.structuredLog(network, `Checking for executeJob function`, tags)
       const parsedTransaction: TransactionDescription =
         this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
+
       if (parsedTransaction.name === 'executeJob') {
         this.networkMonitor.structuredLog(network, `Extracting bridgeInRequest from transaction`, tags)
         const args: any[] | undefined = Object.values(parsedTransaction.args)
@@ -517,6 +526,16 @@ export default class Indexer extends HealthCheck {
         if (operatorJobHash === undefined) {
           this.networkMonitor.structuredLog(network, `Could not find bridgeInRequest in ${transaction.hash}`, tags)
         } else {
+          const failedOperatorJobEvent = this.networkMonitor.decodeFailedOperatorJobEvent(receipt)
+
+          if (failedOperatorJobEvent !== undefined) {
+            this.networkMonitor.structuredLog(
+              network,
+              `FailedOperator Event: {"tx": ${transaction.hash}, "jobHash": ${failedOperatorJobEvent} }`,
+              tags,
+            )
+          }
+
           this.networkMonitor.structuredLog(network, `Decoding bridgeInRequest`, tags)
           const bridgeTransaction: TransactionDescription | null =
             this.networkMonitor.bridgeContract.interface.parseTransaction({data: operatorJobPayload!})
@@ -1021,14 +1040,21 @@ export default class Indexer extends HealthCheck {
     }
     `
 
-    const response = await this.apiService.sendMutationRequest(mutation, input)
-    this.networkMonitor.structuredLog(
-      network,
-      `API: Successfully updated Collection ${contractAddress} with id ${data.id}. Response: ${JSON.stringify(
-        response,
-      )}`,
-      tags,
-    )
+    const structuredLogInfo = {network: network, tagId: tags}
+    const rawResponse = await this.apiService.sendMutationRequest(mutation, input, structuredLogInfo)
+    if (rawResponse !== undefined) {
+      const {data: response, headers} = rawResponse
+
+      const requestId = headers.get('x-request-id') ?? ''
+
+      this.networkMonitor.structuredLog(
+        network,
+        `API: Successfully updated Collection ${contractAddress} with id ${data.id}. Response: ${JSON.stringify(
+          response,
+        )}`,
+        [...tags, requestId],
+      )
+    }
   }
 
   async updateDeployedContract(
@@ -1346,12 +1372,19 @@ export default class Indexer extends HealthCheck {
     input.updateNftInput.tx = transaction.hash
 
     try {
-      const response = await this.apiService.sendMutationRequest(mutation, input)
-      this.networkMonitor.structuredLog(
-        network,
-        `Successfully updated NFT with transaction hash ${response.updateNft?.tx}`,
-        tags,
-      )
+      const structuredLogInfo = {network: network, tagId: tags}
+      const rawResponse = await this.apiService.sendMutationRequest(mutation, input, structuredLogInfo)
+      if (rawResponse !== undefined) {
+        const {data: response, headers} = rawResponse
+
+        const requestId = headers.get('x-request-id') ?? ''
+
+        this.networkMonitor.structuredLog(
+          network,
+          `Successfully updated NFT with transaction hash ${response.updateNft?.tx}`,
+          [...tags, requestId],
+        )
+      }
     } catch (error: any) {
       this.networkMonitor.structuredLog(network, `API: Failed to update NFT with tx ${data.nftByTx.tx}`, tags)
       this.networkMonitor.structuredLogError(network, error, [
@@ -1404,12 +1437,21 @@ export default class Indexer extends HealthCheck {
     data.nftByContractAddressAndTokenId.chainId = transaction.chainId
 
     const input: UpdateNftInput = {updateNftInput: data.nftByContractAddressAndTokenId}
-    const response = await this.apiService.sendMutationRequest(mutation, input)
-    this.networkMonitor.structuredLog(
-      network,
-      `Successfully updated NFT with transaction hash ${response.updateNft?.tx}. Response: ${JSON.stringify(response)}`,
-      tags,
-    )
+    const structuredLogInfo = {network: network, tagId: tags}
+    const rawResponse = await this.apiService.sendMutationRequest(mutation, input, structuredLogInfo)
+    if (rawResponse !== undefined) {
+      const {data: response, headers} = rawResponse
+
+      const requestId = headers.get('x-request-id') ?? ''
+
+      this.networkMonitor.structuredLog(
+        network,
+        `Successfully updated NFT with transaction hash ${response.updateNft?.tx}. Response: ${JSON.stringify(
+          response,
+        )}`,
+        [...tags, requestId],
+      )
+    }
   }
 
   async updateCrossChainTransactionCallback(

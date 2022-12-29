@@ -40,7 +40,6 @@ export const webSocketConfig = {
 
 export const networkToChainId: Record<string, number> = {
   ethereum: 1,
-  ethereumTestnetRinkeby: 4,
   ethereumTestnetGoerli: 5,
   polygon: 89,
   polygonTestnet: 80_001,
@@ -59,7 +58,6 @@ export const NETWORK_COLORS: Record<string, string> = {
   binanceSmartChainTestnet: '#f0b90b',
   polygonTestnet: '##B026FF ',
   polygon: '#B026FF ',
-  ethereumTestnetRinkeby: '##83EEFF',
   ethereumTestnetGoerli: '#83EEFF',
   ethereum: '##83EEFF',
 }
@@ -167,3 +165,6 @@ export const utf8ToBytes32 = (str: string): string => {
       .padStart(64, '0')
   )
 }
+
+// turns multi-line query into single line and removes extra spaces
+export const cleanRequest = (query: any) => JSON.stringify(query).replace(/\s+/g, ' ')

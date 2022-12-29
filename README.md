@@ -97,17 +97,17 @@ Bridge a Holographable contract from source chain to destination chain. You need
 
 ```
 USAGE
-  $ holograph bridge:contract [--sourceNetwork goerli|mumbai|fuji|rinkeby] [--destinationNetwork
-    goerli|mumbai|fuji|rinkeby] [--deploymentConfig <value>] [--env mainnet|testnet|develop|experimental]
+  $ holograph bridge:contract [--sourceNetwork goerli|mumbai|fuji] [--destinationNetwork
+    goerli|mumbai|fuji] [--deploymentConfig <value>] [--env mainnet|testnet|develop|experimental]
 
 FLAGS
   --deploymentConfig=<value>     The config file to use
   --destinationNetwork=<option>  The network on which the contract will be deployed
-                                 <options: goerli|mumbai|fuji|rinkeby>
+                                 <options: goerli|mumbai|fuji>
   --env=<option>                 [default: testnet] Holograph environment to use
                                  <options: mainnet|testnet|develop|experimental>
   --sourceNetwork=<option>       The network from which contract deploy request will be sent
-                                 <options: goerli|mumbai|fuji|rinkeby>
+                                 <options: goerli|mumbai|fuji>
 
 DESCRIPTION
   Bridge a Holographable contract from source chain to destination chain. You need to have a deployment config JSON
@@ -126,17 +126,17 @@ Bridge a Holographable NFT from one network to another.
 ```
 USAGE
   $ holograph bridge:nft [--collectionAddress <value>] [--tokenId <value>] [--sourceNetwork
-    goerli|mumbai|fuji|rinkeby] [--destinationNetwork goerli|mumbai|fuji|rinkeby] [--env
+    goerli|mumbai|fuji] [--destinationNetwork goerli|mumbai|fuji] [--env
     mainnet|testnet|develop|experimental]
 
 FLAGS
   --collectionAddress=<value>    The address of the collection smart contract
   --destinationNetwork=<option>  The destination network which to beam to
-                                 <options: goerli|mumbai|fuji|rinkeby>
+                                 <options: goerli|mumbai|fuji>
   --env=<option>                 [default: testnet] Holograph environment to use
                                  <options: mainnet|testnet|develop|experimental>
   --sourceNetwork=<option>       The source network from which to beam
-                                 <options: goerli|mumbai|fuji|rinkeby>
+                                 <options: goerli|mumbai|fuji>
   --tokenId=<value>              The token ID of the NFT to beam
 
 DESCRIPTION
@@ -154,14 +154,14 @@ Initialize the Holograph CLI with a config file. If no flags are passed, the CLI
 
 ```
 USAGE
-  $ holograph config [--url <value> --network goerli|mumbai|fuji|rinkeby] [--privateKey <value>] [--fromFile
+  $ holograph config [--url <value> --network goerli|mumbai|fuji] [--privateKey <value>] [--fromFile
     <value>] [--fromJson <value>]
 
 FLAGS
   --fromFile=<value>    Path to the config file to load
   --fromJson=<value>    JSON object to use as the config
   --network=<option>    Network to set
-                        <options: goerli|mumbai|fuji|rinkeby>
+                        <options: goerli|mumbai|fuji>
   --privateKey=<value>  Default account to use when sending all transactions
   --url=<value>         Provider URL of network to set
 
@@ -297,8 +297,8 @@ Deploy a Holographable contract.
 
 ```
 USAGE
-  $ holograph create:contract [--tx <value>] [--txNetwork goerli|mumbai|fuji|rinkeby] [--targetNetwork
-    goerli|mumbai|fuji|rinkeby] [--deploymentType deployedTx|deploymentConfig|createConfig] [--deploymentConfig <value>]
+  $ holograph create:contract [--tx <value>] [--txNetwork goerli|mumbai|fuji] [--targetNetwork
+    goerli|mumbai|fuji] [--deploymentType deployedTx|deploymentConfig|createConfig] [--deploymentConfig <value>]
     [--env mainnet|testnet|develop|experimental]
 
 FLAGS
@@ -308,10 +308,10 @@ FLAGS
   --env=<option>              [default: testnet] Holograph environment to use
                               <options: mainnet|testnet|develop|experimental>
   --targetNetwork=<option>    The network on which the contract will be executed
-                              <options: goerli|mumbai|fuji|rinkeby>
+                              <options: goerli|mumbai|fuji>
   --tx=<value>                The hash of transaction that deployed the original contract
   --txNetwork=<option>        The network on which the transaction was executed
-                              <options: goerli|mumbai|fuji|rinkeby>
+                              <options: goerli|mumbai|fuji>
 
 DESCRIPTION
   Deploy a Holographable contract.
@@ -329,14 +329,14 @@ Mint a Holographable NFT.
 ```
 USAGE
   $ holograph create:nft [--collectionAddress <value>] [--tokenId <value>] [--tokenUriType ipfs|https|arweave]
-    [--tokenUri <value>] [--network goerli|mumbai|fuji|rinkeby] [--env mainnet|testnet|develop|experimental]
+    [--tokenUri <value>] [--network goerli|mumbai|fuji] [--env mainnet|testnet|develop|experimental]
 
 FLAGS
   --collectionAddress=<value>  The address of the collection smart contract
   --env=<option>               [default: testnet] Holograph environment to use
                                <options: mainnet|testnet|develop|experimental>
   --network=<option>           Name of network to use
-                               <options: goerli|mumbai|fuji|rinkeby>
+                               <options: goerli|mumbai|fuji>
   --tokenId=<value>            [default: 0] The token id to mint. By default the token id is 0, which mints the next
                                available token id
   --tokenUri=<value>           The uri of the token, minus the prepend (ie "ipfs://")
@@ -358,13 +358,13 @@ Request Testnet HLG from a faucet.
 
 ```
 USAGE
-  $ holograph faucet [--network goerli|mumbai|fuji|rinkeby] [--env mainnet|testnet|develop|experimental]
+  $ holograph faucet [--network goerli|mumbai|fuji] [--env mainnet|testnet|develop|experimental]
 
 FLAGS
   --env=<option>      [default: testnet] Holograph environment to use
                       <options: mainnet|testnet|develop|experimental>
   --network=<option>  Name of network to use
-                      <options: goerli|mumbai|fuji|rinkeby>
+                      <options: goerli|mumbai|fuji>
 
 DESCRIPTION
   Request Testnet HLG from a faucet.
@@ -404,7 +404,7 @@ Listen for jobs and execute jobs.
 ```
 USAGE
   $ holograph operator [-m listen|manual|auto] [--sync] [--unsafePassword <value>] [--networks
-    goerli|mumbai|fuji|rinkeby] [--healthCheckPort <value> --healthCheck] [--env mainnet|testnet|develop|experimental]
+    goerli|mumbai|fuji] [--healthCheckPort <value> --healthCheck] [--env mainnet|testnet|develop|experimental]
 
 FLAGS
   -m, --mode=<option>        The mode in which to run the operator
@@ -414,7 +414,7 @@ FLAGS
   --healthCheck              Launch server on http://localhost:6000 to make sure command is still running
   --healthCheckPort=<value>  This flag allows you to choose what port the health check sever is running on.
   --networks=<option>...     Space separated list of networks to use
-                             <options: goerli|mumbai|fuji|rinkeby>
+                             <options: goerli|mumbai|fuji>
   --sync                     Start from last saved block position instead of latest block position
   --unsafePassword=<value>   Enter the plain text password for the wallet in the holograph cli config
 
@@ -433,7 +433,7 @@ Bond in to a pod.
 
 ```
 USAGE
-  $ holograph operator:bond [--network goerli|mumbai|fuji|rinkeby] [--pod <value>] [--amount <value>] [--env
+  $ holograph operator:bond [--network goerli|mumbai|fuji] [--pod <value>] [--amount <value>] [--env
     mainnet|testnet|develop|experimental]
 
 FLAGS
@@ -441,7 +441,7 @@ FLAGS
   --env=<option>      [default: testnet] Holograph environment to use
                       <options: mainnet|testnet|develop|experimental>
   --network=<option>  Name of network to use
-                      <options: goerli|mumbai|fuji|rinkeby>
+                      <options: goerli|mumbai|fuji>
   --pod=<value>       Pod number to join
 
 DESCRIPTION
@@ -459,7 +459,7 @@ Attempt to re-run/recover a specific job.
 
 ```
 USAGE
-  $ holograph operator:recover [--network goerli|mumbai|fuji|rinkeby] [--tx <value>] [--healthCheckPort <value>
+  $ holograph operator:recover [--network goerli|mumbai|fuji] [--tx <value>] [--healthCheckPort <value>
     --healthCheck] [--env mainnet|testnet|develop|experimental]
 
 FLAGS
@@ -468,7 +468,7 @@ FLAGS
   --healthCheck              Launch server on http://localhost:6000 to make sure command is still running
   --healthCheckPort=<value>  This flag allows you to choose what port the health check sever is running on.
   --network=<option>         The network on which the transaction was executed
-                             <options: goerli|mumbai|fuji|rinkeby>
+                             <options: goerli|mumbai|fuji>
   --tx=<value>               The hash of transaction that we want to attempt to execute
 
 DESCRIPTION

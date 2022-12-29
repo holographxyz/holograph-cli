@@ -10,10 +10,7 @@ env:
   ECR_REPOSITORY: holo-cli # notice: the same for all cli apps
   #
   MAINNET_IMAGE_TAG: mainnet-${{ github.sha }}
-  ########################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.59
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.51
-  ########################################
+  #
   CLUSTER_NAME: prod0
   #
   AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
@@ -36,6 +33,14 @@ env:
   MAINNET_DOMAIN: 'holograph.xyz'
   #
   MAINNET_COMMON_NAMESPACE: mainnet # NOTICE <---
+  #
+  #######################################
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.68
+  INDEXER_RELEASE_NAME : rhea-indexer-mainnet  # format -> [release_name]-indexer-[env]
+  #
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.54
+  OPERATOR_RELEASE_NAME: rhea-operator-mainnet # format -> [release_name]-operator-[env]
+  #######################################
   #
   ### INDEXER MAINNET rpc endpoints
   indexer_mainnet_avalanche_rpc_url: ${{ secrets.INDEXER_MAINNET_AVALANCHE_RPC_URL }}
@@ -70,6 +75,7 @@ on:
 
 jobs:
   deploy-to-prod-mainnet:
+    if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
     name: Deploy-to-prod[mainnet]
     runs-on: ubuntu-latest
 
@@ -126,7 +132,7 @@ jobs:
       - name: -> Deploy INDEXER cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: indexer-main # notice
+          RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }} # notice
           #
           ENABLE_DEBUG: 'true'
           HEALTHCHECK: 'true'
@@ -180,7 +186,7 @@ jobs:
       #
       #
       # NOTICE: --- OPERATOR ---
-      - name: Pull the holo-operator helm chart version x.x.x from ECR
+      - name: Pull the holograph-operator helm chart version x.x.x from ECR
         shell: bash
         env:
           #
@@ -194,7 +200,7 @@ jobs:
       - name: -> Deploy OPERATOR cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: operator-main # notice
+          RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }} # notice
           #
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
@@ -235,6 +241,7 @@ jobs:
             --set mainnet_rpc_config_values.address=${{ env.operator_mainnet_address }} \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=chart-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             \
             --values .github/values_for_prod_alb_ingress.yaml \
@@ -247,8 +254,8 @@ jobs:
       - name: -> Info for the new deployments
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          INDEXER_RELEASE_NAME: indexer-main
-          OPERATOR_RELEASE_NAME: operator-main
+          INDEXER_RELEASE_NAME : ${{ env.INDEXER_RELEASE_NAME }}
+          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
           LB_URL: 'https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
