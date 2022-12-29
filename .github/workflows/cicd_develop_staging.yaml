@@ -10,13 +10,7 @@ env:
   ECR_REPOSITORY: holo-cli-dev # notice: the same for all cli apps
   #
   DEV_IMAGE_TAG: dev-${{ github.sha }}
-  #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.68
-  INDEXER_RELEASE_NAME : indexer-dev  # format -> [release_name]-indexer-[env]
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.54
-  OPERATOR_RELEASE_NAME: operator-dev # format -> [release_name]-operator-[env]
-  #######################################
   CLUSTER_NAME: staging
   #
   AWS_KEY_ID: ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
@@ -38,7 +32,15 @@ env:
   #
   STG_DOMAIN: 'cxipchain.xyz'
   #
-  STG_COMMON_NAMESPACE: develop
+  STG_COMMON_NAMESPACE: develop # NOTICE <---
+  #
+  #######################################
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.68
+  INDEXER_RELEASE_NAME: indexer-dev  # format -> [release_name]-indexer-[env]
+  #
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.54
+  OPERATOR_RELEASE_NAME: operator-dev # format -> [release_name]-operator-[env]
+  #######################################
   #
   # INDEXER DEV rpc endpoints
   indexer_dev_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
@@ -67,6 +69,7 @@ on:
 
 jobs:
   deploy-to-staging:
+
     name: Deploy-to-staging[dev]
     runs-on: ubuntu-latest
 
@@ -93,7 +96,7 @@ jobs:
         run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
-        # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
+        # TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ env.AWS_KEY_ID }} #notice: unique for each env
@@ -119,14 +122,16 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-
+      ######
       - name: -> Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }} # notice
+          #
           ENABLE_DEBUG: 'true'
           HEALTHCHECK: 'true'
           MODE: 'auto'
+          ENABLE_UNSAFE: 'false'
           NETWORK: 'fuji mumbai goerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
@@ -134,6 +139,7 @@ jobs:
             helm upgrade --install $RELEASE_NAME \
             holo-indexer-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.STG_COMMON_NAMESPACE }} \
+            /
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLOGRAPH_CONFIG_FILE_DATA }} \
@@ -146,6 +152,7 @@ jobs:
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
             --set NETWORK="${NETWORK}" \
+            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             \
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_dev_avalancheTestnet_rpc_url }} \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_dev_polygonTestnet_rpc_url }} \
@@ -153,10 +160,14 @@ jobs:
             \
             --set dev_rpc_config_values.private_key=${{ env.indexer_dev_private_key }} \
             --set dev_rpc_config_values.address=${{ env.indexer_dev_address }} \
+            --set testnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=chart-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }} \
+            \
+            --set autoscaling.minReplicas=1 \
+            --set autoscaling.maxReplicas=1 \
             \
             --values .github/values_for_stg_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
@@ -177,21 +188,24 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-
+      ######
       - name: -> Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }} # notice
+          #
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
           HEALTHCHECK: 'true'
           MODE: 'auto'
+          ENABLE_UNSAFE: 'false'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             helm upgrade --install $RELEASE_NAME \
             holo-operator-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.STG_COMMON_NAMESPACE }} \
+            \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA }} \
@@ -202,6 +216,7 @@ jobs:
             --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
+            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             \
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_dev_avalancheTestnet_rpc_url }} \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_dev_polygonTestnet_rpc_url }} \
@@ -230,7 +245,7 @@ jobs:
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
-            echo "------------------------- Last 5 Helm releases -------------------------"
+            echo "------------------------- Last n Helm releases -------------------------"
             echo "--INDEXER--"
             helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
             echo "--OPERATOR--"

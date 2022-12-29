@@ -10,18 +10,14 @@ env:
   ECR_REPOSITORY: holo-cli # notice: the same for all cli apps
   #
   TESTNET_IMAGE_TAG: testnet-${{ github.sha }}
-  #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.59
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.51
-  #######################################
+  #
   CLUSTER_NAME: prod0
   #
   AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
   ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }} # TIP: the 2 CERTs are separated with \, in Github secret
   #
-  #TODO - create new gh secret for TESTNET. should be different from staging????
-  TESTNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
+  TESTNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO - create new gh secret for TESTNET. should be different from staging????
   #
   TESTNET_HOLO_INDEXER_HOST: 'http://testrhea-holo-api.testnet.svc.cluster.local:443' # Notice <-- the release from API
   #
@@ -37,6 +33,14 @@ env:
   TESTNET_DOMAIN: 'holograph.xyz'
   #
   TESTNET_COMMON_NAMESPACE: testnet # NOTICE <---
+  #
+  #######################################
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.68
+  INDEXER_RELEASE_NAME : rhea-indexer-testnet  # format -> [release_name]-indexer-[env]
+  #
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.54
+  OPERATOR_RELEASE_NAME: rhea-operator-testnet # format -> [release_name]-operator-[env]
+  #######################################
   #
   # INDEXER TESTNET rpc endpoints
   indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
@@ -128,7 +132,7 @@ jobs:
       - name: -> Deploy INDEXER cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: rhea-indexer-testnet # notice
+          RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }} # notice
           #
           ENABLE_DEBUG: 'true'
           HEALTHCHECK: 'true'
@@ -165,7 +169,7 @@ jobs:
             --set testnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-            --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
+            --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=chart-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
             \
             --set autoscaling.minReplicas=1 \
@@ -180,7 +184,7 @@ jobs:
       #
       #
       # NOTICE: --- OPERATOR ---
-      - name: Pull the holo-operator helm chart version x.x.x from ECR
+      - name: Pull the holograph-operator helm chart version x.x.x from ECR
         shell: bash
         env:
           #
@@ -194,7 +198,7 @@ jobs:
       - name: -> Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: rhea-operator-testnet # notice
+          RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }} # notice
           #
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
@@ -235,6 +239,7 @@ jobs:
             --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=chart-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             \
             --values .github/values_for_prod_alb_ingress.yaml \
@@ -247,8 +252,8 @@ jobs:
       - name: -> Info for the new deployments
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          INDEXER_RELEASE_NAME: rhea-indexer-testnet
-          OPERATOR_RELEASE_NAME: rhea-operator-testnet
+          INDEXER_RELEASE_NAME : ${{ env.INDEXER_RELEASE_NAME }}
+          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
           LB_URL: 'https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
