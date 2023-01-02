@@ -9,6 +9,9 @@ env:
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli-dev # notice: the same for all cli apps
   #
+  AWS_KEY_ID: ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
+  AWS_ACCESS_KEY: ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
+  #
   DEV_IMAGE_TAG: dev-${{ github.sha }}
 
 on:
@@ -22,9 +25,7 @@ on:
       - '!master'
 
 jobs:
-  build-oldschool-image:
-
-    name: build-oldschool-image
+  build_oldschool_image:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
