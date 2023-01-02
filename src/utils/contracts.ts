@@ -21,23 +21,22 @@ export const getABIs = async (environment: string): Promise<any> => {
 
 export const HOLOGRAPH_ADDRESSES: {[key in Environment]: string} = {
   [Environment.localhost]: '0xa3931469C1D058a98dde3b5AEc4dA002B6ca7446'.toLowerCase(),
-  [Environment.experimental]: '0x9B869476E5281C6a075A7D93ba3Adc60CDdAC443'.toLowerCase(),
-  [Environment.develop]: '0x8b0C32B59F7d620D467E36e31121733a6eb87b69'.toLowerCase(),
-  [Environment.testnet]: '0x37101ddAd4D1b19ce31A3015e07cfC0cE92E45D7'.toLowerCase(),
-  [Environment.mainnet]: '0x0000000000000000000000000000000000000000'.toLowerCase(),
+  [Environment.experimental]: '0x199728d88a68856868f50FC259F01Bb4D2672Da9'.toLowerCase(),
+  [Environment.develop]: '0x8dd0A4D129f03F1251574E545ad258dE26cD5e97'.toLowerCase(),
+  [Environment.testnet]: '0x6429b42da2a06aA1C46710509fC96E846F46181e'.toLowerCase(),
+  [Environment.mainnet]: '0x6429b42da2a06aA1C46710509fC96E846F46181e'.toLowerCase(),
 }
 
 export const FAUCET_ADDRESSES: {[key in Environment]: string} = {
   [Environment.localhost]: '0x232E8406518da66ecD5681a600f18A13E8CfE5E6',
-  [Environment.experimental]: '0xEd79cdf35016aB8ba182a3125d136726CdE686Ba',
-  [Environment.develop]: '0x07edede74dCA142db475e0b553B3cEaF86B4c3d5',
-  [Environment.testnet]: '0x2CCc77739Fd104bA131366660e53200130EF9831',
+  [Environment.experimental]: '0x122C44eB91D149E6F495eD7cC3a5603eA05b593e',
+  [Environment.develop]: '0xb934d4B23F70fd8EB99cc8E9629285060cB4C9F2',
+  [Environment.testnet]: '0xe54b42B7002D58bA5C9df2BCc5b8a520B8b94463',
   [Environment.mainnet]: '0x0000000000000000000000000000000000000000',
 } as const
 
 export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
   ethereum: '0x66A71Dcef29A0fFBDBE3c6a460a3B5BC225Cd675',
-  ethereumTestnetRinkeby: '0x79a63d6d8BBD5c6dfc774dA79bCcD948EAcb53FA',
   ethereumTestnetGoerli: '0xbfD2135BFfbb0B5378b56643c2Df8a87552Bfa23',
   polygon: '0x3c2269811836af69497E5F486A85D7316753cf62',
   polygonTestnet: '0xf69186dfBa60DdB133E91E9A4B5673624293d8F8',

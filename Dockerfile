@@ -20,15 +20,19 @@ RUN yarn build
 
 RUN npm install -location=global ../holograph-cli
 
+# experimental / develop / testnet / mainnet
+ENV HOLOGRAPH_ENVIRONMENT=a-super-fancy-environment
 ENV CONFIG_FILE=a-super-config-file.json
 ENV PASSWORD=a-super-secret-password
 ENV HOLOGRAPH_CLI_CMD=TeRmInAtOr
 ENV HOLOGRAPH_INDEXER_HOST=ThE_FuTuRe
-
+#
 ENV ENABLE_DEBUG=defaul-value
 ENV ENABLE_SYNC=defaul-value
 ENV HEALTHCHECK=defaul-value
 ENV MODE=defaul-value
+#
+ENV ENABLE_UNSAFE=defaul-value
 
 # we use liveness/readiness probes in k8s
 HEALTHCHECK none

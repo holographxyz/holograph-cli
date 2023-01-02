@@ -37,7 +37,7 @@ export const warpFlag = {
 export const networksFlag = {
   networks: Flags.string({
     description: 'Space separated list of networks to use',
-    options: supportedShortNetworks,
+    options: [...supportedNetworks, ...supportedShortNetworks],
     required: false,
     multiple: true,
   }),
@@ -46,7 +46,7 @@ export const networksFlag = {
 export const networkFlag = {
   network: Flags.string({
     description: 'Name of network to use',
-    options: supportedShortNetworks,
+    options: [...supportedNetworks, ...supportedShortNetworks],
     multiple: false,
     required: false,
   }),
@@ -384,6 +384,7 @@ export class NetworkMonitor {
   currentBlockHeight: {[key: string]: number} = {}
   blockJobs: {[key: string]: BlockJob[]} = {}
   exited = false
+  lastProcessBlockDone: {[key: string]: number} = {}
   lastBlockJobDone: {[key: string]: number} = {}
   blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
   gasPrices: {[key: string]: GasPricing} = {}
@@ -406,10 +407,13 @@ export class NetworkMonitor {
   LAYERZERO_RECEIVERS: {[key: string]: string} = {
     localhost: '0x830e22aa238b6aeD78087FaCea8Bb95c6b7A7E2a'.toLowerCase(),
     localhost2: '0x830e22aa238b6aeD78087FaCea8Bb95c6b7A7E2a'.toLowerCase(),
-    ethereumTestnetRinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     ethereumTestnetGoerli: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     polygonTestnet: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     avalancheTestnet: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
+
+    ethereum: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
+    polygon: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
+    avalanche: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
   }
 
   needToSubscribe = false
@@ -581,6 +585,7 @@ export class NetworkMonitor {
       }
 
       this.lastBlockJobDone[network] = Date.now()
+      this.lastProcessBlockDone[network] = Date.now()
       this.runningProcesses += 1
       if (continuous) {
         this.needToSubscribe = true
@@ -632,7 +637,7 @@ export class NetworkMonitor {
         this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
       }
 
-      this.structuredLog(network, `Websocket is closed. Restarting connection for ${networks[network].shortKey}`)
+      this.structuredLog(network, `Websocket is closed. Restarting connection for ${networks[network].name}`)
       // terminate the existing websocket
       this.ws[network].terminate()
       restart()
@@ -640,7 +645,7 @@ export class NetworkMonitor {
   }
 
   failoverWebSocketProvider(network: string, rpcEndpoint: string, subscribe: boolean): void {
-    this.log('this.providers', networks[network].shortKey)
+    this.log('this.providers', networks[network].name)
     this.ws[network] = new WebSocket(rpcEndpoint)
     keepAlive({
       debug: this.debug,
@@ -677,12 +682,11 @@ export class NetworkMonitor {
           throw new Error('Unsupported RPC provider protocol -> ' + protocol)
       }
 
+      this.walletNonces[network] = -1
       if (this.userWallet !== undefined) {
         this.wallets[network] = this.userWallet.connect(this.providers[network])
-        // eslint-disable-next-line no-await-in-loop
         this.walletNonces[network] = await this.getNonce({
           network,
-          // eslint-disable-next-line no-await-in-loop
           walletAddress: await this.wallets[network].getAddress(),
           canFail: false,
         })
@@ -693,7 +697,6 @@ export class NetworkMonitor {
           this.structuredLog(network, `Starting Operator from ${this.warp} blocks back...`)
         }
 
-        /* eslint-disable no-await-in-loop */
         const currentBlock: number = await this.providers[network].getBlockNumber()
         this.blockJobs[network] = []
         for (let n = currentBlock - this.warp, nl = currentBlock; n <= nl; n++) {
@@ -718,6 +721,7 @@ export class NetworkMonitor {
       }
 
       this.gasPrices[network] = await initializeGasPricing(network, this.providers[network])
+      this.activated[network] = true
     }
 
     const holographABI = await fs.readJson(path.join(__dirname, `../abi/${this.environment}/Holograph.json`))
@@ -790,8 +794,6 @@ export class NetworkMonitor {
           this.localhostWallets[network],
         )
       }
-
-      this.activated[network] = false
     }
   }
 
@@ -818,7 +820,7 @@ export class NetworkMonitor {
     /**
      * Before exit, save the block heights to the local db
      */
-    if ((exitCode && exitCode === 0) || exitCode === 'SIGINT') {
+    if ((exitCode && exitCode === 0) || exitCode === 'SIGINT' || exitCode === 'SIGTERM') {
       if (this.exited === false) {
         this.log('')
         if (this.needToSubscribe) {
@@ -866,7 +868,7 @@ export class NetworkMonitor {
         break
       case 'wss:':
         this.ws[network].close(1012, 'Block Job Handler has been inactive longer than threshold time.')
-        //        this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint, false)
+        //  this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint, false)
         break
       default:
         throw new Error('Unsupported RPC provider protocol -> ' + protocol)
@@ -879,6 +881,12 @@ export class NetworkMonitor {
         walletAddress: await this.wallets[network].getAddress(),
         canFail: false,
       })
+    }
+
+    // apply this logic to catch a potential processBlock failing and being dropped during a provider restart cycle
+    // allow for up to 3 provider restarts to occur before triggering this
+    if (Date.now() - this.lastProcessBlockDone[network] > TIMEOUT_THRESHOLD * 3) {
+      this.blockJobHandler(network)
     }
 
     Promise.resolve()
@@ -916,6 +924,7 @@ export class NetworkMonitor {
     }
 
     this.lastBlockJobDone[network] = Date.now()
+    this.lastProcessBlockDone[network] = Date.now()
     if (this.blockJobs[network].length > 0) {
       const blockJob: BlockJob = this.blockJobs[network][0] as BlockJob
       this.processBlock(blockJob)
@@ -1016,10 +1025,9 @@ export class NetworkMonitor {
       canFail: true,
     })
     if (block !== undefined && block !== null && 'transactions' in block) {
-      const recentBlock: boolean = this.currentBlockHeight[job.network] - job.block < 5
+      const recentBlock = this.currentBlockHeight[job.network] - job.block < 5
       if (this.verbose) {
         this.structuredLog(job.network, `Block retrieved`, job.block)
-
         /*
         this.structuredLog(job.network, `Calculating block gas`, job.block)
         if (this.gasPrices[job.network].isEip1559) {
@@ -1032,15 +1040,14 @@ export class NetworkMonitor {
             job.block,
           )
         }
-        */
+*/
       }
 
       if (recentBlock) {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const priorityFees: BigNumber = this.gasPrices[job.network].nextPriorityFee!
+      // const priorityFees: BigNumber = this.gasPrices[job.network].nextPriorityFee!
       if (this.verbose && block.transactions.length === 0) {
         this.structuredLog(job.network, `Zero transactions in block`, job.block)
       }
@@ -1072,7 +1079,7 @@ export class NetworkMonitor {
           job.block,
         )
       }
-      */
+*/
 
       if (interestingTransactions.length > 0) {
         if (this.verbose) {
@@ -1135,7 +1142,7 @@ export class NetworkMonitor {
     const timestampColor = color.keyword('green')
     this.log(
       `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
-        capitalize(networks[network].shortKey),
+        capitalize(networks[network].name),
       )}]${cleanTags(tagId)} ${msg}`,
     )
   }
@@ -1162,7 +1169,7 @@ export class NetworkMonitor {
 
     this.warn(
       `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
-        capitalize(networks[network].shortKey),
+        capitalize(networks[network].name),
       )}] [${errorColor('error')}]${cleanTags(tagId)} ${errorMessage}`,
     )
   }
@@ -1907,8 +1914,11 @@ export class NetworkMonitor {
             rawTx.maxFeePerGas = gasPrice!
           }
 
-          populatedTx = await this.wallets[network].populateTransaction(rawTx)
+          if ('value' in rawTx && rawTx.value!.eq(ZERO)) {
+            delete rawTx.value
+          }
 
+          populatedTx = await this.wallets[network].populateTransaction(rawTx)
           signedTx = await this.wallets[network].signTransaction(populatedTx)
           if (txHash === null) {
             txHash = keccak256(signedTx)
@@ -2171,7 +2181,6 @@ export class NetworkMonitor {
       // reset time to allow for proper transaction confirmation
       this.lastBlockJobDone[network] = Date.now()
       this.structuredLog(network, `Transaction ${tx.hash} has been submitted`, tags)
-      this.walletNonces[network]++
       const receipt: TransactionReceipt | null = await this.getTransactionReceipt({
         network,
         transactionHash: tx.hash,
@@ -2180,12 +2189,17 @@ export class NetworkMonitor {
         canFail: waitForReceipt ? false : canFail, // canFail,
       })
       if (receipt === null) {
+        if (!waitForReceipt) {
+          this.walletNonces[network]++
+        }
+
         this.structuredLog(
           network,
           `Transaction ${networks[network].explorer}/tx/${tx.hash} could not be confirmed`,
           tags,
         )
       } else {
+        this.walletNonces[network]++
         this.structuredLog(
           network,
           `Transaction ${networks[network].explorer}/tx/${receipt.transactionHash} mined and confirmed`,

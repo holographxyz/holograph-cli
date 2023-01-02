@@ -29,13 +29,22 @@ else
   echo "HEALTHCHECK=${HEALTHCHECK}"
 fi
 
+if [[ $ENABLE_UNSAFE == 'true' ]] && [[ $HOLOGRAPH_ENVIRONMENT == "mainnet" ]]
+then
+  export ENABLE_UNSAFE='--unsafe'
+  echo "ENABLE_UNSAFE=${ENABLE_UNSAFE}"
+else
+  export ENABLE_UNSAFE=""
+  echo "ENABLE_UNSAFE=${ENABLE_UNSAFE}"
+fi
+
 # notice: configure
 holograph config --fromFile $CONFIG_FILE
 
 # notice: run the specified app
 if [[ $HOLO_CLI_CMD == "operator" ]]
 then
-  eval $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holograph $HOLO_CLI_CMD --networks $NETWORK --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD
+  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD $ENABLE_UNSAFE
 
 elif [[ $HOLO_CLI_CMD == "propagator" ]]
 then
@@ -43,7 +52,7 @@ then
 
 elif [[ $HOLO_CLI_CMD == "indexer" ]]
 then
-  eval $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holograph $HOLO_CLI_CMD --networks $NETWORK --host=$HOLO_INDEXER_HOST $HEALTHCHECK
+  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_INDEXER_HOST $HEALTHCHECK $ENABLE_UNSAFE
 
 else
   echo

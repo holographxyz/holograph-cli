@@ -137,7 +137,6 @@ export default class Config extends Command {
 
       // Add networks to the user config
       // It's okay to await in loop because this is a synchronous operation
-      /* eslint-disable no-await-in-loop */
       for (const network of providedNetworks) {
         const prompt: any = await inquirer.prompt([
           {

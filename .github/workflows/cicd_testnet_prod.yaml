@@ -10,22 +10,17 @@ env:
   ECR_REPOSITORY: holo-cli # notice: the same for all cli apps
   #
   TESTNET_IMAGE_TAG: testnet-${{ github.sha }}
-  #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.46
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.41
-  #######################################
+  #
   CLUSTER_NAME: prod0
   #
   AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
-  ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }}
+  ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }} # TIP: the 2 CERTs are separated with \, in Github secret
   #
-  #TODO - create new gh secret for prod. should be different from staging????
-  TESTNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
+  TESTNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO - create new gh secret for TESTNET. should be different from staging????
   #
-  TESTNET_HOLO_INDEXER_HOST: 'http://pegasus-holo-api.testnet.svc.cluster.local:443' # Notice <-- PEGASUS release from API
+  TESTNET_HOLO_INDEXER_HOST: 'http://testrhea-holo-api.testnet.svc.cluster.local:443' # Notice <-- the release from API
   #
-  # TODO -> replace them with the PROD specific password <---------------------------
   TESTNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
   TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
   #
@@ -33,20 +28,28 @@ env:
   INDEXER_HOLO_CONFIG_FILE_DATA: testnet-config-file
   OPERATOR_HOLO_CONFIG_FILE_DATA: testnet-config-file
   #
-  ABI_ENVIRONMENT: testnet # same for all apps [indexer,operator]
+  HOLOGRAPH_ENVIRONMENT: testnet
   #
   TESTNET_DOMAIN: 'holograph.xyz'
   #
   TESTNET_COMMON_NAMESPACE: testnet # NOTICE <---
   #
-  # INDEXER TESTNET
+  #######################################
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.68
+  INDEXER_RELEASE_NAME : rhea-indexer-testnet  # format -> [release_name]-indexer-[env]
+  #
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.54
+  OPERATOR_RELEASE_NAME: rhea-operator-testnet # format -> [release_name]-operator-[env]
+  #######################################
+  #
+  # INDEXER TESTNET rpc endpoints
   indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
   indexer_testnet_polygonTestnet_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
   indexer_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_GOERLI_RPC_URL }}
   #
   indexer_testnet_private_key: ${{ secrets.INDEXER_PROD_PRIVATE_KEY }}
   indexer_testnet_address: ${{ secrets.INDEXER_PROD_ADDRESS }}
-  # OPERATOR TESTNET
+  # OPERATOR TESTNET rpc endpoints
   operator_testnet_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_FUJI_RPC_URL }}
   operator_testnet_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_MUMBAI_RPC_URL }}
   operator_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_GOERLI_RPC_URL }}
@@ -58,12 +61,12 @@ env:
 #on:
 #  push:
 #    branches:
-#      - 'feat/holo-448-holocli-env-separation'
+#      - 'fix/rename-cli-releases-for-testnet-to-rhea'
 #      # Excluded branches
 #      - '!develop'
 #      - '!main'
 #      - '!master'
-## notice: the trigger
+# notice: the trigger
 on:
   pull_request:
     branches:
@@ -71,8 +74,9 @@ on:
     types: [closed]
 
 jobs:
-  deploy-to-prod0-testnet:
-    name: Deploy-to-prod0[testnet]
+  deploy-to-prod-testnet:
+    if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
+    name: Deploy-to-prod[testnet]
     runs-on: ubuntu-latest
 
     steps:
@@ -98,7 +102,7 @@ jobs:
         run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.TESTNET_IMAGE_TAG }}
 
       - name: Configure AWS creds to access EKS
-        # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
+        # TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ env.AWS_KEY_ID }} #notice: unique for each env
@@ -125,13 +129,15 @@ jobs:
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
       ######
-      - name: -> Deploy INDEXER cli in prod [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
+      - name: -> Deploy INDEXER cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: indexer-testnet #notice
+          RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }} # notice
+          #
           ENABLE_DEBUG: 'true'
           HEALTHCHECK: 'true'
           MODE: 'auto'
+          ENABLE_UNSAFE: 'false'
           NETWORK: 'fuji mumbai goerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
@@ -139,18 +145,20 @@ jobs:
             helm upgrade --install $RELEASE_NAME \
             holo-indexer-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.TESTNET_COMMON_NAMESPACE }} \
+            \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
             --set holo_indexer_password=${{ env.TESTNET_HOLO_INDEXER_PASSWORD }} \
             --set HOLO_INDEXER_HOST=${{ env.TESTNET_HOLO_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.TESTNET_HOLO_INDEXER_OPERATOR_API_KEY }} \
-            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
             --set NETWORK="${NETWORK}" \
+            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             \
             --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_testnet_avalancheTestnet_rpc_url }} \
             --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_testnet_polygonTestnet_rpc_url }} \
@@ -158,10 +166,14 @@ jobs:
             \
             --set testnet_rpc_config_values.private_key=${{ env.indexer_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.indexer_testnet_address }} \
+            --set testnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-            --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
+            --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=chart-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
+            \
+            --set autoscaling.minReplicas=1 \
+            --set autoscaling.maxReplicas=1 \
             \
             --values .github/values_for_prod_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
@@ -172,7 +184,7 @@ jobs:
       #
       #
       # NOTICE: --- OPERATOR ---
-      - name: Pull the holo-operator helm chart version x.x.x from ECR
+      - name: Pull the holograph-operator helm chart version x.x.x from ECR
         shell: bash
         env:
           #
@@ -183,30 +195,41 @@ jobs:
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
       ######
-      - name: -> Deploy OPERATOR cli in prod [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
+      - name: -> Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: operator-testnet #notice
+          RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }} # notice
+          #
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
           HEALTHCHECK: 'true'
           MODE: 'auto'
+          ENABLE_UNSAFE: 'false'
+          AVALANCHE_NETWORK: "fuji"
+          POLYGON_NETWORK  : "mumbai"
+          ETHEREUM_NETWORK : "goerli"
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             helm upgrade --install $RELEASE_NAME \
             holo-operator-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.TESTNET_COMMON_NAMESPACE }} \
+            \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.TESTNET_HOLO_OPERATOR_PASSWORD }} \
-            --set ABI_ENVIRONMENT=${{ env.ABI_ENVIRONMENT }} \
+            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
+            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            \
+            --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
+            --set POLYGON_NETWORK=$POLYGON_NETWORK \
+            --set ETHEREUM_NETWORK=$ETHEREUM_NETWORK \
             \
             --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_testnet_avalancheTestnet_rpc_url }} \
             --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_testnet_polygonTestnet_rpc_url }} \
@@ -216,6 +239,7 @@ jobs:
             --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=chart-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             \
             --values .github/values_for_prod_alb_ingress.yaml \
@@ -228,19 +252,19 @@ jobs:
       - name: -> Info for the new deployments
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          INDEXER_RELEASE_NAME: indexer-testnet
-          OPERATOR_RELEASE_NAME: operator-testnet
+          INDEXER_RELEASE_NAME : ${{ env.INDEXER_RELEASE_NAME }}
+          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
           LB_URL: 'https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
-            echo "------------------------- Last 5 Helm releases -------------------------"
+            echo "------------------------- Last n Helm releases -------------------------"
             echo "--INDEXER--"
             helm history $INDEXER_RELEASE_NAME  -n ${{ env.TESTNET_COMMON_NAMESPACE }} --max 3
             echo "--OPERATOR--"
             helm history $OPERATOR_RELEASE_NAME -n ${{ env.TESTNET_COMMON_NAMESPACE }} --max 3
 
-            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+            echo "------------------------ Newly deployed image [same for all clis] ------------------------"
             echo "$TESTNET_IMAGE_TAG"
 
             echo "------------------------ Healthchecks ------------------------"

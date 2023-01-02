@@ -17,9 +17,9 @@
     "name": "getDeploymentBlock",
     "outputs": [
       {
-        "internalType": "address",
-        "name": "holograph",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "deploymentBlock",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
