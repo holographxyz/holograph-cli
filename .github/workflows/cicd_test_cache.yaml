@@ -65,7 +65,7 @@ jobs:
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@master #v@2
+        uses: docker/setup-buildx-action@v2
 
       - name: Cache Docker layers
         uses: actions/cache@v2
@@ -81,11 +81,11 @@ jobs:
           context: .
           builder: ${{ steps.buildx.outputs.name }}
           file: Dockerfile
-          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
-          push: false # This would be set to true in a real world deployment scenario.
           build-args: AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }}
+          tags      : ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to  : type=local,dest=/tmp/.buildx-cache-new
+          push      : false # This would be set to true in a real world deployment scenario.
 
         # Temp fix
         # https://github.com/docker/build-push-action/issues/252
