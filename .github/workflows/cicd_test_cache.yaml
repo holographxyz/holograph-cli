@@ -28,12 +28,18 @@ jobs:
   build_oldschool_image:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Use Githubs federated identity with AWS
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ env.IAM_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Checkout code
+        uses: actions/checkout@v2
 
       - name: Build image
         run: |
@@ -44,6 +50,16 @@ jobs:
   buildx_with_cache_single_dockerfile:
     runs-on: ubuntu-latest
     steps:
+      - name: Use Githubs federated identity with AWS
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ env.IAM_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
       - uses: actions/checkout@v2
 
       - name: Set up Docker Buildx
@@ -57,10 +73,6 @@ jobs:
           key: ${{ runner.os }}-single-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-single-buildx
-
-      - name: Login to ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build image
         uses: docker/build-push-action@v2
