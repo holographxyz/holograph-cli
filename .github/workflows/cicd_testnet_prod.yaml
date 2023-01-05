@@ -35,10 +35,10 @@ env:
   TESTNET_COMMON_NAMESPACE: testnet # NOTICE <---
   #
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.68
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.69
   INDEXER_RELEASE_NAME : rhea-indexer-testnet  # format -> [release_name]-indexer-[env]
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.54
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.55
   OPERATOR_RELEASE_NAME: rhea-operator-testnet # format -> [release_name]-operator-[env]
   #######################################
   #

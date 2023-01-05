@@ -35,10 +35,10 @@ env:
   MAINNET_COMMON_NAMESPACE: mainnet # NOTICE <---
   #
   #######################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.68
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.69
   INDEXER_RELEASE_NAME : rhea-indexer-mainnet  # format -> [release_name]-indexer-[env]
   #
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.54
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.55
   OPERATOR_RELEASE_NAME: rhea-operator-mainnet # format -> [release_name]-operator-[env]
   #######################################
   #
