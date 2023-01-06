@@ -130,6 +130,7 @@ export default class Propagator extends HealthCheck {
     }
 
     CliUx.ux.action.start(`Starting propagator in mode: ${OperatorMode[this.operatorMode]}`)
+    const continuous = flags.repair > 0 ? false : true // If repair is set, run network monitor stops after catching up to the latest block
     await this.networkMonitor.run(!(flags.repair > 0), undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 

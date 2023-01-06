@@ -160,7 +160,8 @@ export default class Indexer extends HealthCheck {
     // this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
 
     CliUx.ux.action.start(`Starting indexer`)
-    await this.networkMonitor.run(!(flags.repair > 0), undefined, this.filterBuilder)
+    const continuous = flags.repair > 0 ? false : true // If repair is set, run network monitor stops after catching up to the latest block
+    await this.networkMonitor.run(continuous, undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
     // Start health check server on port 6000 or healthCheckPort
