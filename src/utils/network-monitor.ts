@@ -704,7 +704,7 @@ export class NetworkMonitor {
       }
 
       if (this.repair > 0) {
-        this.structuredLog(network, `Repair mode activated`)
+        this.structuredLog(network, color.red(`🚧 REPAIR MODE ACTIVATED 🚧`))
         const currentBlock = await this.providers[network].getBlockNumber()
         if (this.verbose) {
           this.structuredLog(network, `Current block height [${color.green(currentBlock)}]`)
@@ -1147,7 +1147,7 @@ export class NetworkMonitor {
 
       this.currentBlockHeight[network] = block
       if (this.verbose) {
-        this.structuredLog(network, `New block mined`, block)
+        this.structuredLog(network, color.yellow(`⛏ A new block has been mined. New block height is [${block}] ⛏`))
       }
 
       this.blockJobs[network].push({
@@ -1187,7 +1187,6 @@ export class NetworkMonitor {
     const timestampColor = color.keyword('green')
     const errorColor = color.keyword('red')
 
-    console.log(this.parent.constructor)
     this.warn(
       `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
         capitalize(networks[network].name),
