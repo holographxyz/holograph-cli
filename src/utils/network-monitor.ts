@@ -710,7 +710,7 @@ export class NetworkMonitor {
           this.structuredLog(network, `Current block height [${color.green(currentBlock)}]`)
           this.structuredLog(
             network,
-            `Starting Operator in repair mode from ${color.yellow(
+            `Starting Network Monitor in repair mode from ${color.yellow(
               currentBlock - this.repair,
             )} blocks back at block [${color.red(this.repair)}]`,
           )
@@ -726,13 +726,13 @@ export class NetworkMonitor {
         }
       } else if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
         if (this.verbose) {
-          this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
+          this.structuredLog(network, `Resuming Network Monitor from block height ${this.latestBlockHeight[network]}`)
         }
 
         this.currentBlockHeight[network] = this.latestBlockHeight[network]
       } else {
         if (this.verbose) {
-          this.structuredLog(network, `Starting Operator from latest block height`)
+          this.structuredLog(network, `Starting Network Monitor from latest block height`)
         }
 
         this.latestBlockHeight[network] = 0
@@ -935,7 +935,7 @@ export class NetworkMonitor {
     if (job !== undefined) {
       this.latestBlockHeight[job.network] = job.block
       if (this.verbose) {
-        this.structuredLog(job.network, `Processed block`, job.block)
+        this.structuredLog(job.network, `Block procesing complete ✅`, job.block)
       }
 
       this.blockJobs[job.network].shift()
@@ -1033,7 +1033,7 @@ export class NetworkMonitor {
   async processBlock(job: BlockJob): Promise<void> {
     this.activated[job.network] = true
     if (this.verbose) {
-      this.structuredLog(job.network, `Processing block`, job.block)
+      this.structuredLog(job.network, `Getting block 🔍`, job.block)
     }
 
     const block: BlockWithTransactions | null = await this.getBlockWithTransactions({
@@ -1045,7 +1045,7 @@ export class NetworkMonitor {
     if (block !== undefined && block !== null && 'transactions' in block) {
       const recentBlock = this.currentBlockHeight[job.network] - job.block < 5
       if (this.verbose) {
-        this.structuredLog(job.network, `Block retrieved`, job.block)
+        this.structuredLog(job.network, `Block retrieved 📥`, job.block)
         /*
         Temporarily disabled
         this.structuredLog(job.network, `Calculating block gas`, job.block)
@@ -1147,7 +1147,7 @@ export class NetworkMonitor {
 
       this.currentBlockHeight[network] = block
       if (this.verbose) {
-        this.structuredLog(network, color.yellow(`⛏ A new block has been mined. New block height is [${block}] ⛏`))
+        this.structuredLog(network, color.yellow(`A new block has been mined. New block height is [${block}] ⛏`))
       }
 
       this.blockJobs[network].push({
