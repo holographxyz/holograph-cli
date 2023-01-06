@@ -10,7 +10,7 @@ import {getNetworkByChainId, supportedNetworks} from '@holographxyz/networks'
 import {capitalize} from '../../utils/utils'
 import {DeploymentConfig, decodeDeploymentConfigInput} from '../../utils/contract-deployment'
 
-import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
+import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, repairFlag} from '../../utils/network-monitor'
 import {HealthCheck} from '../../base-commands/healthcheck'
 
 type RecoveryData = {
@@ -43,7 +43,7 @@ export default class Propagator extends HealthCheck {
     unsafePassword: Flags.string({
       description: 'Enter the plain text password for the wallet in the holograph cli config',
     }),
-    ...warpFlag,
+    ...repairFlag,
     ...networksFlag,
     recover: Flags.string({
       description: 'Provide a JSON array of RecoveryData objects to manually ensure propagation',
@@ -101,7 +101,7 @@ export default class Propagator extends HealthCheck {
       processTransactions: this.processTransactions,
       userWallet,
       lastBlockFilename: 'propagator-blocks.json',
-      warp: flags.warp,
+      repair: flags.repair,
     })
 
     this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
@@ -130,7 +130,7 @@ export default class Propagator extends HealthCheck {
     }
 
     CliUx.ux.action.start(`Starting propagator in mode: ${OperatorMode[this.operatorMode]}`)
-    await this.networkMonitor.run(!(flags.warp > 0), undefined, this.filterBuilder)
+    await this.networkMonitor.run(!(flags.repair > 0), undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
     let recoveryData: RecoveryData[] = JSON.parse(flags.recover as string) as RecoveryData[]

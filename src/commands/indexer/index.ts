@@ -32,7 +32,7 @@ import {
   decodeBridgeOutErc20Args,
   decodeBridgeOutErc721Args,
 } from '../../utils/bridge'
-import {BlockJob, FilterType, NetworkMonitor, networksFlag, warpFlag} from '../../utils/network-monitor'
+import {BlockJob, FilterType, NetworkMonitor, networksFlag, repairFlag} from '../../utils/network-monitor'
 import {HealthCheck} from '../../base-commands/healthcheck'
 import ApiService from '../../services/api-service'
 import {Logger, NftStatus, UpdateCrossChainTransactionStatusInput, UpdateNftInput} from '../../types/api'
@@ -69,7 +69,7 @@ export default class Indexer extends HealthCheck {
       default: 'http://localhost:9001',
     }),
     ...networksFlag,
-    ...warpFlag,
+    ...repairFlag,
     ...HealthCheck.flags,
   }
 
@@ -147,7 +147,7 @@ export default class Indexer extends HealthCheck {
       debug: this.debug,
       processTransactions: this.processTransactions,
       lastBlockFilename: 'indexer-blocks.json',
-      warp: flags.warp,
+      repair: flags.repair,
     })
 
     if (this.apiService !== undefined) {
@@ -160,7 +160,7 @@ export default class Indexer extends HealthCheck {
     // this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
 
     CliUx.ux.action.start(`Starting indexer`)
-    await this.networkMonitor.run(!(flags.warp > 0), undefined, this.filterBuilder)
+    await this.networkMonitor.run(!(flags.repair > 0), undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
     // Start health check server on port 6000 or healthCheckPort

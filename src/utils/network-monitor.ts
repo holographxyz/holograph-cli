@@ -26,11 +26,11 @@ import {GasPricing, initializeGasPricing, updateGasPricing} from './gas'
 import {capitalize, NETWORK_COLORS, zeroAddress} from './utils'
 import {HOLOGRAPH_ADDRESSES} from './contracts'
 
-export const warpFlag = {
-  warp: Flags.integer({
-    description: 'Start from the beginning of the chain',
+export const repairFlag = {
+  repair: Flags.integer({
+    description: 'Start from block number specified',
     default: 0,
-    char: 'w',
+    char: 'r',
   }),
 }
 
@@ -349,7 +349,7 @@ type NetworkMonitorOptions = {
   filters?: TransactionFilter[]
   userWallet?: Wallet
   lastBlockFilename?: string
-  warp?: number
+  repair?: number
   verbose?: boolean
 }
 
@@ -417,7 +417,7 @@ export class NetworkMonitor {
   }
 
   needToSubscribe = false
-  warp = 0
+  repair = 0
 
   targetEvents: Record<string, string> = {
     AvailableJob: '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11',
@@ -510,8 +510,8 @@ export class NetworkMonitor {
       this.userWallet = options.userWallet
     }
 
-    if (options.warp !== undefined && options.warp > 0) {
-      this.warp = options.warp
+    if (options.repair !== undefined && options.repair > 0) {
+      this.repair = options.repair
     }
 
     if (options.networks === undefined || '') {
@@ -533,6 +533,8 @@ export class NetworkMonitor {
 
       return false
     })
+
+    // Popluate the networks array with the full network name
     for (let i = 0, l = options.networks.length; i < l; i++) {
       if (supportedShortNetworks.includes(options.networks[i])) {
         options.networks[i] = getNetworkByShortKey(options.networks[i]).key
@@ -543,6 +545,15 @@ export class NetworkMonitor {
     }
 
     this.networks = [...new Set(options.networks)]
+
+    // Repair can only be used with a single network at a time since the block number provided to the repair flag is global
+    // This can be updated in the future to support multiple networks with different block numbers simple logic is preferred for now
+    if (this.repair > 0 && this.networks.length > 1) {
+      this.log(
+        'Repair mode is not supported for multiple networks. Please use a single network with desired repair block height',
+      )
+      this.exitRouter({exit: true}, 'SIGINT')
+    }
 
     // Color the networks 🌈
     for (let i = 0, l = this.networks.length; i < l; i++) {
@@ -692,14 +703,22 @@ export class NetworkMonitor {
         })
       }
 
-      if (this.warp > 0) {
+      if (this.repair > 0) {
+        this.structuredLog(network, `Repair mode activated`)
+        const currentBlock = await this.providers[network].getBlockNumber()
         if (this.verbose) {
-          this.structuredLog(network, `Starting Operator from ${this.warp} blocks back...`)
+          this.structuredLog(network, `Current block height [${color.green(currentBlock)}]`)
+          this.structuredLog(
+            network,
+            `Starting Operator in repair mode from ${color.yellow(
+              currentBlock - this.repair,
+            )} blocks back at block [${color.red(this.repair)}]`,
+          )
         }
 
-        const currentBlock: number = await this.providers[network].getBlockNumber()
+        this.latestBlockHeight[network] = this.repair
         this.blockJobs[network] = []
-        for (let n = currentBlock - this.warp, nl = currentBlock; n <= nl; n++) {
+        for (let n = this.repair; n <= currentBlock; n++) {
           this.blockJobs[network].push({
             network,
             block: n,
@@ -915,7 +934,6 @@ export class NetworkMonitor {
   blockJobHandler = (network: string, job?: BlockJob): void => {
     if (job !== undefined) {
       this.latestBlockHeight[job.network] = job.block
-      // we assume that this is latest
       if (this.verbose) {
         this.structuredLog(job.network, `Processed block`, job.block)
       }
@@ -1029,6 +1047,7 @@ export class NetworkMonitor {
       if (this.verbose) {
         this.structuredLog(job.network, `Block retrieved`, job.block)
         /*
+        Temporarily disabled
         this.structuredLog(job.network, `Calculating block gas`, job.block)
         if (this.gasPrices[job.network].isEip1559) {
           this.structuredLog(
@@ -1040,7 +1059,7 @@ export class NetworkMonitor {
             job.block,
           )
         }
-*/
+        */
       }
 
       if (recentBlock) {
@@ -1065,7 +1084,7 @@ export class NetworkMonitor {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
 
-      /*
+      /* Temporarily disabled
       if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
         this.structuredLog(
           job.network,
@@ -1079,7 +1098,7 @@ export class NetworkMonitor {
           job.block,
         )
       }
-*/
+      */
 
       if (interestingTransactions.length > 0) {
         if (this.verbose) {
@@ -1112,6 +1131,7 @@ export class NetworkMonitor {
         }
 
         let latest = this.currentBlockHeight[network]
+        // If the current network's block number is ahead of the network monitor's latest block, add the blocks to the queue
         while (block - latest > 0) {
           if (this.verbose) {
             this.structuredLog(network, `Block (Syncing)`, latest)
@@ -1167,6 +1187,7 @@ export class NetworkMonitor {
     const timestampColor = color.keyword('green')
     const errorColor = color.keyword('red')
 
+    console.log(this.parent.constructor)
     this.warn(
       `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
         capitalize(networks[network].name),
