@@ -914,9 +914,9 @@ export class NetworkMonitor {
   blockJobMonitor = (network: string): Promise<void> => {
     return new Promise<void>(() => {
       if (Date.now() - this.lastBlockJobDone[network] > TIMEOUT_THRESHOLD) {
-        this.structuredLogError(
+        this.structuredLog(
           network,
-          'Block Job Handler has been inactive longer than threshold time. Restarting.',
+          color.yellow('Block Job Handler has been inactive longer than threshold time. Restarting.'),
           [],
         )
         this.lastBlockJobDone[network] = Date.now()
@@ -1147,7 +1147,7 @@ export class NetworkMonitor {
 
       this.currentBlockHeight[network] = block
       if (this.verbose) {
-        this.structuredLog(network, color.yellow(`A new block has been mined. New block height is [${block}] ⛏`))
+        this.structuredLog(network, color.green(`A new block has been mined. New block height is [${block}] ⛏`))
       }
 
       this.blockJobs[network].push({
