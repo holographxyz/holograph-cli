@@ -1930,7 +1930,7 @@ export class NetworkMonitor {
             from: populatedTx.from,
             nonce: populatedTx.nonce,
             data: populatedTx.data,
-            value: BigNumber.from(populatedTx.value).toNumber(),
+            value: BigNumber.from(populatedTx.value ?? 0).toNumber(),
             gasLimit: BigNumber.from(populatedTx.gasLimit).toNumber(),
             gasPrice: gasPricing.isEip1559 ? 0 : formatUnits(BigNumber.from(populatedTx.gasPrice), 'gwei'),
             maxFeePerGas: gasPricing.isEip1559 ? formatUnits(BigNumber.from(populatedTx.maxFeePerGas), 'gwei') : 0,
