@@ -1934,7 +1934,9 @@ export class NetworkMonitor {
             gasLimit: BigNumber.from(populatedTx.gasLimit).toNumber(),
             gasPrice: gasPricing.isEip1559 ? 0 : formatUnits(BigNumber.from(populatedTx.gasPrice), 'gwei'),
             maxFeePerGas: gasPricing.isEip1559 ? formatUnits(BigNumber.from(populatedTx.maxFeePerGas), 'gwei') : 0,
-            maxPriorityFeePerGas: gasPricing.isEip1559 ? formatUnits(BigNumber.from(populatedTx.maxPriorityFeePerGas), 'gwei') : 0,
+            maxPriorityFeePerGas: gasPricing.isEip1559
+              ? formatUnits(BigNumber.from(populatedTx.maxPriorityFeePerGas), 'gwei')
+              : 0,
           }
           this.structuredLog(network, 'Attempting to send transaction -> ' + JSON.stringify(debugTx), tags)
           tx = await this.providers[network].sendTransaction(signedTx)
