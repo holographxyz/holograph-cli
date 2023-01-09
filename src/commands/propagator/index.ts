@@ -201,7 +201,6 @@ export default class Propagator extends HealthCheck {
         networkDependant: false,
       },
     ]
-    return Promise.resolve()
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {

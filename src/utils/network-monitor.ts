@@ -907,8 +907,6 @@ export class NetworkMonitor {
     if (Date.now() - this.lastProcessBlockDone[network] > TIMEOUT_THRESHOLD * 3) {
       this.blockJobHandler(network)
     }
-
-    Promise.resolve()
   }
 
   blockJobMonitor = (network: string): Promise<void> => {
