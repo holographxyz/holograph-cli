@@ -10,7 +10,7 @@ import {getNetworkByHolographId, networks} from '@holographxyz/networks'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {GasPricing} from '../../utils/gas'
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
-import {web3, functionSignature, sha3, zeroAddress} from '../../utils/utils'
+import {web3, functionSignature, sha3} from '../../utils/utils'
 import {checkOptionFlag} from '../../utils/validation'
 import {OperatorJobAwareCommand, OperatorJob} from '../../utils/operator-job'
 import {HealthCheck} from '../../base-commands/healthcheck'
@@ -129,6 +129,7 @@ export default class Operator extends OperatorJobAwareCommand {
 
     // check if file exists
     if (await fs.pathExists(this.jobsFile)) {
+      this.log('Saved jobs file exists, parsing it for valid/active jobs.')
       // if file exists, need to add it to list of jobs to process
       this.operatorJobs = (await fs.readJson(this.jobsFile)) as {[key: string]: OperatorJob}
       // need to check each job and make sure it's still valid
@@ -141,6 +142,8 @@ export default class Operator extends OperatorJobAwareCommand {
         // if job is still valid, it will stay in object, otherwise it will be removed
         await this.checkJobStatus(jobHash)
       }
+    } else {
+      this.log('Saved jobs file not found (not loaded).')
     }
 
     for (const network of this.networkMonitor.networks) {
@@ -448,10 +451,10 @@ export default class Operator extends OperatorJobAwareCommand {
       candidates.sort((a: OperatorJob, b: OperatorJob): number => {
         return BigNumber.from(b.gasPrice).sub(BigNumber.from(a.gasPrice)).toNumber()
       })
-      const compareGas: BigNumber = gasPricing.isEip1559 ? gasPricing.maxFeePerGas! : gasPricing.gasPrice!
+      const compareGas: BigNumber = gasPricing.isEip1559 ? gasPricing.nextBlockFee! : gasPricing.gasPrice!
       let foundCandidate = false
       for (const candidate of candidates) {
-        if (candidate.jobDetails.operator === zeroAddress || BigNumber.from(candidate.gasPrice).gte(compareGas)) {
+        if (BigNumber.from(candidate.gasPrice).gte(compareGas)) {
           this.networkMonitor.structuredLog(network, `Sending job ${candidate.hash} for execution`, tags)
           // have a valid job to do right away
           this.processOperatorJob(network, candidate.hash, tags)
@@ -491,20 +494,18 @@ export default class Operator extends OperatorJobAwareCommand {
       }
 
       if (operate) {
-        const gasPricing: GasPricing = this.networkMonitor.gasPrices[network]
-        const gasPrice: BigNumber = gasPricing.isEip1559 ? gasPricing.maxFeePerGas! : gasPricing.gasPrice!
-
         const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
           network,
           tags,
           contract: this.networkMonitor.operatorContract,
           methodName: 'executeJob',
           args: [job.payload],
-          gasPrice: gasPrice,
+          gasPrice: BigNumber.from(job.gasPrice),
           gasLimit: BigNumber.from(job.gasLimit).mul(BigNumber.from('2')),
           canFail: false,
           waitForReceipt: true,
-          interval: 1000,
+          interval: 5000,
+          attempts: 10,
         })
         if (receipt !== null && receipt.status === 1) {
           delete this.operatorJobs[jobHash]

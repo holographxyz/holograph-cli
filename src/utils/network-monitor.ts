@@ -1911,7 +1911,7 @@ export class NetworkMonitor {
             }
 
             rawTx.type = 2
-            rawTx.maxPriorityFeePerGas = gasPrice!.sub(gasPricing.nextBlockFee!)
+            rawTx.maxPriorityFeePerGas = gasPrice!
             rawTx.maxFeePerGas = gasPrice!
           }
 
