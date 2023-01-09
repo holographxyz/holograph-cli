@@ -502,7 +502,7 @@ export default class Operator extends OperatorJobAwareCommand {
           args: [job.payload],
           gasPrice: BigNumber.from(job.gasPrice),
           gasLimit: BigNumber.from(job.gasLimit).mul(BigNumber.from('2')),
-          canFail: false,
+          canFail: true,
           waitForReceipt: true,
           interval: 5000,
           attempts: 10,
