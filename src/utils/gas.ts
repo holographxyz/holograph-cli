@@ -118,6 +118,16 @@ export function updateGasPricing(
       gasPricing.gasPrice = gasPricing.maxFeePerGas
     }
   }
+  // this is only called if blockchain is not EIP-1559 compatible
+  // mostly POW chains
+  else {
+    // this if statement is only used once when gas pricing is undefined and first block is being passed in
+    if (gasPricing.gasPrice === null) {
+      gasPricing.gasPrice = BigNumber.from('0')
+    }
+
+    gasPricing.gasPrice = adjustBaseBlockFee(network, gasPricing.gasPrice)
+  }
 
   return gasPricing
 }

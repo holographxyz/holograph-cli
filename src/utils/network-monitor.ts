@@ -1911,7 +1911,7 @@ export class NetworkMonitor {
             }
 
             rawTx.type = 2
-            rawTx.maxPriorityFeePerGas = gasPrice!.sub(gasPricing.nextBlockFee!)
+            rawTx.maxPriorityFeePerGas = gasPrice!
             rawTx.maxFeePerGas = gasPrice!
           }
 
@@ -1925,6 +1925,20 @@ export class NetworkMonitor {
             txHash = keccak256(signedTx)
           }
 
+          const debugTx = {
+            to: populatedTx.to,
+            from: populatedTx.from,
+            nonce: populatedTx.nonce,
+            data: populatedTx.data,
+            value: BigNumber.from(populatedTx.value).toNumber(),
+            gasLimit: BigNumber.from(populatedTx.gasLimit).toNumber(),
+            gasPrice: gasPricing.isEip1559 ? 0 : formatUnits(BigNumber.from(populatedTx.gasPrice), 'gwei'),
+            maxFeePerGas: gasPricing.isEip1559 ? formatUnits(BigNumber.from(populatedTx.maxFeePerGas), 'gwei') : 0,
+            maxPriorityFeePerGas: gasPricing.isEip1559
+              ? formatUnits(BigNumber.from(populatedTx.maxPriorityFeePerGas), 'gwei')
+              : 0,
+          }
+          this.structuredLog(network, 'Attempting to send transaction -> ' + JSON.stringify(debugTx), tags)
           tx = await this.providers[network].sendTransaction(signedTx)
           if (tx === null) {
             counter++
@@ -1937,6 +1951,7 @@ export class NetworkMonitor {
               }
             }
           } else {
+            this.structuredLog(network, `Transaction sent to mempool ${tx.hash}`, tags)
             if (sendTxInterval) clearInterval(sendTxInterval)
             if (!sent) {
               sent = true
