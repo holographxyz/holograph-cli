@@ -325,7 +325,6 @@ export default class Analyze extends Command {
         networkDependant: false,
       },
     ]
-    return Promise.resolve()
   }
 
   /**
