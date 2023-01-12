@@ -165,7 +165,11 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
     if (operatorJobHash !== undefined && operatorJobHash !== '' && operatorJobHash in this.operatorJobs) {
       const job: OperatorJob = this.operatorJobs[operatorJobHash]
       if ((await this.decodeOperatorJob(job.network, job.hash, job.payload, [] as string[])) === undefined) {
-        // job is no longer active/valid, need to remove it from list
+        this.networkMonitor.structuredLogError(
+          job.network,
+          `Job ${job.hash} is no longer active/valid, removing it from list`,
+          [] as string[],
+        )
         delete this.operatorJobs[job.hash]
       }
     }
