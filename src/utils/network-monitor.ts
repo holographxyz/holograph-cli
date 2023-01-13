@@ -24,7 +24,7 @@ import {supportedNetworks, supportedShortNetworks, networks, getNetworkByShortKe
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {GasPricing, initializeGasPricing, updateGasPricing} from './gas'
 import {capitalize, NETWORK_COLORS, zeroAddress} from './utils'
-import {CXIP_ERC721_ADDRESSES, HOLOGRAPH_ADDRESSES} from './contracts'
+import {HOLOGRAPH_ADDRESSES} from './contracts'
 
 export const repairFlag = {
   repair: Flags.integer({
