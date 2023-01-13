@@ -585,7 +585,7 @@ export class NetworkMonitor {
       this.log(`📄 Interfaces address: ${this.interfacesAddress}`)
       this.log(`📄 Operator address: ${this.operatorAddress}`)
       this.log(`📄 Registry address: ${this.registryAddress}`)
-      this.log(`📄 Token address: ${this.tokenAddress}`)
+      this.log(`📄 HLG Token address: ${this.tokenAddress}`)
       this.log(`📄 CXIP ERC721 address: ${this.cxipERC721Address}`)
       this.log(`📄 Messaging Module address: ${this.messagingModuleAddress}`)
       this.log(``)
@@ -763,6 +763,7 @@ export class NetworkMonitor {
     this.interfacesAddress = (await this.holograph.getInterfaces()).toLowerCase()
     this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
     this.registryAddress = (await this.holograph.getRegistry()).toLowerCase()
+    this.tokenAddress = (await this.holograph.getUtilityToken()).toLowerCase()
     this.cxipERC721Address = CXIP_ERC721_ADDRESSES[this.environment]
 
     // Setup contracts
