@@ -1,5 +1,3 @@
-import * as fs from 'fs-extra'
-import * as path from 'node:path'
 import dotenv from 'dotenv'
 dotenv.config()
 
@@ -39,7 +37,6 @@ import {HealthCheck} from '../../base-commands/healthcheck'
 import ApiService from '../../services/api-service'
 import {Logger, NftStatus, UpdateCrossChainTransactionStatusInput, UpdateNftInput} from '../../types/api'
 import {gql} from 'graphql-request'
-import {Contract} from 'ethers'
 import {validateIpfsCid} from '../../utils/validation'
 
 type DBJob = {
