@@ -40,6 +40,7 @@ import ApiService from '../../services/api-service'
 import {Logger, NftStatus, UpdateCrossChainTransactionStatusInput, UpdateNftInput} from '../../types/api'
 import {gql} from 'graphql-request'
 import {Contract} from 'ethers'
+import {validateIpfsCid} from '../../utils/validation'
 
 type DBJob = {
   attempts: number
@@ -1324,39 +1325,9 @@ export default class Indexer extends HealthCheck {
       tags,
     )
 
-    // TODO: Move getting CxipERC721ABI to top of file
-    const CxipERC721ABI = await fs.readJson(path.join(__dirname, `../abi/${this.environment}/CxipERC721.json`))
-    this.networkMonitor.cxipERC721Contract = new Contract(
-      contractAddress,
-      CxipERC721ABI,
-      this.networkMonitor.providers[network],
-    )
-
-    // let cxipErc721Address = await this.networkMonitor.registryContract.getHolographedHashAddress(
-    //   cxipErc721Config.erc721ConfigHash,
-    // )
+    this.networkMonitor.cxipERC721Contract.attach(contractAddress)
     const ipfsCid: string = await this.networkMonitor.cxipERC721Contract.tokenURI(tokenId)
-
-    // TODO: Replace with query to get nft by ipfs hash / cid
-    // const query = gql`
-    //   query($tx: String!) {
-    //     nftByTx(tx: $tx) {
-    //       id
-    //       tx
-    //       status
-    //       chainId
-    //     }
-    //   }
-    // `
-    // TODO: Replace network-monitor ad-hoc functions with chain services
-    // Setup the contracts and chain services
-    // const coreChainService = new CoreChainService(network, this.networkMonitor)
-    // await coreChainService.initialize()
-    // const tokenContract = await coreChainService.getUtilityToken()
-    // const faucetContract = await coreChainService.getFaucet()
-    // const tokenChainService = new TokenChainService(network, this.networkMonitor, tokenContract)
-    // const faucetService = new FaucetService(network, this.networkMonitor, faucetContract)
-    // const currentHlgBalance = BigNumber.from(await tokenChainService.balanceOf(coreChainService.wallet.address))
+    await validateIpfsCid(ipfsCid)
 
     const query = gql`
       query($ipfsCid: String!) {

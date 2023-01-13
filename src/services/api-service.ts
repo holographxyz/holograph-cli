@@ -121,6 +121,8 @@ class ApiService {
     }
   }
 
+  // Note: This is not currently used since queries are passed into the sendQueryRequest function via dbJobMap
+  // THis can be updated when we move the jobs to a queue service
   async queryNftByTx(tx: string): Promise<Nft> {
     const query = gql`
       query($tx: String!) {
@@ -140,7 +142,9 @@ class ApiService {
     }
   }
 
-  async querynftByIpfsCid(cid: string): Promise<Nft> {
+  // Note: This is not currently used since queries are passed into the sendQueryRequest function via dbJobMap
+  // THis can be updated when we move the jobs to a queue service
+  async queryNftByIpfsCid(cid: string): Promise<Nft> {
     const query = gql`
       query($cid: String!) {
         nftByIpfsCid(ifpsCid: $cid) {

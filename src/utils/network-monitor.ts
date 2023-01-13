@@ -24,7 +24,7 @@ import {supportedNetworks, supportedShortNetworks, networks, getNetworkByShortKe
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {GasPricing, initializeGasPricing, updateGasPricing} from './gas'
 import {capitalize, NETWORK_COLORS, zeroAddress} from './utils'
-import {HOLOGRAPH_ADDRESSES} from './contracts'
+import {CXIP_ERC721_ADDRESSES, HOLOGRAPH_ADDRESSES} from './contracts'
 
 export const repairFlag = {
   repair: Flags.integer({
@@ -763,16 +763,11 @@ export class NetworkMonitor {
     this.interfacesAddress = (await this.holograph.getInterfaces()).toLowerCase()
     this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
     this.registryAddress = (await this.holograph.getRegistry()).toLowerCase()
+    this.cxipERC721Address = CXIP_ERC721_ADDRESSES[this.environment]
 
-    // TODO: remove this once we have a way to get the address from the holograph contract?
-    // this.cxipERC721Address = (await this.holograph.getCxipERC721()).toLowerCase()
-    // this.cxipERC721Address = CXIP_ERC721_ADDRESSES[this.environment]
-    // const CxipERC721ABI = await fs.readJson(path.join(__dirname, `../abi/${this.environment}/CxipERC721.json`))
-    // this.cxipERC721Contract = new Contract(this.cxipERC721Address, CxipERC721ABI, this.providers[this.networks[0]])
-
-    // NOTE: I don't think we can use the hardcoded cxipERC721Address in the example above and will instead need to look up the collection contract
-    // address from the holograph contract in a way like this:
-    // let cxipErc721Address = await holographRegistry.getHolographedHashAddress(cxipErc721Config.erc721ConfigHash);
+    // Setup contracts
+    const CxipERC721ABI = await fs.readJson(path.join(__dirname, `../abi/${this.environment}/CxipERC721.json`))
+    this.cxipERC721Contract = new Contract(this.cxipERC721Address, CxipERC721ABI, this.providers[this.networks[0]])
 
     const holographBridgeABI = await fs.readJson(
       path.join(__dirname, `../abi/${this.environment}/HolographBridge.json`),
