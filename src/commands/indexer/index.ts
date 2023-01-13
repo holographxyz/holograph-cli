@@ -1,3 +1,5 @@
+import * as fs from 'fs-extra'
+import * as path from 'node:path'
 import dotenv from 'dotenv'
 dotenv.config()
 
@@ -37,6 +39,7 @@ import {HealthCheck} from '../../base-commands/healthcheck'
 import ApiService from '../../services/api-service'
 import {Logger, NftStatus, UpdateCrossChainTransactionStatusInput, UpdateNftInput} from '../../types/api'
 import {gql} from 'graphql-request'
+import {Contract} from 'ethers'
 
 type DBJob = {
   attempts: number
@@ -101,7 +104,7 @@ export default class Indexer extends HealthCheck {
    * Command Entry Point
    */
   async run(): Promise<void> {
-    this.log(`Operator command has begun!!!`)
+    this.log(`Indexer command has begun!!!`)
     const {flags} = await this.parse(Indexer)
     this.BASE_URL = flags.host
     const enableHealthCheckServer = flags.healthCheck
@@ -1321,9 +1324,43 @@ export default class Indexer extends HealthCheck {
       tags,
     )
 
+    // TODO: Move getting CxipERC721ABI to top of file
+    const CxipERC721ABI = await fs.readJson(path.join(__dirname, `../abi/${this.environment}/CxipERC721.json`))
+    this.networkMonitor.cxipERC721Contract = new Contract(
+      contractAddress,
+      CxipERC721ABI,
+      this.networkMonitor.providers[network],
+    )
+
+    // let cxipErc721Address = await this.networkMonitor.registryContract.getHolographedHashAddress(
+    //   cxipErc721Config.erc721ConfigHash,
+    // )
+    const ipfsCid: string = await this.networkMonitor.cxipERC721Contract.tokenURI(tokenId)
+
+    // TODO: Replace with query to get nft by ipfs hash / cid
+    // const query = gql`
+    //   query($tx: String!) {
+    //     nftByTx(tx: $tx) {
+    //       id
+    //       tx
+    //       status
+    //       chainId
+    //     }
+    //   }
+    // `
+    // TODO: Replace network-monitor ad-hoc functions with chain services
+    // Setup the contracts and chain services
+    // const coreChainService = new CoreChainService(network, this.networkMonitor)
+    // await coreChainService.initialize()
+    // const tokenContract = await coreChainService.getUtilityToken()
+    // const faucetContract = await coreChainService.getFaucet()
+    // const tokenChainService = new TokenChainService(network, this.networkMonitor, tokenContract)
+    // const faucetService = new FaucetService(network, this.networkMonitor, faucetContract)
+    // const currentHlgBalance = BigNumber.from(await tokenChainService.balanceOf(coreChainService.wallet.address))
+
     const query = gql`
-      query($tx: String!) {
-        nftByTx(tx: $tx) {
+      query($ipfsCid: String!) {
+        nftByIpfsCid(ipfsCid: $ipfsCid) {
           id
           tx
           status
@@ -1331,9 +1368,10 @@ export default class Indexer extends HealthCheck {
         }
       }
     `
+
     this.networkMonitor.structuredLog(
       network,
-      `Sending minted nft with tx ${transaction.hash} job to DBJobManager`,
+      `Sending minted nft with ipfs cid ${ipfsCid} and tx ${transaction.hash} job to DBJobManager`,
       tags,
     )
     const job: DBJob = {
@@ -1341,10 +1379,10 @@ export default class Indexer extends HealthCheck {
       network,
       timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
       query,
-      message: `API: Requesting to update NFT with transaction hash ${transaction.hash}`,
+      message: `API: Requesting to update NFT with ipfs cid ${ipfsCid} and transaction hash ${transaction.hash}`,
       callback: this.updateERC721Callback,
       arguments: [transaction, network, tags],
-      identifier: {tx: transaction.hash},
+      identifier: {ipfsCid: ipfsCid},
       tags,
     }
     if (!(job.timestamp in this.dbJobMap)) {

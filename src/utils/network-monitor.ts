@@ -24,7 +24,7 @@ import {supportedNetworks, supportedShortNetworks, networks, getNetworkByShortKe
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {GasPricing, initializeGasPricing, updateGasPricing} from './gas'
 import {capitalize, NETWORK_COLORS, zeroAddress} from './utils'
-import {HOLOGRAPH_ADDRESSES} from './contracts'
+import {CXIP_ERC721_ADDRESSES, HOLOGRAPH_ADDRESSES} from './contracts'
 
 export const repairFlag = {
   repair: Flags.integer({
@@ -372,6 +372,8 @@ export class NetworkMonitor {
   interfacesAddress!: string
   operatorAddress!: string
   registryAddress!: string
+  tokenAddress!: string
+  cxipERC721Address!: string
   messagingModuleAddress!: string
   wallets: {[key: string]: Wallet} = {}
   walletNonces: {[key: string]: number} = {}
@@ -395,6 +397,7 @@ export class NetworkMonitor {
   interfacesContract!: Contract
   operatorContract!: Contract
   registryContract!: Contract
+  cxipERC721Contract!: Contract
   messagingModuleContract!: Contract
   HOLOGRAPH_ADDRESSES = HOLOGRAPH_ADDRESSES
 
@@ -582,6 +585,8 @@ export class NetworkMonitor {
       this.log(`📄 Interfaces address: ${this.interfacesAddress}`)
       this.log(`📄 Operator address: ${this.operatorAddress}`)
       this.log(`📄 Registry address: ${this.registryAddress}`)
+      this.log(`📄 Token address: ${this.tokenAddress}`)
+      this.log(`📄 CXIP ERC721 address: ${this.cxipERC721Address}`)
       this.log(`📄 Messaging Module address: ${this.messagingModuleAddress}`)
       this.log(``)
     }
@@ -758,6 +763,16 @@ export class NetworkMonitor {
     this.interfacesAddress = (await this.holograph.getInterfaces()).toLowerCase()
     this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
     this.registryAddress = (await this.holograph.getRegistry()).toLowerCase()
+
+    // TODO: remove this once we have a way to get the address from the holograph contract?
+    // this.cxipERC721Address = (await this.holograph.getCxipERC721()).toLowerCase()
+    // this.cxipERC721Address = CXIP_ERC721_ADDRESSES[this.environment]
+    // const CxipERC721ABI = await fs.readJson(path.join(__dirname, `../abi/${this.environment}/CxipERC721.json`))
+    // this.cxipERC721Contract = new Contract(this.cxipERC721Address, CxipERC721ABI, this.providers[this.networks[0]])
+
+    // NOTE: I don't think we can use the hardcoded cxipERC721Address in the example above and will instead need to look up the collection contract
+    // address from the holograph contract in a way like this:
+    // let cxipErc721Address = await holographRegistry.getHolographedHashAddress(cxipErc721Config.erc721ConfigHash);
 
     const holographBridgeABI = await fs.readJson(
       path.join(__dirname, `../abi/${this.environment}/HolographBridge.json`),

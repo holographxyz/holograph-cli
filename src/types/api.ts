@@ -89,7 +89,7 @@ export type Nft = {
   creator: string | null
   type: TokenType
   ipfsImageCid: string | null
-  ipfsMetadataCid: string | null
+  ipfsCid: string | null
   awsUrl: string | null
   arweaveUrl: string | null
   fileExtension: string | null
@@ -105,6 +105,7 @@ export type Nft = {
 
 export interface NftQueryResponse {
   nftByTx: Nft
+  nftByIpfsCid: Nft
 }
 
 export interface NftMutationResponse {

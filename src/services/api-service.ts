@@ -140,6 +140,25 @@ class ApiService {
     }
   }
 
+  async querynftByIpfsCid(cid: string): Promise<Nft> {
+    const query = gql`
+      query($cid: String!) {
+        nftByIpfsCid(ifpsCid: $cid) {
+          id
+          tx
+          status
+          chainId
+        }
+      }
+    `
+    try {
+      const data: NftQueryResponse = await this.client.request(query, {cid})
+      return data.nftByIpfsCid
+    } catch (error: any) {
+      this.logger.error(`Error sending query request ${error}`)
+    }
+  }
+
   async updateNft(updateNftInput: UpdateNftInput): Promise<Nft> {
     const mutation = gql`
       mutation($updateNftInput: UpdateNftInput!) {
