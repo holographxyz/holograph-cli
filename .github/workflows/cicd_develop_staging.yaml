@@ -36,7 +36,7 @@ env:
   #
   #######################################
   STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.69
-  INDEXER_RELEASE_NAME: indexer-dev  # format -> [release_name]-indexer-[env]
+  INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
   STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.55
   OPERATOR_RELEASE_NAME: operator-dev # format -> [release_name]-operator-[env]
@@ -69,7 +69,6 @@ on:
 
 jobs:
   deploy-to-staging:
-
     name: Deploy-to-staging[dev]
     runs-on: ubuntu-latest
 
@@ -109,11 +108,11 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           file: Dockerfile
           build-args: AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }}
-          platforms : linux/amd64
-          tags      : ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
+          platforms: linux/amd64
+          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
           cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to  : type=local,dest=/tmp/.buildx-cache-new
-          push      : true # set false to deactivate the push to ECR
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          push: true # set false to deactivate the push to ECR
 
       # This ugly bit is necessary if you don't want your cache to grow forever until it hits GitHub's limit of 5GB.
       # https://github.com/docker/build-push-action/issues/252 & https://github.com/moby/buildkit/issues/1896
@@ -266,7 +265,7 @@ jobs:
       - name: -> Info for the new deployments
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          INDEXER_RELEASE_NAME : ${{ env.INDEXER_RELEASE_NAME }}
+          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }}
           OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
           LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
         with:
