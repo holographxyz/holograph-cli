@@ -37,7 +37,7 @@ import {HealthCheck} from '../../base-commands/healthcheck'
 import ApiService from '../../services/api-service'
 import {Logger, NftStatus, UpdateCrossChainTransactionStatusInput, UpdateNftInput} from '../../types/api'
 import {gql} from 'graphql-request'
-import {validateIpfsCid} from '../../utils/validation'
+import {getIpfsCidFromTokenUri, validateIpfsCid} from '../../utils/validation'
 
 type DBJob = {
   attempts: number
@@ -1323,9 +1323,13 @@ export default class Indexer extends HealthCheck {
     )
 
     this.networkMonitor.cxipERC721Contract.attach(contractAddress)
-    const ipfsCid: string = await this.networkMonitor.cxipERC721Contract.tokenURI(tokenId)
+    const tokenURI: string = await this.networkMonitor.cxipERC721Contract.tokenURI(tokenId)
+    this.networkMonitor.structuredLog(network, `Token URI is ${tokenURI}`, tags)
+    const ipfsCid = getIpfsCidFromTokenUri(tokenURI)
+    this.networkMonitor.structuredLog(network, `IPFS CID is ${ipfsCid}`, tags)
     await validateIpfsCid(ipfsCid)
 
+    // This query is filtered at the API level to only return NFTs with where tx is null
     const query = gql`
       query($ipfsCid: String!) {
         nftByIpfsCid(ipfsCid: $ipfsCid) {
@@ -1369,7 +1373,7 @@ export default class Indexer extends HealthCheck {
     this.networkMonitor.structuredLog(network, `Successfully found NFT with tx ${transaction.hash} `, tags)
     this.networkMonitor.structuredLog(
       network,
-      `API: Requesting to update NFT with ${data.nftByTx.tx} and id ${data.nftByTx.id}`,
+      `API: Requesting to update NFT with ${data.nftByIpfsCid.tx} and id ${data.nftByIpfsCid.id}`,
       tags,
     )
     const mutation = gql`
@@ -1383,7 +1387,7 @@ export default class Indexer extends HealthCheck {
     }
     `
     // Include the on chain data in the update input
-    const input: UpdateNftInput = {updateNftInput: data.nftByTx}
+    const input: UpdateNftInput = {updateNftInput: data.nftByIpfsCid}
     input.updateNftInput.status = NftStatus.MINTED
     input.updateNftInput.chainId = transaction.chainId
     input.updateNftInput.tx = transaction.hash
@@ -1403,10 +1407,10 @@ export default class Indexer extends HealthCheck {
         )
       }
     } catch (error: any) {
-      this.networkMonitor.structuredLog(network, `API: Failed to update NFT with tx ${data.nftByTx.tx}`, tags)
+      this.networkMonitor.structuredLog(network, `API: Failed to update NFT with tx ${data.nftByIpfsCid.tx}`, tags)
       this.networkMonitor.structuredLogError(network, error, [
         ...tags,
-        this.errorColor(`Cross chain transaction ${data.nftByTx.tx}`),
+        this.errorColor(`Cross chain transaction ${data.nftByIpfsCid.tx}`),
       ])
     }
   }
