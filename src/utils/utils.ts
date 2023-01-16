@@ -168,3 +168,16 @@ export const utf8ToBytes32 = (str: string): string => {
 
 // turns multi-line query into single line and removes extra spaces
 export const cleanRequest = (query: any) => JSON.stringify(query).replace(/\s+/g, ' ')
+
+export function numericSort(a: number, b: number): number {
+  return a - b
+}
+
+export function numberfy(arr: string[]): number[] {
+  const numbers: number[] = []
+  for (const a of arr) {
+    numbers.push(Number.parseInt(a, 10))
+  }
+
+  return numbers
+}
