@@ -728,7 +728,11 @@ export default class Indexer extends HealthCheck {
       ipfsCid = getIpfsCidFromTokenUri(tokenURI)
       this.networkMonitor.structuredLog(network, `IPFS CID is ${ipfsCid}`, tags)
     } catch (error) {
-      this.networkMonitor.structuredLogError(network, `Error getting IPFS CID from token URI ${tokenURI}`, tags)
+      this.networkMonitor.structuredLogError(
+        network,
+        `Error getting IPFS CID from token URI ${tokenURI} - ${JSON.stringify(error)}`,
+        tags,
+      )
       return
     }
 
