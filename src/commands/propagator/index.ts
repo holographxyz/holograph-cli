@@ -26,9 +26,7 @@ type RecoveryData = {
 export default class Propagator extends HealthCheck {
   static hidden = true
   static description = 'Listen for EVM events deploys collections to the supported networks'
-  static examples = [
-    '$ <%= config.bin %> <%= command.id %> --networks ethereumTestnetGoerli polygonTestnet avalancheTestnet --mode=auto',
-  ]
+  static examples = ['$ <%= config.bin %> <%= command.id %> --networks goerli mumbai fuji --mode=auto']
 
   static flags = {
     mode: Flags.string({

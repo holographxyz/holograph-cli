@@ -7,7 +7,13 @@ import color from '@oclif/color'
 import {gql} from 'graphql-request'
 import dotenv from 'dotenv'
 
-import {Logger, NftStatus, UpdateCrossChainTransactionStatusInput, UpdateNftInput} from '../../types/api'
+import {
+  GetNftByCidInput,
+  Logger,
+  NftStatus,
+  UpdateCrossChainTransactionStatusInput,
+  UpdateNftInput,
+} from '../../types/api'
 import {BlockJob, FilterType, NetworkMonitor, networksFlag, repairFlag} from '../../utils/network-monitor'
 import {capitalize, functionSignature, numberfy, numericSort, sleep} from '../../utils/utils'
 import {BridgeInErc20Args, BridgeOutErc20Args} from '../../utils/bridge'
@@ -15,8 +21,6 @@ import {DeploymentConfig} from '../../utils/contract-deployment'
 import {HealthCheck} from '../../base-commands/healthcheck'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import ApiService from '../../services/api-service'
-import {Logger, NftStatus, UpdateCrossChainTransactionStatusInput, UpdateNftInput} from '../../types/api'
-import {gql} from 'graphql-request'
 import {getIpfsCidFromTokenUri, validateIpfsCid} from '../../utils/validation'
 
 import {DBJob, DBJobMap} from '../../types/indexer'
@@ -34,15 +38,13 @@ export default class Indexer extends HealthCheck {
   static hidden = true
   static LAST_BLOCKS_FILE_NAME = 'indexer-blocks.json'
   static description = 'Listen for EVM events and update database network status'
-  static examples = [
-    '$ <%= config.bin %> <%= command.id %> --networks ethereumTestnetGoerli polygonTestnet avalancheTestnet',
-  ]
+  static examples = ['$ <%= config.bin %> <%= command.id %> --networks goerli mumbai fuji']
 
   static flags = {
     host: Flags.string({
       description: 'The host to send data to',
       char: 'h',
-      default: 'http://localhost:9001',
+      default: 'http://localhost:4000',
     }),
     ...networksFlag,
     ...repairFlag,
@@ -675,7 +677,6 @@ export default class Indexer extends HealthCheck {
     )
 
     this.networkMonitor.structuredLog(network, `Checking if contract ${contractAddress} is on registry ...`, tags)
-
     this.networkMonitor.structuredLog(
       network,
       `registry Contract address = ${this.networkMonitor.registryContract.address}`,
@@ -707,10 +708,11 @@ export default class Indexer extends HealthCheck {
     this.networkMonitor.structuredLog(network, `IPFS CID is ${ipfsCid}`, tags)
     await validateIpfsCid(ipfsCid)
 
-    // This query is filtered at the API level to only return NFTs with where tx is null
+    // This query is filtered with tx passed in as null because we want to get the nft that has not been minted yet
+    const input: GetNftByCidInput = {nftByIpfsCid: {cid: ipfsCid, tx: null}}
     const query = gql`
-      query($ipfsCid: String!) {
-        nftByIpfsCid(ipfsCid: $ipfsCid) {
+      query($nftByIpfsCid: GetNftByIpfsCidInput!) {
+        nftByIpfsCid(nftInput: $nftByIpfsCid) {
           id
           tx
           status

@@ -113,6 +113,7 @@ export interface NftMutationResponse {
 }
 
 export type UpdateNftInput = {updateNftInput: Omit<Nft, 'id'>}
+export type GetNftByCidInput = {nftByIpfsCid: {cid: string; tx: string | null}}
 
 export enum CollectionStatus {
   'DRAFT' = 'DRAFT',
