@@ -712,11 +712,27 @@ export default class Indexer extends HealthCheck {
       tags,
     )
 
-    this.networkMonitor.cxipERC721Contract.attach(contractAddress)
+    this.networkMonitor.structuredLog(
+      network,
+      `Attaching CXIP ERC721 Contract to the contract address ${contractAddress}`,
+      tags,
+    )
+
+    this.networkMonitor.cxipERC721Contract = this.networkMonitor.cxipERC721Contract.attach(contractAddress)
+    this.networkMonitor.structuredLog(network, `Calling the tokenURI function for tokenId ${tokenId}`, tags)
     const tokenURI: string = await this.networkMonitor.cxipERC721Contract.tokenURI(tokenId)
     this.networkMonitor.structuredLog(network, `Token URI is ${tokenURI}`, tags)
-    const ipfsCid = getIpfsCidFromTokenUri(tokenURI)
-    this.networkMonitor.structuredLog(network, `IPFS CID is ${ipfsCid}`, tags)
+
+    let ipfsCid = ''
+    try {
+      ipfsCid = getIpfsCidFromTokenUri(tokenURI)
+      this.networkMonitor.structuredLog(network, `IPFS CID is ${ipfsCid}`, tags)
+    } catch (error) {
+      this.networkMonitor.structuredLogError(network, `Error getting IPFS CID from token URI ${tokenURI}`, tags)
+      return
+    }
+
+    this.networkMonitor.structuredLog(network, `Validating IPFS CID ${ipfsCid}`, tags)
     await validateIpfsCid(ipfsCid)
 
     // This query is filtered with tx passed in as null because we want to get the nft that has not been minted yet
@@ -734,7 +750,7 @@ export default class Indexer extends HealthCheck {
 
     this.networkMonitor.structuredLog(
       network,
-      `Sending minted nft with ipfs cid ${ipfsCid} and tx ${transaction.hash} job to DBJobManager`,
+      `Sending minted nft with IPFS CID ${ipfsCid} and tx ${transaction.hash} job to DBJobManager`,
       tags,
     )
     const job: DBJob = {
@@ -742,7 +758,7 @@ export default class Indexer extends HealthCheck {
       network,
       timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
       query,
-      message: `API: Requesting to update NFT with ipfs cid ${ipfsCid} and transaction hash ${transaction.hash}`,
+      message: `API: Requesting to update NFT with IPFS CID ${ipfsCid} and transaction hash ${transaction.hash}`,
       callback: this.updateERC721Callback,
       arguments: [transaction, network, tags],
       identifier: input,
