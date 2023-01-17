@@ -717,7 +717,6 @@ export default class Indexer extends HealthCheck {
       `Attaching CXIP ERC721 Contract to the contract address ${contractAddress}`,
       tags,
     )
-
     this.networkMonitor.cxipERC721Contract = this.networkMonitor.cxipERC721Contract.attach(contractAddress)
     this.networkMonitor.structuredLog(network, `Calling the tokenURI function for tokenId ${tokenId}`, tags)
     const tokenURI: string = await this.networkMonitor.cxipERC721Contract.tokenURI(tokenId)
@@ -740,7 +739,7 @@ export default class Indexer extends HealthCheck {
     await validateIpfsCid(ipfsCid)
 
     // This query is filtered with tx passed in as null because we want to get the nft that has not been minted yet
-    const input: GetNftByCidInput = {nftByIpfsCid: {cid: ipfsCid, tx: null}}
+    const input: GetNftByCidInput = {nftByIpfsCid: {cid: ipfsCid, tx: transaction.hash}}
     const query = gql`
       query($nftByIpfsCid: GetNftByIpfsCidInput!) {
         nftByIpfsCid(nftInput: $nftByIpfsCid) {
