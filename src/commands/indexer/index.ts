@@ -313,7 +313,8 @@ export default class Indexer extends HealthCheck {
               `handleContractDeployedEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
               tags,
             )
-            await handleContractDeployedEvent(
+            await handleContractDeployedEvent.call(
+              this,
               this.networkMonitor,
               transaction,
               job.network,
@@ -330,7 +331,8 @@ export default class Indexer extends HealthCheck {
               `handleBridgeOutEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
               tags,
             )
-            await handleBridgeOutEvent(
+            await handleBridgeOutEvent.call(
+              this,
               this.networkMonitor,
               this.environment,
               transaction,
@@ -350,7 +352,8 @@ export default class Indexer extends HealthCheck {
               `handleBridgeInEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
               tags,
             )
-            await handleBridgeInEvent(
+            await handleBridgeInEvent.call(
+              this,
               this.networkMonitor,
               transaction,
               job.network,
@@ -370,7 +373,8 @@ export default class Indexer extends HealthCheck {
                 `handleAvailableOperatorJobEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
                 tags,
               )
-              await handleAvailableOperatorJobEvent(
+              await handleAvailableOperatorJobEvent.call(
+                this,
                 this.networkMonitor,
                 transaction,
                 job.network,
@@ -385,7 +389,14 @@ export default class Indexer extends HealthCheck {
                 `handleMintEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
                 tags,
               )
-              await handleMintEvent(this.networkMonitor, transaction, job.network, tags, this.updateMintedERC721)
+              await handleMintEvent.call(
+                this,
+                this.networkMonitor,
+                transaction,
+                job.network,
+                tags,
+                this.updateMintedERC721,
+              )
             } else {
               this.networkMonitor.structuredLog(job.network, `irrelevant transaction ${transaction.hash}`, tags)
             }
