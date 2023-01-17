@@ -734,7 +734,7 @@ export default class Indexer extends HealthCheck {
       message: `API: Requesting to update NFT with ipfs cid ${ipfsCid} and transaction hash ${transaction.hash}`,
       callback: this.updateERC721Callback,
       arguments: [transaction, network, tags],
-      identifier: {ipfsCid: ipfsCid},
+      identifier: input,
       tags,
     }
     if (!(job.timestamp in this.dbJobMap)) {
