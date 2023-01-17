@@ -54,7 +54,8 @@ async function handleContractDeployedEvent(
 
       networkMonitor.structuredLog(network, `updateDeployedContract`, tags)
 
-      await updateDeployedContract(transaction, network, contractAddress, deploymentConfig, tags)
+      // @ts-expect-error 'this' is of type any
+      await updateDeployedContract.call(this, transaction, network, contractAddress, deploymentConfig, tags)
     }
   } else {
     networkMonitor.structuredLog(network, `Transaction failed, ignoring it`, tags)

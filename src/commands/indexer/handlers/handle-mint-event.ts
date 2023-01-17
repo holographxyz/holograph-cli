@@ -33,7 +33,8 @@ async function handleMintEvent(
       networkMonitor.structuredLog(network, `No Transfer event found`, tags)
     } else {
       networkMonitor.structuredLog(network, `updateMintedERC721`, tags)
-      await updateMintedERC721(transaction, network, holographableContractAddress, erc721TransferEvent, tags)
+      // @ts-expect-error 'this' is of type any
+      await updateMintedERC721.call(this, transaction, network, holographableContractAddress, erc721TransferEvent, tags)
     }
   } else {
     networkMonitor.structuredLog(network, `Transaction failed, ignoring it`, tags)

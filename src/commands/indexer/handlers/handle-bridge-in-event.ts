@@ -116,7 +116,16 @@ async function handleBridgeInEvent(
               const direction = 'in'
               networkMonitor.structuredLog(network, `Calling updateBridgedContract with direction ${direction}`, tags)
 
-              await updateBridgedContract(direction, transaction, network, contractAddress, deploymentConfig, tags)
+              await updateBridgedContract.call(
+                // @ts-expect-error 'this' is of type any
+                this,
+                direction,
+                transaction,
+                network,
+                contractAddress,
+                deploymentConfig,
+                tags,
+              )
             }
           } else {
             networkMonitor.structuredLog(network, `Decoding contractType`, tags)
@@ -141,7 +150,8 @@ async function handleBridgeInEvent(
                 const direction = 'in'
                 networkMonitor.structuredLog(network, `Calling updateBridgedERC20 with direction ${direction}`, tags)
 
-                await updateBridgedERC20(transaction, network, erc20BeamInfo, tags)
+                // @ts-expect-error 'this' is of type any
+                await updateBridgedERC20.call(this, transaction, network, erc20BeamInfo, tags)
               }
             } else if (contractType === 'HolographERC721') {
               networkMonitor.structuredLog(network, `BridgeInRequest identified as ERC721 transfer`, tags)
@@ -158,7 +168,9 @@ async function handleBridgeInEvent(
                 const direction = 'in'
                 networkMonitor.structuredLog(network, `Calling updateBridgedERC721 with direction ${direction}`, tags)
 
-                await updateBridgedERC721(
+                await updateBridgedERC721.call(
+                  // @ts-expect-error 'this' is of type any
+                  this,
                   direction,
                   transaction,
                   network,
