@@ -121,6 +121,8 @@ class ApiService {
     }
   }
 
+  // Note: This is not currently used since queries are passed into the sendQueryRequest function via dbJobMap
+  // THis can be updated when we move the jobs to a queue service
   async queryNftByTx(tx: string): Promise<Nft> {
     const query = gql`
       query($tx: String!) {
@@ -135,6 +137,27 @@ class ApiService {
     try {
       const data: NftQueryResponse = await this.client.request(query, {tx})
       return data.nftByTx
+    } catch (error: any) {
+      this.logger.error(`Error sending query request ${error}`)
+    }
+  }
+
+  // Note: This is not currently used since queries are passed into the sendQueryRequest function via dbJobMap
+  // THis can be updated when we move the jobs to a queue service
+  async queryNftByIpfsCid(cid: string): Promise<Nft> {
+    const query = gql`
+      query($cid: String!) {
+        nftByIpfsCid(ifpsCid: $cid) {
+          id
+          tx
+          status
+          chainId
+        }
+      }
+    `
+    try {
+      const data: NftQueryResponse = await this.client.request(query, {cid})
+      return data.nftByIpfsCid
     } catch (error: any) {
       this.logger.error(`Error sending query request ${error}`)
     }

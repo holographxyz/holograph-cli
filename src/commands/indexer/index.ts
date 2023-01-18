@@ -7,7 +7,13 @@ import color from '@oclif/color'
 import {gql} from 'graphql-request'
 import dotenv from 'dotenv'
 
-import {Logger, NftStatus, UpdateCrossChainTransactionStatusInput, UpdateNftInput} from '../../types/api'
+import {
+  GetNftByCidInput,
+  Logger,
+  NftStatus,
+  UpdateCrossChainTransactionStatusInput,
+  UpdateNftInput,
+} from '../../types/api'
 import {BlockJob, FilterType, NetworkMonitor, networksFlag, repairFlag} from '../../utils/network-monitor'
 import {capitalize, functionSignature, numberfy, numericSort, sleep} from '../../utils/utils'
 import {BridgeInErc20Args, BridgeOutErc20Args} from '../../utils/bridge'
@@ -15,6 +21,8 @@ import {DeploymentConfig} from '../../utils/contract-deployment'
 import {HealthCheck} from '../../base-commands/healthcheck'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import ApiService from '../../services/api-service'
+import {getIpfsCidFromTokenUri, validateIpfsCid} from '../../utils/validation'
+
 import {DBJob, DBJobMap} from '../../types/indexer'
 import {
   handleMintEvent,
@@ -30,15 +38,13 @@ export default class Indexer extends HealthCheck {
   static hidden = true
   static LAST_BLOCKS_FILE_NAME = 'indexer-blocks.json'
   static description = 'Listen for EVM events and update database network status'
-  static examples = [
-    '$ <%= config.bin %> <%= command.id %> --networks ethereumTestnetGoerli polygonTestnet avalancheTestnet',
-  ]
+  static examples = ['$ <%= config.bin %> <%= command.id %> --networks goerli mumbai fuji']
 
   static flags = {
     host: Flags.string({
       description: 'The host to send data to',
       char: 'h',
-      default: 'http://localhost:9001',
+      default: 'http://localhost:4000',
     }),
     ...networksFlag,
     ...repairFlag,
@@ -60,7 +66,7 @@ export default class Indexer extends HealthCheck {
    * Command Entry Point
    */
   async run(): Promise<void> {
-    this.log(`Operator command has begun!!!`)
+    this.log(`Indexer command has begun!!!`)
     const {flags} = await this.parse(Indexer)
     this.BASE_URL = flags.host
     const enableHealthCheckServer = flags.healthCheck
@@ -682,7 +688,6 @@ export default class Indexer extends HealthCheck {
     )
 
     this.networkMonitor.structuredLog(network, `Checking if contract ${contractAddress} is on registry ...`, tags)
-
     this.networkMonitor.structuredLog(
       network,
       `registry Contract address = ${this.networkMonitor.registryContract.address}`,
@@ -707,9 +712,37 @@ export default class Indexer extends HealthCheck {
       tags,
     )
 
+    this.networkMonitor.structuredLog(
+      network,
+      `Attaching CXIP ERC721 Contract to the contract address ${contractAddress}`,
+      tags,
+    )
+    this.networkMonitor.cxipERC721Contract = this.networkMonitor.cxipERC721Contract.attach(contractAddress)
+    this.networkMonitor.structuredLog(network, `Calling the tokenURI function for tokenId ${tokenId}`, tags)
+    const tokenURI: string = await this.networkMonitor.cxipERC721Contract.tokenURI(tokenId)
+    this.networkMonitor.structuredLog(network, `Token URI is ${tokenURI}`, tags)
+
+    let ipfsCid = ''
+    try {
+      ipfsCid = getIpfsCidFromTokenUri(tokenURI)
+      this.networkMonitor.structuredLog(network, `IPFS CID is ${ipfsCid}`, tags)
+    } catch (error) {
+      this.networkMonitor.structuredLogError(
+        network,
+        `Error getting IPFS CID from token URI ${tokenURI} - ${JSON.stringify(error)}`,
+        tags,
+      )
+      return
+    }
+
+    this.networkMonitor.structuredLog(network, `Validating IPFS CID ${ipfsCid}`, tags)
+    await validateIpfsCid(ipfsCid)
+
+    // This query is filtered with tx passed in as null because we want to get the nft that has not been minted yet
+    const input: GetNftByCidInput = {nftByIpfsCid: {cid: ipfsCid, tx: null}}
     const query = gql`
-      query($tx: String!) {
-        nftByTx(tx: $tx) {
+      query($nftByIpfsCid: GetNftByIpfsCidInput!) {
+        nftByIpfsCid(nftInput: $nftByIpfsCid) {
           id
           tx
           status
@@ -717,9 +750,10 @@ export default class Indexer extends HealthCheck {
         }
       }
     `
+
     this.networkMonitor.structuredLog(
       network,
-      `Sending minted nft with tx ${transaction.hash} job to DBJobManager`,
+      `Sending minted nft with IPFS CID ${ipfsCid} and tx ${transaction.hash} job to DBJobManager`,
       tags,
     )
     const job: DBJob = {
@@ -727,10 +761,10 @@ export default class Indexer extends HealthCheck {
       network,
       timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
       query,
-      message: `API: Requesting to update NFT with transaction hash ${transaction.hash}`,
+      message: `API: Requesting to update NFT with IPFS CID ${ipfsCid} and transaction hash ${transaction.hash}`,
       callback: this.updateERC721Callback,
       arguments: [transaction, network, tags],
-      identifier: {tx: transaction.hash},
+      identifier: input,
       tags,
     }
     if (!(job.timestamp in this.dbJobMap)) {
@@ -749,7 +783,7 @@ export default class Indexer extends HealthCheck {
     this.networkMonitor.structuredLog(network, `Successfully found NFT with tx ${transaction.hash} `, tags)
     this.networkMonitor.structuredLog(
       network,
-      `API: Requesting to update NFT with ${data.nftByTx.tx} and id ${data.nftByTx.id}`,
+      `API: Requesting to update NFT with ${data.nftByIpfsCid.tx} and id ${data.nftByIpfsCid.id}`,
       tags,
     )
     const mutation = gql`
@@ -763,7 +797,7 @@ export default class Indexer extends HealthCheck {
     }
     `
     // Include the on chain data in the update input
-    const input: UpdateNftInput = {updateNftInput: data.nftByTx}
+    const input: UpdateNftInput = {updateNftInput: data.nftByIpfsCid}
     input.updateNftInput.status = NftStatus.MINTED
     input.updateNftInput.chainId = transaction.chainId
     input.updateNftInput.tx = transaction.hash
@@ -783,10 +817,10 @@ export default class Indexer extends HealthCheck {
         )
       }
     } catch (error: any) {
-      this.networkMonitor.structuredLog(network, `API: Failed to update NFT with tx ${data.nftByTx.tx}`, tags)
+      this.networkMonitor.structuredLog(network, `API: Failed to update NFT with tx ${data.nftByIpfsCid.tx}`, tags)
       this.networkMonitor.structuredLogError(network, error, [
         ...tags,
-        this.errorColor(`Cross chain transaction ${data.nftByTx.tx}`),
+        this.errorColor(`Cross chain transaction ${data.nftByIpfsCid.tx}`),
       ])
     }
   }
