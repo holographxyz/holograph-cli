@@ -39,8 +39,8 @@ export const CXIP_ERC721_ADDRESSES: {[key in Environment]: string} = {
   [Environment.localhost]: '0x0000000000000000000000000000000000000000',
   [Environment.experimental]: '0x0000000000000000000000000000000000000000',
   [Environment.develop]: '0x156C8b069232986c8C6bD9017BBAA098e97f0269',
-  [Environment.testnet]: '0x0000000000000000000000000000000000000000',
-  [Environment.mainnet]: '0x0000000000000000000000000000000000000000',
+  [Environment.testnet]: '0x690f4b7e0a102047d442CA3FEcDbB024Cb6b1FC5',
+  [Environment.mainnet]: '0x690f4b7e0a102047d442CA3FEcDbB024Cb6b1FC5',
 }
 
 export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {

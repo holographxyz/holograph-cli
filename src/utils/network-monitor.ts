@@ -586,7 +586,6 @@ export class NetworkMonitor {
       this.log(`📄 Operator address: ${this.operatorAddress}`)
       this.log(`📄 Registry address: ${this.registryAddress}`)
       this.log(`📄 HLG Token address: ${this.tokenAddress}`)
-      this.log(`📄 CXIP ERC721 address: ${this.cxipERC721Address}`)
       this.log(`📄 Messaging Module address: ${this.messagingModuleAddress}`)
       this.log(``)
     }
