@@ -739,7 +739,7 @@ export default class Indexer extends HealthCheck {
     await validateIpfsCid(ipfsCid)
 
     // This query is filtered with tx passed in as null because we want to get the nft that has not been minted yet
-    const input: GetNftByCidInput = {nftByIpfsCid: {cid: ipfsCid, tx: transaction.hash}}
+    const input: GetNftByCidInput = {nftByIpfsCid: {cid: ipfsCid, tx: null}}
     const query = gql`
       query($nftByIpfsCid: GetNftByIpfsCidInput!) {
         nftByIpfsCid(nftInput: $nftByIpfsCid) {
