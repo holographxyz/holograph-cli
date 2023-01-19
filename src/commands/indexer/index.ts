@@ -709,7 +709,7 @@ export default class Indexer extends HealthCheck {
       )
       this.networkMonitor.structuredLog(
         network,
-        `Contract ${contractAddress} is not on registry at the address ${this.networkMonitor.registryAddress} in env ${this.environment}. Skipping...`,
+        `Contract ${contractAddress} is not in registry at the address ${this.networkMonitor.registryAddress} in env ${this.environment}. Skipping...`,
         tags,
       )
       return
