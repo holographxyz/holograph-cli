@@ -733,7 +733,9 @@ export default class Indexer extends HealthCheck {
 
     let tokenURI = ''
     try {
-      tokenURI = await this.networkMonitor.cxipERC721Contract.tokenURI(BigNumber.from(tokenId))
+      tokenURI = await this.networkMonitor.cxipERC721Contract.tokenURI(BigNumber.from(tokenId), {
+        blockTag: transaction.blockNumber,
+      })
       this.networkMonitor.structuredLog(network, `Token URI is ${tokenURI}`, tags)
     } catch (error) {
       this.networkMonitor.structuredLogError(
