@@ -701,9 +701,22 @@ export default class Indexer extends HealthCheck {
       tags,
     )
 
+    let attempts = 0
     if (isHolographable === false) {
       this.networkMonitor.structuredLog(network, `Contract ${contractAddress} is not on registry`, tags)
-      // return
+      attempts++
+
+      if (attempts < 2) {
+        this.networkMonitor.structuredLog(
+          network,
+          `Contract ${contractAddress} is not on registry.. trying again`,
+          tags,
+        )
+        this.updateMintedERC721(transaction, network, contractAddress, erc721TransferEvent, tags)
+      } else {
+        this.networkMonitor.structuredLog(network, `Contract ${contractAddress} is not on registry.. giving up`, tags)
+        return
+      }
     }
 
     this.networkMonitor.structuredLog(
