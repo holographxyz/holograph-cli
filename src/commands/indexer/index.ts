@@ -719,8 +719,19 @@ export default class Indexer extends HealthCheck {
     )
     this.networkMonitor.cxipERC721Contract = this.networkMonitor.cxipERC721Contract.attach(contractAddress)
     this.networkMonitor.structuredLog(network, `Calling the tokenURI function for tokenId ${tokenId}`, tags)
-    const tokenURI: string = await this.networkMonitor.cxipERC721Contract.tokenURI(tokenId)
-    this.networkMonitor.structuredLog(network, `Token URI is ${tokenURI}`, tags)
+
+    let tokenURI = ''
+    try {
+      tokenURI = await this.networkMonitor.cxipERC721Contract.tokenURI(tokenId)
+      this.networkMonitor.structuredLog(network, `Token URI is ${tokenURI}`, tags)
+    } catch (error) {
+      this.networkMonitor.structuredLogError(
+        network,
+        `Error getting token URI from ${contractAddress} and ${tokenId} - ${JSON.stringify(error)}`,
+        tags,
+      )
+      return
+    }
 
     let ipfsCid = ''
     try {
