@@ -687,7 +687,7 @@ export default class Indexer extends HealthCheck {
       tags,
     )
 
-    this.networkMonitor.structuredLog(network, `Checking if contract ${contractAddress} is on registry ...`, tags)
+    this.networkMonitor.structuredLog(network, `Checking if contract ${contractAddress} is on registry...`, tags)
     this.networkMonitor.structuredLog(
       network,
       `registry Contract address = ${this.networkMonitor.registryContract.address}`,
@@ -701,22 +701,9 @@ export default class Indexer extends HealthCheck {
       tags,
     )
 
-    let attempts = 0
     if (isHolographable === false) {
       this.networkMonitor.structuredLog(network, `Contract ${contractAddress} is not on registry`, tags)
-      attempts++
-
-      if (attempts < 2) {
-        this.networkMonitor.structuredLog(
-          network,
-          `Contract ${contractAddress} is not on registry.. trying again`,
-          tags,
-        )
-        this.updateMintedERC721(transaction, network, contractAddress, erc721TransferEvent, tags)
-      } else {
-        this.networkMonitor.structuredLog(network, `Contract ${contractAddress} is not on registry.. giving up`, tags)
-        return
-      }
+      // return
     }
 
     this.networkMonitor.structuredLog(
