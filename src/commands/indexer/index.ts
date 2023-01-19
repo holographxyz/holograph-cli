@@ -23,6 +23,8 @@ import {ensureConfigFileIsValid} from '../../utils/config'
 import ApiService from '../../services/api-service'
 import {getIpfsCidFromTokenUri, validateIpfsCid} from '../../utils/validation'
 
+import {BigNumber} from '@ethersproject/bignumber'
+
 import {DBJob, DBJobMap} from '../../types/indexer'
 import {
   handleMintEvent,
@@ -731,7 +733,7 @@ export default class Indexer extends HealthCheck {
 
     let tokenURI = ''
     try {
-      tokenURI = await this.networkMonitor.cxipERC721Contract.tokenURI(tokenId)
+      tokenURI = await this.networkMonitor.cxipERC721Contract.tokenURI(BigNumber.from(tokenId))
       this.networkMonitor.structuredLog(network, `Token URI is ${tokenURI}`, tags)
     } catch (error) {
       this.networkMonitor.structuredLogError(
