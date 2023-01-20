@@ -727,6 +727,9 @@ export default class Indexer extends HealthCheck {
       tags,
     )
     this.networkMonitor.cxipERC721Contract = this.networkMonitor.cxipERC721Contract.attach(contractAddress)
+    this.networkMonitor.cxipERC721Contract = this.networkMonitor.cxipERC721Contract.connect(
+      this.networkMonitor.providers[network],
+    )
     this.networkMonitor.structuredLog(network, `Calling the tokenURI function for tokenId ${tokenId}`, tags)
 
     let tokenURI = ''
