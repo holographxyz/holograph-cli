@@ -1902,13 +1902,16 @@ export class NetworkMonitor {
         let tx: TransactionResponse | null
         const gasPricing: GasPricing = this.gasPrices[network]
         let gasPrice: BigNumber | undefined
+        const rawTxGasPrice: BigNumber = BigNumber.from(rawTx.gasPrice ?? 0)
+
+        // Remove the gasPrice from rawTx to avoid EIP1559 error that type2 tx does not allow for use of gasPrice
+        delete rawTx.gasPrice
 
         try {
           // move gas price info around to support EIP-1559
           if (gasPricing.isEip1559) {
             if (gasPrice === undefined) {
-              gasPrice = BigNumber.from(rawTx.gasPrice ?? 0)
-              delete rawTx.gasPrice
+              gasPrice = BigNumber.from(rawTxGasPrice)
             }
 
             rawTx.type = 2
