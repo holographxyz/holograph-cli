@@ -36,6 +36,7 @@ export function calculateNextBlockFee(network: string, parent: Block | BlockWith
   if (network === 'polygon' || network === 'plygonTestnet') {
     baseFeeMaxChangeDenominator = BigNumber.from('16')
   }
+
   const baseFeePerGas: BigNumber = parent.baseFeePerGas!
   const parentGasTarget: BigNumber = parent.gasLimit.div(elasticityMultiplier)
   if (parent.gasUsed.eq(parentGasTarget)) {
