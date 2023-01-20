@@ -33,7 +33,7 @@ export function calculateNextBlockFee(network: string, parent: Block | BlockWith
   const one: BigNumber = BigNumber.from('1')
   const elasticityMultiplier: BigNumber = BigNumber.from('2')
   let baseFeeMaxChangeDenominator: BigNumber = BigNumber.from('8')
-  if (network === 'polygon' || network === 'plygonTestnet') {
+  if (network === 'polygon' || network === 'polygonTestnet') {
     baseFeeMaxChangeDenominator = BigNumber.from('16')
   }
 
