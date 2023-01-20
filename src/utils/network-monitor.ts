@@ -1902,11 +1902,12 @@ export class NetworkMonitor {
         let tx: TransactionResponse | null
         const gasPricing: GasPricing = this.gasPrices[network]
         let gasPrice: BigNumber | undefined
+
         try {
           // move gas price info around to support EIP-1559
           if (gasPricing.isEip1559) {
             if (gasPrice === undefined) {
-              gasPrice = BigNumber.from(rawTx.gasPrice!)
+              gasPrice = BigNumber.from(rawTx.gasPrice ?? 0)
               delete rawTx.gasPrice
             }
 
