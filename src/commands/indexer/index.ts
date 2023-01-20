@@ -23,8 +23,6 @@ import {ensureConfigFileIsValid} from '../../utils/config'
 import ApiService from '../../services/api-service'
 import {getIpfsCidFromTokenUri, validateIpfsCid} from '../../utils/validation'
 
-import {BigNumber} from '@ethersproject/bignumber'
-
 import {DBJob, DBJobMap} from '../../types/indexer'
 import {
   handleMintEvent,
@@ -711,7 +709,7 @@ export default class Indexer extends HealthCheck {
       )
       this.networkMonitor.structuredLog(
         network,
-        `Contract ${contractAddress} is not in registry at the address ${this.networkMonitor.registryAddress} in env ${this.environment}. Skipping...`,
+        `Contract ${contractAddress} is not on registry at the address ${this.networkMonitor.registryAddress} in env ${this.environment}. Skipping...`,
         tags,
       )
       return
@@ -733,7 +731,7 @@ export default class Indexer extends HealthCheck {
 
     let tokenURI = ''
     try {
-      tokenURI = await this.networkMonitor.cxipERC721Contract.tokenURI(BigNumber.from(tokenId))
+      tokenURI = await this.networkMonitor.cxipERC721Contract.tokenURI(tokenId, {blockTag: transaction.blockNumber})
       this.networkMonitor.structuredLog(network, `Token URI is ${tokenURI}`, tags)
     } catch (error) {
       this.networkMonitor.structuredLogError(
