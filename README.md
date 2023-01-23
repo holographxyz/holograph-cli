@@ -44,25 +44,41 @@ USAGE
 
 <!-- commands -->
 
-- [`holograph bridge`](#holograph-bridge)
-- [`holograph bridge:contract`](#holograph-bridgecontract)
-- [`holograph bridge:nft`](#holograph-bridgenft)
-- [`holograph config`](#holograph-config)
-- [`holograph config:networks`](#holograph-confignetworks)
-- [`holograph config:user`](#holograph-configuser)
-- [`holograph config:view`](#holograph-configview)
-- [`holograph create`](#holograph-create)
-- [`holograph create:contract`](#holograph-createcontract)
-- [`holograph create:nft`](#holograph-createnft)
-- [`holograph faucet`](#holograph-faucet)
-- [`holograph help [COMMAND]`](#holograph-help-command)
-- [`holograph operator`](#holograph-operator)
-- [`holograph operator:bond`](#holograph-operatorbond)
-- [`holograph operator:recover`](#holograph-operatorrecover)
-- [`holograph operator:unbond`](#holograph-operatorunbond)
-- [`holograph status`](#holograph-status)
-- [`holograph status:contract`](#holograph-statuscontract)
-- [`holograph status:nft`](#holograph-statusnft)
+- [Overview](#overview)
+- [Usage](#usage)
+- [Commands](#commands)
+  - [`holograph bridge`](#holograph-bridge)
+  - [`holograph bridge:contract`](#holograph-bridgecontract)
+  - [`holograph bridge:nft`](#holograph-bridgenft)
+  - [`holograph config`](#holograph-config)
+  - [`holograph config:networks`](#holograph-confignetworks)
+  - [`holograph config:user`](#holograph-configuser)
+  - [`holograph config:view`](#holograph-configview)
+  - [`holograph create`](#holograph-create)
+  - [`holograph create:contract`](#holograph-createcontract)
+  - [`holograph create:nft`](#holograph-createnft)
+  - [`holograph faucet`](#holograph-faucet)
+  - [`holograph help [COMMAND]`](#holograph-help-command)
+  - [`holograph operator`](#holograph-operator)
+  - [`holograph operator:bond`](#holograph-operatorbond)
+  - [`holograph operator:recover`](#holograph-operatorrecover)
+  - [`holograph operator:unbond`](#holograph-operatorunbond)
+  - [`holograph status`](#holograph-status)
+  - [`holograph status:contract`](#holograph-statuscontract)
+  - [`holograph status:nft`](#holograph-statusnft)
+  - [Developing](#developing)
+    - [Install Dependencies](#install-dependencies)
+    - [Working with the code](#working-with-the-code)
+    - [Branches](#branches)
+    - [The `mainnet` branch](#the-mainnet-branch)
+    - [The `testnet` branch](#the-testnet-branch)
+    - [The `develop` branch](#the-develop-branch)
+    - [The `experimetnal` branch](#the-experimetnal-branch)
+  - [Contributing](#contributing)
+    - [Bugs](#bugs)
+    - [Suggestions / Desires](#suggestions--desires)
+    - [Pull Requests](#pull-requests)
+  - [Official Links](#official-links)
 
 ## `holograph bridge`
 
@@ -459,7 +475,7 @@ Attempt to re-run/recover a specific job.
 
 ```
 USAGE
-  $ holograph operator:recover [--network goerli|mumbai|fuji] [--tx <value>] [--healthCheckPort <value>
+  $ holograph operator:recover [--host http://localhost:4000] [--network goerli|mumbai|fuji] [--tx <value>] [--healthCheckPort <value>
     --healthCheck] [--env mainnet|testnet|develop|experimental]
 
 FLAGS
@@ -470,6 +486,7 @@ FLAGS
   --network=<option>         The network on which the transaction was executed
                              <options: goerli|mumbai|fuji>
   --tx=<value>               The hash of transaction that we want to attempt to execute
+  --host                     The host to send data to
 
 DESCRIPTION
   Attempt to re-run/recover a specific job.
