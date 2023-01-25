@@ -197,7 +197,7 @@ jobs:
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
-            --set datadog_tags.version=chart-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
             \
             --set autoscaling.minReplicas=1 \
             --set autoscaling.maxReplicas=1 \
@@ -267,7 +267,7 @@ jobs:
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
-            --set datadog_tags.version=chart-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             \
             --values .github/values_for_prod_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
