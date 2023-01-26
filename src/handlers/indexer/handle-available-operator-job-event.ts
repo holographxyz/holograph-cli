@@ -3,17 +3,17 @@ import {getNetworkByHolographId} from '@holographxyz/networks'
 import {TransactionDescription} from '@ethersproject/abi'
 import {BigNumber} from 'ethers'
 
-import {create2address, decodeDeploymentConfig, DeploymentConfig} from '../../../utils/contract-deployment'
-import {UpdateBridgedContract, UpdateBridgedERC20, UpdateBridgedERC721} from '../../../types/indexer'
-import {sha3, storageSlot, toAscii} from '../../../utils/utils'
-import {NetworkMonitor} from '../../../utils/network-monitor'
+import {create2address, decodeDeploymentConfig, DeploymentConfig} from '../../utils/contract-deployment'
+import {UpdateBridgedContract, UpdateBridgedERC20, UpdateBridgedERC721} from '../../types/indexer'
+import {sha3, storageSlot, toAscii} from '../../utils/utils'
+import {NetworkMonitor} from '../../utils/network-monitor'
 import {
   BridgeInArgs,
   BridgeInErc721Args,
   BridgeOutErc20Args,
   decodeBridgeInErc721Args,
   decodeBridgeOutErc20Args,
-} from '../../../utils/bridge'
+} from '../../utils/bridge'
 
 async function handleAvailableOperatorJobEvent(
   networkMonitor: NetworkMonitor,

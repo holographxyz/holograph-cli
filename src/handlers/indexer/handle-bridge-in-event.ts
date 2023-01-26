@@ -2,16 +2,16 @@ import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-p
 import {getNetworkByHolographId} from '@holographxyz/networks'
 import {TransactionDescription} from '@ethersproject/abi'
 
-import {UpdateBridgedContract, UpdateBridgedERC20, UpdateBridgedERC721} from '../../../types/indexer'
-import {BridgeInArgs, BridgeInErc20Args, decodeBridgeInErc20Args} from '../../../utils/bridge'
-import {sha3, storageSlot, toAscii} from '../../../utils/utils'
-import {NetworkMonitor} from '../../../utils/network-monitor'
+import {UpdateBridgedContract, UpdateBridgedERC20, UpdateBridgedERC721} from '../../types/indexer'
+import {BridgeInArgs, BridgeInErc20Args, decodeBridgeInErc20Args} from '../../utils/bridge'
+import {sha3, storageSlot, toAscii} from '../../utils/utils'
+import {NetworkMonitor} from '../../utils/network-monitor'
 import {
   create2address,
   decodeDeploymentConfig,
   DeploymentConfig,
   deploymentConfigHash,
-} from '../../../utils/contract-deployment'
+} from '../../utils/contract-deployment'
 
 async function handleBridgeInEvent(
   networkMonitor: NetworkMonitor,
