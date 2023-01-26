@@ -1027,12 +1027,16 @@ export default class Indexer extends HealthCheck {
             const response = await this.apiService.updateCrossChainTransactionStatus(input)
             this.networkMonitor.structuredLog(
               network,
-              this.apiColor(`API: Cross chain message transaction ${jobHash} mutation response ${JSON.stringify(response)}`),
+              this.apiColor(
+                `API: Cross chain message transaction ${jobHash} mutation response ${JSON.stringify(response)}`,
+              ),
               tags,
             )
             this.networkMonitor.structuredLog(
               network,
-              `Successfully updated cross chain message transaction with ${jobHash}. Response: ${JSON.stringify(response)}`,
+              `Successfully updated cross chain message transaction with ${jobHash}. Response: ${JSON.stringify(
+                response,
+              )}`,
               tags,
             )
           } catch (error: any) {
@@ -1079,12 +1083,16 @@ export default class Indexer extends HealthCheck {
             const response = await this.apiService.updateCrossChainTransactionStatus(input)
             this.networkMonitor.structuredLog(
               network,
-              this.apiColor(`API: Cross chain operator transaction ${jobHash} mutation response ${JSON.stringify(response)}`),
+              this.apiColor(
+                `API: Cross chain operator transaction ${jobHash} mutation response ${JSON.stringify(response)}`,
+              ),
               tags,
             )
             this.networkMonitor.structuredLog(
               network,
-              `Successfully updated cross chain operator transaction with ${jobHash}. Response: ${JSON.stringify(response)}`,
+              `Successfully updated cross chain operator transaction with ${jobHash}. Response: ${JSON.stringify(
+                response,
+              )}`,
               tags,
             )
           } catch (error: any) {

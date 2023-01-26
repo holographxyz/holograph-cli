@@ -144,7 +144,7 @@ async function handleAvailableOperatorJobEvent(
       networkMonitor.structuredLog(
         network,
         `Bridge-In transaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
-        tags
+        tags,
       )
     }
   } else {
