@@ -16,7 +16,7 @@ import {
 } from '../types/api'
 import {AbstractError} from '../types/errors'
 import {StructuredLogInfo} from '../types/interfaces'
-import {cleanRequest } from '../utils/utils'
+import {cleanRequest} from '../utils/utils'
 
 class ApiService {
   logger: Logger
