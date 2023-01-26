@@ -16,7 +16,7 @@ import {
 } from '../types/api'
 import {AbstractError} from '../types/errors'
 import {StructuredLogInfo} from '../types/interfaces'
-import {cleanRequest} from '../utils/utils'
+import {cleanRequest } from '../utils/utils'
 
 class ApiService {
   logger: Logger
@@ -178,7 +178,6 @@ class ApiService {
       updateNftInput: updateNftInput,
     })
 
-    this.logger.log('Updated NFT', data.updateNft)
     return data.updateNft
   }
 
@@ -208,7 +207,6 @@ class ApiService {
       }
   `
     const data: CrossChainTransactionResponse = await this.client.request(query, {jobHash})
-    this.logger.debug('Found cross chain transaction:', data.crossChainTransaction)
     return data.crossChainTransaction
   }
 
@@ -245,7 +243,6 @@ class ApiService {
       createOrUpdateCrossChainTransactionInput: updateCrossChainTransactionStatusInput,
     })
 
-    this.logger.debug('Updated cross chain transaction:', data.createOrUpdateCrossChainTransaction)
     return data.createOrUpdateCrossChainTransaction
   }
 }
