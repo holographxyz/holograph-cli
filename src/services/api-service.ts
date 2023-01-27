@@ -177,7 +177,6 @@ class ApiService {
       updateNftInput: updateNftInput,
     })
 
-    this.logger.log('Updated NFT', data.updateNft)
     return data.updateNft
   }
 
@@ -207,7 +206,6 @@ class ApiService {
       }
   `
     const data: CrossChainTransactionResponse = await this.client.request(query, {jobHash})
-    this.logger.debug('Found cross chain transaction:', data.crossChainTransaction)
     return data.crossChainTransaction
   }
 

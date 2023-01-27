@@ -79,7 +79,7 @@ export default class Indexer extends HealthCheck {
     this.environment = environment
 
     if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
-      this.log(`Skiping API authentication for ${Environment[this.environment]} environment`)
+      this.log(`Skipping API authentication for ${Environment[this.environment]} environment`)
     } else {
       // Create API Service for GraphQL requests
       try {
@@ -93,15 +93,14 @@ export default class Indexer extends HealthCheck {
         this.apiService = new ApiService(this.BASE_URL, logger)
         await this.apiService.operatorLogin()
       } catch (error: any) {
-        this.error(error)
+        // NOTE: sample of how to do logs when in production mode
+        this.log(JSON.stringify({...error, stack: error.stack}))
       }
 
       if (this.apiService === undefined) {
         throw new Error('API service is not defined')
       }
 
-      this.debug(`process.env.OPERATOR_API_KEY = ${process.env.OPERATOR_API_KEY}`)
-      this.debug(`this.JWT = ${this.JWT}`)
       this.log(this.apiColor(`API: Successfully authenticated as an operator`))
     }
 
@@ -853,6 +852,8 @@ export default class Indexer extends HealthCheck {
     transaction: TransactionResponse,
     network: string,
     direction: string,
+    contractAddress: string,
+    tokenId: string,
     tags: (string | number)[],
   ): Promise<void> {
     this.networkMonitor.structuredLog(
@@ -1026,12 +1027,16 @@ export default class Indexer extends HealthCheck {
             const response = await this.apiService.updateCrossChainTransactionStatus(input)
             this.networkMonitor.structuredLog(
               network,
-              this.apiColor(`API: Cross chain transaction ${jobHash} mutation response ${JSON.stringify(response)}`),
+              this.apiColor(
+                `API: Cross chain message transaction ${jobHash} mutation response ${JSON.stringify(response)}`,
+              ),
               tags,
             )
             this.networkMonitor.structuredLog(
               network,
-              `Successfully updated cross chain transaction with ${jobHash}. Response: ${JSON.stringify(response)}`,
+              `Successfully updated cross chain message transaction with ${jobHash}. Response: ${JSON.stringify(
+                response,
+              )}`,
               tags,
             )
           } catch (error: any) {
@@ -1060,7 +1065,7 @@ export default class Indexer extends HealthCheck {
         this.networkMonitor.structuredLog(
           network,
           this.apiColor(
-            `API:Cross chain transaction mutation with ${jobHash} for bridgeIn with input ${JSON.stringify(input)}`,
+            `API: Cross chain transaction mutation with ${jobHash} for bridgeIn with input ${JSON.stringify(input)}`,
           ),
           tags,
         )
@@ -1078,12 +1083,16 @@ export default class Indexer extends HealthCheck {
             const response = await this.apiService.updateCrossChainTransactionStatus(input)
             this.networkMonitor.structuredLog(
               network,
-              this.apiColor(`API: Cross chain transaction ${jobHash} mutation response ${JSON.stringify(response)}`),
+              this.apiColor(
+                `API: Cross chain operator transaction ${jobHash} mutation response ${JSON.stringify(response)}`,
+              ),
               tags,
             )
             this.networkMonitor.structuredLog(
               network,
-              `Successfully updated cross chain transaction with ${jobHash}. Response: ${JSON.stringify(response)}`,
+              `Successfully updated cross chain operator transaction with ${jobHash}. Response: ${JSON.stringify(
+                response,
+              )}`,
               tags,
             )
           } catch (error: any) {
