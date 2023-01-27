@@ -433,7 +433,7 @@ export default class Analyze extends Command {
 
     try {
       const response = await this.apiService.updateCrossChainTransactionStatus(updatedTx)
-      this.log(`Updated cross chain transaction ${response.id}`)
+      this.log(`Updated cross chain transaction ${response!.data!.id}`)
     } catch (error: any) {
       this.error(error)
     }
