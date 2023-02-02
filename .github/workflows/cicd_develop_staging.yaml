@@ -35,7 +35,7 @@ env:
   STG_COMMON_NAMESPACE: develop # NOTICE <---
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.69
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.70
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
   STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.55
@@ -56,11 +56,16 @@ env:
   #
   operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
   operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
+  #
+  # SQS User [indexer_processor_sqs_user]
+  SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
+  SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
+  DEV_SQS_QUEUE_URL: "https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor"
 
 on:
   push:
     branches:
-      - 'develop'
+      - 'feat/sqs-env-vars'
       # Excluded branches
       - '!testnet'
       - '!main'
@@ -194,6 +199,11 @@ jobs:
             \
             --set autoscaling.minReplicas=1 \
             --set autoscaling.maxReplicas=1 \
+            \
+            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
+            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
+            --set sqs.SQS_QUEUE_URL=${{ env.DEV_SQS_QUEUE_URL }} \
+            --set sqs.AWS_REGION=us-west-2 \
             \
             --values .github/values_for_stg_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
