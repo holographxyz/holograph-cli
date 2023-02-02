@@ -404,8 +404,6 @@ export default class Operator extends OperatorJobAwareCommand {
       // job failed, gotta try again
       this.processOperatorJobs(network)
     }
-
-    Promise.resolve()
   }
 
   processOperatorJobs = (network: string, jobHash?: string): void => {

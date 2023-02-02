@@ -12,11 +12,25 @@ import {sha3} from '../../utils/utils'
 import {checkOptionFlag, checkTransactionHashFlag} from '../../utils/validation'
 import {OperatorJobAwareCommand} from '../../utils/operator-job'
 import {HealthCheck} from '../../base-commands/healthcheck'
+import {Environment} from '@holographxyz/environment'
+import ApiService from '../../services/api-service'
+import {CrossChainTransaction, Logger, TransactionStatus} from '../../types/api'
+import color from '@oclif/color'
+
+enum Step {
+  OPERATOR,
+  MESSAGE,
+}
 
 export default class Recover extends OperatorJobAwareCommand {
   static description = 'Attempt to re-run/recover a specific job.'
   static examples = ['$ <%= config.bin %> <%= command.id %> --network="ethereumTestnetGoerli" --tx="0x..."']
+
   static flags = {
+    host: Flags.string({
+      description: 'The host to send data to',
+      char: 'h',
+    }),
     network: Flags.string({
       description: 'The network on which the transaction was executed',
       options: supportedShortNetworks,
@@ -27,11 +41,20 @@ export default class Recover extends OperatorJobAwareCommand {
     ...HealthCheck.flags,
   }
 
+  // API Params
+  BASE_URL!: string
+  JWT!: string
+  apiService!: ApiService
+  environment!: Environment
+  apiColor = color.keyword('orange')
+  errorColor = color.keyword('red')
+
   /**
    * Command Entry Point
    */
   async run(): Promise<void> {
     this.log('Loading user configurations...')
+
     const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
       this.config.configDir,
       undefined,
@@ -40,6 +63,39 @@ export default class Recover extends OperatorJobAwareCommand {
     this.log('User configurations loaded.')
 
     const {flags} = await this.parse(Recover)
+
+    if (flags.host !== undefined) {
+      this.BASE_URL = flags.host
+    }
+
+    if (
+      this.environment === Environment.localhost ||
+      this.environment === Environment.experimental ||
+      this.BASE_URL === undefined
+    ) {
+      this.log(`Skiping API authentication for ${Environment[this.environment]} environment`)
+    } else {
+      // Create API Service for GraphQL requests
+      try {
+        const logger: Logger = {
+          log: this.log,
+          warn: this.warn,
+          debug: this.debug,
+          error: this.error,
+          jsonEnabled: () => false,
+        }
+        this.apiService = new ApiService(this.BASE_URL, logger)
+        await this.apiService.operatorLogin()
+      } catch (error: any) {
+        this.error(error)
+      }
+
+      if (this.apiService === undefined) {
+        throw new Error('API service is not defined')
+      }
+
+      this.log(this.apiColor(`API: Successfully authenticated as an operator`))
+    }
 
     const network: string = await checkOptionFlag(
       supportedNetworksOptions,
@@ -60,6 +116,11 @@ export default class Recover extends OperatorJobAwareCommand {
       verbose: false,
     })
 
+    if (this.apiService !== undefined) {
+      this.apiService.setStructuredLog(this.networkMonitor.structuredLog.bind(this.networkMonitor))
+      this.apiService.setStructuredLogError(this.networkMonitor.structuredLogError.bind(this.networkMonitor))
+    }
+
     CliUx.ux.action.start('Loading network RPC providers')
     await this.networkMonitor.run(true)
     CliUx.ux.action.stop()
@@ -77,7 +138,7 @@ export default class Recover extends OperatorJobAwareCommand {
     if (transaction === null) {
       this.networkMonitor.structuredLog(network, 'Could not retrieve the transaction')
       // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
-      process.exit()
+      this.exit()
     } else {
       await this.processTransaction(network, transaction)
     }
@@ -95,6 +156,7 @@ export default class Recover extends OperatorJobAwareCommand {
     const from: string | undefined = transaction.from?.toLowerCase()
     switch (to) {
       case this.networkMonitor.bridgeAddress: {
+        // check if tx is on
         await this.handleBridgeOutEvent(transaction, network)
 
         break
@@ -108,6 +170,7 @@ export default class Recover extends OperatorJobAwareCommand {
             network,
             `Function processTransaction stumbled on an unknown transaction ${transaction.hash}`,
           )
+          this.exit()
         }
     }
   }
@@ -141,6 +204,7 @@ export default class Recover extends OperatorJobAwareCommand {
         ).toNumber()
         let destinationNetwork: string | undefined
         const networkNames: string[] = supportedNetworks
+
         for (let i = 0, l = networkNames.length; i < l; i++) {
           const n = networks[networkNames[i]]
           if ((n.chain as number) === chainId) {
@@ -157,7 +221,8 @@ export default class Recover extends OperatorJobAwareCommand {
           network,
           `Bridge-Out transaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
         )
-        await this.executePayload(destinationNetwork, operatorJobPayload!)
+
+        await this.executePayload(destinationNetwork, operatorJobPayload!, Step.MESSAGE)
       }
     }
   }
@@ -172,6 +237,7 @@ export default class Recover extends OperatorJobAwareCommand {
       attempts: 30,
       canFail: true,
     })
+
     if (receipt === null) {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
@@ -185,8 +251,10 @@ export default class Recover extends OperatorJobAwareCommand {
         receipt,
         this.networkMonitor.operatorAddress,
       )
+
       const operatorJobPayload: string | undefined = operatorJobEvent === undefined ? undefined : operatorJobEvent![1]
       const operatorJobHash: string | undefined = operatorJobPayload === undefined ? undefined : operatorJobEvent![0]
+
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract relayer available job for ${transaction.hash}`)
       } else {
@@ -201,7 +269,7 @@ export default class Recover extends OperatorJobAwareCommand {
           network,
           `Bridge-In transaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
         )
-        await this.executePayload(network, operatorJobPayload!)
+        await this.executePayload(network, operatorJobPayload!, Step.OPERATOR)
       }
     }
   }
@@ -209,7 +277,7 @@ export default class Recover extends OperatorJobAwareCommand {
   /**
    * Execute the payload on the destination network
    */
-  async executePayload(network: string, payload: string): Promise<void> {
+  async executePayload(network: string, payload: string, step: Step): Promise<void> {
     // If the operator is in listen mode, payloads will not be executed
     // If the operator is in manual mode, the payload must be manually executed
     // If the operator is in auto mode, the payload will be executed automatically
@@ -224,15 +292,73 @@ export default class Recover extends OperatorJobAwareCommand {
     const operate: boolean = operatorPrompt.shouldContinue
 
     if (operate) {
-      await this.networkMonitor.executeTransaction({
+      const response = await this.networkMonitor.executeTransaction({
         network,
         contract: this.networkMonitor.operatorContract,
         methodName: 'executeJob',
         args: [payload],
       })
+
+      if (response !== null && response.status === 1) {
+        await this.updateDB(network, sha3(payload), step)
+      }
     }
 
     // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
     process.exit()
+  }
+
+  async updateDB(network: string, jobHash: string, step: Step) {
+    if (this.apiService === undefined) {
+      return
+    }
+
+    let updatedCrossChainTransaction: CrossChainTransaction | undefined
+
+    try {
+      this.networkMonitor.structuredLog(network, `Checking status for jobHash: ${jobHash}...`)
+
+      const crossChainTransaction = await this.apiService.getCrossChainTransaction(jobHash)
+
+      if (
+        crossChainTransaction.sourceStatus !== TransactionStatus.COMPLETED ||
+        crossChainTransaction.messageStatus !== TransactionStatus.COMPLETED
+      ) {
+        this.networkMonitor.structuredLog(network, `Beaming is not completed in the DB...`)
+
+        updatedCrossChainTransaction = crossChainTransaction
+
+        if (step === Step.OPERATOR) {
+          updatedCrossChainTransaction.sourceStatus = TransactionStatus.COMPLETED
+          updatedCrossChainTransaction.messageStatus = TransactionStatus.COMPLETED
+        } else if (step === Step.MESSAGE) {
+          updatedCrossChainTransaction.messageStatus = TransactionStatus.COMPLETED
+        }
+
+        updatedCrossChainTransaction.data = undefined
+        delete updatedCrossChainTransaction.id
+      }
+    } catch (error: any) {
+      this.networkMonitor.structuredLogError(network, error, [this.errorColor(`Request failed with errors`)])
+    }
+
+    if (updatedCrossChainTransaction !== undefined) {
+      try {
+        this.networkMonitor.structuredLog(network, `Updating beaming in the DB...`)
+
+        const rawResponse = await this.apiService.updateCrossChainTransactionStatus(updatedCrossChainTransaction)
+
+        if (rawResponse !== undefined) {
+          const {data: response, headers} = rawResponse
+
+          const requestId = headers.get('x-request-id') ?? ''
+          this.networkMonitor.structuredLog(network, `Query response ${JSON.stringify(response)}`, [requestId])
+        }
+      } catch (error: any) {
+        this.networkMonitor.structuredLogError(network, error, [
+          this.errorColor(`Request failed with errors: ${error}`),
+        ])
+      }
+    }
   }
 }

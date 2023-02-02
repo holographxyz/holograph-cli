@@ -7,7 +7,6 @@ import {
   CrossChainTransactionResponse,
   CrossChainTransaction,
   UpdateCrossChainTransactionStatusInput,
-  UpsertCrossChainTransactionReponse,
   UpdateCrossChainTransactionStatusInputWithoutData,
   Nft,
   UpdateNftInput,
@@ -121,6 +120,8 @@ class ApiService {
     }
   }
 
+  // Note: This is not currently used since queries are passed into the sendQueryRequest function via dbJobMap
+  // THis can be updated when we move the jobs to a queue service
   async queryNftByTx(tx: string): Promise<Nft> {
     const query = gql`
       query($tx: String!) {
@@ -135,6 +136,27 @@ class ApiService {
     try {
       const data: NftQueryResponse = await this.client.request(query, {tx})
       return data.nftByTx
+    } catch (error: any) {
+      this.logger.error(`Error sending query request ${error}`)
+    }
+  }
+
+  // Note: This is not currently used since queries are passed into the sendQueryRequest function via dbJobMap
+  // THis can be updated when we move the jobs to a queue service
+  async queryNftByIpfsCid(cid: string): Promise<Nft> {
+    const query = gql`
+      query($cid: String!) {
+        nftByIpfsCid(ifpsCid: $cid) {
+          id
+          tx
+          status
+          chainId
+        }
+      }
+    `
+    try {
+      const data: NftQueryResponse = await this.client.request(query, {cid})
+      return data.nftByIpfsCid
     } catch (error: any) {
       this.logger.error(`Error sending query request ${error}`)
     }
@@ -155,7 +177,6 @@ class ApiService {
       updateNftInput: updateNftInput,
     })
 
-    this.logger.log('Updated NFT', data.updateNft)
     return data.updateNft
   }
 
@@ -185,15 +206,14 @@ class ApiService {
       }
   `
     const data: CrossChainTransactionResponse = await this.client.request(query, {jobHash})
-    this.logger.debug('Found cross chain transaction:', data.crossChainTransaction)
     return data.crossChainTransaction
   }
 
-  async updateCrossChainTransactionStatus(
+  async updateCrossChainTransactionStatus<T = any>(
     updateCrossChainTransactionStatusInput:
       | UpdateCrossChainTransactionStatusInput
       | UpdateCrossChainTransactionStatusInputWithoutData,
-  ): Promise<any> {
+  ): Promise<Response<T> | undefined> {
     const mutation = gql`
         mutation CreateOrUpdateCrossChainTransaction($createOrUpdateCrossChainTransactionInput: CreateOrUpdateCrossChainTransactionInput!) {
           createOrUpdateCrossChainTransaction(createOrUpdateCrossChainTransactionInput: $createOrUpdateCrossChainTransactionInput) {
@@ -218,12 +238,10 @@ class ApiService {
           }
         }
     `
-    const data: UpsertCrossChainTransactionReponse = await this.client.request(mutation, {
+    const result = await this.client.rawRequest(mutation, {
       createOrUpdateCrossChainTransactionInput: updateCrossChainTransactionStatusInput,
     })
-
-    this.logger.debug('Updated cross chain transaction:', data.createOrUpdateCrossChainTransaction)
-    return data.createOrUpdateCrossChainTransaction
+    return result
   }
 }
 

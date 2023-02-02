@@ -24,7 +24,7 @@ export type GasPricing = {
 }
 
 // Implemented from https://eips.ethereum.org/EIPS/eip-1559
-export function calculateNextBlockFee(parent: Block | BlockWithTransactions): BigNumber {
+export function calculateNextBlockFee(network: string, parent: Block | BlockWithTransactions): BigNumber {
   const zero: BigNumber = BigNumber.from('0')
   if (parent.baseFeePerGas === undefined) {
     return zero
@@ -32,7 +32,11 @@ export function calculateNextBlockFee(parent: Block | BlockWithTransactions): Bi
 
   const one: BigNumber = BigNumber.from('1')
   const elasticityMultiplier: BigNumber = BigNumber.from('2')
-  const baseFeeMaxChangeDenominator: BigNumber = BigNumber.from('8')
+  let baseFeeMaxChangeDenominator: BigNumber = BigNumber.from('8')
+  if (network === 'polygon' || network === 'polygonTestnet') {
+    baseFeeMaxChangeDenominator = BigNumber.from('16')
+  }
+
   const baseFeePerGas: BigNumber = parent.baseFeePerGas!
   const parentGasTarget: BigNumber = parent.gasLimit.div(elasticityMultiplier)
   if (parent.gasUsed.eq(parentGasTarget)) {
@@ -108,7 +112,7 @@ export function updateGasPricing(
 ): GasPricing {
   if (block.baseFeePerGas) {
     gasPricing.isEip1559 = true
-    gasPricing.nextBlockFee = adjustBaseBlockFee(network, calculateNextBlockFee(block))
+    gasPricing.nextBlockFee = adjustBaseBlockFee(network, calculateNextBlockFee(network, block))
     gasPricing.maxFeePerGas = gasPricing.nextBlockFee!
     if (gasPricing.nextPriorityFee === null) {
       gasPricing.nextPriorityFee = BigNumber.from('0')
