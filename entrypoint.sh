@@ -46,16 +46,12 @@ if [[ $HOLO_CLI_CMD == "operator" ]]
 then
   eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD $ENABLE_UNSAFE
 
-elif [[ $HOLO_CLI_CMD == "propagator" ]]
-then
-  eval $ENABLE_DEBUG ABI_ENVIRONMENT=$ABI_ENVIRONMENT holograph $HOLO_CLI_CMD --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD
-
 elif [[ $HOLO_CLI_CMD == "indexer" ]]
 then
   eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_INDEXER_HOST $HEALTHCHECK $ENABLE_UNSAFE
 
 else
   echo
-  echo "-> ERROR...Hey, Should I run as operator, propagator, indexer or at least TERMINATOR?"
+  echo "-> ERROR...Hey, Should I run as operator, indexer or at least TERMINATOR?"
   echo
 fi
