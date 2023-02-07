@@ -9,7 +9,7 @@ env:
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli-dev # notice: the same for all cli apps
   #
-  DEV_IMAGE_TAG: dev-f7f22645e9a79be920984410c2cc4a8982d071cd #dev-${{ github.sha }}
+  DEV_IMAGE_TAG: dev-${{ github.sha }}
   #
   CLUSTER_NAME: staging
   #
@@ -65,7 +65,7 @@ env:
 on:
   push:
     branches:
-      - 'feat/indexer-separation-into-networks'
+      - 'develop'
       # Excluded branches
       - '!testnet'
       - '!main'
@@ -91,40 +91,40 @@ jobs:
       - name: Checkout the code
         uses: actions/checkout@v2
 
-#      # This is a separate action that sets up buildx runner
-#      - name: Set up Docker Buildx
-#        id: buildx
-#        uses: docker/setup-buildx-action@v2
-#
-#      # So now you can use Actions' own caching!
-#      - name: Cache Docker layers
-#        uses: actions/cache@v2
-#        with:
-#          path: /tmp/.buildx-cache
-#          key: ${{ runner.os }}-single-buildx-${{ github.sha }}
-#          restore-keys: |
-#            ${{ runner.os }}-single-buildx
-#
-#      # And make it available for builds
-#      - name: Build image
-#        uses: docker/build-push-action@v2
-#        with:
-#          context: .
-#          builder: ${{ steps.buildx.outputs.name }}
-#          file: Dockerfile
-#          build-args: AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }}
-#          platforms: linux/amd64
-#          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
-#          cache-from: type=local,src=/tmp/.buildx-cache
-#          cache-to: type=local,dest=/tmp/.buildx-cache-new
-#          push: true # set false to deactivate the push to ECR
-#
-#      # This ugly bit is necessary if you don't want your cache to grow forever until it hits GitHub's limit of 5GB.
-#      # https://github.com/docker/build-push-action/issues/252 & https://github.com/moby/buildkit/issues/1896
-#      - name: Move cache
-#        run: |
-#          rm -rf /tmp/.buildx-cache
-#          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+      # This is a separate action that sets up buildx runner
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      # So now you can use Actions' own caching!
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-single-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-single-buildx
+
+      # And make it available for builds
+      - name: Build image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          builder: ${{ steps.buildx.outputs.name }}
+          file: Dockerfile
+          build-args: AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }}
+          platforms: linux/amd64
+          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          push: true # set false to deactivate the push to ECR
+
+      # This ugly bit is necessary if you don't want your cache to grow forever until it hits GitHub's limit of 5GB.
+      # https://github.com/docker/build-push-action/issues/252 & https://github.com/moby/buildkit/issues/1896
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Configure AWS creds to access EKS
         # TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -163,8 +163,6 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
-#          NETWORK: 'fuji mumbai goerli' #deleteme
-#            --set NETWORK="${NETWORK}" \ #deleteme
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -216,92 +214,92 @@ jobs:
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
             --set ingress.blue_green_deployment=false
-#      #
-#      #
-##      # NOTICE: --- OPERATOR ---
-##      - name: Pull the holograph-operator helm chart version x.x.x from ECR
-##        shell: bash
-##        env:
-##          #
-##          CHART_REPO: holo-operator
-##          CHART_VERSION: ${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}
-##          #
-##          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-##        run: |
-##          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-##      ######
-##      - name: -> Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
-##        uses: tensor-hq/eksctl-helm-action@main
-##        env:
-##          RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }} # notice
-##          #
-##          ENABLE_DEBUG: 'true'
-##          ENABLE_SYNC: 'true'
-##          HEALTHCHECK: 'true'
-##          MODE: 'auto'
-##          ENABLE_UNSAFE: 'false'
-##        with:
-##          eks_cluster: ${{ env.CLUSTER_NAME }}
-##          command: |-
-##            helm upgrade --install $RELEASE_NAME \
-##            holo-operator-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}.tgz \
-##            -n ${{ env.STG_COMMON_NAMESPACE }} \
-##            \
-##            --set image.repository=${{ env.ECR_REPOSITORY }} \
-##            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
-##            --set config_file_data=${{ env.OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA }} \
-##            --set holo_operator_password=${{ env.STG_HOLOGRAPH_OPERATOR_PASSWORD }} \
-##            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
-##            \
-##            --set ENABLE_DEBUG=$ENABLE_DEBUG \
-##            --set ENABLE_SYNC=$ENABLE_SYNC \
-##            --set HEALTHCHECK=$HEALTHCHECK \
-##            --set MODE=$MODE \
-##            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
-##            \
-##            --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_dev_avalancheTestnet_rpc_url }} \
-##            --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_dev_polygonTestnet_rpc_url }} \
-##            --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.operator_dev_ethereumTestnetGoerli_rpc_url }} \
-##            \
-##            --set dev_rpc_config_values.private_key=${{ env.operator_dev_private_key }} \
-##            --set dev_rpc_config_values.address=${{ env.operator_dev_address }} \
-##            \
-##            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-##            --set datadog_tags.service=$RELEASE_NAME \
-##            --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }} \
-##            \
-##            --values .github/values_for_stg_alb_ingress.yaml \
-##            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-##            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-##            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-##            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-##            --set ingress.blue_green_deployment=false
-#
-#      - name: -> Info for the new deployments
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }}
-#          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
-#          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            echo "------------------------- Last n Helm releases -------------------------"
-#            echo "--INDEXER--"
-#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
-#            echo "--OPERATOR--"
-#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
-#
-#            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
-#            echo "$DEV_IMAGE_TAG"
-#
-#            echo "------------------------ Healthchecks ------------------------"
-#            sleep 55
-#
-#            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-#
-#            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+      #
+      #
+      # NOTICE: --- OPERATOR ---
+      - name: Pull the holograph-operator helm chart version x.x.x from ECR
+        shell: bash
+        env:
+          #
+          CHART_REPO: holo-operator
+          CHART_VERSION: ${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}
+          #
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
+      ######
+      - name: -> Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }} # notice
+          #
+          ENABLE_DEBUG: 'true'
+          ENABLE_SYNC: 'true'
+          HEALTHCHECK: 'true'
+          MODE: 'auto'
+          ENABLE_UNSAFE: 'false'
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            helm upgrade --install $RELEASE_NAME \
+            holo-operator-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}.tgz \
+            -n ${{ env.STG_COMMON_NAMESPACE }} \
+            \
+            --set image.repository=${{ env.ECR_REPOSITORY }} \
+            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
+            --set config_file_data=${{ env.OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA }} \
+            --set holo_operator_password=${{ env.STG_HOLOGRAPH_OPERATOR_PASSWORD }} \
+            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
+            \
+            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set ENABLE_SYNC=$ENABLE_SYNC \
+            --set HEALTHCHECK=$HEALTHCHECK \
+            --set MODE=$MODE \
+            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            \
+            --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_dev_avalancheTestnet_rpc_url }} \
+            --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_dev_polygonTestnet_rpc_url }} \
+            --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.operator_dev_ethereumTestnetGoerli_rpc_url }} \
+            \
+            --set dev_rpc_config_values.private_key=${{ env.operator_dev_private_key }} \
+            --set dev_rpc_config_values.address=${{ env.operator_dev_address }} \
+            \
+            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.service=$RELEASE_NAME \
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }} \
+            \
+            --values .github/values_for_stg_alb_ingress.yaml \
+            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
+            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
+            --set ingress.blue_green_deployment=false
+
+      - name: -> Info for the new deployments
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }}
+          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
+          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            echo "------------------------- Last n Helm releases -------------------------"
+            echo "--INDEXER--"
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
+            echo "--OPERATOR--"
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
+
+            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+            echo "$DEV_IMAGE_TAG"
+
+            echo "------------------------ Healthchecks ------------------------"
+            sleep 55
+
+            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+
+            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
