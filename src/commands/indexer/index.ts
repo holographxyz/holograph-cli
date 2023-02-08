@@ -26,13 +26,16 @@ import {getIpfsCidFromTokenUri, validateIpfsCid} from '../../utils/validation'
 import {DBJob, DBJobMap} from '../../types/indexer'
 import {
   // handleMintEvent,
-  handleBridgeInEvent,
+  // handleBridgeInEvent,
   handleBridgeOutEvent,
   handleContractDeployedEvent,
   handleAvailableOperatorJobEvent,
 } from '../../handlers/indexer'
 
-import {handleMintEvent as sqsHandleMintEvent} from '../../handlers/sqs-indexer'
+import {
+  handleMintEvent as sqsHandleMintEvent,
+  handleBridgeInEvent as sqsHandleBridgeInEvent,
+} from '../../handlers/sqs-indexer'
 
 dotenv.config()
 
@@ -359,16 +362,18 @@ export default class Indexer extends HealthCheck {
               `handleBridgeInEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
               tags,
             )
-            await handleBridgeInEvent.call(
-              this,
-              this.networkMonitor,
-              transaction,
-              job.network,
-              tags,
-              this.updateBridgedContract,
-              this.updateBridgedERC20,
-              this.updateBridgedERC721,
-            )
+            // await handleBridgeInEvent.call(
+            //   this,
+            //   this.networkMonitor,
+            //   transaction,
+            //   job.network,
+            //   tags,
+            //   this.updateBridgedContract,
+            //   this.updateBridgedERC20,
+            //   this.updateBridgedERC721,
+            // )
+
+            await sqsHandleBridgeInEvent.call(this, this.networkMonitor, transaction, job.network, tags)
 
             break
           }
