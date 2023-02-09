@@ -27,12 +27,15 @@ import {DBJob, DBJobMap} from '../../types/indexer'
 import {
   // handleMintEvent,
   handleBridgeInEvent,
-  handleBridgeOutEvent,
+  // handleBridgeOutEvent,
   handleContractDeployedEvent,
   handleAvailableOperatorJobEvent,
 } from '../../handlers/indexer'
 
-import {handleMintEvent as sqsHandleMintEvent} from '../../handlers/sqs-indexer'
+import {
+  handleMintEvent as sqsHandleMintEvent,
+  handleBridgeOutEvent as sqsHandleBridgeOutEvent,
+} from '../../handlers/sqs-indexer'
 
 dotenv.config()
 
@@ -338,16 +341,25 @@ export default class Indexer extends HealthCheck {
               `handleBridgeOutEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
               tags,
             )
-            await handleBridgeOutEvent.call(
+            // await handleBridgeOutEvent.call(
+            //   this,
+            //   this.networkMonitor,
+            //   this.environment,
+            //   transaction,
+            //   job.network,
+            //   tags,
+            //   this.updateBridgedContract,
+            //   this.updateBridgedERC20,
+            //   this.updateBridgedERC721,
+            // )
+
+            await sqsHandleBridgeOutEvent.call(
               this,
               this.networkMonitor,
               this.environment,
               transaction,
               job.network,
               tags,
-              this.updateBridgedContract,
-              this.updateBridgedERC20,
-              this.updateBridgedERC721,
             )
 
             break
