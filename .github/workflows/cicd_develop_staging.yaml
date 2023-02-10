@@ -35,7 +35,7 @@ env:
   STG_COMMON_NAMESPACE: develop # NOTICE <---
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.75
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.78
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
   STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.56
@@ -60,6 +60,7 @@ env:
   # SQS User [indexer_processor_sqs_user]
   SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
   SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
+  DEV_SQS_ENDPOINT: "https://sqs.us-west-2.amazonaws.com"
   DEV_SQS_QUEUE_URL: "https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor"
 
 on:
@@ -205,6 +206,7 @@ jobs:
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
+            --set sqs.SQS_ENDPOINT=${{ env.DEV_SQS_ENDPOINT }} \
             --set sqs.SQS_QUEUE_URL=${{ env.DEV_SQS_QUEUE_URL }} \
             --set sqs.AWS_REGION=us-west-2 \
             \
