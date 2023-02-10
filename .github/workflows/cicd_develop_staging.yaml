@@ -127,14 +127,14 @@ jobs:
 #          rm -rf /tmp/.buildx-cache
 #          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 #
-#      - name: Configure AWS creds to access EKS
-#        # TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
-#        uses: aws-actions/configure-aws-credentials@v1
-#        with:
-#          aws-access-key-id: ${{ env.AWS_KEY_ID }} #notice: unique for each env
-#          aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
-#          aws-region: ${{ env.AWS_REGION }}
-#
+      - name: Configure AWS creds to access EKS
+        # TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ env.AWS_KEY_ID }} #notice: unique for each env
+          aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
+          aws-region: ${{ env.AWS_REGION }}
+
 #      - name: Create ns [${{ env.STG_COMMON_NAMESPACE }}]
 #        uses: tensor-hq/eksctl-helm-action@main
 #        with:
