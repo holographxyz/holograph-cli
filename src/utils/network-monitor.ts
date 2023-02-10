@@ -635,6 +635,11 @@ export class NetworkMonitor {
     return lastBlocks
   }
 
+  saveSampleFile(configDir: string): void {
+    const filePath = path.join(configDir, 'testing_write_permission.txt')
+    fs.writeFileSync(filePath, `I wrote this file at: ${new Date()}`)
+  }
+
   saveLastBlocks(configDir: string, lastBlocks: {[key: string]: number}): void {
     const filePath = path.join(configDir, this.environment + '.' + this.LAST_BLOCKS_FILE_NAME)
     fs.writeFileSync(filePath, JSON.stringify(lastBlocks), 'utf8')

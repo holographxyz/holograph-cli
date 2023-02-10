@@ -121,9 +121,11 @@ export default class Indexer extends HealthCheck {
       this.apiService.setStructuredLogError(this.networkMonitor.structuredLogError.bind(this.networkMonitor))
     }
 
+    this.networkMonitor.saveSampleFile(this.config.configDir)
+
     // TODO: It doesn't seems like sync is working
     // Indexer always synchronizes missed blocks
-    // this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
+    this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
 
     CliUx.ux.action.start(`Starting indexer`)
     const continuous = !flags.repair // If repair is set, run network monitor stops after catching up to the latest block
