@@ -3,6 +3,8 @@ ARG REPO_NAME=misc
 
 FROM $AWS_ECR_URL/$REPO_NAME:node-18.9.0
 
+STOPSIGNAL SIGTINT
+
 #RUN apk update && apk add git curl jq
 #RUN apk add --update python3 make g++ && rm -rf /var/cache/apk/*
 RUN apt-get update && apt-get install -y git curl jq nano net-tools
