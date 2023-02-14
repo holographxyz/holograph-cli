@@ -43,6 +43,19 @@ EXPOSE 6000
 
 RUN chmod 755 /holograph-cli/entrypoint.sh
 # notice: The ENTRYPOINT specifies a command that will always be executed when the container starts.
-ENTRYPOINT ["/holograph-cli/entrypoint.sh"]
+#ENTRYPOINT ["/holograph-cli/entrypoint.sh"]
 # notice: The CMD specifies arguments that will be fed to the ENTRYPOINT
 # https://docs.docker.com/engine/reference/builder/#understand-how-cmd-and-entrypoint-interact
+
+
+
+# TODO
+# Add Tini
+ENV TINI_VERSION v0.19.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
+ENTRYPOINT ["/tini", "--"]
+
+# Run your program under Tini
+CMD ["holograph", "indexer", "--env", "develop", "--networks", "fuji", "--host=http://devel-holo-api.develop.svc.cluster.local:443"]
+# TODO
