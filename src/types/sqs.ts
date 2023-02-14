@@ -1,6 +1,4 @@
 import {Environment} from '@holographxyz/environment'
-import {BridgeInErc20Args, BridgeOutErc20Args} from '../utils/bridge'
-import {DeploymentConfig} from '../utils/contract-deployment'
 
 export enum PayloadType {
   HolographProtocol = 'HolographProtocol',
@@ -8,30 +6,20 @@ export enum PayloadType {
   ERC721 = 'ERC721',
 }
 
-export enum ContractType {
-  HolographERC20 = 'HolographERC20',
-  HolographERC721 = 'HolographERC721',
-}
-
-export enum JobIdentifier {
-  ERC721Mint = 'ERC721Mint',
-  Bridge = 'Bridge',
+export enum EventName {
+  MintNft = 'MintNft',
+  BridgePreProcess = 'BridgePreProcess',
 }
 
 export type SqsMessageBody = {
   type: PayloadType
-  jobIdentifier: JobIdentifier
-  eventName?: string
+  eventName: EventName
+  eventSignature?: string
   tagId: (string | number)[]
   chainId: number
   holographAddress: string
   environment: Environment
-  payload:
-    | MintEventPayload
-    | BridgeContractDeploymentPayload
-    | BridgeERC20TransferPayload
-    | BridgeERC721TransferPayload
-    | BridgeEventPayload
+  payload: MintEventPayload | BridgeEventPayload
 }
 
 export type MintEventPayload = {
@@ -42,41 +30,7 @@ export type MintEventPayload = {
   to: string
 }
 
-export enum BridgeDirection {
-  In = 'in',
-  Out = 'out',
-}
-
-export type BridgeContractDeploymentPayload = {
-  tx: string
-  blockNum: number
-  contractAddress: string
-  deploymentConfig: DeploymentConfig
-}
-
-export type BridgeERC20TransferPayload = {
-  tx: string
-  blockNum: number
-  direction: BridgeDirection
-  contractAddress: string
-  erc20BeamInfo: BridgeInErc20Args | BridgeOutErc20Args
-  contractType: ContractType.HolographERC20
-}
-
-export type BridgeERC721TransferPayload = {
-  tx: string
-  blockNum: number
-  direction: BridgeDirection
-  contractAddress: string
-  contractType: ContractType.HolographERC721
-  operatorJobHash: string
-  fromNetwork: string
-  toNetwork: string
-  nftTokenId: string
-}
-
 export type BridgeEventPayload = {
   tx: string
   blockNum: number
-  direction: BridgeDirection
 }

@@ -3,7 +3,7 @@ import {TransactionResponse} from '@ethersproject/abstract-provider'
 import SqsService from '../../services/sqs-service'
 import {networkToChainId} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
-import {BridgeDirection, JobIdentifier, PayloadType, SqsMessageBody} from '../../types/sqs'
+import {EventName, PayloadType, SqsMessageBody} from '../../types/sqs'
 
 async function handleBridgeEvents(
   networkMonitor: NetworkMonitor,
@@ -13,7 +13,7 @@ async function handleBridgeEvents(
 ): Promise<void> {
   const messageBody: SqsMessageBody = {
     type: PayloadType.HolographProtocol,
-    jobIdentifier: JobIdentifier.Bridge,
+    eventName: EventName.BridgePreProcess,
     tagId: tags,
     chainId: networkToChainId[network],
     holographAddress: networkMonitor.HOLOGRAPH_ADDRESSES[networkMonitor.environment],
@@ -21,7 +21,6 @@ async function handleBridgeEvents(
     payload: {
       tx: transaction.hash,
       blockNum: Number(transaction.blockNumber),
-      direction: BridgeDirection.In,
     },
   }
 
