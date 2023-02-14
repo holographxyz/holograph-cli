@@ -52,8 +52,8 @@ RUN chmod 755 /holograph-cli/entrypoint.sh
 ENV TINI_VERSION v0.19.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
-ENTRYPOINT ["/tini", "--", "/holograph-cli/entrypoint.sh"]
+ENTRYPOINT ["/tini", "--"]
 
 # Run your program under Tini
-#CMD ["holograph", "indexer", "--env", "develop", "--networks", "fuji", "--host=http://devel-holo-api.develop.svc.cluster.local:443"]
+CMD ["/holograph-cli/entrypoint.sh"]
 
