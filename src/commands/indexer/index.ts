@@ -35,6 +35,7 @@ import {
 import {
   handleMintEvent as sqsHandleMintEvent,
   handleBridgeInEvent as sqsHandleBridgeInEvent,
+  handleBridgeEvent,
 } from '../../handlers/sqs-indexer'
 
 dotenv.config()
@@ -316,6 +317,7 @@ export default class Indexer extends HealthCheck {
         const to: string | undefined = transaction.to?.toLowerCase()
         const from: string | undefined = transaction.from?.toLowerCase()
         const functionSig: string | undefined = transaction.data?.slice(0, 10)
+
         switch (to) {
           case this.networkMonitor.factoryAddress: {
             this.networkMonitor.structuredLog(
@@ -373,7 +375,8 @@ export default class Indexer extends HealthCheck {
             //   this.updateBridgedERC721,
             // )
 
-            await sqsHandleBridgeInEvent.call(this, this.networkMonitor, transaction, job.network, tags)
+            await handleBridgeEvent.call(this, this.networkMonitor, transaction, job.network, tags)
+            // await sqsHandleBridgeInEvent.call(this, this.networkMonitor, transaction, job.network, tags)
 
             break
           }

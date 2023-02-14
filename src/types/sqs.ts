@@ -13,14 +13,25 @@ export enum ContractType {
   HolographERC721 = 'HolographERC721',
 }
 
+export enum JobIdentifier {
+  ERC721Mint = 'ERC721Mint',
+  Bridge = 'Bridge',
+}
+
 export type SqsMessageBody = {
   type: PayloadType
-  eventName: string
+  jobIdentifier: JobIdentifier
+  eventName?: string
   tagId: (string | number)[]
   chainId: number
   holographAddress: string
   environment: Environment
-  payload: MintEventPayload | BridgeContractDeploymentPayload | BridgeERC20TransferPayload | BridgeERC721TransferPayload
+  payload:
+    | MintEventPayload
+    | BridgeContractDeploymentPayload
+    | BridgeERC20TransferPayload
+    | BridgeERC721TransferPayload
+    | BridgeEventPayload
 }
 
 export type MintEventPayload = {
@@ -62,4 +73,10 @@ export type BridgeERC721TransferPayload = {
   fromNetwork: string
   toNetwork: string
   nftTokenId: string
+}
+
+export type BridgeEventPayload = {
+  tx: string
+  blockNum: number
+  direction: BridgeDirection
 }

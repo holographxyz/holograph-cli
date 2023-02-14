@@ -2,4 +2,5 @@
 // export {default as handleBridgeOutEvent} from './handle-bridge-out-event'
 export {default as handleMintEvent} from './handle-mint-event'
 export {default as handleBridgeInEvent} from './handle-bridge-in-event'
+export {default as handleBridgeEvent} from './handle-bridge-event'
 // export {default as handleContractDeployedEvent} from './handle-contract-deployed-event'

@@ -3,7 +3,7 @@ import {getNetworkByHolographId} from '@holographxyz/networks'
 import {TransactionDescription} from '@ethersproject/abi'
 
 import SqsService from '../../services/sqs-service'
-import {BridgeDirection, ContractType, PayloadType, SqsMessageBody} from '../../types/sqs'
+import {BridgeDirection, ContractType, JobIdentifier, PayloadType, SqsMessageBody} from '../../types/sqs'
 import {BridgeInArgs, BridgeInErc20Args, decodeBridgeInErc20Args} from '../../utils/bridge'
 import {capitalize, networkToChainId, sha3, storageSlot, toAscii} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
@@ -131,6 +131,7 @@ async function handleBridgeInEvent(
 
               const messageBody: SqsMessageBody = {
                 type: PayloadType.HolographProtocol,
+                jobIdentifier: JobIdentifier.Bridge,
                 eventName: 'BridgeableContractDeployed(address indexed contractAddress, bytes32 indexed hash)',
                 tagId: tags,
                 chainId: networkToChainId[network],
@@ -179,6 +180,7 @@ async function handleBridgeInEvent(
               } else {
                 const messageBody: SqsMessageBody = {
                   type: PayloadType.ERC20,
+                  jobIdentifier: JobIdentifier.Bridge,
                   eventName: 'Transfer(address indexed _from, address indexed _to, uint256 _value)',
                   tagId: tags,
                   chainId: networkToChainId[network],
@@ -222,6 +224,7 @@ async function handleBridgeInEvent(
 
                 const messageBody: SqsMessageBody = {
                   type: PayloadType.ERC721,
+                  jobIdentifier: JobIdentifier.Bridge,
                   eventName: 'Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId)',
                   tagId: tags,
                   chainId: networkToChainId[network],
