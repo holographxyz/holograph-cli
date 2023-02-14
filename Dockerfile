@@ -47,7 +47,6 @@ RUN chmod 755 /holograph-cli/entrypoint.sh
 # notice: The CMD specifies arguments that will be fed to the ENTRYPOINT
 # https://docs.docker.com/engine/reference/builder/#understand-how-cmd-and-entrypoint-interact
 
-
 # Add Tini
 ENV TINI_VERSION v0.19.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
@@ -57,3 +56,4 @@ ENTRYPOINT ["/tini", "--"]
 # Run your program under Tini
 CMD ["holograph", "indexer", "--env", "develop", "--networks", "fuji", "--host=http://devel-holo-api.develop.svc.cluster.local:443"]
 
+# this works -> dev-d3266838ac77938e36b8c73060ef9daa6c92fad4
