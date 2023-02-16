@@ -223,13 +223,22 @@ export default class Indexer extends HealthCheck {
 
   processDBJobs(timestamp?: number, job?: DBJob): void {
     if (timestamp !== undefined && job !== undefined) {
+      this.networkMonitor.structuredLog(
+        job.network,
+        `Processing db job with timestamp ${timestamp} and ${JSON.stringify(job.identifier)}`,
+        job.tags,
+      )
       /*
        * @dev Temporary addition to unblock other DB jobs from getting delayed when current DB job fails.
        *      Remove this once proper Registry checks are implemented for cxipMint events.
        */
       timestamp += 30
       if (!(timestamp in this.dbJobMap)) {
-        this.networkMonitor.structuredLog(job.network, `Adding ${timestamp} to dbJobMap`, job.tags)
+        this.networkMonitor.structuredLog(
+          job.network,
+          `Pushing failed db job 30 seconds to ${timestamp} and ${JSON.stringify(job.identifier)}`,
+          job.tags,
+        )
         this.dbJobMap[timestamp] = []
       }
 
