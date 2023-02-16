@@ -25,14 +25,14 @@ import {getIpfsCidFromTokenUri, validateIpfsCid} from '../../utils/validation'
 
 import {DBJob, DBJobMap} from '../../types/indexer'
 import {
-  // handleMintEvent,
+  handleMintEvent,
   handleBridgeInEvent,
   handleBridgeOutEvent,
   handleContractDeployedEvent,
   handleAvailableOperatorJobEvent,
 } from '../../handlers/indexer'
 
-import {handleMintEvent as sqsHandleMintEvent} from '../../handlers/sqs-indexer'
+// import {handleMintEvent as sqsHandleMintEvent} from '../../handlers/sqs-indexer'
 
 dotenv.config()
 
@@ -397,16 +397,16 @@ export default class Indexer extends HealthCheck {
                 tags,
               )
 
-              // await handleMintEvent.call(
-              //   this,
-              //   this.networkMonitor,
-              //   transaction,
-              //   job.network,
-              //   tags,
-              //   this.updateMintedERC721,
-              // )
+              await handleMintEvent.call(
+                this,
+                this.networkMonitor,
+                transaction,
+                job.network,
+                tags,
+                this.updateMintedERC721,
+              )
 
-              await sqsHandleMintEvent.call(this, this.networkMonitor, transaction, job.network, tags)
+              // await sqsHandleMintEvent.call(this, this.networkMonitor, transaction, job.network, tags)
             } else {
               this.networkMonitor.structuredLog(job.network, `irrelevant transaction ${transaction.hash}`, tags)
             }
@@ -467,9 +467,9 @@ export default class Indexer extends HealthCheck {
 
       this.networkMonitor.structuredLog(
         network,
-        `API: Successfully updated Collection ${contractAddress} with id ${data.id}. Response: ${JSON.stringify(
-          response,
-        )}`,
+        `API: Successfully updated Collection ${contractAddress} with id ${
+          data.collectionByContractAddress.id
+        }. Response: ${JSON.stringify(response)}`,
         [...tags, requestId],
       )
     }
