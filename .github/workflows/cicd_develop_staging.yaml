@@ -35,7 +35,7 @@ env:
   STG_COMMON_NAMESPACE: develop # NOTICE <---
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.78
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.80
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
   STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.56
@@ -196,8 +196,9 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }} \
             \
-            --set autoscaling.minReplicas=1 \
-            --set autoscaling.maxReplicas=1 \
+            --set autoscaling.avalanche.maxReplicas=1 \
+            --set autoscaling.ethereum.maxReplicas=1 \
+            --set autoscaling.polygon.maxReplicas=1 \
             \
             --set resources.ethereum.limits.cpu=150m \
             --set resources.ethereum.limits.memory=520Mi \
