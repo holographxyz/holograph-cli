@@ -187,7 +187,20 @@ export default class Indexer extends HealthCheck {
       try {
         const rawResponse = await this.apiService.sendQueryRequest(job.query, job.identifier, structuredLogInfo)
 
-        if (rawResponse !== undefined) {
+        // Check how the query responded. If it failed, add the job back to the queue
+        // Otherwise, continue to process the job
+        if (rawResponse === undefined) {
+          // rawResponse is undefined
+          this.networkMonitor.structuredLogError(job.network, 'No response from API', [
+            ...job.tags,
+            this.errorColor(`Request failed with errors ${job.query}`),
+          ])
+
+          // Sleep for 1 second and add job back to the queue
+          await sleep(1000)
+          this.processDBJobs(timestamp, job)
+        } else {
+          // rawResponse is defined... continue
           const {data: response, headers} = rawResponse
           const requestId = headers.get('x-request-id') ?? ''
 
@@ -208,16 +221,6 @@ export default class Indexer extends HealthCheck {
             await sleep(1000)
             this.processDBJobs(timestamp, job)
           }
-        } else {
-          // rawResponse is undefined
-          this.networkMonitor.structuredLogError(job.network, 'No response from API', [
-            ...job.tags,
-            this.errorColor(`Request failed with errors ${job.query}`),
-          ])
-
-          // Sleep for 1 second and add job back to the queue
-          await sleep(1000)
-          this.processDBJobs(timestamp, job)
         }
       } catch (extError: any) {
         this.networkMonitor.structuredLogError(job.network, extError, [
