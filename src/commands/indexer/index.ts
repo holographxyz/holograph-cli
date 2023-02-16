@@ -170,6 +170,7 @@ export default class Indexer extends HealthCheck {
   }
 
   async processDBJob(timestamp: number, job: DBJob): Promise<void> {
+    this.log(`Starting processDBJob`)
     this.networkMonitor.structuredLog(job.network, job.message, job.tags)
     if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
       this.networkMonitor.structuredLog(
@@ -185,6 +186,7 @@ export default class Indexer extends HealthCheck {
     } else {
       const structuredLogInfo = {network: job.network, tagId: job.tags}
       try {
+        this.networkMonitor.structuredLog(job.network, 'About to call the jobs query', job.tags)
         const rawResponse = await this.apiService.sendQueryRequest(job.query, job.identifier, structuredLogInfo)
 
         // Check how the query responded. If it failed, add the job back to the queue
@@ -199,6 +201,7 @@ export default class Indexer extends HealthCheck {
               )}`,
             ),
           ])
+          this.processDBJobs()
         } else {
           // Response is defined... continue
           const {data: response, headers} = rawResponse
@@ -209,6 +212,7 @@ export default class Indexer extends HealthCheck {
               ...job.tags,
               requestId,
             ])
+            this.networkMonitor.structuredLog(job.network, 'Calling this jobs callback function', job.tags)
             await job.callback.bind(this)(response, ...job.arguments)
             this.processDBJobs()
           } catch (error: any) {
@@ -232,7 +236,7 @@ export default class Indexer extends HealthCheck {
   }
 
   processDBJobs(timestamp?: number, job?: DBJob): void {
-    this.networkMonitor.structuredLog(job!.network, `Starting processDBJobs ${job!.identifier}`, job!.tags)
+    this.log('Starting processDBJobs')
     if (timestamp !== undefined && job !== undefined) {
       this.networkMonitor.structuredLog(
         job.network,
@@ -281,6 +285,7 @@ export default class Indexer extends HealthCheck {
     }
 
     const timestamps: number[] = numberfy(Object.keys(this.dbJobMap))
+    this.log(`Length of this.dbJobs = ${timestamps.length}`)
     if (timestamps.length > 0) {
       timestamps.sort(numericSort)
       const timestamp: number = timestamps[0]
@@ -295,24 +300,26 @@ export default class Indexer extends HealthCheck {
         const job: DBJob = this.dbJobMap[timestamp].shift()!
 
         if (job === undefined) {
-          this.log(`Processing job...`)
+          this.log(`Processing job for ${timestamp} but the job object is undefined`)
         } else {
-          this.networkMonitor.structuredLog(job.network, `Processing job...`, job.tags)
+          this.networkMonitor.structuredLog(job.network, `Processing job for ${timestamp}`, job.tags)
         }
 
         this.processDBJob(timestamp, job)
       } else {
         if (job === undefined) {
-          this.log(`No jobs found`)
+          this.log(`No jobs found for ${timestamp}`)
         } else {
-          this.networkMonitor.structuredLog(job.network, `No jobs found`, job.tags)
+          this.networkMonitor.structuredLog(job.network, `No jobs found for ${timestamp}`, job.tags)
         }
 
         delete this.dbJobMap[timestamp]
         setTimeout(this.processDBJobs.bind(this), 1000)
       }
     } else {
-      if (job !== undefined) {
+      if (job === undefined) {
+        this.log('No timestamps found, setting timeout...')
+      } else {
         this.networkMonitor.structuredLog(job.network, `No timestamps found, setting timeout...`, job.tags)
       }
 
