@@ -467,9 +467,9 @@ export default class Indexer extends HealthCheck {
 
       this.networkMonitor.structuredLog(
         network,
-        `API: Successfully updated Collection ${contractAddress} with id ${data.collectionByContractAddress.id}. Response: ${JSON.stringify(
-          response,
-        )}`,
+        `API: Successfully updated Collection ${contractAddress} with id ${
+          data.collectionByContractAddress.id
+        }. Response: ${JSON.stringify(response)}`,
         [...tags, requestId],
       )
     }
