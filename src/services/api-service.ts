@@ -88,7 +88,7 @@ class ApiService {
     }
 
     this.client.setHeader('authorization', `Bearer ${JWT}`)
-    this.logger.log(`Operator JWT: ${JWT}`)
+    // this.logger.log(`Operator JWT: ${JWT}`)
   }
 
   async sendQueryRequest<T = any>(

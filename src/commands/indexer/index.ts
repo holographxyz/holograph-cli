@@ -95,8 +95,10 @@ export default class Indexer extends HealthCheck {
         this.apiService = new ApiService(this.BASE_URL, logger)
         await this.apiService.operatorLogin()
       } catch (error: any) {
+        this.log('Error: Failed to get Operator Token from API')
         // NOTE: sample of how to do logs when in production mode
         this.log(JSON.stringify({...error, stack: error.stack}))
+        this.exit()
       }
 
       if (this.apiService === undefined) {
