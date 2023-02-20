@@ -3,11 +3,11 @@ import {getNetworkByHolographId} from '@holographxyz/networks'
 import {TransactionDescription} from '@ethersproject/abi'
 import {Environment} from '@holographxyz/environment'
 
-import {create2address, decodeDeploymentConfig, DeploymentConfig} from '../../../utils/contract-deployment'
-import {UpdateBridgedContract, UpdateBridgedERC20, UpdateBridgedERC721} from '../../../types/indexer'
-import {BridgeOutArgs, BridgeOutErc20Args, decodeBridgeOutErc20Args} from '../../../utils/bridge'
-import {sha3, storageSlot, toAscii} from '../../../utils/utils'
-import {NetworkMonitor} from '../../../utils/network-monitor'
+import {create2address, decodeDeploymentConfig, DeploymentConfig} from '../../utils/contract-deployment'
+import {UpdateBridgedContract, UpdateBridgedERC20, UpdateBridgedERC721} from '../../types/indexer'
+import {BridgeOutArgs, BridgeOutErc20Args, decodeBridgeOutErc20Args} from '../../utils/bridge'
+import {sha3, storageSlot, toAscii} from '../../utils/utils'
+import {NetworkMonitor} from '../../utils/network-monitor'
 
 async function handleBridgeOutEvent(
   networkMonitor: NetworkMonitor,

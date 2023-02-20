@@ -44,6 +44,7 @@
     "prettier:fix": "prettier --loglevel error --ignore-path .gitignore --write ."
   },
   "dependencies": {
+    "@aws-sdk/client-sqs": "^3.258.0",
     "@ethereumjs/common": "^2.6.4",
     "@ethereumjs/tx": "^3.5.2",
     "@ethersproject/abi": "^5.7.0",

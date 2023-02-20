@@ -1,13 +1,13 @@
 import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
 
-import {NetworkMonitor} from '../../../utils/network-monitor'
-import {UpdateDeployedContract} from '../../../types/indexer'
+import {NetworkMonitor} from '../../utils/network-monitor'
+import {UpdateDeployedContract} from '../../types/indexer'
 import {
   create2address,
   decodeDeploymentConfigInput,
   DeploymentConfig,
   deploymentConfigHash,
-} from '../../../utils/contract-deployment'
+} from '../../utils/contract-deployment'
 
 async function handleContractDeployedEvent(
   networkMonitor: NetworkMonitor,

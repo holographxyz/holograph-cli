@@ -30,7 +30,9 @@ import {
   handleBridgeOutEvent,
   handleContractDeployedEvent,
   handleAvailableOperatorJobEvent,
-} from './handlers'
+} from '../../handlers/indexer'
+
+// import {handleMintEvent as sqsHandleMintEvent} from '../../handlers/sqs-indexer'
 
 dotenv.config()
 
@@ -168,6 +170,7 @@ export default class Indexer extends HealthCheck {
   }
 
   async processDBJob(timestamp: number, job: DBJob): Promise<void> {
+    this.log(`Starting processDBJob`)
     this.networkMonitor.structuredLog(job.network, job.message, job.tags)
     if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
       this.networkMonitor.structuredLog(
@@ -183,17 +186,33 @@ export default class Indexer extends HealthCheck {
     } else {
       const structuredLogInfo = {network: job.network, tagId: job.tags}
       try {
+        this.networkMonitor.structuredLog(job.network, 'About to call the jobs query', job.tags)
         const rawResponse = await this.apiService.sendQueryRequest(job.query, job.identifier, structuredLogInfo)
 
-        if (rawResponse !== undefined) {
+        // Check how the query responded. If it failed, add the job back to the queue
+        // Otherwise, continue to process the job
+        if (rawResponse === undefined) {
+          // No valid response from API
+          this.networkMonitor.structuredLogError(job.network, 'No response from API', [
+            ...job.tags,
+            this.errorColor(
+              `SendQueryRequest did not have a valid response ${job.query} with input ${JSON.stringify(
+                job.identifier,
+              )}`,
+            ),
+          ])
+          this.processDBJobs()
+        } else {
+          // Response is defined... continue
           const {data: response, headers} = rawResponse
-
           const requestId = headers.get('x-request-id') ?? ''
+
           try {
             this.networkMonitor.structuredLog(job.network, `Query response ${JSON.stringify(response)}`, [
               ...job.tags,
               requestId,
             ])
+            this.networkMonitor.structuredLog(job.network, 'Calling this jobs callback function', job.tags)
             await job.callback.bind(this)(response, ...job.arguments)
             this.processDBJobs()
           } catch (error: any) {
@@ -207,27 +226,34 @@ export default class Indexer extends HealthCheck {
             this.processDBJobs(timestamp, job)
           }
         }
-      } catch (extError: any) {
-        this.networkMonitor.structuredLogError(job.network, extError, [
+      } catch (error: any) {
+        this.networkMonitor.structuredLogError(job.network, error, [
           ...job.tags,
-          this.errorColor(`SendQueryRequest failed with errors ${job.query}`),
+          this.errorColor(`SendQueryRequest failed with errors ${job.query} ${JSON.stringify(job.identifier)}`),
         ])
-        // Sleep for 1 second and add job back to the queue
-        await sleep(1000)
-        this.processDBJobs(timestamp, job)
       }
     }
   }
 
   processDBJobs(timestamp?: number, job?: DBJob): void {
+    this.log('Starting processDBJobs')
     if (timestamp !== undefined && job !== undefined) {
+      this.networkMonitor.structuredLog(
+        job.network,
+        `Processing db job with timestamp ${timestamp} and ${JSON.stringify(job.identifier)}`,
+        job.tags,
+      )
       /*
        * @dev Temporary addition to unblock other DB jobs from getting delayed when current DB job fails.
        *      Remove this once proper Registry checks are implemented for cxipMint events.
        */
       timestamp += 30
       if (!(timestamp in this.dbJobMap)) {
-        this.networkMonitor.structuredLog(job.network, `Adding ${timestamp} to dbJobMap`, job.tags)
+        this.networkMonitor.structuredLog(
+          job.network,
+          `Pushing failed db job 30 seconds to ${timestamp} and ${JSON.stringify(job.identifier)}`,
+          job.tags,
+        )
         this.dbJobMap[timestamp] = []
       }
 
@@ -259,6 +285,7 @@ export default class Indexer extends HealthCheck {
     }
 
     const timestamps: number[] = numberfy(Object.keys(this.dbJobMap))
+    this.log(`Length of this.dbJobs = ${timestamps.length}`)
     if (timestamps.length > 0) {
       timestamps.sort(numericSort)
       const timestamp: number = timestamps[0]
@@ -273,24 +300,26 @@ export default class Indexer extends HealthCheck {
         const job: DBJob = this.dbJobMap[timestamp].shift()!
 
         if (job === undefined) {
-          this.log(`Processing job...`)
+          this.log(`Processing job for ${timestamp} but the job object is undefined`)
         } else {
-          this.networkMonitor.structuredLog(job.network, `Processing job...`, job.tags)
+          this.networkMonitor.structuredLog(job.network, `Processing job for ${timestamp}`, job.tags)
         }
 
         this.processDBJob(timestamp, job)
       } else {
         if (job === undefined) {
-          this.log(`No jobs found`)
+          this.log(`No jobs found for ${timestamp}`)
         } else {
-          this.networkMonitor.structuredLog(job.network, `No jobs found`, job.tags)
+          this.networkMonitor.structuredLog(job.network, `No jobs found for ${timestamp}`, job.tags)
         }
 
         delete this.dbJobMap[timestamp]
         setTimeout(this.processDBJobs.bind(this), 1000)
       }
     } else {
-      if (job !== undefined) {
+      if (job === undefined) {
+        this.log('No timestamps found, setting timeout...')
+      } else {
         this.networkMonitor.structuredLog(job.network, `No timestamps found, setting timeout...`, job.tags)
       }
 
@@ -394,6 +423,7 @@ export default class Indexer extends HealthCheck {
                 `handleMintEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
                 tags,
               )
+
               await handleMintEvent.call(
                 this,
                 this.networkMonitor,
@@ -402,6 +432,8 @@ export default class Indexer extends HealthCheck {
                 tags,
                 this.updateMintedERC721,
               )
+
+              // await sqsHandleMintEvent.call(this, this.networkMonitor, transaction, job.network, tags)
             } else {
               this.networkMonitor.structuredLog(job.network, `irrelevant transaction ${transaction.hash}`, tags)
             }
@@ -462,9 +494,9 @@ export default class Indexer extends HealthCheck {
 
       this.networkMonitor.structuredLog(
         network,
-        `API: Successfully updated Collection ${contractAddress} with id ${data.id}. Response: ${JSON.stringify(
-          response,
-        )}`,
+        `API: Successfully updated Collection ${contractAddress} with id ${
+          data.collectionByContractAddress.id
+        }. Response: ${JSON.stringify(response)}`,
         [...tags, requestId],
       )
     }
@@ -517,11 +549,8 @@ export default class Indexer extends HealthCheck {
       identifier: {contractAddress: contractAddress},
       tags,
     }
-    if (!(job.timestamp in this.dbJobMap)) {
-      this.dbJobMap[job.timestamp] = []
-    }
 
-    this.dbJobMap[job.timestamp].push(job)
+    this.addTimestampedJob(job)
   }
 
   async updateBridgedContract(
@@ -576,11 +605,8 @@ export default class Indexer extends HealthCheck {
         identifier: {contractAddress: contractAddress},
         tags,
       }
-      if (!(job.timestamp in this.dbJobMap)) {
-        this.dbJobMap[job.timestamp] = []
-      }
 
-      this.dbJobMap[job.timestamp].push(job)
+      this.addTimestampedJob(job)
     }
   }
 
@@ -645,11 +671,8 @@ export default class Indexer extends HealthCheck {
       identifier: {contractAddress: contractAddress, tokenId: tokenId},
       tags,
     }
-    if (!(job.timestamp in this.dbJobMap)) {
-      this.dbJobMap[job.timestamp] = []
-    }
 
-    this.dbJobMap[job.timestamp].push(job)
+    this.addTimestampedJob(job)
 
     const crossChainTxType: string =
       direction === 'in' ? 'bridgeIn' : direction === 'out' ? 'bridgeOut' : 'relayMessage'
@@ -789,11 +812,8 @@ export default class Indexer extends HealthCheck {
       identifier: input,
       tags,
     }
-    if (!(job.timestamp in this.dbJobMap)) {
-      this.dbJobMap[job.timestamp] = []
-    }
 
-    this.dbJobMap[job.timestamp].push(job)
+    this.addTimestampedJob(job)
   }
 
   async updateERC721Callback(
@@ -1166,11 +1186,8 @@ export default class Indexer extends HealthCheck {
       identifier: {contractAddress, tokenId},
       tags,
     }
-    if (!(job.timestamp in this.dbJobMap)) {
-      this.dbJobMap[job.timestamp] = []
-    }
 
-    this.dbJobMap[job.timestamp].push(job)
+    this.addTimestampedJob(job)
   }
 
   async getBlockTimestamp(network: string, blockNumber: number): Promise<number> {
@@ -1181,5 +1198,20 @@ export default class Indexer extends HealthCheck {
     }
 
     return timestamp
+  }
+
+  addTimestampedJob(job: DBJob): void {
+    // If this timestamp is not in the map, create a new array for it and add the job
+    if (!(job.timestamp in this.dbJobMap)) {
+      this.networkMonitor.structuredLog(job.network, `Adding new timestamp ${job.timestamp} to dbJobMap`, job.tags)
+      this.dbJobMap[job.timestamp] = []
+    }
+
+    this.networkMonitor.structuredLog(
+      job.network,
+      `Adding job with identifier ${JSON.stringify(job.identifier)} to dbJobMap with timestamp ${job.timestamp}`,
+      job.tags,
+    )
+    this.dbJobMap[job.timestamp].push(job)
   }
 }

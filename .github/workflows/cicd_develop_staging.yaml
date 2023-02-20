@@ -15,7 +15,7 @@ env:
   #
   AWS_KEY_ID: ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
-  ALB_CERT_ARN: ${{ secrets.STG_ALB_CERT_ARN_FOR_CXIPCHAIN_XYZ }}
+  ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }}
   #
   STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
@@ -30,15 +30,15 @@ env:
   #
   HOLOGRAPH_ENVIRONMENT: develop
   #
-  STG_DOMAIN: 'cxipchain.xyz'
+  STG_DOMAIN: 'holograph.xyz' # needed only for the health checks
   #
   STG_COMMON_NAMESPACE: develop # NOTICE <---
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.69
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.80
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.55
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.56
   OPERATOR_RELEASE_NAME: operator-dev # format -> [release_name]-operator-[env]
   #######################################
   #
@@ -56,6 +56,12 @@ env:
   #
   operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
   operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
+  #
+  # SQS User [indexer_processor_sqs_user]
+  SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
+  SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
+  DEV_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
+  DEV_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor'
 
 on:
   push:
@@ -158,7 +164,6 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
-          NETWORK: 'fuji mumbai goerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -177,7 +182,6 @@ jobs:
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
-            --set NETWORK="${NETWORK}" \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             \
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_dev_avalancheTestnet_rpc_url }} \
@@ -192,13 +196,20 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }} \
             \
-            --set autoscaling.minReplicas=1 \
-            --set autoscaling.maxReplicas=1 \
+            --set autoscaling.avalanche.maxReplicas=1 \
+            --set autoscaling.ethereum.maxReplicas=1 \
+            --set autoscaling.polygon.maxReplicas=1 \
             \
-            --set resources.limits.cpu=150m \
-            --set resources.limits.memory=520Mi \
-            --set resources.requests.cpu=100m \
-            --set resources.requests.memory=200Mi \
+            --set resources.ethereum.limits.cpu=150m \
+            --set resources.ethereum.limits.memory=520Mi \
+            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.requests.memory=200Mi \
+            \
+            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
+            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
+            --set sqs.SQS_ENDPOINT=${{ env.DEV_SQS_ENDPOINT }} \
+            --set sqs.SQS_QUEUE_URL=${{ env.DEV_SQS_QUEUE_URL }} \
+            --set sqs.AWS_REGION=us-west-2 \
             \
             --values .github/values_for_stg_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
@@ -256,14 +267,14 @@ jobs:
             --set dev_rpc_config_values.private_key=${{ env.operator_dev_private_key }} \
             --set dev_rpc_config_values.address=${{ env.operator_dev_address }} \
             \
+            --set resources.ethereum.limits.cpu=150m \
+            --set resources.ethereum.limits.memory=520Mi \
+            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.requests.memory=200Mi \
+            \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }} \
-            \
-            --set resources.limits.cpu=150m \
-            --set resources.limits.memory=520Mi \
-            --set resources.requests.cpu=100m \
-            --set resources.requests.memory=200Mi \
             \
             --values .github/values_for_stg_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \

@@ -1,7 +1,7 @@
 import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
 
-import {NetworkMonitor} from '../../../utils/network-monitor'
-import {UpdateMintedERC721} from '../../../types/indexer'
+import {NetworkMonitor} from '../../utils/network-monitor'
+import {UpdateMintedERC721} from '../../types/indexer'
 
 async function handleMintEvent(
   networkMonitor: NetworkMonitor,
