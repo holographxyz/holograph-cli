@@ -33,6 +33,7 @@ import {
   checkTokenIdFlag,
   checkTransactionHashFlag,
 } from '../../utils/validation'
+import {ContractFactory, ethers} from 'ethers'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
   const codeFile: string = await checkStringFlag(undefined, prompt)
@@ -108,7 +109,7 @@ export default class Contract extends Command {
     let chainId: string
     let salt: string
     let bytecodeType: BytecodeType
-    const contractTypes: string[] = ['HolographERC20', 'HolographERC721']
+    const contractTypes: string[] = ['HolographERC20', 'HolographERC721', 'HolographERC721Drop']
     let contractType: string
     let contractTypeHash: string
     let byteCode: string
@@ -126,6 +127,9 @@ export default class Contract extends Command {
     let collectionSymbol: string
     let royaltyBps: number
 
+    // Drops
+    let numOfEditions: number
+
     let configHashBytes: number[]
     let sig: string
     let signature: Signature
@@ -135,6 +139,7 @@ export default class Contract extends Command {
       flags.deploymentType,
       'Select the type of deployment to use',
     )
+
     switch (deploymentType) {
       case DeploymentType.deployedTx:
         txNetwork = await checkOptionFlag(
@@ -147,6 +152,7 @@ export default class Contract extends Command {
           'Enter the hash of transaction that deployed the original contract',
         )
         break
+
       case DeploymentType.deploymentConfig:
         deploymentConfigFile = await checkStringFlag(flags.deploymentConfig, 'Enter the config file to use')
         if (await fs.pathExists(deploymentConfigFile as string)) {
@@ -156,6 +162,7 @@ export default class Contract extends Command {
         }
 
         break
+
       case DeploymentType.createConfig:
         chainType = await checkOptionFlag(
           supportedNetworksOptions,
@@ -170,14 +177,28 @@ export default class Contract extends Command {
             64,
             '0',
           )
+
         deploymentConfig.config.salt = salt
         bytecodeType = await checkBytecodeTypeFlag(undefined, 'Select the bytecode type to deploy')
-        contractType =
-          bytecodeType === BytecodeType.Custom
-            ? await checkOptionFlag(contractTypes, undefined, 'Select the contract type to create')
-            : bytecodeType === BytecodeType.SampleERC20
-            ? 'HolographERC20'
-            : 'HolographERC721'
+
+        // Select the contract type to deploy
+        switch (bytecodeType) {
+          case BytecodeType.Custom:
+            contractType = await checkOptionFlag(contractTypes, undefined, 'Select the contract type to create')
+            break
+          case BytecodeType.SampleERC20:
+            contractType = 'HolographERC20'
+            break
+          case BytecodeType.SampleERC721:
+            contractType = 'HolographERC721'
+            break
+          case BytecodeType.HolographERC721Drop:
+            contractType = 'HolographERC721Drop'
+            break
+          default:
+            contractType = 'HolographERC721Drop'
+        }
+
         contractTypeHash = '0x' + web3.utils.asciiToHex(contractType).slice(2).padStart(64, '0')
         deploymentConfig.config.contractType = contractTypeHash
         byteCode =
@@ -186,6 +207,7 @@ export default class Contract extends Command {
                 'Provide the filename containing the hex encoded string of the bytecode you want to use',
               )
             : bytecodes[bytecodeType]
+
         switch (contractType) {
           case 'HolographERC20':
             tokenName = await checkStringFlag(undefined, 'Enter the token name to use')
@@ -237,15 +259,16 @@ export default class Contract extends Command {
               ],
             )
             break
+
           case 'HolographERC721':
-            collectionName = await checkStringFlag(undefined, 'Enter the collection name to use')
+            collectionName = await checkStringFlag(undefined, 'Enter the name of the collection')
             collectionSymbol = await checkStringFlag(undefined, 'Enter the collection symbol to use')
             royaltyBps = await checkNumberFlag(
               undefined,
-              'Enter the percentage of royalty to collect in basepoints. (1 = 0.01%, 10000 = 100%)',
+              'Enter the percentage of royalty to collect in basis points. (1 = 0.01%, 10000 = 100%)',
             )
             if (royaltyBps > 10_000 || royaltyBps < 0) {
-              throw new Error('Invalid royalty basepoints was provided: ' + royaltyBps.toString())
+              throw new Error('Invalid royalty basis points was provided: ' + royaltyBps.toString())
             }
 
             switch (bytecodeType) {
@@ -260,10 +283,12 @@ export default class Contract extends Command {
                   ],
                 )
                 break
+
               case BytecodeType.SampleERC721:
                 eventConfig = configureEvents([1, 2, 7]) // [HolographERC721Event.bridgeIn, HolographERC721Event.bridgeOut, HolographERC721Event.afterBurn]
                 sourceInitCode = generateInitCode(['address'], [userWallet.address])
                 break
+
               case BytecodeType.Custom:
                 eventConfig = configureEvents(
                   (
@@ -294,6 +319,59 @@ export default class Contract extends Command {
                 sourceInitCode,
               ],
             )
+
+            break
+
+          case 'HolographERC721Drop':
+            // TODO: Make this logic more modular
+            // collectionName = await checkStringFlag(undefined, 'Enter the name of the Drop')
+            // collectionSymbol = await checkStringFlag(undefined, 'Enter the collection symbol to use')
+            // const numOfEditions = await checkNumberFlag(undefined, 'Enter the number of editions in this drop')
+
+            // royaltyBps = await checkNumberFlag(
+            //   undefined,
+            //   'Enter the percentage of royalty to collect in basis points. (1 = 0.01%, 10000 = 100%)',
+            // )
+            // if (royaltyBps > 10_000 || royaltyBps < 0) {
+            //   throw new Error('Invalid royalty basis points was provided: ' + royaltyBps.toString())
+            // }
+
+            // TODO: Connect wallet to the provider
+            const account = userWallet.connect(this.networkMonitor.providers['ethereumTestnetGoerli'])
+
+            // TODO: Deploy a metadata renderer contract
+            const rendererByteCode = '' // TODO: Get the bytecode from the metadata renderer contract
+            const renderAbi = JSON.parse(fs.readFileSync(`./src/abi/develop/EditionMetadataRenderer.json`).toString())
+            const rendererFactory = new ContractFactory(renderAbi, rendererByteCode, account)
+
+            // If your contract requires constructor args, you can specify them here
+            const metadataRenderer = await rendererFactory.deploy()
+            console.log(metadataRenderer)
+
+            initCode = generateInitCode(
+              [
+                'tuple(address,address,address,string,string,address,address,uint64,uint16,bytes[],address,bytes)',
+                'bool',
+              ],
+              [
+                [
+                  '0x0000000000000000000000000000000000000000', // TODO: holographFeeManager - this.networkMonitor.holographFeeManager.address
+                  '0x0000000000000000000000000000000000000000', // holographERC721TransferHelper
+                  '0x000000000000AAeB6D7670E522A718067333cd4E', // marketFilterAddress
+                  'Holograph ERC721 Drop Collection', // contractName
+                  'hDROP', // contractSymbol
+                  userWallet.address, // initialOwner
+                  userWallet.address, // fundsRecipient
+                  10, // number of editions
+                  500, // royalty percentage in bps
+                  [], // setupCalls (TODO: used to set sales config)
+                  metadataRenderer.address, // metadataRenderer
+                  generateInitCode(['string', 'string', 'string'], ['decscription', 'imageURI', 'animationURI']), // metadataRendererInit
+                ],
+                false, // skipInit
+              ],
+            ) // initCode
+
             break
         }
 
@@ -311,6 +389,7 @@ export default class Contract extends Command {
         )
         configHashBytes = web3.utils.hexToBytes(configHash)
         needToSign = true
+
         break
     }
 

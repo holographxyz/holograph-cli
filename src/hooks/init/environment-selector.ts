@@ -45,7 +45,8 @@ function validateDisabledCommands(commandName: string) {
 }
 
 const environmentSelectorHook: Hook<'init'> = async function ({id, argv}) {
-  validateDisabledCommands(String(id))
+  // TODO: Reenable
+  // validateDisabledCommands(String(id))
 
   if (id !== 'config' && id !== undefined) {
     const indexOfEnv = argv.indexOf('--env')
