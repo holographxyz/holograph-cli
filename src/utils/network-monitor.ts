@@ -24,20 +24,20 @@ import {supportedNetworks, supportedShortNetworks, networks, getNetworkByShortKe
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {GasPricing, initializeGasPricing, updateGasPricing} from './gas'
 import {capitalize, NETWORK_COLORS, zeroAddress} from './utils'
-import {HOLOGRAPH_ADDRESSES} from './contracts'
+import {CXIP_ERC721_ADDRESSES, HOLOGRAPH_ADDRESSES} from './contracts'
 
-export const warpFlag = {
-  warp: Flags.integer({
-    description: 'Start from the beginning of the chain',
+export const repairFlag = {
+  repair: Flags.integer({
+    description: 'Start from block number specified',
     default: 0,
-    char: 'w',
+    char: 'r',
   }),
 }
 
 export const networksFlag = {
   networks: Flags.string({
     description: 'Space separated list of networks to use',
-    options: supportedShortNetworks,
+    options: [...supportedNetworks, ...supportedShortNetworks],
     required: false,
     multiple: true,
   }),
@@ -46,7 +46,7 @@ export const networksFlag = {
 export const networkFlag = {
   network: Flags.string({
     description: 'Name of network to use',
-    options: supportedShortNetworks,
+    options: [...supportedNetworks, ...supportedShortNetworks],
     multiple: false,
     required: false,
   }),
@@ -349,7 +349,7 @@ type NetworkMonitorOptions = {
   filters?: TransactionFilter[]
   userWallet?: Wallet
   lastBlockFilename?: string
-  warp?: number
+  repair?: number
   verbose?: boolean
 }
 
@@ -372,6 +372,8 @@ export class NetworkMonitor {
   interfacesAddress!: string
   operatorAddress!: string
   registryAddress!: string
+  tokenAddress!: string
+  cxipERC721Address!: string
   messagingModuleAddress!: string
   wallets: {[key: string]: Wallet} = {}
   walletNonces: {[key: string]: number} = {}
@@ -395,6 +397,7 @@ export class NetworkMonitor {
   interfacesContract!: Contract
   operatorContract!: Contract
   registryContract!: Contract
+  cxipERC721Contract!: Contract
   messagingModuleContract!: Contract
   HOLOGRAPH_ADDRESSES = HOLOGRAPH_ADDRESSES
 
@@ -407,7 +410,6 @@ export class NetworkMonitor {
   LAYERZERO_RECEIVERS: {[key: string]: string} = {
     localhost: '0x830e22aa238b6aeD78087FaCea8Bb95c6b7A7E2a'.toLowerCase(),
     localhost2: '0x830e22aa238b6aeD78087FaCea8Bb95c6b7A7E2a'.toLowerCase(),
-    ethereumTestnetRinkeby: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     ethereumTestnetGoerli: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     polygonTestnet: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     avalancheTestnet: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
@@ -418,7 +420,7 @@ export class NetworkMonitor {
   }
 
   needToSubscribe = false
-  warp = 0
+  repair = 0
 
   targetEvents: Record<string, string> = {
     AvailableJob: '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11',
@@ -511,8 +513,8 @@ export class NetworkMonitor {
       this.userWallet = options.userWallet
     }
 
-    if (options.warp !== undefined && options.warp > 0) {
-      this.warp = options.warp
+    if (options.repair !== undefined && options.repair > 0) {
+      this.repair = options.repair
     }
 
     if (options.networks === undefined || '') {
@@ -534,6 +536,8 @@ export class NetworkMonitor {
 
       return false
     })
+
+    // Popluate the networks array with the full network name
     for (let i = 0, l = options.networks.length; i < l; i++) {
       if (supportedShortNetworks.includes(options.networks[i])) {
         options.networks[i] = getNetworkByShortKey(options.networks[i]).key
@@ -544,6 +548,15 @@ export class NetworkMonitor {
     }
 
     this.networks = [...new Set(options.networks)]
+
+    // Repair can only be used with a single network at a time since the block number provided to the repair flag is global
+    // This can be updated in the future to support multiple networks with different block numbers simple logic is preferred for now
+    if (this.repair > 0 && this.networks.length > 1) {
+      this.log(
+        'Repair mode is not supported for multiple networks. Please use a single network with desired repair block height',
+      )
+      this.exitRouter({exit: true}, 'SIGINT')
+    }
 
     // Color the networks 🌈
     for (let i = 0, l = this.networks.length; i < l; i++) {
@@ -572,6 +585,7 @@ export class NetworkMonitor {
       this.log(`📄 Interfaces address: ${this.interfacesAddress}`)
       this.log(`📄 Operator address: ${this.operatorAddress}`)
       this.log(`📄 Registry address: ${this.registryAddress}`)
+      this.log(`📄 HLG Token address: ${this.tokenAddress}`)
       this.log(`📄 Messaging Module address: ${this.messagingModuleAddress}`)
       this.log(``)
     }
@@ -638,7 +652,7 @@ export class NetworkMonitor {
         this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
       }
 
-      this.structuredLog(network, `Websocket is closed. Restarting connection for ${networks[network].shortKey}`)
+      this.structuredLog(network, `Websocket is closed. Restarting connection for ${networks[network].name}`)
       // terminate the existing websocket
       this.ws[network].terminate()
       restart()
@@ -646,7 +660,7 @@ export class NetworkMonitor {
   }
 
   failoverWebSocketProvider(network: string, rpcEndpoint: string, subscribe: boolean): void {
-    this.log('this.providers', networks[network].shortKey)
+    this.log('this.providers', networks[network].name)
     this.ws[network] = new WebSocket(rpcEndpoint)
     keepAlive({
       debug: this.debug,
@@ -693,14 +707,22 @@ export class NetworkMonitor {
         })
       }
 
-      if (this.warp > 0) {
+      if (this.repair > 0) {
+        this.structuredLog(network, color.red(`🚧 REPAIR MODE ACTIVATED 🚧`))
+        const currentBlock = await this.providers[network].getBlockNumber()
         if (this.verbose) {
-          this.structuredLog(network, `Starting Operator from ${this.warp} blocks back...`)
+          this.structuredLog(network, `Current block height [${color.green(currentBlock)}]`)
+          this.structuredLog(
+            network,
+            `Starting Network Monitor in repair mode from ${color.yellow(
+              currentBlock - this.repair,
+            )} blocks back at block [${color.red(this.repair)}]`,
+          )
         }
 
-        const currentBlock: number = await this.providers[network].getBlockNumber()
+        this.latestBlockHeight[network] = this.repair
         this.blockJobs[network] = []
-        for (let n = currentBlock - this.warp, nl = currentBlock; n <= nl; n++) {
+        for (let n = this.repair; n <= currentBlock; n++) {
           this.blockJobs[network].push({
             network,
             block: n,
@@ -708,13 +730,13 @@ export class NetworkMonitor {
         }
       } else if (network in this.latestBlockHeight && this.latestBlockHeight[network] > 0) {
         if (this.verbose) {
-          this.structuredLog(network, `Resuming Operator from block height ${this.latestBlockHeight[network]}`)
+          this.structuredLog(network, `Resuming Network Monitor from block height ${this.latestBlockHeight[network]}`)
         }
 
         this.currentBlockHeight[network] = this.latestBlockHeight[network]
       } else {
         if (this.verbose) {
-          this.structuredLog(network, `Starting Operator from latest block height`)
+          this.structuredLog(network, `Starting Network Monitor from latest block height`)
         }
 
         this.latestBlockHeight[network] = 0
@@ -740,6 +762,12 @@ export class NetworkMonitor {
     this.interfacesAddress = (await this.holograph.getInterfaces()).toLowerCase()
     this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
     this.registryAddress = (await this.holograph.getRegistry()).toLowerCase()
+    this.tokenAddress = (await this.holograph.getUtilityToken()).toLowerCase()
+    this.cxipERC721Address = CXIP_ERC721_ADDRESSES[this.environment]
+
+    // Setup contracts
+    const CxipERC721ABI = await fs.readJson(path.join(__dirname, `../abi/${this.environment}/CxipERC721.json`))
+    this.cxipERC721Contract = new Contract(this.cxipERC721Address, CxipERC721ABI, this.providers[this.networks[0]])
 
     const holographBridgeABI = await fs.readJson(
       path.join(__dirname, `../abi/${this.environment}/HolographBridge.json`),
@@ -889,16 +917,14 @@ export class NetworkMonitor {
     if (Date.now() - this.lastProcessBlockDone[network] > TIMEOUT_THRESHOLD * 3) {
       this.blockJobHandler(network)
     }
-
-    Promise.resolve()
   }
 
   blockJobMonitor = (network: string): Promise<void> => {
     return new Promise<void>(() => {
       if (Date.now() - this.lastBlockJobDone[network] > TIMEOUT_THRESHOLD) {
-        this.structuredLogError(
+        this.structuredLog(
           network,
-          'Block Job Handler has been inactive longer than threshold time. Restarting.',
+          color.yellow('Block Job Handler has been inactive longer than threshold time. Restarting.'),
           [],
         )
         this.lastBlockJobDone[network] = Date.now()
@@ -916,9 +942,8 @@ export class NetworkMonitor {
   blockJobHandler = (network: string, job?: BlockJob): void => {
     if (job !== undefined) {
       this.latestBlockHeight[job.network] = job.block
-      // we assume that this is latest
       if (this.verbose) {
-        this.structuredLog(job.network, `Processed block`, job.block)
+        this.structuredLog(job.network, `Block procesing complete ✅`, job.block)
       }
 
       this.blockJobs[job.network].shift()
@@ -1016,7 +1041,7 @@ export class NetworkMonitor {
   async processBlock(job: BlockJob): Promise<void> {
     this.activated[job.network] = true
     if (this.verbose) {
-      this.structuredLog(job.network, `Processing block`, job.block)
+      this.structuredLog(job.network, `Getting block 🔍`, job.block)
     }
 
     const block: BlockWithTransactions | null = await this.getBlockWithTransactions({
@@ -1028,8 +1053,9 @@ export class NetworkMonitor {
     if (block !== undefined && block !== null && 'transactions' in block) {
       const recentBlock = this.currentBlockHeight[job.network] - job.block < 5
       if (this.verbose) {
-        this.structuredLog(job.network, `Block retrieved`, job.block)
+        this.structuredLog(job.network, `Block retrieved 📥`, job.block)
         /*
+        Temporarily disabled
         this.structuredLog(job.network, `Calculating block gas`, job.block)
         if (this.gasPrices[job.network].isEip1559) {
           this.structuredLog(
@@ -1041,7 +1067,7 @@ export class NetworkMonitor {
             job.block,
           )
         }
-*/
+        */
       }
 
       if (recentBlock) {
@@ -1066,7 +1092,7 @@ export class NetworkMonitor {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
 
-      /*
+      /* Temporarily disabled
       if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
         this.structuredLog(
           job.network,
@@ -1080,7 +1106,7 @@ export class NetworkMonitor {
           job.block,
         )
       }
-*/
+      */
 
       if (interestingTransactions.length > 0) {
         if (this.verbose) {
@@ -1113,6 +1139,7 @@ export class NetworkMonitor {
         }
 
         let latest = this.currentBlockHeight[network]
+        // If the current network's block number is ahead of the network monitor's latest block, add the blocks to the queue
         while (block - latest > 0) {
           if (this.verbose) {
             this.structuredLog(network, `Block (Syncing)`, latest)
@@ -1128,7 +1155,7 @@ export class NetworkMonitor {
 
       this.currentBlockHeight[network] = block
       if (this.verbose) {
-        this.structuredLog(network, `New block mined`, block)
+        this.structuredLog(network, color.green(`A new block has been mined. New block height is [${block}] ⛏`))
       }
 
       this.blockJobs[network].push({
@@ -1143,7 +1170,7 @@ export class NetworkMonitor {
     const timestampColor = color.keyword('green')
     this.log(
       `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
-        capitalize(networks[network].shortKey),
+        capitalize(networks[network].name),
       )}]${cleanTags(tagId)} ${msg}`,
     )
   }
@@ -1170,7 +1197,7 @@ export class NetworkMonitor {
 
     this.warn(
       `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
-        capitalize(networks[network].shortKey),
+        capitalize(networks[network].name),
       )}] [${errorColor('error')}]${cleanTags(tagId)} ${errorMessage}`,
     )
   }

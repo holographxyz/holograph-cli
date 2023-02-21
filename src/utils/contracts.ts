@@ -35,9 +35,16 @@ export const FAUCET_ADDRESSES: {[key in Environment]: string} = {
   [Environment.mainnet]: '0x0000000000000000000000000000000000000000',
 } as const
 
+export const CXIP_ERC721_ADDRESSES: {[key in Environment]: string} = {
+  [Environment.localhost]: '0x0000000000000000000000000000000000000000',
+  [Environment.experimental]: '0x0000000000000000000000000000000000000000',
+  [Environment.develop]: '0x156C8b069232986c8C6bD9017BBAA098e97f0269',
+  [Environment.testnet]: '0x690f4b7e0a102047d442CA3FEcDbB024Cb6b1FC5',
+  [Environment.mainnet]: '0x690f4b7e0a102047d442CA3FEcDbB024Cb6b1FC5',
+}
+
 export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
   ethereum: '0x66A71Dcef29A0fFBDBE3c6a460a3B5BC225Cd675',
-  ethereumTestnetRinkeby: '0x79a63d6d8BBD5c6dfc774dA79bCcD948EAcb53FA',
   ethereumTestnetGoerli: '0xbfD2135BFfbb0B5378b56643c2Df8a87552Bfa23',
   polygon: '0x3c2269811836af69497E5F486A85D7316753cf62',
   polygonTestnet: '0xf69186dfBa60DdB133E91E9A4B5673624293d8F8',

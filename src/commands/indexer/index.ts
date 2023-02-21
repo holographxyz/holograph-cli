@@ -1,75 +1,55 @@
-import dotenv from 'dotenv'
-dotenv.config()
-
+import {Block, TransactionResponse} from '@ethersproject/abstract-provider'
+import {hexZeroPad} from '@ethersproject/bytes'
+import {Environment} from '@holographxyz/environment'
+import {networks} from '@holographxyz/networks'
 import {CliUx, Flags} from '@oclif/core'
 import color from '@oclif/color'
-import {BigNumber} from '@ethersproject/bignumber'
-import {TransactionDescription} from '@ethersproject/abi'
-import {Block, TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
-import {hexZeroPad} from '@ethersproject/bytes'
-
-import {Environment} from '@holographxyz/environment'
-import {getNetworkByHolographId, networks} from '@holographxyz/networks'
-
-import {ensureConfigFileIsValid} from '../../utils/config'
-import {
-  create2address,
-  decodeDeploymentConfig,
-  decodeDeploymentConfigInput,
-  DeploymentConfig,
-  deploymentConfigHash,
-} from '../../utils/contract-deployment'
-import {capitalize, functionSignature, sha3, sleep, storageSlot, toAscii} from '../../utils/utils'
-import {
-  BridgeInArgs,
-  BridgeInErc20Args,
-  BridgeInErc721Args,
-  BridgeOutArgs,
-  BridgeOutErc20Args,
-  BridgeOutErc721Args,
-  decodeBridgeInErc20Args,
-  decodeBridgeInErc721Args,
-  decodeBridgeOutErc20Args,
-  decodeBridgeOutErc721Args,
-} from '../../utils/bridge'
-import {BlockJob, FilterType, NetworkMonitor, networksFlag, warpFlag} from '../../utils/network-monitor'
-import {HealthCheck} from '../../base-commands/healthcheck'
-import ApiService from '../../services/api-service'
-import {Logger, NftStatus, UpdateCrossChainTransactionStatusInput, UpdateNftInput} from '../../types/api'
 import {gql} from 'graphql-request'
+import dotenv from 'dotenv'
 
-type DBJob = {
-  attempts: number
-  timestamp: number
-  network: string
-  query: string
-  identifier?: any
-  message: string
-  callback: (...args: any[]) => Promise<void>
-  arguments: any[]
-  tags: (string | number)[]
-}
+import {
+  GetNftByCidInput,
+  Logger,
+  NftStatus,
+  UpdateCrossChainTransactionStatusInput,
+  UpdateNftInput,
+} from '../../types/api'
+import {BlockJob, FilterType, NetworkMonitor, networksFlag, repairFlag} from '../../utils/network-monitor'
+import {capitalize, functionSignature, numberfy, numericSort, sleep} from '../../utils/utils'
+import {BridgeInErc20Args, BridgeOutErc20Args} from '../../utils/bridge'
+import {DeploymentConfig} from '../../utils/contract-deployment'
+import {HealthCheck} from '../../base-commands/healthcheck'
+import {ensureConfigFileIsValid} from '../../utils/config'
+import ApiService from '../../services/api-service'
+import {getIpfsCidFromTokenUri, validateIpfsCid} from '../../utils/validation'
 
-type DBJobMap = {
-  [key: number]: DBJob[]
-}
+import {DBJob, DBJobMap} from '../../types/indexer'
+import {
+  handleMintEvent,
+  handleBridgeInEvent,
+  handleBridgeOutEvent,
+  handleContractDeployedEvent,
+  handleAvailableOperatorJobEvent,
+} from '../../handlers/indexer'
+
+// import {handleMintEvent as sqsHandleMintEvent} from '../../handlers/sqs-indexer'
+
+dotenv.config()
 
 export default class Indexer extends HealthCheck {
   static hidden = true
   static LAST_BLOCKS_FILE_NAME = 'indexer-blocks.json'
   static description = 'Listen for EVM events and update database network status'
-  static examples = [
-    '$ <%= config.bin %> <%= command.id %> --networks ethereumTestnetGoerli polygonTestnet avalancheTestnet',
-  ]
+  static examples = ['$ <%= config.bin %> <%= command.id %> --networks goerli mumbai fuji']
 
   static flags = {
     host: Flags.string({
       description: 'The host to send data to',
       char: 'h',
-      default: 'http://localhost:9001',
+      default: 'http://localhost:4000',
     }),
     ...networksFlag,
-    ...warpFlag,
+    ...repairFlag,
     ...HealthCheck.flags,
   }
 
@@ -84,24 +64,11 @@ export default class Indexer extends HealthCheck {
   dbJobMap: DBJobMap = {}
   environment!: Environment
 
-  numericSort(a: number, b: number): number {
-    return a - b
-  }
-
-  numberfy(arr: string[]): number[] {
-    const numbers: number[] = []
-    for (const a of arr) {
-      numbers.push(Number.parseInt(a, 10))
-    }
-
-    return numbers
-  }
-
   /**
    * Command Entry Point
    */
   async run(): Promise<void> {
-    this.log(`Operator command has begun!!!`)
+    this.log(`Indexer command has begun!!!`)
     const {flags} = await this.parse(Indexer)
     this.BASE_URL = flags.host
     const enableHealthCheckServer = flags.healthCheck
@@ -114,7 +81,7 @@ export default class Indexer extends HealthCheck {
     this.environment = environment
 
     if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
-      this.log(`Skiping API authentication for ${Environment[this.environment]} environment`)
+      this.log(`Skipping API authentication for ${Environment[this.environment]} environment`)
     } else {
       // Create API Service for GraphQL requests
       try {
@@ -128,15 +95,16 @@ export default class Indexer extends HealthCheck {
         this.apiService = new ApiService(this.BASE_URL, logger)
         await this.apiService.operatorLogin()
       } catch (error: any) {
-        this.error(error)
+        this.log('Error: Failed to get Operator Token from API')
+        // NOTE: sample of how to do logs when in production mode
+        this.log(JSON.stringify({...error, stack: error.stack}))
+        this.exit()
       }
 
       if (this.apiService === undefined) {
         throw new Error('API service is not defined')
       }
 
-      this.debug(`process.env.OPERATOR_API_KEY = ${process.env.OPERATOR_API_KEY}`)
-      this.debug(`this.JWT = ${this.JWT}`)
       this.log(this.apiColor(`API: Successfully authenticated as an operator`))
     }
 
@@ -147,18 +115,21 @@ export default class Indexer extends HealthCheck {
       debug: this.debug,
       processTransactions: this.processTransactions,
       lastBlockFilename: 'indexer-blocks.json',
-      warp: flags.warp,
+      repair: flags.repair,
     })
 
-    this.apiService.setStructuredLog(this.networkMonitor.structuredLog.bind(this.networkMonitor))
-    this.apiService.setStructuredLogError(this.networkMonitor.structuredLogError.bind(this.networkMonitor))
+    if (this.apiService !== undefined) {
+      this.apiService.setStructuredLog(this.networkMonitor.structuredLog.bind(this.networkMonitor))
+      this.apiService.setStructuredLogError(this.networkMonitor.structuredLogError.bind(this.networkMonitor))
+    }
 
     // TODO: It doesn't seems like sync is working
     // Indexer always synchronizes missed blocks
     // this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
 
     CliUx.ux.action.start(`Starting indexer`)
-    await this.networkMonitor.run(!(flags.warp > 0), undefined, this.filterBuilder)
+    const continuous = !flags.repair // If repair is set, run network monitor stops after catching up to the latest block
+    await this.networkMonitor.run(continuous, undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
     // Start health check server on port 6000 or healthCheckPort
@@ -201,8 +172,8 @@ export default class Indexer extends HealthCheck {
   }
 
   async processDBJob(timestamp: number, job: DBJob): Promise<void> {
+    this.log(`Starting processDBJob`)
     this.networkMonitor.structuredLog(job.network, job.message, job.tags)
-    let response: any
     if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
       this.networkMonitor.structuredLog(
         job.network,
@@ -217,42 +188,73 @@ export default class Indexer extends HealthCheck {
     } else {
       const structuredLogInfo = {network: job.network, tagId: job.tags}
       try {
-        response = await this.apiService.sendQueryRequest(job.query, job.identifier, structuredLogInfo)
-        try {
-          this.networkMonitor.structuredLog(job.network, `Query response ${JSON.stringify(response)}`, job.tags)
-          await job.callback.bind(this)(response, ...job.arguments)
-          this.processDBJobs()
-        } catch (error: any) {
-          this.networkMonitor.structuredLogError(job.network, error, [
-            ...job.tags,
-            this.errorColor(`Request failed with errors ${job.query}`),
-          ])
+        this.networkMonitor.structuredLog(job.network, 'About to call the jobs query', job.tags)
+        const rawResponse = await this.apiService.sendQueryRequest(job.query, job.identifier, structuredLogInfo)
 
-          // Sleep for 1 second and add job back to the queue
-          await sleep(1000)
-          this.processDBJobs(timestamp, job)
+        // Check how the query responded. If it failed, add the job back to the queue
+        // Otherwise, continue to process the job
+        if (rawResponse === undefined) {
+          // No valid response from API
+          this.networkMonitor.structuredLogError(job.network, 'No response from API', [
+            ...job.tags,
+            this.errorColor(
+              `SendQueryRequest did not have a valid response ${job.query} with input ${JSON.stringify(
+                job.identifier,
+              )}`,
+            ),
+          ])
+          this.processDBJobs()
+        } else {
+          // Response is defined... continue
+          const {data: response, headers} = rawResponse
+          const requestId = headers.get('x-request-id') ?? ''
+
+          try {
+            this.networkMonitor.structuredLog(job.network, `Query response ${JSON.stringify(response)}`, [
+              ...job.tags,
+              requestId,
+            ])
+            this.networkMonitor.structuredLog(job.network, 'Calling this jobs callback function', job.tags)
+            await job.callback.bind(this)(response, ...job.arguments)
+            this.processDBJobs()
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(job.network, error, [
+              ...job.tags,
+              this.errorColor(`Request failed with errors ${job.query}`),
+            ])
+
+            // Sleep for 1 second and add job back to the queue
+            await sleep(1000)
+            this.processDBJobs(timestamp, job)
+          }
         }
-      } catch (extError: any) {
-        this.networkMonitor.structuredLogError(job.network, extError, [
+      } catch (error: any) {
+        this.networkMonitor.structuredLogError(job.network, error, [
           ...job.tags,
-          this.errorColor(`SendQueryRequest failed with errors ${job.query}`),
+          this.errorColor(`SendQueryRequest failed with errors ${job.query} ${JSON.stringify(job.identifier)}`),
         ])
-        // Sleep for 1 second and add job back to the queue
-        await sleep(1000)
-        this.processDBJobs(timestamp, job)
       }
     }
   }
 
   processDBJobs(timestamp?: number, job?: DBJob): void {
     if (timestamp !== undefined && job !== undefined) {
+      this.networkMonitor.structuredLog(
+        job.network,
+        `Processing db job with timestamp ${timestamp} and ${JSON.stringify(job.identifier)}`,
+        job.tags,
+      )
       /*
        * @dev Temporary addition to unblock other DB jobs from getting delayed when current DB job fails.
        *      Remove this once proper Registry checks are implemented for cxipMint events.
        */
       timestamp += 30
       if (!(timestamp in this.dbJobMap)) {
-        this.networkMonitor.structuredLog(job.network, `Adding ${timestamp} to dbJobMap`, job.tags)
+        this.networkMonitor.structuredLog(
+          job.network,
+          `Pushing failed db job 30 seconds to ${timestamp} and ${JSON.stringify(job.identifier)}`,
+          job.tags,
+        )
         this.dbJobMap[timestamp] = []
       }
 
@@ -283,9 +285,10 @@ export default class Indexer extends HealthCheck {
       }
     }
 
-    const timestamps: number[] = this.numberfy(Object.keys(this.dbJobMap))
+    const timestamps: number[] = numberfy(Object.keys(this.dbJobMap))
+    this.log(`Number of db jobs with timestamp is ${timestamps.length}`)
     if (timestamps.length > 0) {
-      timestamps.sort(this.numericSort)
+      timestamps.sort(numericSort)
       const timestamp: number = timestamps[0]
 
       if (job === undefined) {
@@ -298,29 +301,24 @@ export default class Indexer extends HealthCheck {
         const job: DBJob = this.dbJobMap[timestamp].shift()!
 
         if (job === undefined) {
-          this.log(`Processing job...`)
+          this.log(`Processing job for ${timestamp} but the job object is undefined`)
         } else {
-          this.networkMonitor.structuredLog(job.network, `Processing job...`, job.tags)
+          this.networkMonitor.structuredLog(job.network, `Processing job for ${timestamp}`, job.tags)
         }
 
         this.processDBJob(timestamp, job)
       } else {
         if (job === undefined) {
-          this.log(`No jobs found`)
+          this.log(`No jobs found for ${timestamp}`)
         } else {
-          this.networkMonitor.structuredLog(job.network, `No jobs found`, job.tags)
+          this.networkMonitor.structuredLog(job.network, `No jobs found for ${timestamp}`, job.tags)
         }
 
         delete this.dbJobMap[timestamp]
         setTimeout(this.processDBJobs.bind(this), 1000)
       }
     } else {
-      if (job === undefined) {
-        this.log(`No timestamps found, setting timeout...`)
-      } else {
-        this.networkMonitor.structuredLog(job.network, `No timestamps found, setting timeout...`, job.tags)
-      }
-
+      this.log('No job found sleeping for 1 second...')
       setTimeout(this.processDBJobs.bind(this), 1000)
     }
   }
@@ -345,7 +343,14 @@ export default class Indexer extends HealthCheck {
               `handleContractDeployedEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
               tags,
             )
-            await this.handleContractDeployedEvent(transaction, job.network, tags)
+            await handleContractDeployedEvent.call(
+              this,
+              this.networkMonitor,
+              transaction,
+              job.network,
+              tags,
+              this.updateDeployedContract,
+            )
 
             break
           }
@@ -356,7 +361,17 @@ export default class Indexer extends HealthCheck {
               `handleBridgeOutEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
               tags,
             )
-            await this.handleBridgeOutEvent(transaction, job.network, tags)
+            await handleBridgeOutEvent.call(
+              this,
+              this.networkMonitor,
+              this.environment,
+              transaction,
+              job.network,
+              tags,
+              this.updateBridgedContract,
+              this.updateBridgedERC20,
+              this.updateBridgedERC721,
+            )
 
             break
           }
@@ -367,7 +382,16 @@ export default class Indexer extends HealthCheck {
               `handleBridgeInEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
               tags,
             )
-            await this.handleBridgeInEvent(transaction, job.network, tags)
+            await handleBridgeInEvent.call(
+              this,
+              this.networkMonitor,
+              transaction,
+              job.network,
+              tags,
+              this.updateBridgedContract,
+              this.updateBridgedERC20,
+              this.updateBridgedERC721,
+            )
 
             break
           }
@@ -379,602 +403,38 @@ export default class Indexer extends HealthCheck {
                 `handleAvailableOperatorJobEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
                 tags,
               )
-              await this.handleAvailableOperatorJobEvent(transaction, job.network, tags)
+              await handleAvailableOperatorJobEvent.call(
+                this,
+                this.networkMonitor,
+                transaction,
+                job.network,
+                tags,
+                this.updateBridgedContract,
+                this.updateBridgedERC20,
+                this.updateBridgedERC721,
+              )
             } else if (functionSig === functionSignature('cxipMint(uint224,uint8,string)')) {
               this.networkMonitor.structuredLog(
                 job.network,
                 `handleMintEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
                 tags,
               )
-              await this.handleMintEvent(transaction, job.network, tags)
+
+              await handleMintEvent.call(
+                this,
+                this.networkMonitor,
+                transaction,
+                job.network,
+                tags,
+                this.updateMintedERC721,
+              )
+
+              // await sqsHandleMintEvent.call(this, this.networkMonitor, transaction, job.network, tags)
             } else {
               this.networkMonitor.structuredLog(job.network, `irrelevant transaction ${transaction.hash}`, tags)
             }
         }
       }
-    }
-  }
-
-  async handleContractDeployedEvent(
-    transaction: TransactionResponse,
-    network: string,
-    tags: (string | number)[],
-  ): Promise<void> {
-    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
-      network,
-      transactionHash: transaction.hash,
-      attempts: 10,
-      canFail: true,
-    })
-    if (receipt === null) {
-      throw new Error(`Could not get receipt for ${transaction.hash}`)
-    }
-
-    if (receipt.status === 1) {
-      this.networkMonitor.structuredLog(network, `Checking for deployment details`, tags)
-      const deploymentEvent: string[] | undefined = this.networkMonitor.decodeBridgeableContractDeployedEvent(
-        receipt,
-        this.networkMonitor.factoryAddress,
-      )
-      if (deploymentEvent === undefined) {
-        this.networkMonitor.structuredLog(network, `No BridgeableContractDeployed event found`, tags)
-      } else {
-        this.networkMonitor.structuredLog(network, `Decoding DeploymentConfig`, tags)
-        const deploymentConfig: DeploymentConfig = decodeDeploymentConfigInput(transaction.data)
-        const deploymentHash: string = deploymentConfigHash(deploymentConfig)
-        const contractAddress = create2address(deploymentConfig, this.networkMonitor.factoryAddress)
-        if (deploymentHash !== deploymentEvent[1]) {
-          throw new Error(`DeploymentConfig hashes ${deploymentHash} and ${deploymentEvent[1]} do not match!`)
-        }
-
-        if (contractAddress !== deploymentEvent[0]) {
-          throw new Error(`Deployment addresses ${contractAddress} and ${deploymentEvent[0]} do not match!`)
-        }
-
-        this.networkMonitor.structuredLog(network, `updateDeployedContract`, tags)
-        await this.updateDeployedContract(
-          transaction,
-          network,
-          contractAddress,
-          deploymentEvent,
-          deploymentConfig,
-          tags,
-        )
-      }
-    } else {
-      this.networkMonitor.structuredLog(network, `Transaction failed, ignoring it`, tags)
-    }
-  }
-
-  async handleMintEvent(transaction: TransactionResponse, network: string, tags: (string | number)[]): Promise<void> {
-    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
-      network,
-      transactionHash: transaction.hash,
-      attempts: 10,
-      canFail: true,
-    })
-
-    if (receipt === null) {
-      throw new Error(`Could not get receipt for ${transaction.hash}`)
-    }
-
-    if (receipt.status === 1) {
-      this.networkMonitor.structuredLog(network, `Checking for mint details`, tags)
-      const holographableContractAddress: string = transaction.to!
-      const erc721TransferEvent: string[] | undefined = this.networkMonitor.decodeErc721TransferEvent(
-        receipt,
-        holographableContractAddress,
-      )
-      if (erc721TransferEvent === undefined) {
-        this.networkMonitor.structuredLog(network, `No Transfer event found`, tags)
-      } else {
-        this.networkMonitor.structuredLog(network, `Decoding contractType`, tags)
-        const slot: string = await this.networkMonitor.providers[network].getStorageAt(
-          holographableContractAddress,
-          storageSlot('eip1967.Holograph.contractType'),
-        )
-        const contractType: string = toAscii(slot)
-        this.networkMonitor.structuredLog(network, `updateMintedERC721`, tags)
-        await this.updateMintedERC721(
-          transaction,
-          network,
-          contractType,
-          holographableContractAddress,
-          erc721TransferEvent,
-          tags,
-        )
-      }
-    } else {
-      this.networkMonitor.structuredLog(network, `Transaction failed, ignoring it`, tags)
-    }
-  }
-
-  async handleBridgeInEvent(
-    transaction: TransactionResponse,
-    network: string,
-    tags: (string | number)[],
-  ): Promise<void> {
-    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
-      network,
-      transactionHash: transaction.hash,
-      attempts: 10,
-      canFail: true,
-    })
-    if (receipt === null) {
-      throw new Error(`Could not get receipt for ${transaction.hash}`)
-    }
-
-    if (receipt.status === 1) {
-      this.networkMonitor.structuredLog(network, `Checking for executeJob function`, tags)
-      const parsedTransaction: TransactionDescription =
-        this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
-      if (parsedTransaction.name === 'executeJob') {
-        this.networkMonitor.structuredLog(network, `Extracting bridgeInRequest from transaction`, tags)
-        const args: any[] | undefined = Object.values(parsedTransaction.args)
-        const operatorJobPayload: string | undefined = args === undefined ? undefined : args[0]
-        const operatorJobHash: string | undefined =
-          operatorJobPayload === undefined ? undefined : sha3(operatorJobPayload)
-        if (operatorJobHash === undefined) {
-          this.networkMonitor.structuredLog(network, `Could not find bridgeInRequest in ${transaction.hash}`, tags)
-        } else {
-          this.networkMonitor.structuredLog(network, `Decoding bridgeInRequest`, tags)
-          const bridgeTransaction: TransactionDescription | null =
-            this.networkMonitor.bridgeContract.interface.parseTransaction({data: operatorJobPayload!})
-          if (bridgeTransaction === null) {
-            this.networkMonitor.structuredLog(network, `Could not decode bridgeInRequest in ${transaction.hash}`, tags)
-          } else {
-            this.networkMonitor.structuredLog(network, `Parsing bridgeInRequest data`, tags)
-            const bridgeIn: BridgeInArgs = bridgeTransaction.args as unknown as BridgeInArgs
-            const fromNetwork: string = getNetworkByHolographId(bridgeIn.fromChain).key
-            const toNetwork: string = network
-            const bridgeInPayload: string = bridgeIn.bridgeInPayload
-            const holographableContractAddress: string = bridgeIn.holographableContract.toLowerCase()
-            if (holographableContractAddress === this.networkMonitor.factoryAddress) {
-              this.networkMonitor.structuredLog(network, `BridgeInRequest identified as contract deployment`, tags)
-              this.networkMonitor.structuredLog(network, `Extracting deployment details`, tags)
-              const deploymentEvent: string[] | undefined = this.networkMonitor.decodeBridgeableContractDeployedEvent(
-                receipt,
-                this.networkMonitor.factoryAddress,
-              )
-              if (deploymentEvent === undefined) {
-                this.networkMonitor.structuredLog(
-                  network,
-                  `Failed extracting deployment details from BridgeableContractDeployed event`,
-                  tags,
-                )
-              } else {
-                this.networkMonitor.structuredLog(network, `Decoding DeploymentConfig`, tags)
-                const deploymentConfig: DeploymentConfig = decodeDeploymentConfig(bridgeInPayload)
-                const deploymentHash: string = deploymentConfigHash(deploymentConfig)
-                const contractAddress = create2address(deploymentConfig, this.networkMonitor.factoryAddress)
-                if (deploymentHash !== deploymentEvent[1]) {
-                  throw new Error(`DeploymentConfig hashes ${deploymentHash} and ${deploymentEvent[1]} do not match!`)
-                }
-
-                if (contractAddress !== deploymentEvent[0]) {
-                  throw new Error(`Deployment addresses ${contractAddress} and ${deploymentEvent[0]} do not match!`)
-                }
-
-                const direction = 'in'
-                this.networkMonitor.structuredLog(
-                  network,
-                  `Calling updateBridgedContract with direction ${direction}`,
-                  tags,
-                )
-                await this.updateBridgedContract(
-                  direction,
-                  transaction,
-                  network,
-                  fromNetwork,
-                  contractAddress,
-                  deploymentEvent,
-                  deploymentConfig,
-                  operatorJobHash,
-                  tags,
-                )
-              }
-            } else {
-              this.networkMonitor.structuredLog(network, `Decoding contractType`, tags)
-              const slot: string = await this.networkMonitor.providers[network].getStorageAt(
-                holographableContractAddress,
-                storageSlot('eip1967.Holograph.contractType'),
-              )
-              const contractType: string = toAscii(slot)
-              if (contractType === 'HolographERC20') {
-                this.networkMonitor.structuredLog(network, `BridgeInRequest identified as ERC20 transfer`, tags)
-                // BRIDGE IN ERC20 TOKENS
-                const erc20BeamInfo: BridgeInErc20Args = decodeBridgeInErc20Args(bridgeInPayload)
-                const erc20TransferEvent: any[] | undefined = this.networkMonitor.decodeErc20TransferEvent(
-                  receipt,
-                  holographableContractAddress,
-                )
-                if (erc20TransferEvent === undefined) {
-                  this.networkMonitor.structuredLog(network, `Could not find a valid ERC20 Transfer event`, tags)
-                } else {
-                  const direction = 'in'
-                  this.networkMonitor.structuredLog(
-                    network,
-                    `Calling updateBridgedERC20 with direction ${direction}`,
-                    tags,
-                  )
-                  await this.updateBridgedERC20(
-                    direction,
-                    transaction,
-                    network,
-                    fromNetwork,
-                    holographableContractAddress,
-                    erc20TransferEvent,
-                    erc20BeamInfo,
-                    operatorJobHash,
-                    tags,
-                  )
-                }
-              } else if (contractType === 'HolographERC721') {
-                this.networkMonitor.structuredLog(network, `BridgeInRequest identified as ERC721 transfer`, tags)
-                // Bridge i
-                const erc721BeamInfo: BridgeInErc721Args = decodeBridgeInErc721Args(bridgeInPayload)
-                const erc721TransferEvent: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(
-                  receipt,
-                  holographableContractAddress,
-                )
-                if (erc721TransferEvent === undefined) {
-                  this.networkMonitor.structuredLog(network, `Could not find a valid ERC721 Transfer event`, tags)
-                } else {
-                  this.networkMonitor.structuredLog(network, `updateBridgedERC721`, tags)
-                  const direction = 'in'
-                  this.networkMonitor.structuredLog(
-                    network,
-                    `Calling updateBridgedERC721 with direction ${direction}`,
-                    tags,
-                  )
-                  await this.updateBridgedERC721(
-                    direction,
-                    transaction,
-                    network,
-                    fromNetwork,
-                    toNetwork,
-                    contractType,
-                    holographableContractAddress,
-                    erc721TransferEvent,
-                    erc721BeamInfo,
-                    operatorJobHash,
-                    tags,
-                  )
-                }
-              } else {
-                this.networkMonitor.structuredLog(network, `unknown BridgeInRequest contractType`, tags)
-              }
-            }
-          }
-        }
-      } else {
-        this.networkMonitor.structuredLog(
-          network,
-          `Function call was ${parsedTransaction.name} and not executeJob`,
-          tags,
-        )
-      }
-    } else {
-      this.networkMonitor.structuredLog(network, `Transaction failed, ignoring it`, tags)
-    }
-  }
-
-  async handleBridgeOutEvent(
-    transaction: TransactionResponse,
-    network: string,
-    tags: (string | number)[],
-  ): Promise<void> {
-    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
-      network,
-      transactionHash: transaction.hash,
-      attempts: 10,
-      canFail: true,
-    })
-    if (receipt === null) {
-      throw new Error(`Could not get receipt for ${transaction.hash}`)
-    }
-
-    if (receipt.status === 1) {
-      this.networkMonitor.structuredLog(network, `Checking for job hash`, tags)
-      let operatorJobHash: string | undefined
-      let operatorJobPayload: string | undefined
-      let args: any[] | undefined
-      switch (this.environment) {
-        case Environment.localhost:
-          operatorJobHash = this.networkMonitor.decodeCrossChainMessageSentEvent(
-            receipt,
-            this.networkMonitor.operatorAddress,
-          )
-          if (operatorJobHash !== undefined) {
-            args = this.networkMonitor.decodeLzEvent(receipt, this.networkMonitor.lzEndpointAddress[network])
-            if (args !== undefined) {
-              operatorJobPayload = args[2] as string
-            }
-          }
-
-          break
-        default:
-          operatorJobHash = this.networkMonitor.decodeCrossChainMessageSentEvent(
-            receipt,
-            this.networkMonitor.operatorAddress,
-          )
-          if (operatorJobHash !== undefined) {
-            operatorJobPayload = this.networkMonitor.decodeLzPacketEvent(receipt)
-          }
-
-          break
-      }
-
-      if (operatorJobHash === undefined) {
-        this.networkMonitor.structuredLog(network, `No CrossChainMessageSent event found`, tags)
-      } else {
-        // check that operatorJobPayload and operatorJobHash are the same
-        if (sha3(operatorJobPayload) !== operatorJobHash) {
-          throw new Error('The hashed operatorJobPayload does not equal operatorJobHash!')
-        }
-
-        const bridgeTransaction: TransactionDescription =
-          this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
-        if (bridgeTransaction.name === 'bridgeOutRequest') {
-          const bridgeOut: BridgeOutArgs = bridgeTransaction.args as unknown as BridgeOutArgs
-          const fromNetwork: string = network
-          const toNetwork: string = getNetworkByHolographId(bridgeOut.toChain).key
-          const bridgeOutPayload: string = bridgeOut.bridgeOutPayload
-          const holographableContractAddress: string = bridgeOut.holographableContract.toLowerCase()
-          if (holographableContractAddress === this.networkMonitor.factoryAddress) {
-            // Bridge out contract deployment
-            const deploymentConfig: DeploymentConfig = decodeDeploymentConfig(bridgeOutPayload)
-            const deploymentHash: string = deploymentConfigHash(deploymentConfig)
-            const contractAddress = create2address(deploymentConfig, this.networkMonitor.factoryAddress)
-            const deploymentEvent: string[] = [contractAddress, deploymentHash]
-            const direction = 'out'
-            this.networkMonitor.structuredLog(
-              network,
-              `Calling updateBridgedContract with direction ${direction}`,
-              tags,
-            )
-            await this.updateBridgedContract(
-              direction,
-              transaction,
-              network,
-              toNetwork,
-              contractAddress,
-              deploymentEvent,
-              deploymentConfig,
-              operatorJobHash,
-              tags,
-            )
-          } else {
-            const slot: string = await this.networkMonitor.providers[network].getStorageAt(
-              holographableContractAddress,
-              storageSlot('eip1967.Holograph.contractType'),
-            )
-            const contractType: string = toAscii(slot)
-            if (contractType === 'HolographERC20') {
-              // Bridge out ERC20 token
-              const erc20BeamInfo: BridgeOutErc20Args = decodeBridgeOutErc20Args(bridgeOutPayload)
-              const erc20TransferEvent: any[] | undefined = this.networkMonitor.decodeErc20TransferEvent(
-                receipt,
-                holographableContractAddress,
-              )
-              if (erc20TransferEvent === undefined) {
-                this.networkMonitor.structuredLog(
-                  network,
-                  `Bridge erc20 transfer event not found for ${transaction.hash}`,
-                  tags,
-                )
-              } else {
-                // We do not currently capture bridge events for ERC20 tokens
-                const direction = 'out'
-                this.networkMonitor.structuredLog(
-                  network,
-                  `Calling updateBridgedERC20 with direction ${direction}`,
-                  tags,
-                )
-                await this.updateBridgedERC20(
-                  direction,
-                  transaction,
-                  network,
-                  toNetwork,
-                  holographableContractAddress,
-                  erc20TransferEvent,
-                  erc20BeamInfo,
-                  operatorJobHash,
-                  tags,
-                )
-              }
-            } else if (contractType === 'HolographERC721') {
-              // Bridge in ERC721 token
-              const erc721BeamInfo: BridgeOutErc721Args = decodeBridgeOutErc721Args(bridgeOutPayload)
-              const erc721TransferEvent: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(
-                receipt,
-                holographableContractAddress,
-              )
-              if (erc721TransferEvent === undefined) {
-                this.networkMonitor.structuredLog(
-                  network,
-                  `Bridge erc721 transfer event not found for ${transaction.hash}`,
-                  tags,
-                )
-              } else {
-                const direction = 'out'
-                this.networkMonitor.structuredLog(
-                  network,
-                  `Calling updateBridgedERC721 with direction ${direction}`,
-                  tags,
-                )
-                await this.updateBridgedERC721(
-                  direction,
-                  transaction,
-                  network,
-                  fromNetwork,
-                  toNetwork,
-                  contractType,
-                  holographableContractAddress,
-                  erc721TransferEvent,
-                  erc721BeamInfo,
-                  operatorJobHash,
-                  tags,
-                )
-              }
-            } else {
-              this.networkMonitor.structuredLog(network, `unknown bridgeOutRequest contractType`, tags)
-            }
-          }
-        } else {
-          this.networkMonitor.structuredLog(
-            network,
-            `Function call was ${bridgeTransaction.name} and not bridgeOutRequest`,
-            tags,
-          )
-        }
-      }
-    } else {
-      this.networkMonitor.structuredLog(network, `Transaction failed, ignoring it`, tags)
-    }
-  }
-
-  async handleAvailableOperatorJobEvent(
-    transaction: TransactionResponse,
-    network: string,
-    tags: (string | number)[],
-  ): Promise<void> {
-    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
-      network,
-      transactionHash: transaction.hash,
-      attempts: 10,
-      canFail: true,
-    })
-    if (receipt === null) {
-      throw new Error(`Could not get receipt for ${transaction.hash}`)
-    }
-
-    if (receipt.status === 1) {
-      this.networkMonitor.structuredLog(network, `Checking for job hash`, tags)
-      const operatorJobPayloadData = this.networkMonitor.decodeAvailableOperatorJobEvent(
-        receipt,
-        this.networkMonitor.operatorAddress,
-      )
-      const operatorJobHash = operatorJobPayloadData === undefined ? undefined : operatorJobPayloadData[0]
-      const operatorJobPayload = operatorJobPayloadData === undefined ? undefined : operatorJobPayloadData[1]
-      if (operatorJobHash === undefined) {
-        this.networkMonitor.structuredLog(network, `No AvailableOperatorJob event found`, tags)
-      } else {
-        // Check that operatorJobPayload and operatorJobHash are the same
-        if (sha3(operatorJobPayload) !== operatorJobHash) {
-          throw new Error('The hashed operatorJobPayload does not equal operatorJobHash!')
-        }
-
-        this.networkMonitor.structuredLog(network, `Decoding bridgeInRequest`, tags)
-        const bridgeTransaction: TransactionDescription = this.networkMonitor.bridgeContract.interface.parseTransaction(
-          {data: operatorJobPayload!},
-        )
-        if (bridgeTransaction.name === 'bridgeInRequest') {
-          const bridgeIn: BridgeInArgs = bridgeTransaction.args as unknown as BridgeInArgs
-          const fromNetwork: string = getNetworkByHolographId(bridgeIn.fromChain).key
-          const toNetwork: string = network
-          const bridgeInPayload: string = bridgeIn.bridgeInPayload
-          const holographableContractAddress: string = bridgeIn.holographableContract.toLowerCase()
-
-          // Bridge out contract deployment
-          if (holographableContractAddress === this.networkMonitor.factoryAddress) {
-            const deploymentConfig: DeploymentConfig = decodeDeploymentConfig(bridgeInPayload)
-            const deploymentHash: string = deploymentConfigHash(deploymentConfig)
-            const contractAddress = create2address(deploymentConfig, this.networkMonitor.factoryAddress)
-            const deploymentEvent: string[] = [contractAddress, deploymentHash]
-            const direction = 'msg'
-            this.networkMonitor.structuredLog(
-              network,
-              `Calling updateBridgedContract with direction ${direction}`,
-              tags,
-            )
-            await this.updateBridgedContract(
-              direction,
-              transaction,
-              network,
-              toNetwork,
-              contractAddress,
-              deploymentEvent,
-              deploymentConfig,
-              operatorJobHash,
-              tags,
-            )
-          } else {
-            const slot: string = await this.networkMonitor.providers[network].getStorageAt(
-              holographableContractAddress,
-              storageSlot('eip1967.Holograph.contractType'),
-            )
-            const contractType: string = toAscii(slot)
-            if (contractType === 'HolographERC20') {
-              // Bridge out ERC20 token
-              const erc20BeamInfo: BridgeOutErc20Args = decodeBridgeOutErc20Args(bridgeInPayload)
-              const erc20TransferEvent: any[] | undefined = this.networkMonitor.decodeErc20TransferEvent(
-                receipt,
-                holographableContractAddress,
-              )
-              if (erc20TransferEvent === undefined) {
-                this.networkMonitor.structuredLog(
-                  network,
-                  `Bridge erc20 transfer event not found for ${transaction.hash}`,
-                  tags,
-                )
-              } else {
-                // We do not currently capture bridge events for ERC
-                const direction = 'msg'
-                this.networkMonitor.structuredLog(
-                  network,
-                  `Calling updateBridgedERC20 with direction ${direction}`,
-                  tags,
-                )
-                await this.updateBridgedERC20(
-                  direction,
-                  transaction,
-                  network,
-                  toNetwork,
-                  holographableContractAddress,
-                  erc20TransferEvent,
-                  erc20BeamInfo,
-                  operatorJobHash,
-                  tags,
-                )
-              }
-            } else if (contractType === 'HolographERC721') {
-              // Bridge in ERC721 token
-              const erc721BeamInfo: BridgeInErc721Args = decodeBridgeInErc721Args(bridgeInPayload)
-              const direction = 'msg'
-              this.networkMonitor.structuredLog(
-                network,
-                `Calling updateBridgedERC721 with direction ${direction}`,
-                tags,
-              )
-              await this.updateBridgedERC721(
-                direction,
-                transaction,
-                network,
-                fromNetwork,
-                toNetwork,
-                contractType,
-                holographableContractAddress,
-                [erc721BeamInfo.from, erc721BeamInfo.to, BigNumber.from(erc721BeamInfo.tokenId)],
-                erc721BeamInfo,
-                operatorJobHash,
-                tags,
-              )
-            }
-          }
-
-          this.networkMonitor.structuredLog(network, `Found a valid bridgeInRequest for ${transaction.hash}`, tags)
-        } else {
-          this.networkMonitor.structuredLog(network, `Unknown bridgeIn function executed for ${transaction.hash}`, tags)
-        }
-
-        this.networkMonitor.structuredLog(
-          network,
-          `Bridge-In transaction type: ${bridgeTransaction.name} -->> ${bridgeTransaction.args}`,
-        )
-      }
-    } else {
-      this.networkMonitor.structuredLog(network, `Transaction failed, ignoring it`, tags)
     }
   }
 
@@ -1021,21 +481,27 @@ export default class Indexer extends HealthCheck {
     }
     `
 
-    const response = await this.apiService.sendMutationRequest(mutation, input)
-    this.networkMonitor.structuredLog(
-      network,
-      `API: Successfully updated Collection ${contractAddress} with id ${data.id}. Response: ${JSON.stringify(
-        response,
-      )}`,
-      tags,
-    )
+    const structuredLogInfo = {network: network, tagId: tags}
+    const rawResponse = await this.apiService.sendMutationRequest(mutation, input, structuredLogInfo)
+    if (rawResponse !== undefined) {
+      const {data: response, headers} = rawResponse
+
+      const requestId = headers.get('x-request-id') ?? ''
+
+      this.networkMonitor.structuredLog(
+        network,
+        `API: Successfully updated Collection ${contractAddress} with id ${
+          data.collectionByContractAddress.id
+        }. Response: ${JSON.stringify(response)}`,
+        [...tags, requestId],
+      )
+    }
   }
 
   async updateDeployedContract(
     transaction: TransactionResponse,
     network: string,
     contractAddress: string,
-    deploymentEvent: string[],
     deploymentConfig: DeploymentConfig,
     tags: (string | number)[],
   ): Promise<void> {
@@ -1079,22 +545,16 @@ export default class Indexer extends HealthCheck {
       identifier: {contractAddress: contractAddress},
       tags,
     }
-    if (!(job.timestamp in this.dbJobMap)) {
-      this.dbJobMap[job.timestamp] = []
-    }
 
-    this.dbJobMap[job.timestamp].push(job)
+    this.addTimestampedJob(job)
   }
 
   async updateBridgedContract(
     direction: string,
     transaction: TransactionResponse,
     network: string,
-    fromNetwork: string,
     contractAddress: string,
-    deploymentEvent: string[],
     deploymentConfig: DeploymentConfig,
-    operatorJobHash: string,
     tags: (string | number)[],
   ): Promise<void> {
     // Not updating DB for any initial call outs since there is no beam status table for this yet
@@ -1141,23 +601,15 @@ export default class Indexer extends HealthCheck {
         identifier: {contractAddress: contractAddress},
         tags,
       }
-      if (!(job.timestamp in this.dbJobMap)) {
-        this.dbJobMap[job.timestamp] = []
-      }
 
-      this.dbJobMap[job.timestamp].push(job)
+      this.addTimestampedJob(job)
     }
   }
 
   async updateBridgedERC20(
-    direction: string,
     transaction: TransactionResponse,
     network: string,
-    fromNetwork: string,
-    contractAddress: string,
-    erc20TransferEvent: any[],
     erc20BeamInfo: BridgeInErc20Args | BridgeOutErc20Args,
-    operatorJobHash: string,
     tags: (string | number)[],
   ): Promise<void> {
     this.networkMonitor.structuredLog(
@@ -1176,7 +628,6 @@ export default class Indexer extends HealthCheck {
     contractType: string,
     contractAddress: string,
     erc721TransferEvent: any[],
-    erc721BeamInfo: BridgeInErc721Args | BridgeOutErc721Args,
     operatorJobHash: string,
     tags: (string | number)[],
   ): Promise<void> {
@@ -1216,11 +667,8 @@ export default class Indexer extends HealthCheck {
       identifier: {contractAddress: contractAddress, tokenId: tokenId},
       tags,
     }
-    if (!(job.timestamp in this.dbJobMap)) {
-      this.dbJobMap[job.timestamp] = []
-    }
 
-    this.dbJobMap[job.timestamp].push(job)
+    this.addTimestampedJob(job)
 
     const crossChainTxType: string =
       direction === 'in' ? 'bridgeIn' : direction === 'out' ? 'bridgeOut' : 'relayMessage'
@@ -1242,7 +690,6 @@ export default class Indexer extends HealthCheck {
   async updateMintedERC721(
     transaction: TransactionResponse,
     network: string,
-    contractType: string,
     contractAddress: string,
     erc721TransferEvent: any[],
     tags: (string | number)[],
@@ -1258,8 +705,7 @@ export default class Indexer extends HealthCheck {
       tags,
     )
 
-    this.networkMonitor.structuredLog(network, `Checking if contract ${contractAddress} is on registry ...`, tags)
-
+    this.networkMonitor.structuredLog(network, `Checking if contract ${contractAddress} is on registry...`, tags)
     this.networkMonitor.structuredLog(
       network,
       `registry Contract address = ${this.networkMonitor.registryContract.address}`,
@@ -1274,8 +720,17 @@ export default class Indexer extends HealthCheck {
     )
 
     if (isHolographable === false) {
-      this.networkMonitor.structuredLog(network, `Contract ${contractAddress} is not on registry`, tags)
-      // return
+      this.networkMonitor.structuredLog(
+        network,
+        `Contract ${contractAddress} is not holographable isHolographable=${isHolographable}`,
+        tags,
+      )
+      this.networkMonitor.structuredLog(
+        network,
+        `Contract ${contractAddress} is not on registry at the address ${this.networkMonitor.registryAddress} in env ${this.environment}. Skipping...`,
+        tags,
+      )
+      return
     }
 
     this.networkMonitor.structuredLog(
@@ -1284,9 +739,51 @@ export default class Indexer extends HealthCheck {
       tags,
     )
 
+    this.networkMonitor.structuredLog(
+      network,
+      `Attaching CXIP ERC721 Contract to the contract address ${contractAddress}`,
+      tags,
+    )
+    this.networkMonitor.cxipERC721Contract = this.networkMonitor.cxipERC721Contract.attach(contractAddress)
+    this.networkMonitor.cxipERC721Contract = this.networkMonitor.cxipERC721Contract.connect(
+      this.networkMonitor.providers[network],
+    )
+    this.networkMonitor.structuredLog(network, `Calling the tokenURI function for tokenId ${tokenId}`, tags)
+
+    let tokenURI = ''
+    try {
+      tokenURI = await this.networkMonitor.cxipERC721Contract.tokenURI(tokenId, {blockTag: transaction.blockNumber})
+      this.networkMonitor.structuredLog(network, `Token URI is ${tokenURI}`, tags)
+    } catch (error) {
+      this.networkMonitor.structuredLogError(
+        network,
+        `Error getting token URI from ${contractAddress} and ${tokenId} - ${JSON.stringify(error)}`,
+        tags,
+      )
+      return
+    }
+
+    let ipfsCid = ''
+    try {
+      ipfsCid = getIpfsCidFromTokenUri(tokenURI)
+      this.networkMonitor.structuredLog(network, `IPFS CID is ${ipfsCid}`, tags)
+    } catch (error) {
+      this.networkMonitor.structuredLogError(
+        network,
+        `Error getting IPFS CID from token URI ${tokenURI} - ${JSON.stringify(error)}`,
+        tags,
+      )
+      return
+    }
+
+    this.networkMonitor.structuredLog(network, `Validating IPFS CID ${ipfsCid}`, tags)
+    await validateIpfsCid(ipfsCid)
+
+    // This query is filtered with tx passed in as null because we want to get the nft that has not been minted yet
+    const input: GetNftByCidInput = {nftByIpfsCid: {cid: ipfsCid, tx: null}}
     const query = gql`
-      query($tx: String!) {
-        nftByTx(tx: $tx) {
+      query($nftByIpfsCid: GetNftByIpfsCidInput!) {
+        nftByIpfsCid(nftInput: $nftByIpfsCid) {
           id
           tx
           status
@@ -1294,9 +791,10 @@ export default class Indexer extends HealthCheck {
         }
       }
     `
+
     this.networkMonitor.structuredLog(
       network,
-      `Sending minted nft with tx ${transaction.hash} job to DBJobManager`,
+      `Sending minted nft with IPFS CID ${ipfsCid} and tx ${transaction.hash} job to DBJobManager`,
       tags,
     )
     const job: DBJob = {
@@ -1304,17 +802,14 @@ export default class Indexer extends HealthCheck {
       network,
       timestamp: await this.getBlockTimestamp(network, transaction.blockNumber!),
       query,
-      message: `API: Requesting to update NFT with transaction hash ${transaction.hash}`,
+      message: `API: Requesting to update NFT with IPFS CID ${ipfsCid} and transaction hash ${transaction.hash}`,
       callback: this.updateERC721Callback,
       arguments: [transaction, network, tags],
-      identifier: {tx: transaction.hash},
+      identifier: input,
       tags,
     }
-    if (!(job.timestamp in this.dbJobMap)) {
-      this.dbJobMap[job.timestamp] = []
-    }
 
-    this.dbJobMap[job.timestamp].push(job)
+    this.addTimestampedJob(job)
   }
 
   async updateERC721Callback(
@@ -1326,7 +821,7 @@ export default class Indexer extends HealthCheck {
     this.networkMonitor.structuredLog(network, `Successfully found NFT with tx ${transaction.hash} `, tags)
     this.networkMonitor.structuredLog(
       network,
-      `API: Requesting to update NFT with ${data.nftByTx.tx} and id ${data.nftByTx.id}`,
+      `API: Requesting to update NFT with ${data.nftByIpfsCid.tx} and id ${data.nftByIpfsCid.id}`,
       tags,
     )
     const mutation = gql`
@@ -1340,23 +835,30 @@ export default class Indexer extends HealthCheck {
     }
     `
     // Include the on chain data in the update input
-    const input: UpdateNftInput = {updateNftInput: data.nftByTx}
+    const input: UpdateNftInput = {updateNftInput: data.nftByIpfsCid}
     input.updateNftInput.status = NftStatus.MINTED
     input.updateNftInput.chainId = transaction.chainId
     input.updateNftInput.tx = transaction.hash
 
     try {
-      const response = await this.apiService.sendMutationRequest(mutation, input)
-      this.networkMonitor.structuredLog(
-        network,
-        `Successfully updated NFT with transaction hash ${response.updateNft?.tx}`,
-        tags,
-      )
+      const structuredLogInfo = {network: network, tagId: tags}
+      const rawResponse = await this.apiService.sendMutationRequest(mutation, input, structuredLogInfo)
+      if (rawResponse !== undefined) {
+        const {data: response, headers} = rawResponse
+
+        const requestId = headers.get('x-request-id') ?? ''
+
+        this.networkMonitor.structuredLog(
+          network,
+          `Successfully updated NFT with transaction hash ${response.updateNft?.tx}`,
+          [...tags, requestId],
+        )
+      }
     } catch (error: any) {
-      this.networkMonitor.structuredLog(network, `API: Failed to update NFT with tx ${data.nftByTx.tx}`, tags)
+      this.networkMonitor.structuredLog(network, `API: Failed to update NFT with tx ${data.nftByIpfsCid.tx}`, tags)
       this.networkMonitor.structuredLogError(network, error, [
         ...tags,
-        this.errorColor(`Cross chain transaction ${data.nftByTx.tx}`),
+        this.errorColor(`Cross chain transaction ${data.nftByIpfsCid.tx}`),
       ])
     }
   }
@@ -1366,6 +868,8 @@ export default class Indexer extends HealthCheck {
     transaction: TransactionResponse,
     network: string,
     direction: string,
+    contractAddress: string,
+    tokenId: string,
     tags: (string | number)[],
   ): Promise<void> {
     this.networkMonitor.structuredLog(
@@ -1404,12 +908,21 @@ export default class Indexer extends HealthCheck {
     data.nftByContractAddressAndTokenId.chainId = transaction.chainId
 
     const input: UpdateNftInput = {updateNftInput: data.nftByContractAddressAndTokenId}
-    const response = await this.apiService.sendMutationRequest(mutation, input)
-    this.networkMonitor.structuredLog(
-      network,
-      `Successfully updated NFT with transaction hash ${response.updateNft?.tx}. Response: ${JSON.stringify(response)}`,
-      tags,
-    )
+    const structuredLogInfo = {network: network, tagId: tags}
+    const rawResponse = await this.apiService.sendMutationRequest(mutation, input, structuredLogInfo)
+    if (rawResponse !== undefined) {
+      const {data: response, headers} = rawResponse
+
+      const requestId = headers.get('x-request-id') ?? ''
+
+      this.networkMonitor.structuredLog(
+        network,
+        `Successfully updated NFT with transaction hash ${response.updateNft?.tx}. Response: ${JSON.stringify(
+          response,
+        )}`,
+        [...tags, requestId],
+      )
+    }
   }
 
   async updateCrossChainTransactionCallback(
@@ -1530,12 +1043,16 @@ export default class Indexer extends HealthCheck {
             const response = await this.apiService.updateCrossChainTransactionStatus(input)
             this.networkMonitor.structuredLog(
               network,
-              this.apiColor(`API: Cross chain transaction ${jobHash} mutation response ${JSON.stringify(response)}`),
+              this.apiColor(
+                `API: Cross chain message transaction ${jobHash} mutation response ${JSON.stringify(response)}`,
+              ),
               tags,
             )
             this.networkMonitor.structuredLog(
               network,
-              `Successfully updated cross chain transaction with ${jobHash}. Response: ${JSON.stringify(response)}`,
+              `Successfully updated cross chain message transaction with ${jobHash}. Response: ${JSON.stringify(
+                response,
+              )}`,
               tags,
             )
           } catch (error: any) {
@@ -1564,7 +1081,7 @@ export default class Indexer extends HealthCheck {
         this.networkMonitor.structuredLog(
           network,
           this.apiColor(
-            `API:Cross chain transaction mutation with ${jobHash} for bridgeIn with input ${JSON.stringify(input)}`,
+            `API: Cross chain transaction mutation with ${jobHash} for bridgeIn with input ${JSON.stringify(input)}`,
           ),
           tags,
         )
@@ -1582,12 +1099,16 @@ export default class Indexer extends HealthCheck {
             const response = await this.apiService.updateCrossChainTransactionStatus(input)
             this.networkMonitor.structuredLog(
               network,
-              this.apiColor(`API: Cross chain transaction ${jobHash} mutation response ${JSON.stringify(response)}`),
+              this.apiColor(
+                `API: Cross chain operator transaction ${jobHash} mutation response ${JSON.stringify(response)}`,
+              ),
               tags,
             )
             this.networkMonitor.structuredLog(
               network,
-              `Successfully updated cross chain transaction with ${jobHash}. Response: ${JSON.stringify(response)}`,
+              `Successfully updated cross chain operator transaction with ${jobHash}. Response: ${JSON.stringify(
+                response,
+              )}`,
               tags,
             )
           } catch (error: any) {
@@ -1661,11 +1182,8 @@ export default class Indexer extends HealthCheck {
       identifier: {contractAddress, tokenId},
       tags,
     }
-    if (!(job.timestamp in this.dbJobMap)) {
-      this.dbJobMap[job.timestamp] = []
-    }
 
-    this.dbJobMap[job.timestamp].push(job)
+    this.addTimestampedJob(job)
   }
 
   async getBlockTimestamp(network: string, blockNumber: number): Promise<number> {
@@ -1676,5 +1194,20 @@ export default class Indexer extends HealthCheck {
     }
 
     return timestamp
+  }
+
+  addTimestampedJob(job: DBJob): void {
+    // If this timestamp is not in the map, create a new array for it and add the job
+    if (!(job.timestamp in this.dbJobMap)) {
+      this.networkMonitor.structuredLog(job.network, `Adding new timestamp ${job.timestamp} to dbJobMap`, job.tags)
+      this.dbJobMap[job.timestamp] = []
+    }
+
+    this.networkMonitor.structuredLog(
+      job.network,
+      `Adding job with identifier ${JSON.stringify(job.identifier)} to dbJobMap with timestamp ${job.timestamp}`,
+      job.tags,
+    )
+    this.dbJobMap[job.timestamp].push(job)
   }
 }

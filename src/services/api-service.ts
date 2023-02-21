@@ -1,12 +1,12 @@
 import color from '@oclif/color'
 import {gql, GraphQLClient} from 'graphql-request'
+import {Response} from 'graphql-request/dist/types'
 import {
   Logger,
   AuthOperatorResponse,
   CrossChainTransactionResponse,
   CrossChainTransaction,
   UpdateCrossChainTransactionStatusInput,
-  UpsertCrossChainTransactionReponse,
   UpdateCrossChainTransactionStatusInputWithoutData,
   Nft,
   UpdateNftInput,
@@ -15,6 +15,7 @@ import {
 } from '../types/api'
 import {AbstractError} from '../types/errors'
 import {StructuredLogInfo} from '../types/interfaces'
+import {cleanRequest} from '../utils/utils'
 
 class ApiService {
   logger: Logger
@@ -44,6 +45,25 @@ class ApiService {
     this.logger.structuredLogError = structuredLogError
   }
 
+  logInfo(description: string, structuredLogInfo?: StructuredLogInfo) {
+    if (this.logger.structuredLog !== undefined && structuredLogInfo !== undefined) {
+      this.logger.structuredLog(structuredLogInfo.network, description, structuredLogInfo.tagId)
+    } else {
+      this.logger.log(description)
+    }
+  }
+
+  logError(description: string, error: any, structuredLogInfo?: StructuredLogInfo) {
+    if (this.logger.structuredLogError !== undefined && structuredLogInfo !== undefined) {
+      this.logger.structuredLogError(structuredLogInfo.network, error, [
+        ...(structuredLogInfo.tagId as (string | number)[]),
+        this.errorColor(description),
+      ])
+    } else {
+      this.logger.error(`${description}: ${error}`)
+    }
+  }
+
   async operatorLogin(): Promise<void> {
     if (!process.env.OPERATOR_API_KEY) {
       throw new Error('OPERATOR_API_KEY env is required')
@@ -68,43 +88,40 @@ class ApiService {
     }
 
     this.client.setHeader('authorization', `Bearer ${JWT}`)
-    this.logger.log(`Operator JWT: ${JWT}`)
+    // this.logger.log(`Operator JWT: ${JWT}`)
   }
 
-  async sendQueryRequest(query: string, props: any, structuredLogInfo?: StructuredLogInfo): Promise<any> {
-    if (this.logger.structuredLog !== undefined && structuredLogInfo !== undefined) {
-      this.logger.structuredLog(
-        structuredLogInfo.network,
-        `Sending query request ${query} with props ${JSON.stringify(props)}`,
-        structuredLogInfo.tagId,
-      )
-    } else {
-      this.logger.log(`Sending query request ${query} with props ${JSON.stringify(props)}`)
-    }
-
+  async sendQueryRequest<T = any>(
+    query: string,
+    props: any,
+    structuredLogInfo?: StructuredLogInfo,
+  ): Promise<Response<T> | undefined> {
+    this.logInfo(`Sending query request ${cleanRequest(query)} with props ${JSON.stringify(props)}`, structuredLogInfo)
     try {
-      return await this.client.request(query, props)
+      return await this.client.rawRequest(query, props)
     } catch (error: any) {
-      if (this.logger.structuredLogError !== undefined && structuredLogInfo !== undefined) {
-        this.logger.structuredLogError(structuredLogInfo.network, error, [
-          ...(structuredLogInfo.tagId as (string | number)[]),
-          this.errorColor(`Error sending query request`),
-        ])
-      } else {
-        this.logger.error(`Error sending query request ${error}`)
-      }
+      this.logError('Error sending query request', error, structuredLogInfo)
     }
   }
 
-  async sendMutationRequest(mutation: string, props: any): Promise<any> {
-    this.logger.log(`Sending mutation request ${mutation} with props ${JSON.stringify(props)}`)
+  async sendMutationRequest<T = any>(
+    mutation: string,
+    props: any,
+    structuredLogInfo?: StructuredLogInfo,
+  ): Promise<Response<T> | undefined> {
+    this.logInfo(
+      `Sending mutation request ${cleanRequest(mutation)} with props ${JSON.stringify(props)}`,
+      structuredLogInfo,
+    )
     try {
-      return await this.client.request(mutation, props)
+      return await this.client.rawRequest(mutation, props)
     } catch (error: any) {
-      this.logger.error(`Error sending mutation request ${error}`)
+      this.logError('Error sending mutation request', error, structuredLogInfo)
     }
   }
 
+  // Note: This is not currently used since queries are passed into the sendQueryRequest function via dbJobMap
+  // THis can be updated when we move the jobs to a queue service
   async queryNftByTx(tx: string): Promise<Nft> {
     const query = gql`
       query($tx: String!) {
@@ -119,6 +136,27 @@ class ApiService {
     try {
       const data: NftQueryResponse = await this.client.request(query, {tx})
       return data.nftByTx
+    } catch (error: any) {
+      this.logger.error(`Error sending query request ${error}`)
+    }
+  }
+
+  // Note: This is not currently used since queries are passed into the sendQueryRequest function via dbJobMap
+  // THis can be updated when we move the jobs to a queue service
+  async queryNftByIpfsCid(cid: string): Promise<Nft> {
+    const query = gql`
+      query($cid: String!) {
+        nftByIpfsCid(ifpsCid: $cid) {
+          id
+          tx
+          status
+          chainId
+        }
+      }
+    `
+    try {
+      const data: NftQueryResponse = await this.client.request(query, {cid})
+      return data.nftByIpfsCid
     } catch (error: any) {
       this.logger.error(`Error sending query request ${error}`)
     }
@@ -139,7 +177,6 @@ class ApiService {
       updateNftInput: updateNftInput,
     })
 
-    this.logger.log('Updated NFT', data.updateNft)
     return data.updateNft
   }
 
@@ -169,15 +206,14 @@ class ApiService {
       }
   `
     const data: CrossChainTransactionResponse = await this.client.request(query, {jobHash})
-    this.logger.debug('Found cross chain transaction:', data.crossChainTransaction)
     return data.crossChainTransaction
   }
 
-  async updateCrossChainTransactionStatus(
+  async updateCrossChainTransactionStatus<T = any>(
     updateCrossChainTransactionStatusInput:
       | UpdateCrossChainTransactionStatusInput
       | UpdateCrossChainTransactionStatusInputWithoutData,
-  ): Promise<any> {
+  ): Promise<Response<T> | undefined> {
     const mutation = gql`
         mutation CreateOrUpdateCrossChainTransaction($createOrUpdateCrossChainTransactionInput: CreateOrUpdateCrossChainTransactionInput!) {
           createOrUpdateCrossChainTransaction(createOrUpdateCrossChainTransactionInput: $createOrUpdateCrossChainTransactionInput) {
@@ -202,12 +238,10 @@ class ApiService {
           }
         }
     `
-    const data: UpsertCrossChainTransactionReponse = await this.client.request(mutation, {
+    const result = await this.client.rawRequest(mutation, {
       createOrUpdateCrossChainTransactionInput: updateCrossChainTransactionStatusInput,
     })
-
-    this.logger.debug('Updated cross chain transaction:', data.createOrUpdateCrossChainTransaction)
-    return data.createOrUpdateCrossChainTransaction
+    return result
   }
 }
 

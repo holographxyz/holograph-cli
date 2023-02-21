@@ -10,20 +10,16 @@ env:
   ECR_REPOSITORY: holo-cli # notice: the same for all cli apps
   #
   TESTNET_IMAGE_TAG: testnet-${{ github.sha }}
-  #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.59
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.51
-  #######################################
+  #
   CLUSTER_NAME: prod0
   #
   AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
   ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }} # TIP: the 2 CERTs are separated with \, in Github secret
   #
-  #TODO - create new gh secret for TESTNET. should be different from staging????
-  TESTNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
+  TESTNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO - create new gh secret for TESTNET. should be different from staging????
   #
-  TESTNET_HOLO_INDEXER_HOST: 'http://testrhea-holo-api.testnet.svc.cluster.local:443' # Notice <-- the release from API
+  TESTNET_HOLO_INDEXER_HOST: 'http://testsirius-holo-api.testnet.svc.cluster.local:443' # Notice <-- the release from API
   #
   TESTNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
   TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
@@ -37,6 +33,14 @@ env:
   TESTNET_DOMAIN: 'holograph.xyz'
   #
   TESTNET_COMMON_NAMESPACE: testnet # NOTICE <---
+  #
+  #######################################
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.80
+  INDEXER_RELEASE_NAME: sirius-indexer-testnet # format -> [release_name]-indexer-[env]
+  #
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.56
+  OPERATOR_RELEASE_NAME: sirius-operator-testnet # format -> [release_name]-operator-[env]
+  #######################################
   #
   # INDEXER TESTNET rpc endpoints
   indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
@@ -52,12 +56,18 @@ env:
   #
   operator_testnet_private_key: ${{ secrets.OPERATOR_PROD_PRIVATE_KEY }}
   operator_testnet_address: ${{ secrets.OPERATOR_PROD_ADDRESS }}
+  #
+  # SQS User [indexer_processor_sqs_user]
+  SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
+  SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
+  TESTNET_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
+  TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
 
 # notice: the trigger
 #on:
 #  push:
 #    branches:
-#      - 'fix/rename-cli-releases-for-testnet-to-rhea'
+#      - 'something'
 #      # Excluded branches
 #      - '!develop'
 #      - '!main'
@@ -71,6 +81,7 @@ on:
 
 jobs:
   deploy-to-prod-testnet:
+    if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
     name: Deploy-to-prod[testnet]
     runs-on: ubuntu-latest
 
@@ -81,20 +92,47 @@ jobs:
           role-to-assume: ${{ env.IAM_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Checkout code
-        uses: actions/checkout@v2
-
       - name: Login to ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build image
-        run: |
-          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
-          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.TESTNET_IMAGE_TAG }} .
+      - name: Checkout the code
+        uses: actions/checkout@v2
 
-      - name: Push image
-        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.TESTNET_IMAGE_TAG }}
+      # This is a separate action that sets up buildx runner
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      # So now you can use Actions' own caching!
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-single-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-single-buildx
+
+      # And make it available for builds
+      - name: Build image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          builder: ${{ steps.buildx.outputs.name }}
+          file: Dockerfile
+          build-args: AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }}
+          platforms: linux/amd64
+          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.TESTNET_IMAGE_TAG }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          push: true # set false to deactivate the push to ECR
+
+      # This ugly bit is necessary if you don't want your cache to grow forever until it hits GitHub's limit of 5GB.
+      # https://github.com/docker/build-push-action/issues/252 & https://github.com/moby/buildkit/issues/1896
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Configure AWS creds to access EKS
         # TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -113,7 +151,7 @@ jobs:
       #
       #
       # NOTICE: --- INDEXER ---
-      - name: Pull the holo-indexer helm chart version x.x.x from ECR
+      - name: Pull the holograph-indexer helm chart version x.x.x from ECR
         shell: bash
         env:
           #
@@ -127,7 +165,7 @@ jobs:
       - name: -> Deploy INDEXER cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: rhea-indexer-testnet # notice
+          RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }} # notice
           #
           ENABLE_DEBUG: 'true'
           HEALTHCHECK: 'true'
@@ -164,11 +202,23 @@ jobs:
             --set testnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-            --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
-            --set datadog_tags.version=chart-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
+            --set datadog_tags.service=$RELEASE_NAME \
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
             \
-            --set autoscaling.minReplicas=1 \
-            --set autoscaling.maxReplicas=1 \
+            --set autoscaling.avalanche.maxReplicas=1 \
+            --set autoscaling.ethereum.maxReplicas=1 \
+            --set autoscaling.polygon.maxReplicas=1 \
+            \
+            --set resources.ethereum.limits.cpu=150m \
+            --set resources.ethereum.limits.memory=520Mi \
+            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.requests.memory=200Mi \
+            \
+            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
+            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
+            --set sqs.SQS_ENDPOINT=${{ env.TESTNET_SQS_ENDPOINT }} \
+            --set sqs.SQS_QUEUE_URL=${{ env.TESTNET_SQS_QUEUE_URL }} \
+            --set sqs.AWS_REGION=us-west-2 \
             \
             --values .github/values_for_prod_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
@@ -179,7 +229,7 @@ jobs:
       #
       #
       # NOTICE: --- OPERATOR ---
-      - name: Pull the holo-operator helm chart version x.x.x from ECR
+      - name: Pull the holograph-operator helm chart version x.x.x from ECR
         shell: bash
         env:
           #
@@ -193,16 +243,16 @@ jobs:
       - name: -> Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: rhea-operator-testnet # notice
+          RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }} # notice
           #
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
-          AVALANCHE_NETWORK: "fuji"
-          POLYGON_NETWORK  : "mumbai"
-          ETHEREUM_NETWORK : "goerli"
+          AVALANCHE_NETWORK: 'fuji'
+          POLYGON_NETWORK: 'mumbai'
+          ETHEREUM_NETWORK: 'goerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -233,8 +283,14 @@ jobs:
             --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
             \
+            --set resources.ethereum.limits.cpu=150m \
+            --set resources.ethereum.limits.memory=520Mi \
+            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.requests.memory=200Mi \
+            \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-            --set datadog_tags.version=chart-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
+            --set datadog_tags.service=$RELEASE_NAME \
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             \
             --values .github/values_for_prod_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
@@ -246,8 +302,8 @@ jobs:
       - name: -> Info for the new deployments
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          INDEXER_RELEASE_NAME: rhea-indexer-testnet
-          OPERATOR_RELEASE_NAME: rhea-operator-testnet
+          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }}
+          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
           LB_URL: 'https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}

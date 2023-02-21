@@ -10,10 +10,7 @@ env:
   ECR_REPOSITORY: holo-cli # notice: the same for all cli apps
   #
   MAINNET_IMAGE_TAG: mainnet-${{ github.sha }}
-  ########################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.59
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.51
-  ########################################
+  #
   CLUSTER_NAME: prod0
   #
   AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
@@ -22,7 +19,7 @@ env:
   #
   MAINNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_MAINNET_OPERATOR_API_KEY }}
   #
-  MAINNET_HOLO_INDEXER_HOST: 'http://rhea-holo-api.mainnet.svc.cluster.local:443' # Notice <-- the release from API
+  MAINNET_HOLO_INDEXER_HOST: 'http://sirius-holo-api.mainnet.svc.cluster.local:443' # Notice <-- the release from API
   #
   MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.MAINNET_HOLO_INDEXER_PASSWORD }}
   MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.MAINNET_HOLO_OPERATOR_PASSWORD }}
@@ -36,6 +33,14 @@ env:
   MAINNET_DOMAIN: 'holograph.xyz'
   #
   MAINNET_COMMON_NAMESPACE: mainnet # NOTICE <---
+  #
+  #######################################
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.80
+  INDEXER_RELEASE_NAME: sirius-indexer-mainnet # format -> [release_name]-indexer-[env]
+  #
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.56
+  OPERATOR_RELEASE_NAME: sirius-operator-mainnet # format -> [release_name]-operator-[env]
+  #######################################
   #
   ### INDEXER MAINNET rpc endpoints
   indexer_mainnet_avalanche_rpc_url: ${{ secrets.INDEXER_MAINNET_AVALANCHE_RPC_URL }}
@@ -51,6 +56,12 @@ env:
   #
   operator_mainnet_private_key: ${{ secrets.OPERATOR_MAINNET_PRIVATE_KEY }}
   operator_mainnet_address: ${{ secrets.OPERATOR_MAINNET_ADDRESS }}
+  #
+  # SQS User [indexer_processor_sqs_user]
+  SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
+  SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
+  MAINNET_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
+  MAINNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/mainnet-indexer-processor'
 
 ## notice: the trigger
 #on:
@@ -70,6 +81,7 @@ on:
 
 jobs:
   deploy-to-prod-mainnet:
+    if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
     name: Deploy-to-prod[mainnet]
     runs-on: ubuntu-latest
 
@@ -80,20 +92,47 @@ jobs:
           role-to-assume: ${{ env.IAM_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Checkout code
-        uses: actions/checkout@v2
-
       - name: Login to ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build image
-        run: |
-          docker build --platform linux/amd64 --build-arg AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }} \
-          -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }} .
+      - name: Checkout the code
+        uses: actions/checkout@v2
 
-      - name: Push image
-        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }}
+      # This is a separate action that sets up buildx runner
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      # So now you can use Actions' own caching!
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-single-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-single-buildx
+
+      # And make it available for builds
+      - name: Build image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          builder: ${{ steps.buildx.outputs.name }}
+          file: Dockerfile
+          build-args: AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }}
+          platforms: linux/amd64
+          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          push: true # set false to deactivate the push to ECR
+
+      # This ugly bit is necessary if you don't want your cache to grow forever until it hits GitHub's limit of 5GB.
+      # https://github.com/docker/build-push-action/issues/252 & https://github.com/moby/buildkit/issues/1896
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Configure AWS creds to access EKS
         # TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -112,7 +151,7 @@ jobs:
       #
       #
       # NOTICE: --- INDEXER ---
-      - name: Pull the holo-indexer helm chart version x.x.x from ECR
+      - name: Pull the holograph-indexer helm chart version x.x.x from ECR
         shell: bash
         env:
           #
@@ -126,7 +165,7 @@ jobs:
       - name: -> Deploy INDEXER cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: indexer-main # notice
+          RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }} # notice
           #
           ENABLE_DEBUG: 'true'
           HEALTHCHECK: 'true'
@@ -163,13 +202,23 @@ jobs:
             --set mainnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-            --set datadog_tags.service=$RELEASE_NAME-holo-indexer \
-            --set datadog_tags.version=chart-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
+            --set datadog_tags.service=$RELEASE_NAME \
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
             \
-            --set autoscaling.minReplicas=2 \
-            --set autoscaling.maxReplicas=2 \
+            --set autoscaling.avalanche.maxReplicas=1 \
+            --set autoscaling.ethereum.maxReplicas=1 \
+            --set autoscaling.polygon.maxReplicas=1 \
             \
-            --set LivenessProbeCommand="if [ \$(curl localhost:6000/healthcheck | jq -r '.providerStatus.polygon') != CONNECTED ] ;then exit 1 ;fi && if [ \$(curl localhost:6000/healthcheck | jq -r '.providerStatus.avalanche') != CONNECTED ] ;then exit 1 ;fi" \
+            --set resources.ethereum.limits.cpu=150m \
+            --set resources.ethereum.limits.memory=520Mi \
+            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.requests.memory=200Mi \
+            \
+            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
+            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
+            --set sqs.SQS_ENDPOINT=${{ env.MAINNET_SQS_ENDPOINT }} \
+            --set sqs.SQS_QUEUE_URL=${{ env.MAINNET_SQS_QUEUE_URL }} \
+            --set sqs.AWS_REGION=us-west-2 \
             \
             --values .github/values_for_prod_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
@@ -180,7 +229,7 @@ jobs:
       #
       #
       # NOTICE: --- OPERATOR ---
-      - name: Pull the holo-operator helm chart version x.x.x from ECR
+      - name: Pull the holograph-operator helm chart version x.x.x from ECR
         shell: bash
         env:
           #
@@ -194,16 +243,16 @@ jobs:
       - name: -> Deploy OPERATOR cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: operator-main # notice
+          RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }} # notice
           #
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'true'
-          AVALANCHE_NETWORK: "avax"
-          POLYGON_NETWORK  : "matic"
-          ETHEREUM_NETWORK : "eth"
+          AVALANCHE_NETWORK: 'avax'
+          POLYGON_NETWORK: 'matic'
+          ETHEREUM_NETWORK: 'eth'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -234,8 +283,14 @@ jobs:
             --set mainnet_rpc_config_values.private_key=${{ env.operator_mainnet_private_key }} \
             --set mainnet_rpc_config_values.address=${{ env.operator_mainnet_address }} \
             \
+            --set resources.ethereum.limits.cpu=150m \
+            --set resources.ethereum.limits.memory=520Mi \
+            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.requests.memory=200Mi \
+            \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-            --set datadog_tags.version=chart-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
+            --set datadog_tags.service=$RELEASE_NAME \
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             \
             --values .github/values_for_prod_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
@@ -247,8 +302,8 @@ jobs:
       - name: -> Info for the new deployments
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          INDEXER_RELEASE_NAME: indexer-main
-          OPERATOR_RELEASE_NAME: operator-main
+          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }}
+          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
           LB_URL: 'https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}

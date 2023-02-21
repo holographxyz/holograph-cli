@@ -10,7 +10,7 @@ import {getNetworkByChainId, supportedNetworks} from '@holographxyz/networks'
 import {capitalize} from '../../utils/utils'
 import {DeploymentConfig, decodeDeploymentConfigInput} from '../../utils/contract-deployment'
 
-import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, warpFlag} from '../../utils/network-monitor'
+import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, repairFlag} from '../../utils/network-monitor'
 import {HealthCheck} from '../../base-commands/healthcheck'
 
 type RecoveryData = {
@@ -26,9 +26,7 @@ type RecoveryData = {
 export default class Propagator extends HealthCheck {
   static hidden = true
   static description = 'Listen for EVM events deploys collections to the supported networks'
-  static examples = [
-    '$ <%= config.bin %> <%= command.id %> --networks ethereumTestnetRinkeby polygonTestnet avalancheTestnet --mode=auto',
-  ]
+  static examples = ['$ <%= config.bin %> <%= command.id %> --networks goerli mumbai fuji --mode=auto']
 
   static flags = {
     mode: Flags.string({
@@ -43,7 +41,7 @@ export default class Propagator extends HealthCheck {
     unsafePassword: Flags.string({
       description: 'Enter the plain text password for the wallet in the holograph cli config',
     }),
-    ...warpFlag,
+    ...repairFlag,
     ...networksFlag,
     recover: Flags.string({
       description: 'Provide a JSON array of RecoveryData objects to manually ensure propagation',
@@ -101,7 +99,7 @@ export default class Propagator extends HealthCheck {
       processTransactions: this.processTransactions,
       userWallet,
       lastBlockFilename: 'propagator-blocks.json',
-      warp: flags.warp,
+      repair: flags.repair,
     })
 
     this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
@@ -130,7 +128,8 @@ export default class Propagator extends HealthCheck {
     }
 
     CliUx.ux.action.start(`Starting propagator in mode: ${OperatorMode[this.operatorMode]}`)
-    await this.networkMonitor.run(!(flags.warp > 0), undefined, this.filterBuilder)
+    const continuous = !flags.repair // If repair is set, run network monitor stops after catching up to the latest block
+    await this.networkMonitor.run(continuous, undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
     let recoveryData: RecoveryData[] = JSON.parse(flags.recover as string) as RecoveryData[]
@@ -200,7 +199,6 @@ export default class Propagator extends HealthCheck {
         networkDependant: false,
       },
     ]
-    return Promise.resolve()
   }
 
   async processTransactions(job: BlockJob, transactions: ethers.providers.TransactionResponse[]): Promise<void> {
