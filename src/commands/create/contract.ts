@@ -33,7 +33,7 @@ import {
   checkTokenIdFlag,
   checkTransactionHashFlag,
 } from '../../utils/validation'
-import {ContractFactory, ethers} from 'ethers'
+import {ContractFactory} from 'ethers'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
   const codeFile: string = await checkStringFlag(undefined, prompt)
