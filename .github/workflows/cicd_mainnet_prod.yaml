@@ -151,7 +151,7 @@ jobs:
       #
       #
       # NOTICE: --- INDEXER ---
-      - name: Pull the holo-indexer helm chart version x.x.x from ECR
+      - name: Pull the holograph-indexer helm chart version x.x.x from ECR
         shell: bash
         env:
           #
