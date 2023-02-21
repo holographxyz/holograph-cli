@@ -286,7 +286,7 @@ export default class Indexer extends HealthCheck {
     }
 
     const timestamps: number[] = numberfy(Object.keys(this.dbJobMap))
-    this.log(`Number of db jobs with ${timestamp} is ${timestamps.length}`)
+    this.log(`Number of db jobs with timestamp is ${timestamps.length}`)
     if (timestamps.length > 0) {
       timestamps.sort(numericSort)
       const timestamp: number = timestamps[0]
