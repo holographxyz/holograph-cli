@@ -19,7 +19,7 @@ env:
   #
   TESTNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO - create new gh secret for TESTNET. should be different from staging????
   #
-  TESTNET_HOLO_INDEXER_HOST: 'http://testrhea-holo-api.testnet.svc.cluster.local:443' # Notice <-- the release from API
+  TESTNET_HOLO_INDEXER_HOST: 'http://testsirius-holo-api.testnet.svc.cluster.local:443' # Notice <-- the release from API
   #
   TESTNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
   TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
@@ -35,11 +35,11 @@ env:
   TESTNET_COMMON_NAMESPACE: testnet # NOTICE <---
   #
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.69
-  INDEXER_RELEASE_NAME: rhea-indexer-testnet # format -> [release_name]-indexer-[env]
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.80
+  INDEXER_RELEASE_NAME: sirius-indexer-testnet # format -> [release_name]-indexer-[env]
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.55
-  OPERATOR_RELEASE_NAME: rhea-operator-testnet # format -> [release_name]-operator-[env]
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.56
+  OPERATOR_RELEASE_NAME: sirius-operator-testnet # format -> [release_name]-operator-[env]
   #######################################
   #
   # INDEXER TESTNET rpc endpoints
@@ -56,12 +56,18 @@ env:
   #
   operator_testnet_private_key: ${{ secrets.OPERATOR_PROD_PRIVATE_KEY }}
   operator_testnet_address: ${{ secrets.OPERATOR_PROD_ADDRESS }}
+  #
+  # SQS User [indexer_processor_sqs_user]
+  SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
+  SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
+  TESTNET_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
+  TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
 
 # notice: the trigger
 #on:
 #  push:
 #    branches:
-#      - 'fix/rename-cli-releases-for-testnet-to-rhea'
+#      - 'something'
 #      # Excluded branches
 #      - '!develop'
 #      - '!main'
@@ -145,7 +151,7 @@ jobs:
       #
       #
       # NOTICE: --- INDEXER ---
-      - name: Pull the holo-indexer helm chart version x.x.x from ECR
+      - name: Pull the holograph-indexer helm chart version x.x.x from ECR
         shell: bash
         env:
           #
@@ -199,13 +205,20 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
             \
-            --set autoscaling.minReplicas=1 \
-            --set autoscaling.maxReplicas=1 \
+            --set autoscaling.avalanche.maxReplicas=1 \
+            --set autoscaling.ethereum.maxReplicas=1 \
+            --set autoscaling.polygon.maxReplicas=1 \
             \
-            --set resources.limits.cpu=150m \
-            --set resources.limits.memory=520Mi \
-            --set resources.requests.cpu=100m \
-            --set resources.requests.memory=200Mi \
+            --set resources.ethereum.limits.cpu=150m \
+            --set resources.ethereum.limits.memory=520Mi \
+            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.requests.memory=200Mi \
+            \
+            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
+            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
+            --set sqs.SQS_ENDPOINT=${{ env.TESTNET_SQS_ENDPOINT }} \
+            --set sqs.SQS_QUEUE_URL=${{ env.TESTNET_SQS_QUEUE_URL }} \
+            --set sqs.AWS_REGION=us-west-2 \
             \
             --values .github/values_for_prod_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
@@ -270,14 +283,14 @@ jobs:
             --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
             \
+            --set resources.ethereum.limits.cpu=150m \
+            --set resources.ethereum.limits.memory=520Mi \
+            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.requests.memory=200Mi \
+            \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
-            \
-            --set resources.limits.cpu=150m \
-            --set resources.limits.memory=520Mi \
-            --set resources.requests.cpu=100m \
-            --set resources.requests.memory=200Mi \
             \
             --values .github/values_for_prod_alb_ingress.yaml \
             --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
