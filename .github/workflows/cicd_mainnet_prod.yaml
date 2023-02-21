@@ -171,7 +171,9 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'true'
-          NETWORK: 'avax matic eth'
+          AVALANCHE_NETWORK: 'avax'
+          ETHEREUM_NETWORK: 'eth'
+          POLYGON_NETWORK: 'matic'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -190,7 +192,11 @@ jobs:
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
-            --set NETWORK="${NETWORK}" \
+            \
+            --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
+            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
+            --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
+            \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             \
             --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.indexer_mainnet_avalanche_rpc_url }} \
