@@ -34,15 +34,16 @@ function validateDisabledCommandsOnMainnet(environment: string, commandName: str
   }
 }
 
-function validateDisabledCommands(commandName: string) {
-  const commandsDisableTemporarily = ['create', 'create:contract', 'create:nft']
+// TODO: Reenable
+// function validateDisabledCommands(commandName: string) {
+//   const commandsDisableTemporarily = ['create', 'create:contract', 'create:nft']
 
-  if (commandsDisableTemporarily.includes(commandName)) {
-    console.error(color.red(`The ${commandName} command is temporarily disabled.`))
-    // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
-    process.exit(0)
-  }
-}
+//   if (commandsDisableTemporarily.includes(commandName)) {
+//     console.error(color.red(`The ${commandName} command is temporarily disabled.`))
+//     // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+//     process.exit(0)
+//   }
+// }
 
 const environmentSelectorHook: Hook<'init'> = async function ({id, argv}) {
   // TODO: Reenable
