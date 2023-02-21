@@ -95,8 +95,10 @@ export default class Indexer extends HealthCheck {
         this.apiService = new ApiService(this.BASE_URL, logger)
         await this.apiService.operatorLogin()
       } catch (error: any) {
+        this.log('Error: Failed to get Operator Token from API')
         // NOTE: sample of how to do logs when in production mode
         this.log(JSON.stringify({...error, stack: error.stack}))
+        this.exit()
       }
 
       if (this.apiService === undefined) {
@@ -236,7 +238,6 @@ export default class Indexer extends HealthCheck {
   }
 
   processDBJobs(timestamp?: number, job?: DBJob): void {
-    this.log('Starting processDBJobs')
     if (timestamp !== undefined && job !== undefined) {
       this.networkMonitor.structuredLog(
         job.network,
@@ -285,7 +286,7 @@ export default class Indexer extends HealthCheck {
     }
 
     const timestamps: number[] = numberfy(Object.keys(this.dbJobMap))
-    this.log(`Length of this.dbJobs = ${timestamps.length}`)
+    this.log(`Number of db jobs with timestamp is ${timestamps.length}`)
     if (timestamps.length > 0) {
       timestamps.sort(numericSort)
       const timestamp: number = timestamps[0]
@@ -317,12 +318,7 @@ export default class Indexer extends HealthCheck {
         setTimeout(this.processDBJobs.bind(this), 1000)
       }
     } else {
-      if (job === undefined) {
-        this.log('No timestamps found, setting timeout...')
-      } else {
-        this.networkMonitor.structuredLog(job.network, `No timestamps found, setting timeout...`, job.tags)
-      }
-
+      this.log('No job found sleeping for 1 second...')
       setTimeout(this.processDBJobs.bind(this), 1000)
     }
   }
