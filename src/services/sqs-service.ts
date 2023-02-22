@@ -34,7 +34,6 @@ class SqsService {
           QueueUrl: this.sqsQueueURL,
         }),
       )
-      console.log('Success, message sent. MessageID:', data.MessageId)
       return data
     } catch (error: any) {
       console.log(error)

@@ -29,10 +29,14 @@ import {
   // handleBridgeInEvent,
   // handleBridgeOutEvent,
   handleContractDeployedEvent,
-  handleAvailableOperatorJobEvent,
+  // handleAvailableOperatorJobEvent,
 } from '../../handlers/indexer'
 
-import {handleMintEvent as sqsHandleMintEvent, handleBridgeEvent} from '../../handlers/sqs-indexer'
+import {
+  handleMintEvent as sqsHandleMintEvent,
+  handleAvailableOperatorJobEvent as sqsHandleAvailableOperatorJobEvent,
+  handleBridgeEvent,
+} from '../../handlers/sqs-indexer'
 
 dotenv.config()
 
@@ -385,16 +389,18 @@ export default class Indexer extends HealthCheck {
                 `handleAvailableOperatorJobEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
                 tags,
               )
-              await handleAvailableOperatorJobEvent.call(
-                this,
-                this.networkMonitor,
-                transaction,
-                job.network,
-                tags,
-                this.updateBridgedContract,
-                this.updateBridgedERC20,
-                this.updateBridgedERC721,
-              )
+              // await handleAvailableOperatorJobEvent.call(
+              //   this,
+              //   this.networkMonitor,
+              //   transaction,
+              //   job.network,
+              //   tags,
+              //   this.updateBridgedContract,
+              //   this.updateBridgedERC20,
+              //   this.updateBridgedERC721,
+              // )
+
+              await sqsHandleAvailableOperatorJobEvent.call(this, this.networkMonitor, transaction, job.network, tags)
             } else if (functionSig === functionSignature('cxipMint(uint224,uint8,string)')) {
               this.networkMonitor.structuredLog(
                 job.network,
