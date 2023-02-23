@@ -6,7 +6,7 @@ import {BytesLike} from '@ethersproject/bytes'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {networks} from '@holographxyz/networks'
 
-import {BytecodeType, bytecodes} from '../../utils/bytecodes'
+import {BytecodeType, bytecodes, EditionMetadataRenderer} from '../../utils/bytecodes'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {web3, zeroAddress, generateInitCode, remove0x, sha3} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
@@ -33,7 +33,7 @@ import {
   checkTokenIdFlag,
   checkTransactionHashFlag,
 } from '../../utils/validation'
-import {ContractFactory} from 'ethers'
+import {ContractFactory, ethers} from 'ethers'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
   const codeFile: string = await checkStringFlag(undefined, prompt)
@@ -169,6 +169,7 @@ export default class Contract extends Command {
           undefined,
           'Select the primary network of the contract (does not prepend chainId to tokenIds)',
         )
+
         chainId = '0x' + networks[chainType].holographId.toString(16).padStart(8, '0')
         deploymentConfig.config.chainType = chainId
         salt =
@@ -336,17 +337,15 @@ export default class Contract extends Command {
             //   throw new Error('Invalid royalty basis points was provided: ' + royaltyBps.toString())
             // }
 
-            // TODO: Connect wallet to the provider
-            const account = userWallet.connect(this.networkMonitor.providers['ethereumTestnetGoerli'])
+            // Connect wallet to the provider
+            const provider = this.networkMonitor.providers[chainType]
+            const account = userWallet.connect(provider)
 
             // TODO: Deploy a metadata renderer contract
-            const rendererByteCode = '' // TODO: Get the bytecode from the metadata renderer contract
-            const renderAbi = JSON.parse(fs.readFileSync(`./src/abi/develop/EditionMetadataRenderer.json`).toString())
-            const rendererFactory = new ContractFactory(renderAbi, rendererByteCode, account)
-
-            // If your contract requires constructor args, you can specify them here
-            const metadataRenderer = await rendererFactory.deploy()
-            console.log(metadataRenderer)
+            // const renderAbi = JSON.parse(fs.readFileSync(`./src/abi/develop/EditionMetadataRenderer.json`).toString())
+            // const rendererFactory = new ContractFactory(renderAbi, EditionMetadataRenderer.bytecode, account)
+            // const metadataRenderer = await rendererFactory.deploy()
+            // this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
 
             initCode = generateInitCode(
               [
@@ -362,10 +361,10 @@ export default class Contract extends Command {
                   'hDROP', // contractSymbol
                   userWallet.address, // initialOwner
                   userWallet.address, // fundsRecipient
-                  10, // number of editions
-                  500, // royalty percentage in bps
+                  100, // number of editions
+                  1000, // royalty percentage in bps
                   [], // setupCalls (TODO: used to set sales config)
-                  metadataRenderer.address, // metadataRenderer
+                  '0x79acD41ca9F7a9e8Bb42806235a94Cf64db788CC', // metadataRenderer.address
                   generateInitCode(['string', 'string', 'string'], ['decscription', 'imageURI', 'animationURI']), // metadataRendererInit
                 ],
                 false, // skipInit
@@ -473,24 +472,26 @@ export default class Contract extends Command {
     }
 
     CliUx.ux.action.start('Deploying contract')
+    let provider = this.networkMonitor.providers[targetNetwork]
+    const account = userWallet.connect(provider)
     const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
       network: targetNetwork,
-      contract: this.networkMonitor.factoryContract.connect(this.networkMonitor.providers[targetNetwork]),
+      contract: this.networkMonitor.factoryContract.connect(provider),
       methodName: 'deployHolographableContract',
-      args: [deploymentConfig.config, deploymentConfig.signature, deploymentConfig.signer],
+      args: [deploymentConfig.config, deploymentConfig.signature, account],
       waitForReceipt: true,
     })
     CliUx.ux.action.stop()
 
     if (receipt === null) {
-      throw new Error('failed to confirm that the transaction was mined')
+      throw new Error('Failed to confirm that the transaction was mined')
     } else {
       const logs: any[] | undefined = this.networkMonitor.decodeBridgeableContractDeployedEvent(
         receipt,
         this.networkMonitor.factoryAddress,
       )
       if (logs === undefined) {
-        throw new Error('failed to extract transfer event from transaction receipt')
+        throw new Error('Failed to extract transfer event from transaction receipt')
       } else {
         const deploymentAddress = logs[0] as string
         this.log(`Contract has been deployed to address ${deploymentAddress} on ${targetNetwork} network`)

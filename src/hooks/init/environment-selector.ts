@@ -2,6 +2,7 @@ import {Hook} from '@oclif/core'
 import color from '@oclif/color'
 
 enum Environment {
+  LOCALHOST = 'localhost',
   EXPERIMENTAL = 'experimental',
   DEVELOP = 'develop',
   TESTNET = 'testnet',
