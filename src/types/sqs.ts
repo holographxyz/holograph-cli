@@ -6,14 +6,20 @@ export enum PayloadType {
   ERC721 = 'ERC721',
 }
 
+export enum EventName {
+  MintNft = 'MintNft',
+  BridgePreProcess = 'BridgePreProcess',
+}
+
 export type SqsMessageBody = {
   type: PayloadType
-  eventName: string
+  eventName: EventName
+  eventSignature?: string
   tagId: (string | number)[]
   chainId: number
   holographAddress: string
   environment: Environment
-  payload: MintEventPayload
+  payload: MintEventPayload | BridgeEventPayload
 }
 
 export type MintEventPayload = {
@@ -22,4 +28,9 @@ export type MintEventPayload = {
   collectionAddress: string
   nftTokenId: string
   to: string
+}
+
+export type BridgeEventPayload = {
+  tx: string
+  blockNum: number
 }
