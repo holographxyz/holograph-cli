@@ -24,15 +24,20 @@ import ApiService from '../../services/api-service'
 import {getIpfsCidFromTokenUri, validateIpfsCid} from '../../utils/validation'
 
 import {DBJob, DBJobMap} from '../../types/indexer'
-import {
-  handleMintEvent,
-  handleBridgeInEvent,
-  handleBridgeOutEvent,
-  handleContractDeployedEvent,
-  handleAvailableOperatorJobEvent,
-} from '../../handlers/indexer'
+// import {
+//   handleMintEvent,
+//   handleBridgeInEvent,
+//   handleBridgeOutEvent,
+//   handleContractDeployedEvent,
+//   handleAvailableOperatorJobEvent,
+// } from '../../handlers/indexer'
 
-// import {handleMintEvent as sqsHandleMintEvent} from '../../handlers/sqs-indexer'
+import {
+  handleMintEvent as sqsHandleMintEvent,
+  handleContractDeployedEvent as sqsHandleContractDeployedEvent,
+  handleAvailableOperatorJobEvent as sqsHandleAvailableOperatorJobEvent,
+  handleBridgeEvent,
+} from '../../handlers/sqs-indexer'
 
 dotenv.config()
 
@@ -336,6 +341,7 @@ export default class Indexer extends HealthCheck {
         const to: string | undefined = transaction.to?.toLowerCase()
         const from: string | undefined = transaction.from?.toLowerCase()
         const functionSig: string | undefined = transaction.data?.slice(0, 10)
+
         switch (to) {
           case this.networkMonitor.factoryAddress: {
             this.networkMonitor.structuredLog(
@@ -343,14 +349,16 @@ export default class Indexer extends HealthCheck {
               `handleContractDeployedEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
               tags,
             )
-            await handleContractDeployedEvent.call(
-              this,
-              this.networkMonitor,
-              transaction,
-              job.network,
-              tags,
-              this.updateDeployedContract,
-            )
+            // await handleContractDeployedEvent.call(
+            //   this,
+            //   this.networkMonitor,
+            //   transaction,
+            //   job.network,
+            //   tags,
+            //   this.updateDeployedContract,
+            // )
+
+            await sqsHandleContractDeployedEvent.call(this, this.networkMonitor, transaction, job.network, tags)
 
             break
           }
@@ -361,17 +369,19 @@ export default class Indexer extends HealthCheck {
               `handleBridgeOutEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
               tags,
             )
-            await handleBridgeOutEvent.call(
-              this,
-              this.networkMonitor,
-              this.environment,
-              transaction,
-              job.network,
-              tags,
-              this.updateBridgedContract,
-              this.updateBridgedERC20,
-              this.updateBridgedERC721,
-            )
+            // await handleBridgeOutEvent.call(
+            //   this,
+            //   this.networkMonitor,
+            //   this.environment,
+            //   transaction,
+            //   job.network,
+            //   tags,
+            //   this.updateBridgedContract,
+            //   this.updateBridgedERC20,
+            //   this.updateBridgedERC721,
+            // )
+
+            await handleBridgeEvent.call(this, this.networkMonitor, transaction, job.network, tags)
 
             break
           }
@@ -382,16 +392,18 @@ export default class Indexer extends HealthCheck {
               `handleBridgeInEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
               tags,
             )
-            await handleBridgeInEvent.call(
-              this,
-              this.networkMonitor,
-              transaction,
-              job.network,
-              tags,
-              this.updateBridgedContract,
-              this.updateBridgedERC20,
-              this.updateBridgedERC721,
-            )
+            // await handleBridgeInEvent.call(
+            //   this,
+            //   this.networkMonitor,
+            //   transaction,
+            //   job.network,
+            //   tags,
+            //   this.updateBridgedContract,
+            //   this.updateBridgedERC20,
+            //   this.updateBridgedERC721,
+            // )
+
+            await handleBridgeEvent.call(this, this.networkMonitor, transaction, job.network, tags)
 
             break
           }
@@ -403,16 +415,18 @@ export default class Indexer extends HealthCheck {
                 `handleAvailableOperatorJobEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
                 tags,
               )
-              await handleAvailableOperatorJobEvent.call(
-                this,
-                this.networkMonitor,
-                transaction,
-                job.network,
-                tags,
-                this.updateBridgedContract,
-                this.updateBridgedERC20,
-                this.updateBridgedERC721,
-              )
+              // await handleAvailableOperatorJobEvent.call(
+              //   this,
+              //   this.networkMonitor,
+              //   transaction,
+              //   job.network,
+              //   tags,
+              //   this.updateBridgedContract,
+              //   this.updateBridgedERC20,
+              //   this.updateBridgedERC721,
+              // )
+
+              await sqsHandleAvailableOperatorJobEvent.call(this, this.networkMonitor, transaction, job.network, tags)
             } else if (functionSig === functionSignature('cxipMint(uint224,uint8,string)')) {
               this.networkMonitor.structuredLog(
                 job.network,
@@ -420,16 +434,16 @@ export default class Indexer extends HealthCheck {
                 tags,
               )
 
-              await handleMintEvent.call(
-                this,
-                this.networkMonitor,
-                transaction,
-                job.network,
-                tags,
-                this.updateMintedERC721,
-              )
+              // await handleMintEvent.call(
+              //   this,
+              //   this.networkMonitor,
+              //   transaction,
+              //   job.network,
+              //   tags,
+              //   this.updateMintedERC721,
+              // )
 
-              // await sqsHandleMintEvent.call(this, this.networkMonitor, transaction, job.network, tags)
+              await sqsHandleMintEvent.call(this, this.networkMonitor, transaction, job.network, tags)
             } else {
               this.networkMonitor.structuredLog(job.network, `irrelevant transaction ${transaction.hash}`, tags)
             }
