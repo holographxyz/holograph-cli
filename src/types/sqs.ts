@@ -9,6 +9,7 @@ export enum PayloadType {
 export enum EventName {
   MintNft = 'MintNft',
   BridgePreProcess = 'BridgePreProcess',
+  ContractDeployed = 'ContractDeployed',
 }
 
 export type SqsMessageBody = {
