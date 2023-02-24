@@ -10,6 +10,7 @@ export enum EventName {
   MintNft = 'MintNft',
   BridgePreProcess = 'BridgePreProcess',
   ContractDeployed = 'ContractDeployed',
+  AvailableOperatorJob = 'AvailableOperatorJob',
 }
 
 export type SqsMessageBody = {
