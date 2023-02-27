@@ -17,17 +17,20 @@ function validateDisabledCommandsOnMainnet(environment: string, commandName: str
     'operator:unbond',
     'operator:recover',
     'indexer',
+    'create',
+    'create:contract',
+    'create:nft',
   ]
 
-  const indexOfArg = argv.indexOf('--unsafe')
-  const unsafe = indexOfArg !== -1
+  const indexOfUnsafeFlag = argv.indexOf('--unsafe')
+  const unsafe = indexOfUnsafeFlag !== -1
 
   if (environment === Environment.MAINNET && commandsDisableForMainnet.includes(commandName)) {
     console.error(color.red(`The ${commandName} command is currently disabled on mainnet.`))
 
     if (unsafe && (commandName.includes('operator') || commandName.includes('indexer'))) {
       console.warn(color.yellow('Executing command on UNSAFE mode...'))
-      argv.splice(indexOfArg)
+      argv.splice(indexOfUnsafeFlag)
     } else {
       // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
       process.exit(0)
@@ -35,20 +38,18 @@ function validateDisabledCommandsOnMainnet(environment: string, commandName: str
   }
 }
 
-// TODO: Reenable
-// function validateDisabledCommands(commandName: string) {
-//   const commandsDisableTemporarily = ['create', 'create:contract', 'create:nft']
+function validateDisabledCommands(commandName: string) {
+  const commandsDisableTemporarily: string[] = [] // add commands to disable on all envs here
 
-//   if (commandsDisableTemporarily.includes(commandName)) {
-//     console.error(color.red(`The ${commandName} command is temporarily disabled.`))
-//     // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
-//     process.exit(0)
-//   }
-// }
+  if (commandsDisableTemporarily.includes(commandName)) {
+    console.error(color.red(`The ${commandName} command is temporarily disabled.`))
+    // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+    process.exit(0)
+  }
+}
 
 const environmentSelectorHook: Hook<'init'> = async function ({id, argv}) {
-  // TODO: Reenable
-  // validateDisabledCommands(String(id))
+  validateDisabledCommands(String(id))
 
   if (id !== 'config' && id !== undefined) {
     const indexOfEnv = argv.indexOf('--env')
