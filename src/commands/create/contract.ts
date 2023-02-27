@@ -34,7 +34,7 @@ import {
   checkTransactionHashFlag,
   checkUriTypeFlag,
 } from '../../utils/validation'
-import {BigNumber, ContractFactory, ethers} from 'ethers'
+import {ContractFactory} from 'ethers'
 import {UriTypeIndex} from '../../utils/asset-deployment'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
@@ -327,7 +327,7 @@ export default class Contract extends Command {
 
             break
 
-          case 'HolographERC721Drop':
+          case 'HolographERC721Drop': {
             collectionName = await checkStringFlag(undefined, 'Enter the name of the Drop')
             collectionSymbol = await checkStringFlag(undefined, 'Enter the collection symbol to use')
             description = await checkStringFlag(undefined, 'Enter the description of the drop')
@@ -389,6 +389,7 @@ export default class Contract extends Command {
             ) // initCode
 
             break
+          }
         }
 
         deploymentConfig.config.byteCode = byteCode
@@ -489,13 +490,13 @@ export default class Contract extends Command {
     }
 
     CliUx.ux.action.start('Deploying contract')
-    let provider = this.networkMonitor.providers[targetNetwork]
+    const provider = this.networkMonitor.providers[targetNetwork]
     const account = userWallet.connect(provider)
     const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
       network: targetNetwork,
       // NOTE: gas can be overriden by here
       // gasPrice: BigNumber.from(100000000000), // 100 gwei
-      // gasLimit: BigNumber.from(7000000),
+      // gasLimit: BigNumber.from(7000000), // 7 million
       contract: this.networkMonitor.factoryContract.connect(provider),
       methodName: 'deployHolographableContract',
       args: [deploymentConfig.config, deploymentConfig.signature, account.address],

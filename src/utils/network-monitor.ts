@@ -2029,7 +2029,7 @@ export class NetworkMonitor {
     gasPrice,
     gasLimit,
     value = ZERO,
-    nonce,
+    // nonce, disabled to let ethers.js handle it
     tags = [] as (string | number)[],
     attempts = 10,
     canFail = false,

@@ -1,9 +1,9 @@
 export enum BytecodeType {
-  HolographERC721Drop = 'HolographERC721Drop',
   Custom = 'Custom',
   CxipERC721 = 'CxipERC721',
   SampleERC20 = 'SampleERC20',
   SampleERC721 = 'SampleERC721',
+  HolographERC721Drop = 'HolographERC721Drop',
   Holographer = 'Holographer',
 }
 
