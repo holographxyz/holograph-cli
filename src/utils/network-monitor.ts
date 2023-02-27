@@ -1903,7 +1903,7 @@ export class NetworkMonitor {
     tags = [] as (string | number)[],
     attempts = 10,
     canFail = false,
-    interval = 1000,
+    interval = 3000,
   }: SendTransactionParams): Promise<TransactionResponse | null> {
     return new Promise<TransactionResponse | null>((topResolve, _topReject) => {
       let txHash: string | null
@@ -2040,7 +2040,7 @@ export class NetworkMonitor {
       let sent = false
       let populateTxInterval: NodeJS.Timeout | null = null
       const handleError = (error: any) => {
-        // process.stdout.write('populateTransaction' + JSON.stringify(error, undefined, 2))
+        process.stdout.write('populateTransaction' + JSON.stringify(error, undefined, 2))
         counter++
         if (canFail && counter > attempts) {
           this.structuredLogError(network, error, tags)
@@ -2058,7 +2058,7 @@ export class NetworkMonitor {
           rawTx = await contract.populateTransaction[methodName](...args, {
             gasPrice,
             gasLimit,
-            nonce,
+            // nonce disabled to let ethers.js handle it,
             value,
             from: this.wallets[network].address,
           })

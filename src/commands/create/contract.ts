@@ -32,8 +32,10 @@ import {
   checkStringFlag,
   checkTokenIdFlag,
   checkTransactionHashFlag,
+  checkUriTypeFlag,
 } from '../../utils/validation'
 import {BigNumber, ContractFactory, ethers} from 'ethers'
+import {UriTypeIndex} from '../../utils/asset-deployment'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
   const codeFile: string = await checkStringFlag(undefined, prompt)
@@ -326,31 +328,41 @@ export default class Contract extends Command {
             break
 
           case 'HolographERC721Drop':
-            // TODO: Make this logic more modular
-            // collectionName = await checkStringFlag(undefined, 'Enter the name of the Drop')
-            // collectionSymbol = await checkStringFlag(undefined, 'Enter the collection symbol to use')
-            // description = await checkStringFlag(undefined, 'Enter the description of the drop')
-            // imageURI = await checkStringFlag(undefined, 'Enter the image URI of the drop')
+            collectionName = await checkStringFlag(undefined, 'Enter the name of the Drop')
+            collectionSymbol = await checkStringFlag(undefined, 'Enter the collection symbol to use')
+            description = await checkStringFlag(undefined, 'Enter the description of the drop')
+            const uriType: UriTypeIndex =
+              UriTypeIndex[
+                await checkUriTypeFlag(
+                  flags.uriType,
+                  'Select the uri of the drop image minus the prepend (ie "ipfs://")',
+                )
+              ]
+            const contentId: string = await checkStringFlag(
+              flags.uri,
+              'Enter the uri of the drop, minus the prepend (ie "ipfs://")',
+            )
+            imageURI = `${UriTypeIndex[uriType]}://${contentId}`
 
-            // numOfEditions = await checkNumberFlag(undefined, 'Enter the number of editions in this drop')
-            // royaltyBps = await checkNumberFlag(
-            //   undefined,
-            //   'Enter the percentage of royalty to collect in basis points. (1 = 0.01%, 10000 = 100%)',
-            // )
+            numOfEditions = await checkNumberFlag(undefined, 'Enter the number of editions in this drop')
+            royaltyBps = await checkNumberFlag(
+              undefined,
+              'Enter the percentage of royalty to collect in basis points. (1 = 0.01%, 10000 = 100%)',
+            )
 
-            // if (royaltyBps > 10_000 || royaltyBps < 0) {
-            //   throw new Error('Invalid royalty basis points was provided: ' + royaltyBps.toString())
-            // }
+            if (royaltyBps > 10_000 || royaltyBps < 0) {
+              throw new Error('Invalid royalty basis points was provided: ' + royaltyBps.toString())
+            }
 
             // Connect wallet to the provider
             const provider = this.networkMonitor.providers[chainType]
             const account = userWallet.connect(provider)
 
-            // TODO: Deploy a metadata renderer contract
-            // const renderAbi = JSON.parse(fs.readFileSync(`./src/abi/develop/EditionMetadataRenderer.json`).toString())
-            // const rendererFactory = new ContractFactory(renderAbi, EditionMetadataRenderer.bytecode, account)
-            // const metadataRenderer = await rendererFactory.deploy()
-            // this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
+            // Deploy a metadata renderer contract
+            const renderAbi = JSON.parse(fs.readFileSync(`./src/abi/develop/EditionMetadataRenderer.json`).toString())
+            const rendererFactory = new ContractFactory(renderAbi, EditionMetadataRenderer.bytecode, account)
+            const metadataRenderer = await rendererFactory.deploy()
+            this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
 
             initCode = generateInitCode(
               [
@@ -362,15 +374,15 @@ export default class Contract extends Command {
                   '0x0000000000000000000000000000000000000000', // TODO: holographFeeManager - this.networkMonitor.holographFeeManager.address
                   '0x0000000000000000000000000000000000000000', // holographERC721TransferHelper
                   '0x000000000000AAeB6D7670E522A718067333cd4E', // marketFilterAddress
-                  'collectionName', // contractName
-                  'collectionSymbol', // contractSymbol
+                  collectionName, // contractName
+                  collectionSymbol, // contractSymbol
                   userWallet.address, // initialOwner
                   userWallet.address, // fundsRecipient
-                  100, // number of editions
-                  1000, // royalty percentage in bps
+                  numOfEditions, // number of editions
+                  royaltyBps, // royalty percentage in bps
                   [], // setupCalls (TODO: used to set sales config)
-                  '0x840c110D724A5Fa1Ddcd136E5b009a2963D508f3', // metadataRenderer.address
-                  generateInitCode(['string', 'string', 'string'], ['description', 'imageURI', 'animationURI']), // metadataRendererInit
+                  metadataRenderer.address, // metadataRenderer.address
+                  generateInitCode(['string', 'string', 'string'], [description, imageURI, 'animationURI']), // metadataRendererInit
                 ],
                 false, // skipInit
               ],
@@ -481,9 +493,9 @@ export default class Contract extends Command {
     const account = userWallet.connect(provider)
     const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
       network: targetNetwork,
-      // gas overrides
-      gasPrice: BigNumber.from(100000000000), // 100 gwei
-      gasLimit: BigNumber.from(7000000),
+      // NOTE: gas can be overriden by here
+      // gasPrice: BigNumber.from(100000000000), // 100 gwei
+      // gasLimit: BigNumber.from(7000000),
       contract: this.networkMonitor.factoryContract.connect(provider),
       methodName: 'deployHolographableContract',
       args: [deploymentConfig.config, deploymentConfig.signature, account.address],
