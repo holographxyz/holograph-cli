@@ -91,6 +91,7 @@ export interface ContractDeployment {
     address: string
     txHash: string
     blockNumber: number
+    network: string
   }
   metadata: {
     contractType: string

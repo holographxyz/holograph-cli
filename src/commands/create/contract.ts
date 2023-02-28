@@ -526,6 +526,7 @@ export default class Contract extends Command {
                 address: deploymentAddress,
                 txHash: receipt.transactionHash,
                 blockNumber: receipt.blockNumber,
+                network: targetNetwork,
               },
             }
 
