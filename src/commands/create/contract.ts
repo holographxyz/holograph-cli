@@ -11,6 +11,7 @@ import {ensureConfigFileIsValid} from '../../utils/config'
 import {web3, zeroAddress, generateInitCode, remove0x, sha3} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {
+  ContractDeployment,
   deploymentFlags,
   DeploymentType,
   DeploymentConfig,
@@ -93,7 +94,7 @@ export default class Contract extends Command {
       },
       signer: userWallet.address,
     } as DeploymentConfig
-    let deploymentConfigFile: string | undefined
+    let contractDeploymentFile: string | undefined
 
     this.networkMonitor = new NetworkMonitor({
       parent: this,
@@ -112,7 +113,7 @@ export default class Contract extends Command {
     let salt: string
     let bytecodeType: BytecodeType
     const contractTypes: string[] = ['HolographERC20', 'HolographERC721', 'HolographERC721Drop']
-    let contractType: string
+    let contractType = ''
     let contractTypeHash: string
     let byteCode: string
     let eventConfig: string = allEventsEnabled()
@@ -125,14 +126,14 @@ export default class Contract extends Command {
     const domainVersion = '1'
     let decimals: number
 
-    let collectionName: string
-    let collectionSymbol: string
-    let royaltyBps: number
+    let collectionName = ''
+    let collectionSymbol = ''
+    let royaltyBps = 0
 
     // Drops
-    let numOfEditions: number
-    let description: string
-    let imageURI: string
+    let numOfEditions = 0
+    let description = ''
+    let imageURI = ''
 
     let configHashBytes: number[]
     let sig: string
@@ -158,11 +159,11 @@ export default class Contract extends Command {
         break
 
       case DeploymentType.deploymentConfig:
-        deploymentConfigFile = await checkStringFlag(flags.deploymentConfig, 'Enter the config file to use')
-        if (await fs.pathExists(deploymentConfigFile as string)) {
-          deploymentConfig = (await fs.readJson(deploymentConfigFile as string)) as DeploymentConfig
+        contractDeploymentFile = await checkStringFlag(flags.deploymentConfig, 'Enter the config file to use')
+        if (await fs.pathExists(contractDeploymentFile as string)) {
+          deploymentConfig = (await fs.readJson(contractDeploymentFile as string)) as DeploymentConfig
         } else {
-          throw new Error('The file "' + (deploymentConfigFile as string) + '" does not exist.')
+          throw new Error('The file "' + (contractDeploymentFile as string) + '" does not exist.')
         }
 
         break
@@ -202,6 +203,7 @@ export default class Contract extends Command {
             break
           default:
             contractType = 'HolographERC721Drop'
+            break
         }
 
         contractTypeHash = '0x' + web3.utils.asciiToHex(contractType).slice(2).padStart(64, '0')
@@ -448,26 +450,6 @@ export default class Contract extends Command {
         (deploymentConfig.signer as string).slice(2),
     )
 
-    if (deploymentType !== DeploymentType.deploymentConfig) {
-      const configFilePrompt: any = await inquirer.prompt([
-        {
-          name: 'shouldSave',
-          message: 'Would you like to export/save the deployment config file?',
-          type: 'confirm',
-          default: true,
-        },
-      ])
-      if (configFilePrompt.shouldSave) {
-        deploymentConfigFile = await checkStringFlag(
-          undefined,
-          'Enter the path and file where to save (ie ./deploymentConfig.json)',
-        )
-        await fs.ensureFile(deploymentConfigFile)
-        await fs.writeFile(deploymentConfigFile, JSON.stringify(deploymentConfig, undefined, 2), 'utf8')
-        this.log('File successfully saved to "' + deploymentConfigFile + '"')
-      }
-    }
-
     CliUx.ux.action.start('Checking that contract is not already deployed on "' + targetNetwork + '" network')
     const contractAddress: string = await this.networkMonitor.registryContract
       .connect(this.networkMonitor.providers[targetNetwork])
@@ -516,6 +498,47 @@ export default class Contract extends Command {
       } else {
         const deploymentAddress = logs[0] as string
         this.log(`Contract has been deployed to address ${deploymentAddress} on ${targetNetwork} network`)
+
+        if (deploymentType !== DeploymentType.deploymentConfig) {
+          const configFilePrompt: any = await inquirer.prompt([
+            {
+              name: 'shouldSave',
+              message: 'Would you like to export/save the deployment config file?',
+              type: 'confirm',
+              default: true,
+            },
+          ])
+          if (configFilePrompt.shouldSave) {
+            // Prepare the deployment config metadata for saving
+            const contractDeployment: ContractDeployment = {
+              deploymentConfig: deploymentConfig,
+              metadata: {
+                collectionName: collectionName,
+                collectionSymbol: collectionSymbol,
+                royaltyBps: royaltyBps,
+                contractType: contractType,
+
+                description: description,
+                imageURI: imageURI,
+                numOfEditions: numOfEditions,
+              },
+              transaction: {
+                address: deploymentAddress,
+                txHash: receipt.transactionHash,
+                blockNumber: receipt.blockNumber,
+              },
+            }
+
+            contractDeploymentFile = await checkStringFlag(
+              undefined,
+              'Enter the path and file where to save (ie ./contractDeployment.json)',
+            )
+            await fs.ensureFile(contractDeploymentFile)
+            await fs.writeFile(contractDeploymentFile, JSON.stringify(contractDeployment, undefined, 2), 'utf8')
+            this.log('File successfully saved to "' + contractDeploymentFile + '"')
+          }
+        }
+
         this.exit()
       }
     }

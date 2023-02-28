@@ -85,6 +85,25 @@ export interface DeploymentConfig {
   signer: string
 }
 
+export interface ContractDeployment {
+  deploymentConfig: DeploymentConfig
+  transaction: {
+    address: string
+    txHash: string
+    blockNumber: number
+  }
+  metadata: {
+    contractType: string
+    collectionName: string
+    collectionSymbol: string
+    royaltyBps: number
+
+    numOfEditions: number
+    description: string
+    imageURI: string
+  }
+}
+
 export type DeploymentConfigStruct = {
   contractType: BytesLike
   chainType: BigNumberish
