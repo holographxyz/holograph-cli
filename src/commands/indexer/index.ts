@@ -38,6 +38,7 @@ import {
   handleAvailableOperatorJobEvent as sqsHandleAvailableOperatorJobEvent,
   handleBridgeEvent,
 } from '../../handlers/sqs-indexer'
+import SqsService from '../../services/sqs-service'
 
 dotenv.config()
 
@@ -127,6 +128,8 @@ export default class Indexer extends HealthCheck {
       this.apiService.setStructuredLog(this.networkMonitor.structuredLog.bind(this.networkMonitor))
       this.apiService.setStructuredLogError(this.networkMonitor.structuredLogError.bind(this.networkMonitor))
     }
+
+    await this.checkSqsServiceAvailability()
 
     // TODO: It doesn't seems like sync is working
     // Indexer always synchronizes missed blocks
@@ -1223,5 +1226,11 @@ export default class Indexer extends HealthCheck {
       job.tags,
     )
     this.dbJobMap[job.timestamp].push(job)
+  }
+
+  async checkSqsServiceAvailability() {
+    this.log('Checking SQS service availability...')
+    await SqsService.Instance.healthCheck()
+    this.log('SQS service is reachable')
   }
 }
