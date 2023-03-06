@@ -79,7 +79,7 @@ export default class Contract extends Command {
 
     let tx!: string
     let txNetwork: string | undefined
-    let deploymentConfig: DeploymentConfig = {
+    const deploymentConfig: DeploymentConfig = {
       config: {
         contractType: '',
         chainType: '',
