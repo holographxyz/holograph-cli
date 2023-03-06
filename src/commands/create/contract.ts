@@ -96,6 +96,13 @@ export default class Contract extends Command {
     } as DeploymentConfig
     let contractDeploymentFile: string | undefined
 
+    let contractDeployment: ContractDeployment = {
+      version: '',
+      deploymentConfig,
+      transactions: [],
+      metadata: {} as any,
+    } as ContractDeployment
+
     this.networkMonitor = new NetworkMonitor({
       parent: this,
       configFile,
@@ -161,7 +168,7 @@ export default class Contract extends Command {
       case DeploymentType.deploymentConfig:
         contractDeploymentFile = await checkStringFlag(flags.deploymentConfig, 'Enter the config file to use')
         if (await fs.pathExists(contractDeploymentFile as string)) {
-          deploymentConfig = (await fs.readJson(contractDeploymentFile as string)) as DeploymentConfig
+          contractDeployment = (await fs.readJson(contractDeploymentFile as string)) as ContractDeployment
         } else {
           throw new Error('The file "' + (contractDeploymentFile as string) + '" does not exist.')
         }
@@ -176,7 +183,7 @@ export default class Contract extends Command {
         )
 
         chainId = '0x' + networks[chainType].holographId.toString(16).padStart(8, '0')
-        deploymentConfig.config.chainType = chainId
+        contractDeployment.deploymentConfig.config.chainType = chainId
         salt =
           '0x' +
           remove0x(await checkTokenIdFlag(undefined, 'Enter a bytes32 hash or number to use for salt hash')).padStart(
@@ -184,7 +191,7 @@ export default class Contract extends Command {
             '0',
           )
 
-        deploymentConfig.config.salt = salt
+        contractDeployment.deploymentConfig.config.salt = salt
         bytecodeType = await checkBytecodeTypeFlag(undefined, 'Select the bytecode type to deploy')
 
         // Select the contract type to deploy
@@ -202,12 +209,12 @@ export default class Contract extends Command {
             contractType = 'HolographERC721Drop'
             break
           default:
-            contractType = 'HolographERC721Drop'
+            contractType = 'HolographERC721'
             break
         }
 
         contractTypeHash = '0x' + web3.utils.asciiToHex(contractType).slice(2).padStart(64, '0')
-        deploymentConfig.config.contractType = contractTypeHash
+        contractDeployment.deploymentConfig.config.contractType = contractTypeHash
         byteCode =
           bytecodeType === BytecodeType.Custom
             ? await getCodeFromFile(
@@ -394,17 +401,17 @@ export default class Contract extends Command {
           }
         }
 
-        deploymentConfig.config.byteCode = byteCode
+        contractDeployment.deploymentConfig.config.byteCode = byteCode
         deploymentConfig.config.initCode = initCode
 
         configHash = sha3(
           '0x' +
-            (deploymentConfig.config.contractType as string).slice(2) +
-            (deploymentConfig.config.chainType as string).slice(2) +
-            (deploymentConfig.config.salt as string).slice(2) +
-            sha3(deploymentConfig.config.byteCode as string).slice(2) +
-            sha3(deploymentConfig.config.initCode as string).slice(2) +
-            (deploymentConfig.signer as string).slice(2),
+            (contractDeployment.deploymentConfig.config.contractType as string).slice(2) +
+            (contractDeployment.deploymentConfig.config.chainType as string).slice(2) +
+            (contractDeployment.deploymentConfig.config.salt as string).slice(2) +
+            sha3(contractDeployment.deploymentConfig.config.byteCode as string).slice(2) +
+            sha3(contractDeployment.deploymentConfig.config.initCode as string).slice(2) +
+            (contractDeployment.deploymentConfig.signer as string).slice(2),
         )
         configHashBytes = web3.utils.hexToBytes(configHash)
         needToSign = true
@@ -426,9 +433,9 @@ export default class Contract extends Command {
         s: '0x' + sig.slice(66, 130),
         v: '0x' + sig.slice(130, 132),
       } as Signature)
-      deploymentConfig.signature.r = signature.r
-      deploymentConfig.signature.s = signature.s
-      deploymentConfig.signature.v = Number.parseInt(signature.v, 16)
+      contractDeployment.deploymentConfig.signature.r = signature.r
+      contractDeployment.deploymentConfig.signature.s = signature.s
+      contractDeployment.deploymentConfig.signature.v = Number.parseInt(signature.v, 16)
     }
 
     if (deploymentType === DeploymentType.deployedTx) {
@@ -436,18 +443,18 @@ export default class Contract extends Command {
       const deploymentTransaction = await this.networkMonitor.providers[txNetwork as string].getTransaction(
         tx as string,
       )
-      deploymentConfig = decodeDeploymentConfigInput(deploymentTransaction.data)
+      contractDeployment.deploymentConfig = decodeDeploymentConfigInput(deploymentTransaction.data)
       CliUx.ux.action.stop()
     }
 
     configHash = sha3(
       '0x' +
-        (deploymentConfig.config.contractType as string).slice(2) +
-        (deploymentConfig.config.chainType as string).slice(2) +
-        (deploymentConfig.config.salt as string).slice(2) +
-        sha3(deploymentConfig.config.byteCode as string).slice(2) +
-        sha3(deploymentConfig.config.initCode as string).slice(2) +
-        (deploymentConfig.signer as string).slice(2),
+        (contractDeployment.deploymentConfig.config.contractType as string).slice(2) +
+        (contractDeployment.deploymentConfig.config.chainType as string).slice(2) +
+        (contractDeployment.deploymentConfig.config.salt as string).slice(2) +
+        sha3(contractDeployment.deploymentConfig.config.byteCode as string).slice(2) +
+        sha3(contractDeployment.deploymentConfig.config.initCode as string).slice(2) +
+        (contractDeployment.deploymentConfig.signer as string).slice(2),
     )
 
     CliUx.ux.action.start('Checking that contract is not already deployed on "' + targetNetwork + '" network')
@@ -481,7 +488,11 @@ export default class Contract extends Command {
       // gasLimit: BigNumber.from(7000000), // 7 million
       contract: this.networkMonitor.factoryContract.connect(provider),
       methodName: 'deployHolographableContract',
-      args: [deploymentConfig.config, deploymentConfig.signature, account.address],
+      args: [
+        contractDeployment.deploymentConfig.config,
+        contractDeployment.deploymentConfig.signature,
+        account.address,
+      ],
       waitForReceipt: true,
     })
     CliUx.ux.action.stop()
@@ -499,49 +510,54 @@ export default class Contract extends Command {
         const deploymentAddress = logs[0] as string
         this.log(`Contract has been deployed to address ${deploymentAddress} on ${targetNetwork} network`)
 
+        // If not reading from previous deployment config, then prepare the deployment config metadata for saving
         if (deploymentType !== DeploymentType.deploymentConfig) {
-          const configFilePrompt: any = await inquirer.prompt([
-            {
-              name: 'shouldSave',
-              message: 'Would you like to export/save the deployment config file?',
-              type: 'confirm',
-              default: true,
+          // Prepare the deployment config metadata for saving
+          contractDeployment = {
+            version: 'beta3',
+            deploymentConfig: deploymentConfig,
+            metadata: {
+              collectionName: collectionName,
+              collectionSymbol: collectionSymbol,
+              royaltyBps: royaltyBps,
+              contractType: contractType,
+
+              description: description,
+              imageURI: imageURI,
+              numOfEditions: numOfEditions,
             },
-          ])
-          if (configFilePrompt.shouldSave) {
-            // Prepare the deployment config metadata for saving
-            const contractDeployment: ContractDeployment = {
-              deploymentConfig: deploymentConfig,
-              metadata: {
-                collectionName: collectionName,
-                collectionSymbol: collectionSymbol,
-                royaltyBps: royaltyBps,
-                contractType: contractType,
-
-                description: description,
-                imageURI: imageURI,
-                numOfEditions: numOfEditions,
-              },
-              transaction: {
-                address: deploymentAddress,
-                txHash: receipt.transactionHash,
-                blockNumber: receipt.blockNumber,
-                network: targetNetwork,
-              },
-            }
-
-            contractDeploymentFile = await checkStringFlag(
-              undefined,
-              'Enter the path and file where to save (ie ./contractDeployment.json)',
-            )
-            await fs.ensureFile(contractDeploymentFile)
-            await fs.writeFile(contractDeploymentFile, JSON.stringify(contractDeployment, undefined, 2), 'utf8')
-            this.log('File successfully saved to "' + contractDeploymentFile + '"')
+            transactions: [],
           }
         }
 
-        this.exit()
+        const configFilePrompt: any = await inquirer.prompt([
+          {
+            name: 'shouldSave',
+            message: 'Would you like to export/save the deployment config file?',
+            type: 'confirm',
+            default: true,
+          },
+        ])
+
+        if (configFilePrompt.shouldSave) {
+          contractDeployment.transactions.push({
+            address: deploymentAddress,
+            txHash: receipt.transactionHash,
+            blockNumber: receipt.blockNumber,
+            network: targetNetwork,
+          })
+
+          contractDeploymentFile = await checkStringFlag(
+            undefined,
+            'Enter the path and file where to save (ie ./contractDeployment.json)',
+          )
+          await fs.ensureFile(contractDeploymentFile)
+          await fs.writeFile(contractDeploymentFile, JSON.stringify(contractDeployment, undefined, 2), 'utf8')
+          this.log('File successfully saved to "' + contractDeploymentFile + '"')
+        }
       }
+
+      this.exit()
     }
   }
 }
