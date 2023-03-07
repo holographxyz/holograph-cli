@@ -35,7 +35,7 @@ import {
   checkTransactionHashFlag,
   checkUriTypeFlag,
 } from '../../utils/validation'
-import {BigNumber, ContractFactory} from 'ethers'
+import {ContractFactory} from 'ethers'
 import {UriTypeIndex} from '../../utils/asset-deployment'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
@@ -359,6 +359,7 @@ export default class Contract extends Command {
               )
               animationURI = `${UriTypeIndex[uriType]}://${animationContentId}`
             }
+
             const contentId: string = await checkStringFlag(
               flags.uri,
               'Enter the image uri of the drop, minus the prepend (ie "ipfs://")',
@@ -432,7 +433,7 @@ export default class Contract extends Command {
                   royaltyBps, // royalty percentage in bps
                   salesConfig, // setupCalls (TODO: used to set sales config)
                   '0xfFFC6cEDD86C0c2f0e54Dcb94600A964280e418C', // TODO: update to metadataRenderer.address when done testing
-                  generateInitCode(['string', 'string', 'string'], [description, imageURI, 'animationURI']), // metadataRendererInit
+                  generateInitCode(['string', 'string', 'string'], [description, imageURI, animationURI]), // metadataRendererInit
                 ],
                 false, // skipInit
               ],
