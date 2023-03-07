@@ -35,7 +35,7 @@ import {
   checkTransactionHashFlag,
   checkUriTypeFlag,
 } from '../../utils/validation'
-import {ContractFactory} from 'ethers'
+import {BigNumber, ContractFactory} from 'ethers'
 import {UriTypeIndex} from '../../utils/asset-deployment'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
@@ -141,6 +141,7 @@ export default class Contract extends Command {
     let numOfEditions = 0
     let description = ''
     let imageURI = ''
+    let animationURI = ''
 
     let configHashBytes: number[]
     let sig: string
@@ -341,12 +342,23 @@ export default class Contract extends Command {
             collectionSymbol = await checkStringFlag(undefined, 'Enter the collection symbol to use')
             description = await checkStringFlag(undefined, 'Enter the description of the drop')
             const uriType: UriTypeIndex =
-              UriTypeIndex[
-                await checkUriTypeFlag(
-                  flags.uriType,
-                  'Select the uri of the drop image minus the prepend (ie "ipfs://")',
-                )
-              ]
+              UriTypeIndex[await checkUriTypeFlag(flags.uriType, 'Select the type of uri to use for the drop')]
+
+            const animationPrompt: any = await inquirer.prompt([
+              {
+                name: 'isAnimation',
+                message: 'Is this an animation?',
+                type: 'confirm',
+                default: false,
+              },
+            ])
+            if (animationPrompt.isAnimation) {
+              const animationContentId: string = await checkStringFlag(
+                flags.uri,
+                'Enter the animation uri of the drop, minus the prepend (ie "ipfs://")',
+              )
+              animationURI = `${UriTypeIndex[uriType]}://${animationContentId}`
+            }
             const contentId: string = await checkStringFlag(
               flags.uri,
               'Enter the image uri of the drop, minus the prepend (ie "ipfs://")',
@@ -365,6 +377,32 @@ export default class Contract extends Command {
             if (royaltyBps > 10_000 || royaltyBps < 0) {
               throw new Error('Invalid royalty basis points was provided: ' + royaltyBps.toString())
             }
+
+            // Setup the sales config
+            const salesConfig: any = []
+            // const salesConfigPrompt: any = await inquirer.prompt([
+            //   {
+            //     name: 'shouldContinue',
+            //     message: 'Would you like to create a sales config for the drop?',
+            //     type: 'confirm',
+            //     default: false,
+            //   },
+            // ])
+            // if (salesConfigPrompt.shouldContinue) {
+            //   const salesConfigBytecode = generateInitCode(
+            //     ['uint104', 'uint32', 'uint64', 'uint64', 'uint64', 'uint64', 'bytes32'],
+            //     [
+            //       BigNumber.from('1000000000000000000'), // 1 eth
+            //       3, // 3 mints per address
+            //       0, // public sale start
+            //       0, // public sale end
+            //       0, // presale start
+            //       0, // presale end
+            //       '0x0000000000000000000000000000000000000000', // presale merkle root (no presale)
+            //     ],
+            //   )
+            //   salesConfig.push(salesConfigBytecode)
+            // }
 
             // Connect wallet to the provider
             const provider = this.networkMonitor.providers[chainType]
@@ -392,8 +430,8 @@ export default class Contract extends Command {
                   userWallet.address, // fundsRecipient
                   numOfEditions, // number of editions
                   royaltyBps, // royalty percentage in bps
-                  [], // setupCalls (TODO: used to set sales config)
-                  metadataRenderer.address, // metadataRenderer.address
+                  salesConfig, // setupCalls (TODO: used to set sales config)
+                  '0xfFFC6cEDD86C0c2f0e54Dcb94600A964280e418C', // TODO: update to metadataRenderer.address when done testing
                   generateInitCode(['string', 'string', 'string'], [description, imageURI, 'animationURI']), // metadataRendererInit
                 ],
                 false, // skipInit
