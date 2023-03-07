@@ -349,11 +349,14 @@ export default class Contract extends Command {
               ]
             const contentId: string = await checkStringFlag(
               flags.uri,
-              'Enter the uri of the drop, minus the prepend (ie "ipfs://")',
+              'Enter the image uri of the drop, minus the prepend (ie "ipfs://")',
             )
             imageURI = `${UriTypeIndex[uriType]}://${contentId}`
 
-            numOfEditions = await checkNumberFlag(undefined, 'Enter the number of editions in this drop')
+            // Disabled for now because we will only support open editions for now
+            // numOfEditions = await checkNumberFlag(undefined, 'Enter the number of editions in this drop')
+            // Set to 0 for open editions
+            numOfEditions = 0
             royaltyBps = await checkNumberFlag(
               undefined,
               'Enter the percentage of royalty to collect in basis points. (1 = 0.01%, 10000 = 100%)',
