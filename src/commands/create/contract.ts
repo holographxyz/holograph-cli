@@ -391,18 +391,35 @@ export default class Contract extends Command {
               },
             ])
             if (salesConfigPrompt.shouldContinue) {
-              const salesConfigBytecode = ethers.utils.solidityPack(
-                ['uint104', 'uint32', 'uint64', 'uint64', 'uint64', 'uint64', 'bytes32'],
-                [
-                  ethers.BigNumber.from('1000000000000000000'), // 1 eth
-                  3, // 3 mints per address
-                  0, // public sale start
-                  0, // public sale end
-                  0, // presale start
-                  0, // presale end
-                  '0x0000000000000000000000000000000000000000000000000000000000000000', // presale merkle root (no presale)
-                ],
-              )
+              const salesConfig: any = []
+
+              // Define the ABI of the contract method
+              const abi = new ethers.utils.Interface([
+                'function setSaleConfiguration(uint256,uint256,uint256,uint256,uint256,uint256,bytes32) external',
+              ])
+
+              // Define the arguments for the method
+              const saleConfig = {
+                publicSalePrice: ethers.utils.parseEther('0.1'), // 0.1 ETH
+                maxSalePurchasePerAddress: 10, // 10 NFTs
+                publicSaleStart: Math.floor(Date.now() / 1000), // Now
+                publicSaleEnd: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
+                presaleStart: Math.floor(Date.now() / 1000) + 7200, // 2 hours from now
+                presaleEnd: Math.floor(Date.now() / 1000) + 10_800, // 3 hours from now
+                presaleMerkleRoot: '0x0000000000000000000000000000000000000000000000000000000000000000', // No presale
+              }
+
+              // Encode the method arguments with the selector
+              const salesConfigBytecode = abi.encodeFunctionData('setSaleConfiguration', [
+                saleConfig.publicSalePrice,
+                saleConfig.maxSalePurchasePerAddress,
+                saleConfig.publicSaleStart,
+                saleConfig.publicSaleEnd,
+                saleConfig.presaleStart,
+                saleConfig.presaleEnd,
+                saleConfig.presaleMerkleRoot,
+              ])
+
               salesConfig.push(salesConfigBytecode)
             }
 
