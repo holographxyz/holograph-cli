@@ -342,7 +342,12 @@ export default class Contract extends Command {
             collectionSymbol = await checkStringFlag(undefined, 'Enter the collection symbol to use')
             description = await checkStringFlag(undefined, 'Enter the description of the drop')
             const uriType: UriTypeIndex =
-              UriTypeIndex[await checkUriTypeFlag(flags.uriType, 'Select the type of uri to use for the drop')]
+              UriTypeIndex[
+                await checkUriTypeFlag(
+                  flags.uriType,
+                  'Select the type of uri to use for the image / animation of the drop',
+                )
+              ]
 
             const animationPrompt: any = await inquirer.prompt([
               {
@@ -381,7 +386,7 @@ export default class Contract extends Command {
             }
 
             // Setup the sales config
-            const salesConfig: any = []
+            const setupCalls: any = []
             const salesConfigPrompt: any = await inquirer.prompt([
               {
                 name: 'shouldContinue',
@@ -391,11 +396,9 @@ export default class Contract extends Command {
               },
             ])
             if (salesConfigPrompt.shouldContinue) {
-              const salesConfig: any = []
-
               // Define the ABI of the contract method
               const abi = new ethers.utils.Interface([
-                'function setSaleConfiguration(uint256,uint256,uint256,uint256,uint256,uint256,bytes32) external',
+                'function setSaleConfiguration(uint104,uint32,uint64,uint64,uint64,uint64,bytes32) external',
               ])
 
               // Define the arguments for the method
@@ -404,8 +407,8 @@ export default class Contract extends Command {
                 maxSalePurchasePerAddress: 10, // 10 NFTs
                 publicSaleStart: Math.floor(Date.now() / 1000), // Now
                 publicSaleEnd: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
-                presaleStart: Math.floor(Date.now() / 1000) + 7200, // 2 hours from now
-                presaleEnd: Math.floor(Date.now() / 1000) + 10_800, // 3 hours from now
+                presaleStart: 0, // no presale
+                presaleEnd: 0, // no presale
                 presaleMerkleRoot: '0x0000000000000000000000000000000000000000000000000000000000000000', // No presale
               }
 
@@ -420,7 +423,7 @@ export default class Contract extends Command {
                 saleConfig.presaleMerkleRoot,
               ])
 
-              salesConfig.push(salesConfigBytecode)
+              setupCalls.push(salesConfigBytecode)
             }
 
             // Connect wallet to the provider
@@ -449,7 +452,7 @@ export default class Contract extends Command {
                   userWallet.address, // fundsRecipient
                   numOfEditions, // number of editions
                   royaltyBps, // royalty percentage in bps
-                  salesConfig, // setupCalls (TODO: used to set sales config)
+                  setupCalls, // setupCalls (used to set sales config)
                   '0xfFFC6cEDD86C0c2f0e54Dcb94600A964280e418C', // TODO: update to metadataRenderer.address when done testing
                   generateInitCode(['string', 'string', 'string'], [description, imageURI, animationURI]), // metadataRendererInit
                 ],
