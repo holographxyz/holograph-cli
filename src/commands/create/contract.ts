@@ -396,6 +396,27 @@ export default class Contract extends Command {
               },
             ])
             if (salesConfigPrompt.shouldContinue) {
+              // Enter the sales config variables
+              const publicSalePrice: string = await checkStringFlag(
+                undefined,
+                'Enter the price of the drop in ether units',
+              )
+              const maxSalePurchasePerAddress: number = await checkNumberFlag(
+                undefined,
+                'Enter the maximum number of editions a user can purchase',
+              )
+              const publicSaleStart: number = Math.floor(
+                new Date(
+                  await checkStringFlag(undefined, 'Enter the start time of the sale in the format of YYYY-MM-DD'),
+                ).getTime() / 1000,
+              )
+
+              const publicSaleEnd: number = Math.floor(
+                new Date(
+                  await checkStringFlag(undefined, 'Enter the ending time of the sale in the format of YYYY-MM-DD'),
+                ).getTime() / 1000,
+              )
+
               // Define the ABI of the contract method
               const abi = new ethers.utils.Interface([
                 'function setSaleConfiguration(uint104,uint32,uint64,uint64,uint64,uint64,bytes32) external',
@@ -403,10 +424,10 @@ export default class Contract extends Command {
 
               // Define the arguments for the method
               const saleConfig = {
-                publicSalePrice: ethers.utils.parseEther('0.1'), // 0.1 ETH
-                maxSalePurchasePerAddress: 10, // 10 NFTs
-                publicSaleStart: Math.floor(Date.now() / 1000), // Now
-                publicSaleEnd: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
+                publicSalePrice: ethers.utils.parseEther(publicSalePrice), // in ETH
+                maxSalePurchasePerAddress: maxSalePurchasePerAddress, // in number of editions an address can purchase
+                publicSaleStart: publicSaleStart, // in unix time
+                publicSaleEnd: publicSaleEnd, // in unix time
                 presaleStart: 0, // no presale
                 presaleEnd: 0, // no presale
                 presaleMerkleRoot: '0x0000000000000000000000000000000000000000000000000000000000000000', // No presale
