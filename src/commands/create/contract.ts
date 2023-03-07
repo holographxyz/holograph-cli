@@ -431,10 +431,10 @@ export default class Contract extends Command {
             const account = userWallet.connect(provider)
 
             // Deploy a metadata renderer contract
-            // const renderAbi = JSON.parse(fs.readFileSync(`./src/abi/develop/EditionMetadataRenderer.json`).toString())
-            // const rendererFactory = new ContractFactory(renderAbi, EditionMetadataRenderer.bytecode, account)
-            // const metadataRenderer = await rendererFactory.deploy()
-            // this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
+            const renderAbi = JSON.parse(fs.readFileSync(`./src/abi/develop/EditionMetadataRenderer.json`).toString())
+            const rendererFactory = new ContractFactory(renderAbi, EditionMetadataRenderer.bytecode, account)
+            const metadataRenderer = await rendererFactory.deploy()
+            this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
 
             initCode = generateInitCode(
               [
@@ -453,7 +453,7 @@ export default class Contract extends Command {
                   numOfEditions, // number of editions
                   royaltyBps, // royalty percentage in bps
                   setupCalls, // setupCalls (used to set sales config)
-                  '0xfFFC6cEDD86C0c2f0e54Dcb94600A964280e418C', // TODO: update to metadataRenderer.address when done testing
+                  metadataRenderer.address, // metadata renderer address deployed from above
                   generateInitCode(['string', 'string', 'string'], [description, imageURI, animationURI]), // metadataRendererInit
                 ],
                 false, // skipInit
@@ -610,12 +610,16 @@ export default class Contract extends Command {
             network: targetNetwork,
           })
 
-          contractDeploymentFile = await checkStringFlag(
-            undefined,
-            'Enter the path and file where to save (ie ./contractDeployment.json)',
-          )
-          await fs.ensureFile(contractDeploymentFile)
-          await fs.writeFile(contractDeploymentFile, JSON.stringify(contractDeployment, undefined, 2), 'utf8')
+          if (deploymentType !== DeploymentType.deploymentConfig && contractDeploymentFile === undefined) {
+            contractDeploymentFile = await checkStringFlag(
+              undefined,
+              'Enter the path and file where to save (ie ./contractDeployment.json)',
+            )
+          }
+
+          // NOTE: this will overwrite the file if it already exists (exlaimation mart is okay due to check above)
+          await fs.ensureFile(contractDeploymentFile!)
+          await fs.writeFile(contractDeploymentFile!, JSON.stringify(contractDeployment, undefined, 2), 'utf8')
           this.log('File successfully saved to "' + contractDeploymentFile + '"')
         }
       }
