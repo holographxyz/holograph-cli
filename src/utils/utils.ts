@@ -181,3 +181,26 @@ export function numberfy(arr: string[]): number[] {
 
   return numbers
 }
+
+export async function retry<T = any>(
+  fn: () => Promise<T>,
+  retriesLeft = 3,
+  interval = 1000,
+  exponentialCooldown = false,
+): Promise<T> {
+  try {
+    const result = await fn()
+    return result
+  } catch (error: any) {
+    if (retriesLeft) {
+      await sleep(interval)
+      console.log(`Number of retries left for function ${fn.name}:  ${retriesLeft}`)
+      return retry(fn, retriesLeft - 1, exponentialCooldown ? interval * 2 : interval, exponentialCooldown)
+    }
+
+    console.error(`Max retries reached for function ${fn.name}`)
+    console.error(error)
+    // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+    process.exit()
+  }
+}
