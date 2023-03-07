@@ -35,7 +35,7 @@ import {
   checkTransactionHashFlag,
   checkUriTypeFlag,
 } from '../../utils/validation'
-import {ContractFactory} from 'ethers'
+import {ContractFactory, ethers} from 'ethers'
 import {UriTypeIndex} from '../../utils/asset-deployment'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
@@ -370,6 +370,7 @@ export default class Contract extends Command {
             // numOfEditions = await checkNumberFlag(undefined, 'Enter the number of editions in this drop')
             // Set to 0 for open editions
             numOfEditions = 0
+
             royaltyBps = await checkNumberFlag(
               undefined,
               'Enter the percentage of royalty to collect in basis points. (1 = 0.01%, 10000 = 100%)',
@@ -381,39 +382,39 @@ export default class Contract extends Command {
 
             // Setup the sales config
             const salesConfig: any = []
-            // const salesConfigPrompt: any = await inquirer.prompt([
-            //   {
-            //     name: 'shouldContinue',
-            //     message: 'Would you like to create a sales config for the drop?',
-            //     type: 'confirm',
-            //     default: false,
-            //   },
-            // ])
-            // if (salesConfigPrompt.shouldContinue) {
-            //   const salesConfigBytecode = generateInitCode(
-            //     ['uint104', 'uint32', 'uint64', 'uint64', 'uint64', 'uint64', 'bytes32'],
-            //     [
-            //       BigNumber.from('1000000000000000000'), // 1 eth
-            //       3, // 3 mints per address
-            //       0, // public sale start
-            //       0, // public sale end
-            //       0, // presale start
-            //       0, // presale end
-            //       '0x0000000000000000000000000000000000000000', // presale merkle root (no presale)
-            //     ],
-            //   )
-            //   salesConfig.push(salesConfigBytecode)
-            // }
+            const salesConfigPrompt: any = await inquirer.prompt([
+              {
+                name: 'shouldContinue',
+                message: 'Would you like to create a sales config for the drop?',
+                type: 'confirm',
+                default: false,
+              },
+            ])
+            if (salesConfigPrompt.shouldContinue) {
+              const salesConfigBytecode = ethers.utils.solidityPack(
+                ['uint104', 'uint32', 'uint64', 'uint64', 'uint64', 'uint64', 'bytes32'],
+                [
+                  ethers.BigNumber.from('1000000000000000000'), // 1 eth
+                  3, // 3 mints per address
+                  0, // public sale start
+                  0, // public sale end
+                  0, // presale start
+                  0, // presale end
+                  '0x0000000000000000000000000000000000000000000000000000000000000000', // presale merkle root (no presale)
+                ],
+              )
+              salesConfig.push(salesConfigBytecode)
+            }
 
             // Connect wallet to the provider
             const provider = this.networkMonitor.providers[chainType]
             const account = userWallet.connect(provider)
 
             // Deploy a metadata renderer contract
-            const renderAbi = JSON.parse(fs.readFileSync(`./src/abi/develop/EditionMetadataRenderer.json`).toString())
-            const rendererFactory = new ContractFactory(renderAbi, EditionMetadataRenderer.bytecode, account)
-            const metadataRenderer = await rendererFactory.deploy()
-            this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
+            // const renderAbi = JSON.parse(fs.readFileSync(`./src/abi/develop/EditionMetadataRenderer.json`).toString())
+            // const rendererFactory = new ContractFactory(renderAbi, EditionMetadataRenderer.bytecode, account)
+            // const metadataRenderer = await rendererFactory.deploy()
+            // this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
 
             initCode = generateInitCode(
               [
