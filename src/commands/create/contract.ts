@@ -374,7 +374,7 @@ export default class Contract extends Command {
             // Disabled for now because we will only support open editions for now
             // numOfEditions = await checkNumberFlag(undefined, 'Enter the number of editions in this drop')
             // Set to 0 for open editions
-            numOfEditions = 0
+            numOfEditions = 100
 
             royaltyBps = await checkNumberFlag(
               undefined,
