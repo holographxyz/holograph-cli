@@ -18,6 +18,7 @@ import {
   checkOptionFlag,
   checkStringFlag,
   checkUriTypeFlag,
+  checkNumberFlag,
 } from '../../utils/validation'
 import {UriTypeIndex} from '../../utils/asset-deployment'
 import {ethers} from 'ethers'
@@ -83,12 +84,6 @@ export default class NFT extends Command {
       flags.collectionAddress,
       'Enter the address of the collection smart contract',
     )
-    const tokenId: string = flags.tokenId as string
-    const uriType: UriTypeIndex =
-      UriTypeIndex[
-        await checkUriTypeFlag(flags.uriType, 'Select the uri of the token, minus the prepend (ie "ipfs://")')
-      ]
-    const uri: string = await checkStringFlag(flags.uri, 'Enter the uri of the token, minus the prepend (ie "ipfs://")')
 
     this.networkMonitor = new NetworkMonitor({
       parent: this,
@@ -125,6 +120,7 @@ export default class NFT extends Command {
       "Select the type of collection you'd like to mint from",
     )
 
+    // Load the ABI for the collection type to mint from
     let abiPath: string
     switch (collectionType) {
       case 'CxipERC721':
@@ -143,31 +139,41 @@ export default class NFT extends Command {
     const collection: Contract = new Contract(collectionAddress, collectionABI, this.networkMonitor.providers[network])
     CliUx.ux.action.stop()
 
-    const mintPrompt: any = await inquirer.prompt([
-      {
-        name: 'shouldContinue',
-        message: `\nWould you like to mint the following NFT?\n\n${JSON.stringify(
-          {
-            network: networks[network].shortKey,
-            collectionAddress,
-            tokenId,
-            uriType: UriTypeIndex[uriType],
-            uri,
-          },
-          undefined,
-          2,
-        )}\n`,
-        type: 'confirm',
-        default: false,
-      },
-    ])
-    const mint: boolean = mintPrompt.shouldContinue
+    let receipt: TransactionReceipt | null = null
 
-    if (mint) {
-      CliUx.ux.action.start('Minting NFT')
+    if (collectionType === 'CxipERC721') {
+      const tokenId: string = flags.tokenId as string
+      const uriType: UriTypeIndex =
+        UriTypeIndex[
+          await checkUriTypeFlag(flags.uriType, 'Select the uri of the token, minus the prepend (ie "ipfs://")')
+        ]
+      const uri: string = await checkStringFlag(
+        flags.uri,
+        'Enter the uri of the token, minus the prepend (ie "ipfs://")',
+      )
 
-      if (collectionType === 'CxipERC721') {
-        const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
+      const mintPrompt: any = await inquirer.prompt([
+        {
+          name: 'shouldContinue',
+          message: `\nWould you like to mint the following NFT?\n\n${JSON.stringify(
+            {
+              network: networks[network].shortKey,
+              collectionAddress,
+              tokenId,
+              uriType: UriTypeIndex[uriType],
+              uri,
+            },
+            undefined,
+            2,
+          )}\n`,
+          type: 'confirm',
+          default: false,
+        },
+      ])
+      const mint: boolean = mintPrompt.shouldContinue
+      if (mint) {
+        CliUx.ux.action.start('Minting NFT')
+        receipt = await this.networkMonitor.executeTransaction({
           network,
           contract: collection,
           methodName: 'cxipMint',
@@ -175,64 +181,64 @@ export default class NFT extends Command {
           waitForReceipt: true,
         })
         CliUx.ux.action.stop()
-
-        if (receipt === null) {
-          throw new Error('Failed to confirm that the transaction was mined')
-        } else {
-          const logs: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(receipt, collectionAddress)
-          if (logs === undefined) {
-            throw new Error('Failed to extract transfer event from transaction receipt')
-          } else {
-            this.log(`NFT has been minted with token id #${logs[2].toString()}`)
-          }
-        }
-      } else if (collectionType === 'HolographERC721Drop') {
-        // Connect wallet for signing txns
-        const {userWallet} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
-        const account = userWallet.connect(this.networkMonitor.providers[network])
-        userWallet.connect(this.networkMonitor.providers[network])
-        const drop = new ethers.Contract(collectionAddress, collectionABI, account)
-        // const receipt = await drop.purchase(1, {
-        //   value: ethers.utils.parseEther('0.01'),
-        //   gasPrice: ethers.BigNumber.from(100_000_000_000), // 100 gwei
-        //   gasLimit: ethers.BigNumber.from(7_000_000), // 7 million
-        // })
-        // console.log(receipt)
-
-        const r = await drop.saleDetails()
-        console.log(r)
-        console.log(r.publicSalePrice)
-
-        // TODO: We might use the network monitor to execute the transaction instead of ethers directly
-        const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
-          network,
-          contract: collection,
-          value: r.publicSalePrice,
-          methodName: 'purchase',
-          args: [1],
-          waitForReceipt: true,
-          gasPrice: ethers.BigNumber.from(100_000_000_000), // 100 gwei
-          gasLimit: ethers.BigNumber.from(1_000_000), // 1 million
-        })
-        CliUx.ux.action.stop()
-
-        console.log(receipt)
-
-        if (receipt === null) {
-          throw new Error('Failed to confirm that the transaction was mined')
-        } else {
-          const logs: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(receipt, collectionAddress)
-          if (logs === undefined) {
-            throw new Error('Failed to extract transfer event from transaction receipt')
-          } else {
-            this.log(`NFT has been minted with token id #${logs[2].toString()}`)
-          }
-        }
       } else {
         this.log('NFT minting was canceled')
+        this.exit()
       }
+    } else if (collectionType === 'HolographERC721Drop') {
+      const numToMint = await checkNumberFlag(undefined, 'How many NFTs would you like to mint/purchase?')
+      // Connect wallet for signing txns
+      const account = userWallet.connect(this.networkMonitor.providers[network])
+      userWallet.connect(this.networkMonitor.providers[network])
 
-      this.exit()
+      // Interact with drop contract
+      const drop = new ethers.Contract(collectionAddress, collectionABI, account)
+      const salesConfig = await drop.saleDetails()
+
+      // Confirm if user wants to mint
+      const mintPrompt: any = await inquirer.prompt([
+        {
+          name: 'shouldContinue',
+          message: `\nMinting ${numToMint} NFTs from the following collection: ${await drop.name()} at ${
+            drop.address
+          } for ${ethers.utils.formatEther(salesConfig.publicSalePrice.mul(numToMint).toString())} ${
+            networks[network].tokenSymbol
+          } on ${network}.\n`,
+          type: 'confirm',
+          default: false,
+        },
+      ])
+      const mint: boolean = mintPrompt.shouldContinue
+
+      if (mint) {
+        receipt = await this.networkMonitor.executeTransaction({
+          network,
+          contract: collection,
+          value: salesConfig.publicSalePrice.mul(numToMint), // must send the price of the drop times the number to purchase
+          methodName: 'purchase',
+          args: [numToMint],
+          waitForReceipt: true,
+        })
+        CliUx.ux.action.stop()
+      } else {
+        this.log('NFT minting was canceled')
+        this.exit()
+      }
+    } else {
+      throw new Error('Invalid collection type')
     }
+
+    if (receipt === null) {
+      throw new Error('Failed to confirm that the transaction was mined')
+    } else {
+      const logs: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(receipt, collectionAddress)
+      if (logs === undefined) {
+        throw new Error('Failed to extract transfer event from transaction receipt')
+      } else {
+        this.log(`NFT has been minted with token id #${logs[2].toString()}`)
+      }
+    }
+
+    this.exit()
   }
 }

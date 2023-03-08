@@ -371,10 +371,10 @@ export default class Contract extends Command {
             )
             imageURI = `${UriTypeIndex[uriType]}://${contentId}`
 
-            // Disabled for now because we will only support open editions for now
-            // numOfEditions = await checkNumberFlag(undefined, 'Enter the number of editions in this drop')
-            // Set to 0 for open editions
-            numOfEditions = 100
+            numOfEditions = await checkNumberFlag(
+              undefined,
+              'Enter the number of editions in this drop. Set to 0 for unlimited editions.',
+            )
 
             royaltyBps = await checkNumberFlag(
               undefined,
