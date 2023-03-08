@@ -17,14 +17,14 @@ import {
   checkContractAddressFlag,
   checkOptionFlag,
   checkStringFlag,
-  checkTokenUriTypeFlag,
+  checkUriTypeFlag,
 } from '../../utils/validation'
-import {TokenUriTypeIndex} from '../../utils/asset-deployment'
+import {UriTypeIndex} from '../../utils/asset-deployment'
 
 export default class NFT extends Command {
   static description = 'Mint a Holographable NFT.'
   static examples = [
-    '$ <%= config.bin %> <%= command.id %> --network="goerli" --collectionAddress="0xf90c33d5ef88a9d84d4d61f62c913ba192091fe7" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"',
+    '$ <%= config.bin %> <%= command.id %> --network="goerli" --collectionAddress="0xf90c33d5ef88a9d84d4d61f62c913ba192091fe7" --tokenId="0" --uriType="ipfs" --uri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json"',
   ]
 
   static flags = {
@@ -41,13 +41,13 @@ export default class NFT extends Command {
       multiple: false,
       required: false,
     }),
-    tokenUriType: Flags.string({
+    uriType: Flags.string({
       description: 'The token URI type',
       multiple: false,
       options: ['ipfs', 'https', 'arweave'],
       required: false,
     }),
-    tokenUri: Flags.string({
+    uri: Flags.string({
       description: 'The uri of the token, minus the prepend (ie "ipfs://")',
       multiple: false,
       required: false,
@@ -83,14 +83,11 @@ export default class NFT extends Command {
       'Enter the address of the collection smart contract',
     )
     const tokenId: string = flags.tokenId as string
-    const tokenUriType: TokenUriTypeIndex =
-      TokenUriTypeIndex[
-        await checkTokenUriTypeFlag(flags.tokenUriType, 'Select the uri of the token, minus the prepend (ie "ipfs://")')
+    const uriType: UriTypeIndex =
+      UriTypeIndex[
+        await checkUriTypeFlag(flags.uriType, 'Select the uri of the token, minus the prepend (ie "ipfs://")')
       ]
-    const tokenUri: string = await checkStringFlag(
-      flags.tokenUri,
-      'Enter the uri of the token, minus the prepend (ie "ipfs://")',
-    )
+    const uri: string = await checkStringFlag(flags.uri, 'Enter the uri of the token, minus the prepend (ie "ipfs://")')
 
     this.networkMonitor = new NetworkMonitor({
       parent: this,
@@ -133,8 +130,8 @@ export default class NFT extends Command {
             network: networks[network].shortKey,
             collectionAddress,
             tokenId,
-            tokenUriType: TokenUriTypeIndex[tokenUriType],
-            tokenUri,
+            uriType: UriTypeIndex[uriType],
+            uri,
           },
           undefined,
           2,
@@ -151,7 +148,7 @@ export default class NFT extends Command {
         network,
         contract: collection,
         methodName: 'cxipMint',
-        args: [tokenId, tokenUriType, tokenUri],
+        args: [tokenId, uriType, uri],
         waitForReceipt: true,
       })
       CliUx.ux.action.stop()
