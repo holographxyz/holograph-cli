@@ -20,6 +20,7 @@ import {
   checkUriTypeFlag,
 } from '../../utils/validation'
 import {UriTypeIndex} from '../../utils/asset-deployment'
+import {ethers} from 'ethers'
 
 export default class NFT extends Command {
   static description = 'Mint a Holographable NFT.'
@@ -117,8 +118,28 @@ export default class NFT extends Command {
       )
     }
 
+    // Select the contract type to deploy
+    const collectionType = await checkOptionFlag(
+      ['CxipERC721', 'HolographERC721Drop'],
+      undefined,
+      "Select the type of collection you'd like to mint from",
+    )
+
+    let abiPath: string
+    switch (collectionType) {
+      case 'CxipERC721':
+        abiPath = path.join(__dirname, `../../abi/${environment}/CxipERC721.json`)
+        break
+      case 'HolographERC721Drop':
+        abiPath = path.join(__dirname, `../../abi/${environment}/HolographERC721Drop.json`)
+        break
+      default:
+        throw new Error('Invalid collection type')
+        break
+    }
+
     CliUx.ux.action.start('Retrieving collection smart contract')
-    const collectionABI = await fs.readJson(path.join(__dirname, `../../abi/${environment}/CxipERC721.json`))
+    const collectionABI = await fs.readJson(abiPath)
     const collection: Contract = new Contract(collectionAddress, collectionABI, this.networkMonitor.providers[network])
     CliUx.ux.action.stop()
 
@@ -144,29 +165,71 @@ export default class NFT extends Command {
 
     if (mint) {
       CliUx.ux.action.start('Minting NFT')
-      const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
-        network,
-        contract: collection,
-        methodName: 'cxipMint',
-        args: [tokenId, uriType, uri],
-        waitForReceipt: true,
-      })
-      CliUx.ux.action.stop()
 
-      if (receipt === null) {
-        throw new Error('failed to confirm that the transaction was mined')
-      } else {
-        const logs: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(receipt, collectionAddress)
-        if (logs === undefined) {
-          throw new Error('failed to extract transfer event from transaction receipt')
+      if (collectionType === 'CxipERC721') {
+        const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
+          network,
+          contract: collection,
+          methodName: 'cxipMint',
+          args: [tokenId, uriType, uri],
+          waitForReceipt: true,
+        })
+        CliUx.ux.action.stop()
+
+        if (receipt === null) {
+          throw new Error('Failed to confirm that the transaction was mined')
         } else {
-          this.log(`NFT has been minted with token id #${logs[2].toString()}`)
+          const logs: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(receipt, collectionAddress)
+          if (logs === undefined) {
+            throw new Error('failed to extract transfer event from transaction receipt')
+          } else {
+            this.log(`NFT has been minted with token id #${logs[2].toString()}`)
+          }
         }
-      }
-    } else {
-      this.log('NFT minting was canceled')
-    }
+      } else if (collectionType === 'HolographERC721Drop') {
+        // TODO: We might use the network monitor to execute the transaction instead of ethers directly
+        // const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
+        //   network,
+        //   contract: collection,
+        //   value: ethers.utils.parseEther('0.01'),
+        //   methodName: 'purchase',
+        //   args: [1],
+        //   waitForReceipt: true,
+        // })
+        // CliUx.ux.action.stop()
 
-    this.exit()
+        // console.log(receipt)
+
+        // if (receipt === null) {
+        //   throw new Error('Failed to confirm that the transaction was mined')
+        // } else {
+        //   const logs: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(receipt, collectionAddress)
+        //   if (logs === undefined) {
+        //     throw new Error('failed to extract transfer event from transaction receipt')
+        //   } else {
+        //     // this.log(`NFT has been minted with token id #${logs[2].toString()}`)
+        //     console.log(logs)
+        //   }
+        // }
+
+        const {userWallet} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
+        const account = userWallet.connect(this.networkMonitor.providers[network])
+        userWallet.connect(this.networkMonitor.providers[network])
+
+        console.log(account)
+
+        const drop = new ethers.Contract(collectionAddress, collectionABI, account)
+        const receipt = await drop.purchase(1, {
+          value: ethers.utils.parseEther('0.01'),
+          gasPrice: ethers.BigNumber.from(100000000000), // 100 gwei
+          gasLimit: ethers.BigNumber.from(7000000), // 7 million
+        })
+        console.log(receipt)
+      } else {
+        this.log('NFT minting was canceled')
+      }
+
+      this.exit()
+    }
   }
 }

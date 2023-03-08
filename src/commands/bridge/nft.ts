@@ -263,7 +263,7 @@ export default class BridgeNFT extends Command {
     CliUx.ux.action.stop()
 
     if (receipt === null) {
-      throw new Error('failed to confirm that the transaction was mined')
+      throw new Error('Failed to confirm that the transaction was mined')
     } else {
       const jobHash: string | undefined = this.networkMonitor.decodeCrossChainMessageSentEvent(
         receipt,
