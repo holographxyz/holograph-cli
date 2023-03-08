@@ -221,8 +221,8 @@ export default class NFT extends Command {
         const drop = new ethers.Contract(collectionAddress, collectionABI, account)
         const receipt = await drop.purchase(1, {
           value: ethers.utils.parseEther('0.01'),
-          gasPrice: ethers.BigNumber.from(100000000000), // 100 gwei
-          gasLimit: ethers.BigNumber.from(7000000), // 7 million
+          gasPrice: ethers.BigNumber.from(100_000_000_000), // 100 gwei
+          gasLimit: ethers.BigNumber.from(7_000_000), // 7 million
         })
         console.log(receipt)
       } else {
