@@ -34,7 +34,7 @@ env:
   #
   STG_DOMAIN: 'holograph.xyz' # needed only for the health checks
   #
-  STG_COMMON_NAMESPACE: testholo #develop # NOTICE <---
+  STG_COMMON_NAMESPACE: develop
   #
   #######################################
   STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.80
