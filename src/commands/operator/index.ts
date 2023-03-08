@@ -14,6 +14,9 @@ import {web3, functionSignature, sha3} from '../../utils/utils'
 import {checkOptionFlag} from '../../utils/validation'
 import {OperatorJobAwareCommand, OperatorJob} from '../../utils/operator-job'
 import {HealthCheck} from '../../base-commands/healthcheck'
+import {BlockHeightProcessType, Logger} from '../../types/api'
+import ApiService from '../../services/api-service'
+import color from '@oclif/color'
 
 /**
  * Operator
@@ -36,6 +39,11 @@ export default class Operator extends OperatorJobAwareCommand {
     unsafePassword: Flags.string({
       description: 'Enter the plain text password for the wallet in the holograph cli config',
     }),
+    host: Flags.string({
+      description: 'The host to send data to',
+      char: 'h',
+      required: false,
+    }),
     ...networksFlag,
     ...HealthCheck.flags,
   }
@@ -46,6 +54,10 @@ export default class Operator extends OperatorJobAwareCommand {
   operatorMode: OperatorMode = OperatorMode.listen
   environment!: Environment
   jobsFile!: string
+
+  // API Params
+  apiService!: ApiService
+  apiColor = color.keyword('orange')
 
   /**
    * Command Entry Point
@@ -79,6 +91,37 @@ export default class Operator extends OperatorJobAwareCommand {
     this.environment = environment
     this.log('User configurations loaded.')
 
+    if (flags.host === undefined) {
+      this.log(`Using config file for block height track ...`)
+    } else if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
+      this.log(`Skipping API authentication for ${Environment[this.environment]} environment`)
+    } else {
+      this.log(`Using API for block height track ...`)
+      // Create API Service for GraphQL requests
+      try {
+        const logger: Logger = {
+          log: this.log,
+          warn: this.warn,
+          debug: this.debug,
+          error: this.error,
+          jsonEnabled: () => false,
+        }
+        this.apiService = new ApiService(flags.host, logger)
+        await this.apiService.operatorLogin()
+      } catch (error: any) {
+        this.log('Error: Failed to get Operator Token from API')
+        // NOTE: sample of how to do logs when in production mode
+        this.log(JSON.stringify({...error, stack: error.stack}))
+        this.exit()
+      }
+
+      if (this.apiService === undefined) {
+        throw new Error('API service is not defined')
+      }
+
+      this.log(this.apiColor(`Successfully authenticated into API ${flags.host}`))
+    }
+
     this.networkMonitor = new NetworkMonitor({
       parent: this,
       configFile,
@@ -87,12 +130,17 @@ export default class Operator extends OperatorJobAwareCommand {
       processTransactions: this.processTransactions,
       userWallet,
       lastBlockFilename: 'operator-blocks.json',
+      apiService: this.apiService,
     })
 
     this.jobsFile = path.join(this.config.configDir, this.networkMonitor.environment + '.operator-job-details.json')
 
     // Load the last block height from the file
-    this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
+
+    this.networkMonitor.latestBlockHeight =
+      this.apiService === undefined
+        ? await this.networkMonitor.loadLastBlocks(this.config.configDir)
+        : await this.networkMonitor.loadLastBlocksHeights(BlockHeightProcessType.OPERATOR)
 
     // Check if the operator has previous missed blocks
     let canSync = false

@@ -18,8 +18,10 @@ env:
   ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }}
   #
   STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
+  STG_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
   STG_HOLOGRAPH_INDEXER_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
+  STG_HOLOGRAPH_OPERATOR_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
   #
   STG_HOLOGRAPH_INDEXER_PASSWORD: ${{ secrets.DEV_HOLO_INDEXER_PASSWORD }}
   STG_HOLOGRAPH_OPERATOR_PASSWORD: ${{ secrets.DEV_HOLO_OPERATOR_PASSWORD }}
@@ -32,13 +34,13 @@ env:
   #
   STG_DOMAIN: 'holograph.xyz' # needed only for the health checks
   #
-  STG_COMMON_NAMESPACE: develop # NOTICE <---
+  STG_COMMON_NAMESPACE: develop
   #
   #######################################
   STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.80
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.56
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.58
   OPERATOR_RELEASE_NAME: operator-dev # format -> [release_name]-operator-[env]
   #######################################
   #
@@ -263,6 +265,8 @@ jobs:
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.STG_HOLOGRAPH_OPERATOR_PASSWORD }} \
+            --set HOLO_OPERATOR_HOST=${{ env.STG_HOLOGRAPH_OPERATOR_HOST }} \
+            --set OPERATOR_API_KEY=${{ env.STG_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \

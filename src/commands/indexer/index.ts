@@ -8,6 +8,7 @@ import {gql} from 'graphql-request'
 import dotenv from 'dotenv'
 
 import {
+  BlockHeightProcessType,
   GetNftByCidInput,
   Logger,
   NftStatus,
@@ -122,11 +123,18 @@ export default class Indexer extends HealthCheck {
       processTransactions: this.processTransactions,
       lastBlockFilename: 'indexer-blocks.json',
       repair: flags.repair,
+      apiService: this.apiService,
     })
 
     if (this.apiService !== undefined) {
       this.apiService.setStructuredLog(this.networkMonitor.structuredLog.bind(this.networkMonitor))
       this.apiService.setStructuredLogError(this.networkMonitor.structuredLogError.bind(this.networkMonitor))
+
+      if (flags.repair === 0) {
+        this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocksHeights(
+          BlockHeightProcessType.INDEXER,
+        )
+      }
     }
 
     await this.checkSqsServiceAvailability()
