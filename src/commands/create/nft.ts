@@ -130,8 +130,8 @@ export default class NFT extends Command {
         abiPath = path.join(__dirname, `../../abi/${environment}/HolographERC721Drop.json`)
         break
       default:
-        throw new Error('Invalid collection type')
-        break
+        this.log('Invalid collection type')
+        return
     }
 
     CliUx.ux.action.start('Retrieving collection smart contract')
@@ -225,7 +225,8 @@ export default class NFT extends Command {
         this.exit()
       }
     } else {
-      throw new Error('Invalid collection type')
+      this.log('Invalid collection type')
+      return
     }
 
     if (receipt === null) {
