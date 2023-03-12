@@ -457,29 +457,69 @@ export default class Contract extends Command {
             const metadataRenderer = await rendererFactory.deploy()
             this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
 
-            initCode = generateInitCode(
+            // TODO: Replace this with new structure for custom contracts
+            // initCode = generateInitCode(
+            //   [
+            //     'tuple(address,address,address,string,string,address,address,uint64,uint16,bytes[],address,bytes)',
+            //     'bool',
+            //   ],
+            //   [
+            //     [
+            //       '0x0000000000000000000000000000000000000000', // TODO: holographFeeManager - this.networkMonitor.holographFeeManager.address
+            //       '0x0000000000000000000000000000000000000000', // holographERC721TransferHelper
+            //       '0x000000000000AAeB6D7670E522A718067333cd4E', // marketFilterAddress
+            //       collectionName, // contractName
+            //       collectionSymbol, // contractSymbol
+            //       userWallet.address, // initialOwner
+            //       userWallet.address, // fundsRecipient
+            //       numOfEditions, // number of editions
+            //       royaltyBps, // royalty percentage in bps
+            //       setupCalls, // setupCalls (used to set sales config)
+            //       metadataRenderer.address, // metadata renderer address deployed from above
+            //       generateInitCode(['string', 'string', 'string'], [description, imageURI, animationURI]), // metadataRendererInit
+            //     ],
+            //     false, // skipInit
+            //   ],
+            // ) // initCode
+
+            const initCode = abiCoder.encode(
+              ['string', 'string', 'uint16', 'uint256', 'bool', 'bytes'],
               [
-                'tuple(address,address,address,string,string,address,address,uint64,uint16,bytes[],address,bytes)',
-                'bool',
+                collectionName, // string memory contractName
+                collectionSymbol, // string memory contractSymbol
+                royaltyBps, // uint16 contractBps
+                '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff', // uint256 eventConfig - AllEventsEnabled() can be replaced with all 32 bytes of F
+                false, // bool skipInit
+                abiCoder.encode(
+                  generateInitCode(
+                    [
+                      'tuple(address,address,address,address,uint64,uint16,tuple(uint104,uint32,uint64,uint64,uint64,uint64,bytes32),address,bytes)',
+                    ],
+                    [
+                      [
+                        '0x0000000000000000000000000000000000000000', // holographERC721TransferHelper
+                        '0x0000000000000000000000000000000000000000', // marketFilterAddress (opensea)
+                        deployer.address, // initialOwner
+                        deployer.address, // fundsRecipient
+                        0, // 1000 editions
+                        1000, // 10% royalty
+                        [
+                          saleConfig.publicSalePrice,
+                          saleConfig.maxSalePurchasePerAddress,
+                          saleConfig.publicSaleStart,
+                          saleConfig.publicSaleEnd,
+                          saleConfig.presaleStart,
+                          saleConfig.presaleEnd,
+                          saleConfig.presaleMerkleRoot,
+                        ], // salesConfig
+                        metadataRenderer.address, // metadataRenderer
+                        generateInitCode(['string', 'string', 'string'], ['decscription', 'imageURI', 'animationURI']), // metadataRendererInit
+                      ],
+                    ],
+                  ),
+                ),
               ],
-              [
-                [
-                  '0x0000000000000000000000000000000000000000', // TODO: holographFeeManager - this.networkMonitor.holographFeeManager.address
-                  '0x0000000000000000000000000000000000000000', // holographERC721TransferHelper
-                  '0x000000000000AAeB6D7670E522A718067333cd4E', // marketFilterAddress
-                  collectionName, // contractName
-                  collectionSymbol, // contractSymbol
-                  userWallet.address, // initialOwner
-                  userWallet.address, // fundsRecipient
-                  numOfEditions, // number of editions
-                  royaltyBps, // royalty percentage in bps
-                  setupCalls, // setupCalls (used to set sales config)
-                  metadataRenderer.address, // metadata renderer address deployed from above
-                  generateInitCode(['string', 'string', 'string'], [description, imageURI, animationURI]), // metadataRendererInit
-                ],
-                false, // skipInit
-              ],
-            ) // initCode
+            )
 
             break
           }
