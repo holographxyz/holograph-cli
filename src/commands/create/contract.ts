@@ -141,7 +141,7 @@ export default class Contract extends Command {
     let numOfEditions = 0
     let description = ''
     let imageURI = ''
-    let animationURI = ''
+    // let animationURI = ''
 
     let configHashBytes: number[]
     let sig: string
@@ -482,46 +482,48 @@ export default class Contract extends Command {
             //   ],
             // ) // initCode
 
-            const initCode = abiCoder.encode(
-              ['string', 'string', 'uint16', 'uint256', 'bool', 'bytes'],
-              [
-                collectionName, // string memory contractName
-                collectionSymbol, // string memory contractSymbol
-                royaltyBps, // uint16 contractBps
-                '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff', // uint256 eventConfig - AllEventsEnabled() can be replaced with all 32 bytes of F
-                false, // bool skipInit
-                abiCoder.encode(
-                  generateInitCode(
-                    [
-                      'tuple(address,address,address,address,uint64,uint16,tuple(uint104,uint32,uint64,uint64,uint64,uint64,bytes32),address,bytes)',
-                    ],
-                    [
-                      [
-                        '0x0000000000000000000000000000000000000000', // holographERC721TransferHelper
-                        '0x0000000000000000000000000000000000000000', // marketFilterAddress (opensea)
-                        deployer.address, // initialOwner
-                        deployer.address, // fundsRecipient
-                        0, // 1000 editions
-                        1000, // 10% royalty
-                        [
-                          saleConfig.publicSalePrice,
-                          saleConfig.maxSalePurchasePerAddress,
-                          saleConfig.publicSaleStart,
-                          saleConfig.publicSaleEnd,
-                          saleConfig.presaleStart,
-                          saleConfig.presaleEnd,
-                          saleConfig.presaleMerkleRoot,
-                        ], // salesConfig
-                        metadataRenderer.address, // metadataRenderer
-                        generateInitCode(['string', 'string', 'string'], ['decscription', 'imageURI', 'animationURI']), // metadataRendererInit
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            )
+            // TODO: New structure for custom contracts
+            //   const initCode = abiCoder.encode(
+            //     ['string', 'string', 'uint16', 'uint256', 'bool', 'bytes'],
+            //     [
+            //       collectionName, // string memory contractName
+            //       collectionSymbol, // string memory contractSymbol
+            //       royaltyBps, // uint16 contractBps
+            //       '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff', // uint256 eventConfig - AllEventsEnabled() can be replaced with all 32 bytes of F
+            //       false, // bool skipInit
+            //       abiCoder.encode(
+            //         generateInitCode(
+            //           [
+            //             'tuple(address,address,address,address,uint64,uint16,tuple(uint104,uint32,uint64,uint64,uint64,uint64,bytes32),address,bytes)',
+            //           ],
+            //           [
+            //             [
+            //               '0x0000000000000000000000000000000000000000', // holographERC721TransferHelper
+            //               '0x0000000000000000000000000000000000000000', // marketFilterAddress (opensea)
+            //               deployer.address, // initialOwner
+            //               deployer.address, // fundsRecipient
+            //               0, // 1000 editions
+            //               1000, // 10% royalty
+            //               [
+            //                 saleConfig.publicSalePrice,
+            //                 saleConfig.maxSalePurchasePerAddress,
+            //                 saleConfig.publicSaleStart,
+            //                 saleConfig.publicSaleEnd,
+            //                 saleConfig.presaleStart,
+            //                 saleConfig.presaleEnd,
+            //                 saleConfig.presaleMerkleRoot,
+            //               ], // salesConfig
+            //               metadataRenderer.address, // metadataRenderer
+            //               generateInitCode(['string', 'string', 'string'], [description, imageURI, animationURI]), // metadataRendererInit
+            //             ],
+            //           ],
+            //         ),
+            //       ),
+            //     ],
+            //   )
 
-            break
+            //   break
+            // }
           }
         }
 
