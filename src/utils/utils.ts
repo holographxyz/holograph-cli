@@ -69,6 +69,10 @@ export const rgbToHex = (rgb: number): string => {
 
 export const zeroAddress: string = '0x' + '00'.repeat(20)
 
+export function allEventsEnabled(): string {
+  return '0x' + 'ff'.repeat(32)
+}
+
 export function generateInitCode(vars: string[], vals: any[]): string {
   return web3.eth.abi.encodeParameters(vars, vals)
 }

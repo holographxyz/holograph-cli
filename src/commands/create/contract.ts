@@ -35,7 +35,7 @@ import {
   checkTransactionHashFlag,
   checkUriTypeFlag,
 } from '../../utils/validation'
-import {ContractFactory, ethers} from 'ethers'
+import {BigNumber, ContractFactory, ethers} from 'ethers'
 import {UriTypeIndex} from '../../utils/asset-deployment'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
@@ -119,7 +119,7 @@ export default class Contract extends Command {
     let chainId: string
     let salt: string
     let bytecodeType: BytecodeType
-    const contractTypes: string[] = ['HolographERC20', 'HolographERC721', 'HolographERC721Drop']
+    const contractTypes: string[] = ['HolographERC20', 'HolographERC721', 'HolographDropsEditionsV1']
     let contractType = ''
     let contractTypeHash: string
     let byteCode: string
@@ -141,7 +141,7 @@ export default class Contract extends Command {
     let numOfEditions = 0
     let description = ''
     let imageURI = ''
-    // let animationURI = ''
+    let animationURI = ''
 
     let configHashBytes: number[]
     let sig: string
@@ -206,8 +206,8 @@ export default class Contract extends Command {
           case BytecodeType.SampleERC721:
             contractType = 'HolographERC721'
             break
-          case BytecodeType.HolographERC721Drop:
-            contractType = 'HolographERC721Drop'
+          case BytecodeType.HolographDropsEditionsV1:
+            contractType = 'HolographDropsEditionsV1'
             break
           default:
             contractType = 'HolographERC721'
@@ -337,115 +337,118 @@ export default class Contract extends Command {
 
             break
 
-          case 'HolographERC721Drop': {
-            collectionName = await checkStringFlag(undefined, 'Enter the name of the Drop')
-            collectionSymbol = await checkStringFlag(undefined, 'Enter the collection symbol to use')
-            description = await checkStringFlag(undefined, 'Enter the description of the drop')
-            const uriType: UriTypeIndex =
-              UriTypeIndex[
-                await checkUriTypeFlag(
-                  flags.uriType,
-                  'Select the type of uri to use for the image / animation of the drop',
-                )
-              ]
+          case 'HolographDropsEditionsV1': {
+            contractType = 'HolographERC721'
+            contractTypeHash = '0x' + web3.utils.asciiToHex(contractType).slice(2).padStart(64, '0')
+            contractDeployment.deploymentConfig.config.contractType = contractTypeHash
+            // collectionName = await checkStringFlag(undefined, 'Enter the name of the Drop')
+            // collectionSymbol = await checkStringFlag(undefined, 'Enter the collection symbol to use')
+            // description = await checkStringFlag(undefined, 'Enter the description of the drop')
+            // const uriType: UriTypeIndex =
+            //   UriTypeIndex[
+            //     await checkUriTypeFlag(
+            //       flags.uriType,
+            //       'Select the type of uri to use for the image / animation of the drop',
+            //     )
+            //   ]
 
-            const animationPrompt: any = await inquirer.prompt([
-              {
-                name: 'isAnimation',
-                message: 'Is this an animation?',
-                type: 'confirm',
-                default: false,
-              },
-            ])
-            if (animationPrompt.isAnimation) {
-              const animationContentId: string = await checkStringFlag(
-                flags.uri,
-                'Enter the animation uri of the drop, minus the prepend (ie "ipfs://")',
-              )
-              animationURI = `${UriTypeIndex[uriType]}://${animationContentId}`
-            }
+            // const animationPrompt: any = await inquirer.prompt([
+            //   {
+            //     name: 'isAnimation',
+            //     message: 'Is this an animation?',
+            //     type: 'confirm',
+            //     default: false,
+            //   },
+            // ])
+            // if (animationPrompt.isAnimation) {
+            //   const animationContentId: string = await checkStringFlag(
+            //     flags.uri,
+            //     'Enter the animation uri of the drop, minus the prepend (ie "ipfs://")',
+            //   )
+            //   animationURI = `${UriTypeIndex[uriType]}://${animationContentId}`
+            // }
 
-            const contentId: string = await checkStringFlag(
-              flags.uri,
-              'Enter the image uri of the drop, minus the prepend (ie "ipfs://")',
-            )
-            imageURI = `${UriTypeIndex[uriType]}://${contentId}`
+            // const contentId: string = await checkStringFlag(
+            //   flags.uri,
+            //   'Enter the image uri of the drop, minus the prepend (ie "ipfs://")',
+            // )
+            // imageURI = `${UriTypeIndex[uriType]}://${contentId}`
 
-            numOfEditions = await checkNumberFlag(
-              undefined,
-              'Enter the number of editions in this drop. Set to 0 for unlimited editions.',
-            )
+            // numOfEditions = await checkNumberFlag(
+            //   undefined,
+            //   'Enter the number of editions in this drop. Set to 0 for unlimited editions.',
+            // )
 
-            royaltyBps = await checkNumberFlag(
-              undefined,
-              'Enter the percentage of royalty to collect in basis points. (1 = 0.01%, 10000 = 100%)',
-            )
+            // royaltyBps = await checkNumberFlag(
+            //   undefined,
+            //   'Enter the percentage of royalty to collect in basis points. (1 = 0.01%, 10000 = 100%)',
+            // )
 
-            if (royaltyBps > 10_000 || royaltyBps < 0) {
-              throw new Error('Invalid royalty basis points was provided: ' + royaltyBps.toString())
-            }
+            // if (royaltyBps > 10_000 || royaltyBps < 0) {
+            //   throw new Error('Invalid royalty basis points was provided: ' + royaltyBps.toString())
+            // }
 
-            // Setup the sales config
-            const setupCalls: any = []
-            const salesConfigPrompt: any = await inquirer.prompt([
-              {
-                name: 'shouldContinue',
-                message: 'Would you like to create a sales config for the drop?',
-                type: 'confirm',
-                default: false,
-              },
-            ])
-            if (salesConfigPrompt.shouldContinue) {
-              // Enter the sales config variables
-              const publicSalePrice: string = await checkStringFlag(
-                undefined,
-                'Enter the price of the drop in ether units',
-              )
-              const maxSalePurchasePerAddress: number = await checkNumberFlag(
-                undefined,
-                'Enter the maximum number of editions a user can purchase',
-              )
-              const publicSaleStart: number = Math.floor(
-                new Date(
-                  await checkStringFlag(undefined, 'Enter the start time of the sale in the format of YYYY-MM-DD'),
-                ).getTime() / 1000,
-              )
+            // // Setup the sales config
+            // const salesConfig: any = []
+            // const salesConfigPrompt: any = await inquirer.prompt([
+            //   {
+            //     name: 'shouldContinue',
+            //     message: 'Would you like to create a sales config for the drop?',
+            //     type: 'confirm',
+            //     default: false,
+            //   },
+            // ])
+            // if (salesConfigPrompt.shouldContinue) {
+            //   // Enter the sales config variables
+            //   const publicSalePrice: string = await checkStringFlag(
+            //     undefined,
+            //     'Enter the price of the drop in ether units',
+            //   )
+            //   const maxSalePurchasePerAddress: number = await checkNumberFlag(
+            //     undefined,
+            //     'Enter the maximum number of editions a user can purchase',
+            //   )
+            //   const publicSaleStart: number = Math.floor(
+            //     new Date(
+            //       await checkStringFlag(undefined, 'Enter the start time of the sale in the format of YYYY-MM-DD'),
+            //     ).getTime() / 1000,
+            //   )
 
-              const publicSaleEnd: number = Math.floor(
-                new Date(
-                  await checkStringFlag(undefined, 'Enter the ending time of the sale in the format of YYYY-MM-DD'),
-                ).getTime() / 1000,
-              )
+            //   const publicSaleEnd: number = Math.floor(
+            //     new Date(
+            //       await checkStringFlag(undefined, 'Enter the ending time of the sale in the format of YYYY-MM-DD'),
+            //     ).getTime() / 1000,
+            //   )
 
-              // Define the ABI of the contract method
-              const abi = new ethers.utils.Interface([
-                'function setSaleConfiguration(uint104,uint32,uint64,uint64,uint64,uint64,bytes32) external',
-              ])
+            //   // Define the ABI of the contract method
+            //   // const abi = new ethers.utils.Interface([
+            //   //   'function setSaleConfiguration(uint104,uint32,uint64,uint64,uint64,uint64,bytes32) external',
+            //   // ])
 
-              // Define the arguments for the method
-              const saleConfig = {
-                publicSalePrice: ethers.utils.parseEther(publicSalePrice), // in ETH
-                maxSalePurchasePerAddress: maxSalePurchasePerAddress, // in number of editions an address can purchase
-                publicSaleStart: publicSaleStart, // in unix time
-                publicSaleEnd: publicSaleEnd, // in unix time
-                presaleStart: 0, // no presale
-                presaleEnd: 0, // no presale
-                presaleMerkleRoot: '0x0000000000000000000000000000000000000000000000000000000000000000', // No presale
-              }
+            //   // Define the arguments for the method
+            //   // const saleConfig = {
+            //   //   publicSalePrice: ethers.utils.parseEther(publicSalePrice), // in ETH
+            //   //   maxSalePurchasePerAddress: maxSalePurchasePerAddress, // in number of editions an address can purchase
+            //   //   publicSaleStart: publicSaleStart, // in unix time
+            //   //   publicSaleEnd: publicSaleEnd, // in unix time
+            //   //   presaleStart: 0, // no presale
+            //   //   presaleEnd: 0, // no presale
+            //   //   presaleMerkleRoot: '0x0000000000000000000000000000000000000000000000000000000000000000', // No presale
+            //   // }
 
-              // Encode the method arguments with the selector
-              const salesConfigBytecode = abi.encodeFunctionData('setSaleConfiguration', [
-                saleConfig.publicSalePrice,
-                saleConfig.maxSalePurchasePerAddress,
-                saleConfig.publicSaleStart,
-                saleConfig.publicSaleEnd,
-                saleConfig.presaleStart,
-                saleConfig.presaleEnd,
-                saleConfig.presaleMerkleRoot,
-              ])
+            //   // Encode the method arguments with the selector
+            //   // const salesConfigBytecode = abi.encodeFunctionData('setSaleConfiguration', [
+            //   //   saleConfig.publicSalePrice,
+            //   //   saleConfig.maxSalePurchasePerAddress,
+            //   //   saleConfig.publicSaleStart,
+            //   //   saleConfig.publicSaleEnd,
+            //   //   saleConfig.presaleStart,
+            //   //   saleConfig.presaleEnd,
+            //   //   saleConfig.presaleMerkleRoot,
+            //   // ])
 
-              setupCalls.push(salesConfigBytecode)
-            }
+            //   // salesConfig.push(saleConfig)
+            // }
 
             // Connect wallet to the provider
             const provider = this.networkMonitor.providers[chainType]
@@ -483,47 +486,80 @@ export default class Contract extends Command {
             // ) // initCode
 
             // TODO: New structure for custom contracts
-            //   const initCode = abiCoder.encode(
-            //     ['string', 'string', 'uint16', 'uint256', 'bool', 'bytes'],
-            //     [
-            //       collectionName, // string memory contractName
-            //       collectionSymbol, // string memory contractSymbol
-            //       royaltyBps, // uint16 contractBps
-            //       '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff', // uint256 eventConfig - AllEventsEnabled() can be replaced with all 32 bytes of F
-            //       false, // bool skipInit
-            //       abiCoder.encode(
-            //         generateInitCode(
-            //           [
-            //             'tuple(address,address,address,address,uint64,uint16,tuple(uint104,uint32,uint64,uint64,uint64,uint64,bytes32),address,bytes)',
-            //           ],
-            //           [
-            //             [
-            //               '0x0000000000000000000000000000000000000000', // holographERC721TransferHelper
-            //               '0x0000000000000000000000000000000000000000', // marketFilterAddress (opensea)
-            //               deployer.address, // initialOwner
-            //               deployer.address, // fundsRecipient
-            //               0, // 1000 editions
-            //               1000, // 10% royalty
-            //               [
-            //                 saleConfig.publicSalePrice,
-            //                 saleConfig.maxSalePurchasePerAddress,
-            //                 saleConfig.publicSaleStart,
-            //                 saleConfig.publicSaleEnd,
-            //                 saleConfig.presaleStart,
-            //                 saleConfig.presaleEnd,
-            //                 saleConfig.presaleMerkleRoot,
-            //               ], // salesConfig
-            //               metadataRenderer.address, // metadataRenderer
-            //               generateInitCode(['string', 'string', 'string'], [description, imageURI, animationURI]), // metadataRendererInit
-            //             ],
-            //           ],
-            //         ),
-            //       ),
-            //     ],
-            //   )
+            // initCode = generateInitCode(
+            //   ['string', 'string', 'uint16', 'uint256', 'bool', 'bytes'],
+            //   [
+            //     collectionName, // string memory contractName
+            //     collectionSymbol, // string memory contractSymbol
+            //     royaltyBps, // uint16 contractBps
+            //     allEventsEnabled(), // uint256 eventConfig -  all 32 bytes of f
+            //     false, // bool skipInit
+            //     generateInitCode(
+            //       [
+            //         'tuple(address,address,address,address,uint64,uint16,tuple(uint104,uint32,uint64,uint64,uint64,uint64,bytes32),address,bytes)',
+            //       ],
+            //       [
+            //         [
+            //           '0x0000000000000000000000000000000000000000', // holographERC721TransferHelper
+            //           '0x000000000000AAeB6D7670E522A718067333cd4E', // marketFilterAddress (opensea)
+            //           userWallet.address, // initialOwner
+            //           userWallet.address, // fundsRecipient
+            //           numOfEditions, // number of editions
+            //           royaltyBps, // percentage of royalties in bps
+            //           [salesConfig],
+            //           metadataRenderer.address, // metadataRenderer
+            //           generateInitCode(['string', 'string', 'string'], [description, imageURI, animationURI]), // metadataRendererInit
+            //         ],
+            //       ],
+            //     ),
+            //   ],
+            // )
 
-            //   break
-            // }
+            initCode = generateInitCode(
+              ['string', 'string', 'uint16', 'uint256', 'bool', 'bytes'],
+              [
+                'collectionName', // string memory contractName
+                'collectionSymbol', // string memory contractSymbol
+                100, // uint16 contractBps
+                allEventsEnabled(), // uint256 eventConfig -  all 32 bytes of f
+                false, // bool skipInit
+                generateInitCode(
+                  ['bytes32', 'address', 'bytes'],
+                  [
+                    '0x' + web3.utils.asciiToHex('HolographDropsEditionsV1').substring(2).padStart(64, '0'),
+                    this.networkMonitor.registryAddress,
+                    generateInitCode(
+                      [
+                        'tuple(address,address,address,address,uint64,uint16,tuple(uint104,uint32,uint64,uint64,uint64,uint64,bytes32),address,bytes)',
+                      ],
+                      [
+                        [
+                          '0x0000000000000000000000000000000000000000', // erc721TransferHelper
+                          '0x000000000000AAeB6D7670E522A718067333cd4E', // marketFilterAddress (opensea)
+                          userWallet.address, // initialOwner
+                          userWallet.address, // fundsRecipient
+                          1000, // number of editions
+                          100, // percentage of royalties in bps
+                          [
+                            0, // in ETH
+                            10, // in number of editions an address can purchase
+                            1678737961305, // today in unix time
+                            1710360427251, // next year today in unix time
+                            0, // no presale
+                            0, // no presale
+                            '0x0000000000000000000000000000000000000000000000000000000000000000', // No presale
+                          ],
+                          '0x0000000000000000000000000000000000000000', // metadataRenderer
+                          generateInitCode(['string', 'string', 'string'], ['description', 'imageURI', 'animationURI']), // metadataRendererInit
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            )
+
+            break
           }
         }
 
@@ -611,7 +647,7 @@ export default class Contract extends Command {
       network: targetNetwork,
       // NOTE: gas can be overriden by here
       // gasPrice: BigNumber.from(100000000000), // 100 gwei
-      // gasLimit: BigNumber.from(7000000), // 7 million
+      gasLimit: BigNumber.from(7000000), // 7 million
       contract: this.networkMonitor.factoryContract.connect(provider),
       methodName: 'deployHolographableContract',
       args: [
