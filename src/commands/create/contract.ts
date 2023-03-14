@@ -35,7 +35,7 @@ import {
   checkTransactionHashFlag,
   checkUriTypeFlag,
 } from '../../utils/validation'
-import {BigNumber, ContractFactory, ethers} from 'ethers'
+import {ContractFactory, ethers} from 'ethers'
 import {UriTypeIndex} from '../../utils/asset-deployment'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
@@ -458,6 +458,7 @@ export default class Contract extends Command {
                 generateInitCode(
                   ['bytes32', 'address', 'bytes'],
                   [
+                    // eslint-disable-next-line unicorn/prefer-string-slice
                     '0x' + web3.utils.asciiToHex('HolographDropsEditionsV1').substring(2).padStart(64, '0'),
                     this.networkMonitor.registryAddress,
                     generateInitCode(
@@ -571,7 +572,7 @@ export default class Contract extends Command {
       network: targetNetwork,
       // NOTE: gas can be overriden by here
       // gasPrice: BigNumber.from(100000000000), // 100 gwei
-      gasLimit: BigNumber.from(7000000), // 7 million
+      // gasLimit: BigNumber.from(7000000), // 7 million
       contract: this.networkMonitor.factoryContract.connect(provider),
       methodName: 'deployHolographableContract',
       args: [
