@@ -2,6 +2,7 @@ import Web3 from 'web3'
 
 import {BigNumber, BigNumberish} from '@ethersproject/bignumber'
 import {formatUnits} from '@ethersproject/units'
+import {Contract, ethers, Wallet} from 'ethers'
 
 export const web3 = new Web3()
 
@@ -207,4 +208,101 @@ export async function retry<T = any>(
     // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
     process.exit()
   }
+}
+
+export type SaleConfig = {
+  publicSalePrice: ethers.BigNumber
+  maxSalePurchasePerAddress: number
+  publicSaleStart: number
+  publicSaleEnd: number
+  presaleStart: number
+  presaleEnd: number
+  presaleMerkleRoot: string
+}
+
+type SalesConfigTuple = [
+  string, // erc721TransferHelper
+  string, // marketFilterAddress
+  string, // initialOwner
+  string, // fundsRecipient
+  number, // number of editions
+  number, // percentage of royalties in bps
+  SaleConfig, // sales config object
+  string, // metadataRenderer
+  string, // metadataRendererInit
+]
+
+type HolographERC721ConfigTuple = [
+  string, // contractName
+  string, // contractSymbol
+  number, // contractBps
+  string, // eventConfig
+  boolean, // skipInit
+  string, // initializer
+]
+
+export function generateSalesConfigTuple(
+  userWallet: Wallet,
+  numOfEditions: number,
+  royaltyBps: number,
+  salesConfig: SaleConfig,
+  metadataRenderer: Contract,
+  description: string,
+  imageURI: string,
+  animationURI: string,
+): SalesConfigTuple {
+  const salesConfigTuple: SalesConfigTuple = [
+    '0x0000000000000000000000000000000000000000', // erc721TransferHelper
+    '0x000000000000AAeB6D7670E522A718067333cd4E', // marketFilterAddress (opensea)
+    userWallet.address, // initialOwner
+    userWallet.address, // fundsRecipient
+    numOfEditions, // number of editions
+    royaltyBps, // percentage of royalties in bps
+    salesConfig,
+    metadataRenderer.address, // metadataRenderer
+    generateInitCode(['string', 'string', 'string'], [description, imageURI, animationURI]), // metadataRendererInit
+  ]
+  return salesConfigTuple
+}
+
+export function generateSalesConfigInitCode(salesConfigTuple: SalesConfigTuple): string {
+  const salesConfigInitCode = generateInitCode(
+    [
+      'tuple(address,address,address,address,uint64,uint16,tuple(uint104,uint32,uint64,uint64,uint64,uint64,bytes32),address,bytes)',
+    ],
+    [salesConfigTuple],
+  )
+  return salesConfigInitCode
+}
+
+export function generateHolographERC721ConfigTuple(
+  collectionName: string,
+  collectionSymbol: string,
+  royaltyBps: number,
+  salesConfigTuple: SalesConfigTuple,
+
+  registryAddress: string,
+): HolographERC721ConfigTuple {
+  const eventConfig = allEventsEnabled()
+  const skipInit = false
+  const initializer = generateInitCode(
+    ['bytes32', 'address', 'bytes'],
+    [generateHashedName('HolographDropsEditionsV1'), registryAddress, generateSalesConfigInitCode(salesConfigTuple)],
+  )
+  return [collectionName, collectionSymbol, royaltyBps, eventConfig, skipInit, initializer]
+}
+
+export function generateDropInitCode(holographERC721ConfigTuple: HolographERC721ConfigTuple): string {
+  return generateInitCode(['string', 'string', 'uint16', 'uint256', 'bool', 'bytes'], holographERC721ConfigTuple)
+}
+
+export function generateMetadataRendererInit(description: string, imageURI: string, animationURI: string): string {
+  return generateInitCode(['string', 'string', 'string'], [description, imageURI, animationURI])
+}
+
+export function generateHashedName(name: string): string {
+  // eslint-disable-next-line unicorn/prefer-string-slice
+  const asciiHex = web3.utils.asciiToHex(name).substring(2) // remove '0x' prefix
+  const paddedHex = asciiHex.padStart(64, '0')
+  return `0x${paddedHex}`
 }

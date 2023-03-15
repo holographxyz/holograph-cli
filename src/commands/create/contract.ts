@@ -8,7 +8,17 @@ import {networks} from '@holographxyz/networks'
 
 import {BytecodeType, bytecodes, EditionMetadataRenderer} from '../../utils/bytecodes'
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {web3, zeroAddress, generateInitCode, remove0x, sha3} from '../../utils/utils'
+import {
+  web3,
+  zeroAddress,
+  generateInitCode,
+  remove0x,
+  sha3,
+  SaleConfig,
+  generateSalesConfigTuple,
+  generateHolographERC721ConfigTuple,
+  generateDropInitCode,
+} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {
   ContractDeployment,
@@ -424,8 +434,8 @@ export default class Contract extends Command {
               )
 
               // Define the arguments for the method
-              const saleConfig = {
-                publicSalePrice: ethers.utils.parseEther(publicSalePrice), // in ETH
+              const saleConfig: SaleConfig = {
+                publicSalePrice: ethers.utils.parseEther(publicSalePrice.toString()), // in ETH
                 maxSalePurchasePerAddress: maxSalePurchasePerAddress, // in number of editions an address can purchase
                 publicSaleStart: publicSaleStart, // in unix time
                 publicSaleEnd: publicSaleEnd, // in unix time
@@ -447,42 +457,26 @@ export default class Contract extends Command {
             const metadataRenderer = await rendererFactory.deploy()
             this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
 
-            initCode = generateInitCode(
-              ['string', 'string', 'uint16', 'uint256', 'bool', 'bytes'],
-              [
-                collectionName, // string memory contractName
-                collectionSymbol, // string memory contractSymbol
-                royaltyBps, // uint16 contractBps
-                allEventsEnabled(), // uint256 eventConfig -  all 32 bytes of f
-                false, // bool skipInit
-                generateInitCode(
-                  ['bytes32', 'address', 'bytes'],
-                  [
-                    // eslint-disable-next-line unicorn/prefer-string-slice
-                    '0x' + web3.utils.asciiToHex('HolographDropsEditionsV1').substring(2).padStart(64, '0'),
-                    this.networkMonitor.registryAddress,
-                    generateInitCode(
-                      [
-                        'tuple(address,address,address,address,uint64,uint16,tuple(uint104,uint32,uint64,uint64,uint64,uint64,bytes32),address,bytes)',
-                      ],
-                      [
-                        [
-                          '0x0000000000000000000000000000000000000000', // erc721TransferHelper
-                          '0x000000000000AAeB6D7670E522A718067333cd4E', // marketFilterAddress (opensea)
-                          userWallet.address, // initialOwner
-                          userWallet.address, // fundsRecipient
-                          numOfEditions, // number of editions
-                          royaltyBps, // percentage of royalties in bps
-                          salesConfig,
-                          metadataRenderer.address, // metadataRenderer
-                          generateInitCode(['string', 'string', 'string'], [description, imageURI, animationURI]), // metadataRendererInit
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ],
+            const salesConfigTuple = generateSalesConfigTuple(
+              userWallet,
+              numOfEditions,
+              royaltyBps,
+              salesConfig,
+              metadataRenderer,
+              description,
+              imageURI,
+              animationURI,
             )
+
+            const HolographERC721Tuple = generateHolographERC721ConfigTuple(
+              collectionName,
+              collectionSymbol,
+              royaltyBps,
+              salesConfigTuple,
+              this.networkMonitor.registryAddress,
+            )
+
+            initCode = generateDropInitCode(HolographERC721Tuple)
 
             break
           }
