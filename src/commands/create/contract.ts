@@ -8,17 +8,7 @@ import {networks} from '@holographxyz/networks'
 
 import {BytecodeType, bytecodes, EditionMetadataRenderer} from '../../utils/bytecodes'
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {
-  web3,
-  zeroAddress,
-  generateInitCode,
-  remove0x,
-  sha3,
-  SaleConfig,
-  generateSalesConfigTuple,
-  generateHolographERC721ConfigTuple,
-  generateDropInitCode,
-} from '../../utils/utils'
+import {web3, zeroAddress, remove0x, sha3} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {
   ContractDeployment,
@@ -47,6 +37,9 @@ import {
 } from '../../utils/validation'
 import {ContractFactory, ethers} from 'ethers'
 import {UriTypeIndex} from '../../utils/asset-deployment'
+import {generateDropInitCode, generateInitCode} from '../../utils/initcode'
+import {generateHolographERC721ConfigTuple, generateSalesConfigTuple} from '../../utils/tuples'
+import {SaleConfig} from '../../types/tuples'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
   const codeFile: string = await checkStringFlag(undefined, prompt)
