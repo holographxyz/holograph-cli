@@ -428,7 +428,7 @@ export default class Contract extends Command {
 
               // Define the arguments for the method
               const saleConfig: SaleConfig = {
-                publicSalePrice: ethers.utils.parseEther(publicSalePrice.toString()), // in ETH
+                publicSalePrice: ethers.utils.parseEther(publicSalePrice), // in ETH
                 maxSalePurchasePerAddress: maxSalePurchasePerAddress, // in number of editions an address can purchase
                 publicSaleStart: publicSaleStart, // in unix time
                 publicSaleEnd: publicSaleEnd, // in unix time
@@ -558,8 +558,8 @@ export default class Contract extends Command {
     const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
       network: targetNetwork,
       // NOTE: gas can be overriden by here
-      // gasPrice: BigNumber.from(100000000000), // 100 gwei
-      // gasLimit: BigNumber.from(7000000), // 7 million
+      // gasPrice: ethers.BigNumber.from(100000000000), // 100 gwei
+      // gasLimit: ethers.BigNumber.from(7000000), // 7 million
       contract: this.networkMonitor.factoryContract.connect(provider),
       methodName: 'deployHolographableContract',
       args: [

@@ -1,10 +1,8 @@
-import Web3 from 'web3'
+import {ethers} from 'ethers'
 import {HolographERC721ConfigTuple, SalesConfigTuple} from '../types/tuples'
 
-export const web3 = new Web3()
-
 export function generateInitCode(vars: string[], vals: any[]): string {
-  return web3.eth.abi.encodeParameters(vars, vals)
+  return ethers.utils.defaultAbiCoder.encode(vars, vals)
 }
 
 export function generateSalesConfigInitCode(salesConfigTuple: SalesConfigTuple): string {

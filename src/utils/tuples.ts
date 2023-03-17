@@ -8,7 +8,6 @@ export function generateHolographERC721ConfigTuple(
   collectionSymbol: string,
   royaltyBps: number,
   salesConfigTuple: SalesConfigTuple,
-
   registryAddress: string,
 ): HolographERC721ConfigTuple {
   const eventConfig = allEventsEnabled()
