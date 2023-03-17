@@ -8,7 +8,7 @@ import {networks} from '@holographxyz/networks'
 
 import {BytecodeType, bytecodes, EditionMetadataRenderer} from '../../utils/bytecodes'
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {web3, zeroAddress, remove0x, sha3} from '../../utils/utils'
+import {zeroAddress, remove0x, sha3} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {
   ContractDeployment,
@@ -217,7 +217,7 @@ export default class Contract extends Command {
             break
         }
 
-        contractTypeHash = '0x' + web3.utils.asciiToHex(contractType).slice(2).padStart(64, '0')
+        contractTypeHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(contractType)).slice(2).padStart(64, '0')
         contractDeployment.deploymentConfig.config.contractType = contractTypeHash
         byteCode =
           bytecodeType === BytecodeType.Custom
@@ -295,7 +295,7 @@ export default class Contract extends Command {
                 sourceInitCode = generateInitCode(
                   ['bytes32', 'address', 'bytes'],
                   [
-                    '0x' + web3.utils.asciiToHex('CxipERC721').slice(2).padStart(64, '0'),
+                    ethers.utils.keccak256(ethers.utils.toUtf8Bytes('CxipERC721')).slice(2).padStart(64, '0'),
                     await this.networkMonitor.registryContract.address,
                     generateInitCode(['address'], [userWallet.address]),
                   ],
@@ -343,7 +343,7 @@ export default class Contract extends Command {
           case 'HolographDropsEditionsV1': {
             // NOTE: Since the Drop contract is an extension of the HolographERC721 enforcer, the contract type must be updated accordingly
             contractType = 'HolographERC721'
-            contractTypeHash = '0x' + web3.utils.asciiToHex(contractType).slice(2).padStart(64, '0')
+            contractTypeHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(contractType)).slice(2).padStart(64, '0')
             contractDeployment.deploymentConfig.config.contractType = contractTypeHash
 
             // Setup the Drop contract properties
@@ -487,7 +487,7 @@ export default class Contract extends Command {
             sha3(contractDeployment.deploymentConfig.config.initCode as string).slice(2) +
             (contractDeployment.deploymentConfig.signer as string).slice(2),
         )
-        configHashBytes = web3.utils.hexToBytes(configHash)
+        configHashBytes = Array.from(ethers.utils.arrayify(configHash)) as number[]
         needToSign = true
 
         break
