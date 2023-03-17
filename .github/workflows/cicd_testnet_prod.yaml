@@ -19,8 +19,6 @@ env:
   #
   TESTNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO - create new gh secret for TESTNET. should be different from staging????
   #
-  TESTNET_HOLO_INDEXER_HOST: 'http://testsirius-holo-api.testnet.svc.cluster.local:443' # Notice <-- the release from API
-  #
   TESTNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
   TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
   #
@@ -34,18 +32,11 @@ env:
   #
   TESTNET_COMMON_NAMESPACE: testnet # NOTICE <---
   #
-  #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.80
-  INDEXER_RELEASE_NAME: sirius-indexer-testnet # format -> [release_name]-indexer-[env]
-  #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.56
-  OPERATOR_RELEASE_NAME: sirius-operator-testnet # format -> [release_name]-operator-[env]
-  #######################################
-  #
   # INDEXER TESTNET rpc endpoints
   indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
   indexer_testnet_polygonTestnet_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
   indexer_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_GOERLI_RPC_URL }}
+  indexer_testnet_binanceTestnet_rpc_url: ${{ secrets.INDEXER_PROD_BSC_TESTNET_RPC_URL }} #TODO <------
   #
   indexer_testnet_private_key: ${{ secrets.INDEXER_PROD_PRIVATE_KEY }}
   indexer_testnet_address: ${{ secrets.INDEXER_PROD_ADDRESS }}
@@ -53,6 +44,7 @@ env:
   operator_testnet_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_FUJI_RPC_URL }}
   operator_testnet_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_MUMBAI_RPC_URL }}
   operator_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_GOERLI_RPC_URL }}
+  operator_testnet_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_BSC_TESTNET_RPC_URL }} #TODO <-----
   #
   operator_testnet_private_key: ${{ secrets.OPERATOR_PROD_PRIVATE_KEY }}
   operator_testnet_address: ${{ secrets.OPERATOR_PROD_ADDRESS }}
@@ -62,6 +54,15 @@ env:
   SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
   TESTNET_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
   TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
+  #
+  TESTNET_HOLO_INDEXER_HOST: 'http://testtitan-holo-api.testnet.svc.cluster.local:443' # Notice <-- the release from API
+  #######################################
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.82
+  INDEXER_RELEASE_NAME: titan-indexer-testnet # format -> [release_name]-indexer-[env]
+  #
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.60
+  OPERATOR_RELEASE_NAME: titan-operator-testnet # format -> [release_name]-operator-[env]
+  #######################################
 
 # notice: the trigger
 #on:
@@ -174,6 +175,7 @@ jobs:
           AVALANCHE_NETWORK: 'fuji'
           ETHEREUM_NETWORK: 'goerli'
           POLYGON_NETWORK: 'mumbai'
+          BINANCE_NETWORK: 'bscTestnet'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -196,12 +198,14 @@ jobs:
             --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
             --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
             --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
+            --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             \
             --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_testnet_avalancheTestnet_rpc_url }} \
             --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_testnet_polygonTestnet_rpc_url }} \
             --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.indexer_testnet_ethereumTestnetGoerli_rpc_url }} \
+            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.indexer_testnet_binanceTestnet_rpc_url }} \
             \
             --set testnet_rpc_config_values.private_key=${{ env.indexer_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.indexer_testnet_address }} \
@@ -214,6 +218,7 @@ jobs:
             --set autoscaling.avalanche.maxReplicas=1 \
             --set autoscaling.ethereum.maxReplicas=1 \
             --set autoscaling.polygon.maxReplicas=1 \
+            --set autoscaling.binance.maxReplicas=1 \
             \
             --set resources.ethereum.limits.cpu=150m \
             --set resources.ethereum.limits.memory=520Mi \
@@ -259,6 +264,7 @@ jobs:
           AVALANCHE_NETWORK: 'fuji'
           POLYGON_NETWORK: 'mumbai'
           ETHEREUM_NETWORK: 'goerli'
+          BINANCE_NETWORK: 'bscTestnet'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -281,10 +287,12 @@ jobs:
             --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
             --set POLYGON_NETWORK=$POLYGON_NETWORK \
             --set ETHEREUM_NETWORK=$ETHEREUM_NETWORK \
+            --set BINANCE_NETWORK=$BINANCE_NETWORK \
             \
             --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_testnet_avalancheTestnet_rpc_url }} \
             --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_testnet_polygonTestnet_rpc_url }} \
             --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.operator_testnet_ethereumTestnetGoerli_rpc_url }} \
+            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.operator_testnet_binanceTestnet_rpc_url }} \
             \
             --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \

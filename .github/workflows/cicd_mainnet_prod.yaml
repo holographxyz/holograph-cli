@@ -19,8 +19,6 @@ env:
   #
   MAINNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_MAINNET_OPERATOR_API_KEY }}
   #
-  MAINNET_HOLO_INDEXER_HOST: 'http://sirius-holo-api.mainnet.svc.cluster.local:443' # Notice <-- the release from API
-  #
   MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.MAINNET_HOLO_INDEXER_PASSWORD }}
   MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.MAINNET_HOLO_OPERATOR_PASSWORD }}
   #
@@ -34,18 +32,11 @@ env:
   #
   MAINNET_COMMON_NAMESPACE: mainnet # NOTICE <---
   #
-  #######################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.80
-  INDEXER_RELEASE_NAME: sirius-indexer-mainnet # format -> [release_name]-indexer-[env]
-  #
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.56
-  OPERATOR_RELEASE_NAME: sirius-operator-mainnet # format -> [release_name]-operator-[env]
-  #######################################
-  #
   ### INDEXER MAINNET rpc endpoints
   indexer_mainnet_avalanche_rpc_url: ${{ secrets.INDEXER_MAINNET_AVALANCHE_RPC_URL }}
   indexer_mainnet_polygon_rpc_url: ${{ secrets.INDEXER_MAINNET_POLYGON_RPC_URL }}
   indexer_mainnet_ethereum_rpc_url: ${{ secrets.INDEXER_MAINNET_ETHEREUM_RPC_URL }}
+  indexer_mainnet_binance_rpc_url: ${{ secrets.INDEXER_MAINNET_BINANCE_RPC_URL }} #TODO <---------------
   #
   indexer_mainnet_private_key: ${{ secrets.INDEXER_MAINNET_PRIVATE_KEY }}
   indexer_mainnet_address: ${{ secrets.INDEXER_MAINNET_ADDRESS }}
@@ -53,6 +44,7 @@ env:
   operator_mainnet_avalanche_rpc_url: ${{ secrets.OPERATOR_MAINNET_AVALANCHE_RPC_URL }}
   operator_mainnet_polygon_rpc_url: ${{ secrets.OPERATOR_MAINNET_POLYGON_RPC_URL }}
   operator_mainnet_ethereum_rpc_url: ${{ secrets.OPERATOR_MAINNET_ETHEREUM_RPC_URL }}
+  operator_mainnet_binance_rpc_url: ${{ secrets.OPERATOR_MAINNET_BINANCE_RPC_URL }} #TODO <-----------------
   #
   operator_mainnet_private_key: ${{ secrets.OPERATOR_MAINNET_PRIVATE_KEY }}
   operator_mainnet_address: ${{ secrets.OPERATOR_MAINNET_ADDRESS }}
@@ -62,6 +54,15 @@ env:
   SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
   MAINNET_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
   MAINNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/mainnet-indexer-processor'
+  #
+  MAINNET_HOLO_INDEXER_HOST: 'http://titan-holo-api.mainnet.svc.cluster.local:443' # Notice <-- the release from API
+  #######################################
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.82
+  INDEXER_RELEASE_NAME: titan-indexer-mainnet # format -> [release_name]-indexer-[env]
+  #
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.60
+  OPERATOR_RELEASE_NAME: titan-operator-mainnet # format -> [release_name]-operator-[env]
+  #######################################
 
 ## notice: the trigger
 #on:
@@ -171,7 +172,10 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'true'
-          NETWORK: 'avax matic eth'
+          AVALANCHE_NETWORK: 'avax'
+          ETHEREUM_NETWORK: 'eth'
+          POLYGON_NETWORK: 'matic'
+          BINANCE_NETWORK: 'bsc'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -190,12 +194,18 @@ jobs:
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
-            --set NETWORK="${NETWORK}" \
+            \
+            --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
+            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
+            --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
+            --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
+            \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             \
             --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.indexer_mainnet_avalanche_rpc_url }} \
             --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.indexer_mainnet_polygon_rpc_url }} \
             --set mainnet_rpc_config_values.ethereum_rpc_url=${{ env.indexer_mainnet_ethereum_rpc_url }} \
+            --set mainnet_rpc_config_values.binance_rpc_url=${{ env.indexer_mainnet_binance_rpc_url }} \
             \
             --set mainnet_rpc_config_values.private_key=${{ env.indexer_mainnet_private_key }} \
             --set mainnet_rpc_config_values.address=${{ env.indexer_mainnet_address }} \
@@ -208,6 +218,7 @@ jobs:
             --set autoscaling.avalanche.maxReplicas=1 \
             --set autoscaling.ethereum.maxReplicas=1 \
             --set autoscaling.polygon.maxReplicas=1 \
+            --set autoscaling.binance.maxReplicas=1 \
             \
             --set resources.ethereum.limits.cpu=150m \
             --set resources.ethereum.limits.memory=520Mi \
@@ -253,6 +264,7 @@ jobs:
           AVALANCHE_NETWORK: 'avax'
           POLYGON_NETWORK: 'matic'
           ETHEREUM_NETWORK: 'eth'
+          BINANCE_NETWORK: 'bsc'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -275,10 +287,12 @@ jobs:
             --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
             --set POLYGON_NETWORK=$POLYGON_NETWORK \
             --set ETHEREUM_NETWORK=$ETHEREUM_NETWORK \
+            --set BINANCE_NETWORK=$BINANCE_NETWORK \
             \
             --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.operator_mainnet_avalanche_rpc_url }} \
             --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.operator_mainnet_polygon_rpc_url }} \
             --set mainnet_rpc_config_values.ethereum_rpc_url=${{ env.operator_mainnet_ethereum_rpc_url }} \
+            --set mainnet_rpc_config_values.binance_rpc_url=${{ env.operator_mainnet_binance_rpc_url }} \
             \
             --set mainnet_rpc_config_values.private_key=${{ env.operator_mainnet_private_key }} \
             --set mainnet_rpc_config_values.address=${{ env.operator_mainnet_address }} \
