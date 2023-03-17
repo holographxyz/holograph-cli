@@ -8,7 +8,7 @@ import {networks} from '@holographxyz/networks'
 
 import {BytecodeType, bytecodes, EditionMetadataRenderer} from '../../utils/bytecodes'
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {web3, zeroAddress, generateInitCode, remove0x, sha3} from '../../utils/utils'
+import {web3, zeroAddress, remove0x, sha3} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {
   ContractDeployment,
@@ -37,6 +37,9 @@ import {
 } from '../../utils/validation'
 import {ContractFactory, ethers} from 'ethers'
 import {UriTypeIndex} from '../../utils/asset-deployment'
+import {generateDropInitCode, generateInitCode} from '../../utils/initcode'
+import {generateHolographERC721ConfigTuple, generateSalesConfigTuple} from '../../utils/tuples'
+import {SaleConfig} from '../../types/tuples'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
   const codeFile: string = await checkStringFlag(undefined, prompt)
@@ -119,7 +122,7 @@ export default class Contract extends Command {
     let chainId: string
     let salt: string
     let bytecodeType: BytecodeType
-    const contractTypes: string[] = ['HolographERC20', 'HolographERC721', 'HolographERC721Drop']
+    const contractTypes: string[] = ['HolographERC20', 'HolographERC721', 'HolographDropsEditionsV1']
     let contractType = ''
     let contractTypeHash: string
     let byteCode: string
@@ -206,8 +209,8 @@ export default class Contract extends Command {
           case BytecodeType.SampleERC721:
             contractType = 'HolographERC721'
             break
-          case BytecodeType.HolographERC721Drop:
-            contractType = 'HolographERC721Drop'
+          case BytecodeType.HolographDropsEditionsV1:
+            contractType = 'HolographDropsEditionsV1'
             break
           default:
             contractType = 'HolographERC721'
@@ -337,7 +340,13 @@ export default class Contract extends Command {
 
             break
 
-          case 'HolographERC721Drop': {
+          case 'HolographDropsEditionsV1': {
+            // NOTE: Since the Drop contract is an extension of the HolographERC721 enforcer, the contract type must be updated accordingly
+            contractType = 'HolographERC721'
+            contractTypeHash = '0x' + web3.utils.asciiToHex(contractType).slice(2).padStart(64, '0')
+            contractDeployment.deploymentConfig.config.contractType = contractTypeHash
+
+            // Setup the Drop contract properties
             collectionName = await checkStringFlag(undefined, 'Enter the name of the Drop')
             collectionSymbol = await checkStringFlag(undefined, 'Enter the collection symbol to use')
             description = await checkStringFlag(undefined, 'Enter the description of the drop')
@@ -386,7 +395,7 @@ export default class Contract extends Command {
             }
 
             // Setup the sales config
-            const setupCalls: any = []
+            let salesConfig: any = []
             const salesConfigPrompt: any = await inquirer.prompt([
               {
                 name: 'shouldContinue',
@@ -417,13 +426,8 @@ export default class Contract extends Command {
                 ).getTime() / 1000,
               )
 
-              // Define the ABI of the contract method
-              const abi = new ethers.utils.Interface([
-                'function setSaleConfiguration(uint104,uint32,uint64,uint64,uint64,uint64,bytes32) external',
-              ])
-
               // Define the arguments for the method
-              const saleConfig = {
+              const saleConfig: SaleConfig = {
                 publicSalePrice: ethers.utils.parseEther(publicSalePrice), // in ETH
                 maxSalePurchasePerAddress: maxSalePurchasePerAddress, // in number of editions an address can purchase
                 publicSaleStart: publicSaleStart, // in unix time
@@ -433,18 +437,7 @@ export default class Contract extends Command {
                 presaleMerkleRoot: '0x0000000000000000000000000000000000000000000000000000000000000000', // No presale
               }
 
-              // Encode the method arguments with the selector
-              const salesConfigBytecode = abi.encodeFunctionData('setSaleConfiguration', [
-                saleConfig.publicSalePrice,
-                saleConfig.maxSalePurchasePerAddress,
-                saleConfig.publicSaleStart,
-                saleConfig.publicSaleEnd,
-                saleConfig.presaleStart,
-                saleConfig.presaleEnd,
-                saleConfig.presaleMerkleRoot,
-              ])
-
-              setupCalls.push(salesConfigBytecode)
+              salesConfig = Object.values(saleConfig)
             }
 
             // Connect wallet to the provider
@@ -457,29 +450,26 @@ export default class Contract extends Command {
             const metadataRenderer = await rendererFactory.deploy()
             this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
 
-            initCode = generateInitCode(
-              [
-                'tuple(address,address,address,string,string,address,address,uint64,uint16,bytes[],address,bytes)',
-                'bool',
-              ],
-              [
-                [
-                  '0x0000000000000000000000000000000000000000', // TODO: holographFeeManager - this.networkMonitor.holographFeeManager.address
-                  '0x0000000000000000000000000000000000000000', // holographERC721TransferHelper
-                  '0x000000000000AAeB6D7670E522A718067333cd4E', // marketFilterAddress
-                  collectionName, // contractName
-                  collectionSymbol, // contractSymbol
-                  userWallet.address, // initialOwner
-                  userWallet.address, // fundsRecipient
-                  numOfEditions, // number of editions
-                  royaltyBps, // royalty percentage in bps
-                  setupCalls, // setupCalls (used to set sales config)
-                  metadataRenderer.address, // metadata renderer address deployed from above
-                  generateInitCode(['string', 'string', 'string'], [description, imageURI, animationURI]), // metadataRendererInit
-                ],
-                false, // skipInit
-              ],
-            ) // initCode
+            const salesConfigTuple = generateSalesConfigTuple(
+              userWallet,
+              numOfEditions,
+              royaltyBps,
+              salesConfig,
+              metadataRenderer,
+              description,
+              imageURI,
+              animationURI,
+            )
+
+            const HolographERC721Tuple = generateHolographERC721ConfigTuple(
+              collectionName,
+              collectionSymbol,
+              royaltyBps,
+              salesConfigTuple,
+              this.networkMonitor.registryAddress,
+            )
+
+            initCode = generateDropInitCode(HolographERC721Tuple)
 
             break
           }
@@ -568,8 +558,8 @@ export default class Contract extends Command {
     const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
       network: targetNetwork,
       // NOTE: gas can be overriden by here
-      // gasPrice: BigNumber.from(100000000000), // 100 gwei
-      // gasLimit: BigNumber.from(7000000), // 7 million
+      // gasPrice: ethers.BigNumber.from(100000000000), // 100 gwei
+      // gasLimit: ethers.BigNumber.from(7000000), // 7 million
       contract: this.networkMonitor.factoryContract.connect(provider),
       methodName: 'deployHolographableContract',
       args: [

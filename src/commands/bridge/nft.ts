@@ -22,7 +22,7 @@ import {
   checkTokenIdFlag,
 } from '../../utils/validation'
 import {GasPricing} from '../../utils/gas'
-import {generateInitCode} from '../../utils/utils'
+import {generateInitCode} from '../../utils/initcode'
 
 export default class BridgeNFT extends Command {
   static description = 'Bridge a Holographable NFT from one network to another.'

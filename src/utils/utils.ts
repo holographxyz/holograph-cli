@@ -69,8 +69,8 @@ export const rgbToHex = (rgb: number): string => {
 
 export const zeroAddress: string = '0x' + '00'.repeat(20)
 
-export function generateInitCode(vars: string[], vals: any[]): string {
-  return web3.eth.abi.encodeParameters(vars, vals)
+export function allEventsEnabled(): string {
+  return '0x' + 'ff'.repeat(32)
 }
 
 export function remove0x(input: string): string {
@@ -203,4 +203,11 @@ export async function retry<T = any>(
     // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
     process.exit()
   }
+}
+
+export function generateHashedName(name: string): string {
+  // eslint-disable-next-line unicorn/prefer-string-slice
+  const asciiHex = web3.utils.asciiToHex(name).substring(2) // remove '0x' prefix
+  const paddedHex = asciiHex.padStart(64, '0')
+  return `0x${paddedHex}`
 }

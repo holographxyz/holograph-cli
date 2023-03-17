@@ -21,7 +21,7 @@ import {
   checkNumberFlag,
 } from '../../utils/validation'
 import {UriTypeIndex} from '../../utils/asset-deployment'
-import {ethers} from 'ethers'
+import {BigNumber, ethers} from 'ethers'
 
 export default class NFT extends Command {
   static description = 'Mint a Holographable NFT.'
@@ -115,7 +115,7 @@ export default class NFT extends Command {
 
     // Select the contract type to deploy
     const collectionType = await checkOptionFlag(
-      ['CxipERC721', 'HolographERC721Drop'],
+      ['CxipERC721', 'HolographDropsEditionsV1'],
       undefined,
       "Select the type of collection you'd like to mint from",
     )
@@ -126,8 +126,8 @@ export default class NFT extends Command {
       case 'CxipERC721':
         abiPath = path.join(__dirname, `../../abi/${environment}/CxipERC721.json`)
         break
-      case 'HolographERC721Drop':
-        abiPath = path.join(__dirname, `../../abi/${environment}/HolographERC721Drop.json`)
+      case 'HolographDropsEditionsV1':
+        abiPath = path.join(__dirname, `../../abi/${environment}/HolographDropsEditionsV1.json`)
         break
       default:
         this.log('Invalid collection type')
@@ -185,7 +185,7 @@ export default class NFT extends Command {
         this.log('NFT minting was canceled')
         this.exit()
       }
-    } else if (collectionType === 'HolographERC721Drop') {
+    } else if (collectionType === 'HolographDropsEditionsV1') {
       const numToMint = await checkNumberFlag(undefined, 'How many NFTs would you like to mint/purchase?')
       // Connect wallet for signing txns
       const account = userWallet.connect(this.networkMonitor.providers[network])
@@ -199,7 +199,7 @@ export default class NFT extends Command {
       const mintPrompt: any = await inquirer.prompt([
         {
           name: 'shouldContinue',
-          message: `\nMinting ${numToMint} NFTs from the following collection: ${await drop.name()} at ${
+          message: `\nMinting ${numToMint} NFTs from the following collection: ${await drop} at ${
             drop.address
           } for ${ethers.utils.formatEther(salesConfig.publicSalePrice.mul(numToMint).toString())} ${
             networks[network].tokenSymbol
@@ -212,6 +212,7 @@ export default class NFT extends Command {
 
       if (mint) {
         receipt = await this.networkMonitor.executeTransaction({
+          gasLimit: BigNumber.from('700000'),
           network,
           contract: collection,
           value: salesConfig.publicSalePrice.mul(numToMint), // must send the price of the drop times the number to purchase
