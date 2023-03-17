@@ -37,10 +37,10 @@ env:
   STG_COMMON_NAMESPACE: develop
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.81
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.82
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.59
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.60
   OPERATOR_RELEASE_NAME: operator-dev # format -> [release_name]-operator-[env]
   #######################################
   #
@@ -171,7 +171,7 @@ jobs:
           AVALANCHE_NETWORK: 'fuji'
           ETHEREUM_NETWORK: 'goerli'
           POLYGON_NETWORK: 'mumbai'
-          BINANCE_NETWORK: 'bsctestnet' #TODO ????????
+          BINANCE_NETWORK: 'bscTestnet'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -214,6 +214,7 @@ jobs:
             --set autoscaling.avalanche.maxReplicas=1 \
             --set autoscaling.ethereum.maxReplicas=1 \
             --set autoscaling.polygon.maxReplicas=1 \
+            --set autoscaling.binance.maxReplicas=1 \
             \
             --set resources.ethereum.limits.cpu=150m \
             --set resources.ethereum.limits.memory=520Mi \
@@ -259,7 +260,7 @@ jobs:
           AVALANCHE_NETWORK: 'fuji'
           POLYGON_NETWORK: 'mumbai'
           ETHEREUM_NETWORK: 'goerli'
-          BINANCE_NETWORK: 'bsctestnet' #TODO ????
+          BINANCE_NETWORK: 'bscTestnet'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
