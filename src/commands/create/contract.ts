@@ -8,7 +8,7 @@ import {networks} from '@holographxyz/networks'
 
 import {BytecodeType, bytecodes, EditionMetadataRenderer} from '../../utils/bytecodes'
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {zeroAddress, remove0x, sha3} from '../../utils/utils'
+import {zeroAddress, remove0x, sha3, web3} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {
   ContractDeployment,
@@ -487,7 +487,7 @@ export default class Contract extends Command {
             sha3(contractDeployment.deploymentConfig.config.initCode as string).slice(2) +
             (contractDeployment.deploymentConfig.signer as string).slice(2),
         )
-        configHashBytes = Array.from(ethers.utils.arrayify(configHash)) as number[]
+        configHashBytes = web3.utils.hexToBytes(configHash)
         needToSign = true
 
         break
