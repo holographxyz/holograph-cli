@@ -183,10 +183,10 @@ export async function validateBeta3Schema(config: Record<string, unknown>): Prom
 
     // temporary change to bypass binance config check
     networkObjects.binanceSmartChainTestnet = Joi.object({
-      providerUrl: Joi.string()
+      providerUrl: Joi.string(),
     })
     networkObjects.binanceSmartChain = Joi.object({
-      providerUrl: Joi.string()
+      providerUrl: Joi.string(),
     })
   }
 
