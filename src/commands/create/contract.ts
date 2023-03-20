@@ -37,9 +37,13 @@ import {
 } from '../../utils/validation'
 import {ContractFactory, ethers} from 'ethers'
 import {UriTypeIndex} from '../../utils/asset-deployment'
-import {generateDropInitCode, generateInitCode} from '../../utils/initcode'
-import {generateHolographERC721ConfigTuple, generateSalesConfigTuple} from '../../utils/tuples'
-import {SaleConfig} from '../../types/tuples'
+import {generateDropInitCode, generateInitCode, generateMetadataRendererInitCode} from '../../utils/initcode'
+import {
+  generateDropInitializerTuple,
+  generateHolographERC721ConfigTuple,
+  generateSalesConfiguationTuple,
+} from '../../utils/tuples'
+import {SalesConfiguration} from '../../types/tuples'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
   const codeFile: string = await checkStringFlag(undefined, prompt)
@@ -427,7 +431,7 @@ export default class Contract extends Command {
               )
 
               // Define the arguments for the method
-              const saleConfig: SaleConfig = {
+              const saleConfig: SalesConfiguration = {
                 publicSalePrice: ethers.utils.parseEther(publicSalePrice), // in ETH
                 maxSalePurchasePerAddress: maxSalePurchasePerAddress, // in number of editions an address can purchase
                 publicSaleStart: publicSaleStart, // in unix time
@@ -450,28 +454,28 @@ export default class Contract extends Command {
             const metadataRenderer = await rendererFactory.deploy()
             this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
 
-            const salesConfigTuple = generateSalesConfigTuple(
-              userWallet,
-              numOfEditions,
-              royaltyBps,
-              salesConfig,
-              metadataRenderer,
-              description,
-              imageURI,
-              animationURI,
+            const salesConfigurationTuple = generateSalesConfiguationTuple(salesConfig)
+            const dropInitializerTuple = generateDropInitializerTuple(
+              zeroAddress, // erc721TransferHelper
+              zeroAddress, // marketFilterAddress
+              userWallet.address, // initialOwner
+              userWallet.address, // fundsRecipient
+              numOfEditions, // number of editions
+              royaltyBps, // percentage of royalties in bps
+              false, // enableOpenSeaRoyaltyRegistry
+              salesConfigurationTuple, // SalesConfiguration
+              metadataRenderer.address, // metadataRenderer
+              generateMetadataRendererInitCode(description, imageURI, animationURI), // metadataRendererInit
             )
 
-            const enableOpenSeaRoyaltyRegistry = true
-            const HolographERC721Tuple = generateHolographERC721ConfigTuple(
+            const holographERC721Tuple = generateHolographERC721ConfigTuple(
               collectionName,
               collectionSymbol,
               royaltyBps,
-              enableOpenSeaRoyaltyRegistry,
-              salesConfigTuple,
-              this.networkMonitor.registryAddress,
+              allEventsEnabled(), // eventConfig
+              false, // skipInit
+              '0x', // initializer initCode
             )
-
-            initCode = generateDropInitCode(HolographERC721Tuple)
 
             break
           }
