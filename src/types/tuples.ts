@@ -26,6 +26,7 @@ export type HolographERC721ConfigTuple = [
   string, // contractName
   string, // contractSymbol
   number, // contractBps
+  boolean, // enableOpenSeaRoyaltyRegistry
   string, // eventConfig
   boolean, // skipInit
   string, // initializer

@@ -16,7 +16,10 @@ export function generateSalesConfigInitCode(salesConfigTuple: SalesConfigTuple):
 }
 
 export function generateDropInitCode(holographERC721ConfigTuple: HolographERC721ConfigTuple): string {
-  return generateInitCode(['string', 'string', 'uint16', 'uint256', 'bool', 'bytes'], holographERC721ConfigTuple)
+  return generateInitCode(
+    ['string', 'string', 'uint16', 'bool', 'uint256', 'bool', 'bytes'],
+    holographERC721ConfigTuple,
+  )
 }
 
 export function generateMetadataRendererInitCode(description: string, imageURI: string, animationURI: string): string {

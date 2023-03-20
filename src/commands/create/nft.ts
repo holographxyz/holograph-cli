@@ -115,7 +115,7 @@ export default class NFT extends Command {
 
     // Select the contract type to deploy
     const collectionType = await checkOptionFlag(
-      ['CxipERC721', 'HolographDropsEditionsV1'],
+      ['CxipERC721', 'HolographDropERC721'],
       undefined,
       "Select the type of collection you'd like to mint from",
     )
@@ -126,8 +126,8 @@ export default class NFT extends Command {
       case 'CxipERC721':
         abiPath = path.join(__dirname, `../../abi/${environment}/CxipERC721.json`)
         break
-      case 'HolographDropsEditionsV1':
-        abiPath = path.join(__dirname, `../../abi/${environment}/HolographDropsEditionsV1.json`)
+      case 'HolographDropERC721':
+        abiPath = path.join(__dirname, `../../abi/${environment}/HolographDropERC721.json`)
         break
       default:
         this.log('Invalid collection type')
@@ -185,7 +185,7 @@ export default class NFT extends Command {
         this.log('NFT minting was canceled')
         this.exit()
       }
-    } else if (collectionType === 'HolographDropsEditionsV1') {
+    } else if (collectionType === 'HolographDropERC721') {
       const numToMint = await checkNumberFlag(undefined, 'How many NFTs would you like to mint/purchase?')
       // Connect wallet for signing txns
       const account = userWallet.connect(this.networkMonitor.providers[network])

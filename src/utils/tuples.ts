@@ -7,6 +7,7 @@ export function generateHolographERC721ConfigTuple(
   collectionName: string,
   collectionSymbol: string,
   royaltyBps: number,
+  enableOpenSeaRoyaltyRegistry: boolean,
   salesConfigTuple: SalesConfigTuple,
   registryAddress: string,
 ): HolographERC721ConfigTuple {
@@ -14,9 +15,17 @@ export function generateHolographERC721ConfigTuple(
   const skipInit = false
   const initializer = generateInitCode(
     ['bytes32', 'address', 'bytes'],
-    [generateHashedName('HolographDropsEditionsV1'), registryAddress, generateSalesConfigInitCode(salesConfigTuple)],
+    [generateHashedName('HolographDropERC721'), registryAddress, generateSalesConfigInitCode(salesConfigTuple)],
   )
-  return [collectionName, collectionSymbol, royaltyBps, eventConfig, skipInit, initializer]
+  return [
+    collectionName,
+    collectionSymbol,
+    royaltyBps,
+    enableOpenSeaRoyaltyRegistry,
+    eventConfig,
+    skipInit,
+    initializer,
+  ]
 }
 
 export function generateSalesConfigTuple(

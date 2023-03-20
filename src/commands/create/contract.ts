@@ -6,7 +6,7 @@ import {BytesLike} from '@ethersproject/bytes'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {networks} from '@holographxyz/networks'
 
-import {BytecodeType, bytecodes, EditionMetadataRenderer} from '../../utils/bytecodes'
+import {BytecodeType, bytecodes, EditionsMetadataRenderer} from '../../utils/bytecodes'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {web3, zeroAddress, remove0x, sha3} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
@@ -122,7 +122,7 @@ export default class Contract extends Command {
     let chainId: string
     let salt: string
     let bytecodeType: BytecodeType
-    const contractTypes: string[] = ['HolographERC20', 'HolographERC721', 'HolographDropsEditionsV1']
+    const contractTypes: string[] = ['HolographERC20', 'HolographERC721', 'HolographDropERC721']
     let contractType = ''
     let contractTypeHash: string
     let byteCode: string
@@ -209,8 +209,8 @@ export default class Contract extends Command {
           case BytecodeType.SampleERC721:
             contractType = 'HolographERC721'
             break
-          case BytecodeType.HolographDropsEditionsV1:
-            contractType = 'HolographDropsEditionsV1'
+          case BytecodeType.HolographDropERC721:
+            contractType = 'HolographDropERC721'
             break
           default:
             contractType = 'HolographERC721'
@@ -340,7 +340,7 @@ export default class Contract extends Command {
 
             break
 
-          case 'HolographDropsEditionsV1': {
+          case 'HolographDropERC721': {
             // NOTE: Since the Drop contract is an extension of the HolographERC721 enforcer, the contract type must be updated accordingly
             contractType = 'HolographERC721'
             contractTypeHash = '0x' + web3.utils.asciiToHex(contractType).slice(2).padStart(64, '0')
@@ -445,8 +445,8 @@ export default class Contract extends Command {
             const account = userWallet.connect(provider)
 
             // Deploy a metadata renderer contract
-            const renderAbi = JSON.parse(fs.readFileSync(`./src/abi/develop/EditionMetadataRenderer.json`).toString())
-            const rendererFactory = new ContractFactory(renderAbi, EditionMetadataRenderer.bytecode, account)
+            const renderAbi = JSON.parse(fs.readFileSync(`./src/abi/develop/EditionsMetadataRenderer.json`).toString())
+            const rendererFactory = new ContractFactory(renderAbi, EditionsMetadataRenderer.bytecode, account)
             const metadataRenderer = await rendererFactory.deploy()
             this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
 
@@ -461,10 +461,12 @@ export default class Contract extends Command {
               animationURI,
             )
 
+            const enableOpenSeaRoyaltyRegistry = true
             const HolographERC721Tuple = generateHolographERC721ConfigTuple(
               collectionName,
               collectionSymbol,
               royaltyBps,
+              enableOpenSeaRoyaltyRegistry,
               salesConfigTuple,
               this.networkMonitor.registryAddress,
             )
@@ -558,8 +560,8 @@ export default class Contract extends Command {
     const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
       network: targetNetwork,
       // NOTE: gas can be overriden by here
-      // gasPrice: ethers.BigNumber.from(100000000000), // 100 gwei
-      // gasLimit: ethers.BigNumber.from(7000000), // 7 million
+      gasPrice: ethers.BigNumber.from(100000000000), // 100 gwei
+      gasLimit: ethers.BigNumber.from(7000000), // 7 million
       contract: this.networkMonitor.factoryContract.connect(provider),
       methodName: 'deployHolographableContract',
       args: [

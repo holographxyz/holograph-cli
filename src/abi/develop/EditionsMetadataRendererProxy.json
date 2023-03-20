@@ -54,11 +54,11 @@
   },
   {
     "inputs": [],
-    "name": "getHolographDropsEditionsV1Source",
+    "name": "getEditionsMetadataRenderer",
     "outputs": [
       {
         "internalType": "address",
-        "name": "",
+        "name": "editionsMetadataRenderer",
         "type": "address"
       }
     ],
@@ -93,6 +93,19 @@
       }
     ],
     "name": "setAdmin",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "editionsMetadataRenderer",
+        "type": "address"
+      }
+    ],
+    "name": "setEditionsMetadataRenderer",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
