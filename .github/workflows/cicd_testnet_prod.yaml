@@ -18,6 +18,10 @@ env:
   ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }} # TIP: the 2 CERTs are separated with \, in Github secret
   #
   TESTNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO - create new gh secret for TESTNET. should be different from staging????
+  TESTNET_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
+  #
+  TESTNET_HOLOGRAPH_INDEXER_HOST: 'http://testtitan-holo-api.testnet.svc.cluster.local:443'
+  TESTNET_HOLOGRAPH_OPERATOR_HOST: 'http://testtitan-holo-api.testnet.svc.cluster.local:443'
   #
   TESTNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
   TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
@@ -276,6 +280,8 @@ jobs:
             --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.TESTNET_HOLO_OPERATOR_PASSWORD }} \
+            --set HOLO_OPERATOR_HOST=${{ env.TESTNET_HOLOGRAPH_OPERATOR_HOST }} \
+            --set OPERATOR_API_KEY=${{ env.TESTNET_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \

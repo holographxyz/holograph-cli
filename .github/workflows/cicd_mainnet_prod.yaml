@@ -19,6 +19,9 @@ env:
   #
   MAINNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_MAINNET_OPERATOR_API_KEY }}
   #
+  MAINNET_HOLOGRAPH_INDEXER_HOST: 'http://titan-holo-api.mainnet.svc.cluster.local:443'
+  MAINNET_HOLOGRAPH_OPERATOR_HOST: 'http://titan-holo-api.mainnet.svc.cluster.local:443'
+  #
   MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.MAINNET_HOLO_INDEXER_PASSWORD }}
   MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.MAINNET_HOLO_OPERATOR_PASSWORD }}
   #
@@ -276,6 +279,8 @@ jobs:
             --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.MAINNET_HOLO_OPERATOR_PASSWORD }} \
+            --set HOLO_INDEXER_HOST=${{ env.MAINNET_HOLO_INDEXER_HOST }} \
+            --set OPERATOR_API_KEY=${{ env.MAINNET_HOLO_INDEXER_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
