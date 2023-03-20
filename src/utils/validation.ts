@@ -335,7 +335,7 @@ export const checkTokenIdFlag = async (input: string | undefined, prompt: string
   return input as string
 }
 
-export const checkTokenUriTypeFlag = async (
+export const checkUriTypeFlag = async (
   input: string | undefined,
   prompt: string,
   exclude?: string | undefined,
@@ -344,23 +344,23 @@ export const checkTokenUriTypeFlag = async (
     input = input.trim()
   }
 
-  let tokenUriTypeList: string[] = Object.values(TokenUriType)
+  let uriTypeList: string[] = Object.values(TokenUriType)
   if (exclude !== undefined) {
-    tokenUriTypeList = tokenUriTypeList.filter((element: string) => {
+    uriTypeList = uriTypeList.filter((element: string) => {
       return !(element === exclude)
     })
   }
 
-  if (input === undefined || (input !== undefined && !tokenUriTypeList.includes(input))) {
-    const tokenUriTypePrompt: any = await inquirer.prompt([
+  if (input === undefined || (input !== undefined && !uriTypeList.includes(input))) {
+    const uriTypePrompt: any = await inquirer.prompt([
       {
-        name: 'tokenUriType',
+        name: 'uriType',
         message: prompt,
         type: 'list',
-        choices: tokenUriTypeList,
+        choices: uriTypeList,
       },
     ])
-    return TokenUriType[tokenUriTypePrompt.tokenUriType as string as keyof typeof TokenUriType]
+    return TokenUriType[uriTypePrompt.uriType as string as keyof typeof TokenUriType]
   }
 
   return TokenUriType[input as string as keyof typeof TokenUriType]

@@ -1,10 +1,12 @@
 import {SQSClient, SendMessageCommand} from '@aws-sdk/client-sqs'
 import {SqsMessageBody} from '../types/sqs'
+import {retry} from '../utils/utils'
 
 class SqsService {
   private static _instance?: SqsService
   private client: SQSClient
   private sqsQueueURL: string
+  private maxRetries = 3
 
   private constructor() {
     this.validateConfig()
@@ -26,21 +28,32 @@ class SqsService {
     return SqsService._instance
   }
 
-  async sendMessage(sqsMessage: SqsMessageBody) {
+  async healthCheck() {
     try {
       const data = await this.client.send(
+        new SendMessageCommand({
+          MessageBody: '{"eventName": "sample", "eventSignature": "sampleHandler", "msg":"hello sample body"}',
+          QueueUrl: this.sqsQueueURL,
+        }),
+      )
+      return data
+    } catch (error: any) {
+      console.error('[Error]: Indexer unable to reach queue system \n', error)
+      // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+      process.exit()
+    }
+  }
+
+  async sendMessage(sqsMessage: SqsMessageBody) {
+    const sendMessage = () =>
+      this.client.send(
         new SendMessageCommand({
           MessageBody: JSON.stringify(sqsMessage),
           QueueUrl: this.sqsQueueURL,
         }),
       )
 
-      console.log('Success, message sent. MessageID:', data.MessageId)
-
-      return data
-    } catch (error: any) {
-      console.log(error)
-    }
+    retry(sendMessage, this.maxRetries)
   }
 
   validateConfig() {

@@ -9,11 +9,12 @@ import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {networks, supportedShortNetworks} from '@holographxyz/networks'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {web3, zeroAddress, generateInitCode} from '../../utils/utils'
+import {web3, zeroAddress} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {DeploymentConfig} from '../../utils/contract-deployment'
 import {validateNetwork, validateNonEmptyString, checkOptionFlag, checkStringFlag} from '../../utils/validation'
 import {GasPricing} from '../../utils/gas'
+import {generateInitCode} from '../../utils/initcode'
 
 export default class BridgeContract extends Command {
   static description =

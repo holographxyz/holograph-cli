@@ -4,7 +4,7 @@ export enum TokenUriType {
   arweave = 'arweave', // 3
 }
 
-export enum TokenUriTypeIndex {
+export enum UriTypeIndex {
   unset, //   0
   ipfs, //    1
   https, //   2

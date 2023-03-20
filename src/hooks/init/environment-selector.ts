@@ -2,6 +2,7 @@ import {Hook} from '@oclif/core'
 import color from '@oclif/color'
 
 enum Environment {
+  LOCALHOST = 'localhost',
   EXPERIMENTAL = 'experimental',
   DEVELOP = 'develop',
   TESTNET = 'testnet',
@@ -16,17 +17,20 @@ function validateDisabledCommandsOnMainnet(environment: string, commandName: str
     'operator:unbond',
     'operator:recover',
     'indexer',
+    'create',
+    'create:contract',
+    'create:nft',
   ]
 
-  const indexOfArg = argv.indexOf('--unsafe')
-  const unsafe = indexOfArg !== -1
+  const indexOfUnsafeFlag = argv.indexOf('--unsafe')
+  const unsafe = indexOfUnsafeFlag !== -1
 
   if (environment === Environment.MAINNET && commandsDisableForMainnet.includes(commandName)) {
     console.error(color.red(`The ${commandName} command is currently disabled on mainnet.`))
 
     if (unsafe && (commandName.includes('operator') || commandName.includes('indexer'))) {
       console.warn(color.yellow('Executing command on UNSAFE mode...'))
-      argv.splice(indexOfArg)
+      argv.splice(indexOfUnsafeFlag)
     } else {
       // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
       process.exit(0)
@@ -35,7 +39,7 @@ function validateDisabledCommandsOnMainnet(environment: string, commandName: str
 }
 
 function validateDisabledCommands(commandName: string) {
-  const commandsDisableTemporarily = ['create', 'create:contract', 'create:nft']
+  const commandsDisableTemporarily: string[] = [] // add commands to disable on all envs here
 
   if (commandsDisableTemporarily.includes(commandName)) {
     console.error(color.red(`The ${commandName} command is temporarily disabled.`))

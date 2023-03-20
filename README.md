@@ -344,8 +344,8 @@ Mint a Holographable NFT.
 
 ```
 USAGE
-  $ holograph create:nft [--collectionAddress <value>] [--tokenId <value>] [--tokenUriType ipfs|https|arweave]
-    [--tokenUri <value>] [--network goerli|mumbai|fuji] [--env mainnet|testnet|develop|experimental]
+  $ holograph create:nft [--collectionAddress <value>] [--tokenId <value>] [--uriType ipfs|https|arweave]
+    [--uri <value>] [--network goerli|mumbai|fuji] [--env mainnet|testnet|develop|experimental]
 
 FLAGS
   --collectionAddress=<value>  The address of the collection smart contract
@@ -355,15 +355,15 @@ FLAGS
                                <options: goerli|mumbai|fuji>
   --tokenId=<value>            [default: 0] The token id to mint. By default the token id is 0, which mints the next
                                available token id
-  --tokenUri=<value>           The uri of the token, minus the prepend (ie "ipfs://")
-  --tokenUriType=<option>      The token URI type
+  --uri=<value>           The uri of the token, minus the prepend (ie "ipfs://")
+  --uriType=<option>      The token URI type
                                <options: ipfs|https|arweave>
 
 DESCRIPTION
   Mint a Holographable NFT.
 
 EXAMPLES
-  $ holograph create:nft --network="goerli" --collectionAddress="0xf90c33d5ef88a9d84d4d61f62c913ba192091fe7" --tokenId="0" --tokenUriType="ipfs" --tokenUri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json" --env mainnet|testnet|develop|experimental
+  $ holograph create:nft --network="goerli" --collectionAddress="0xf90c33d5ef88a9d84d4d61f62c913ba192091fe7" --tokenId="0" --uriType="ipfs" --uri="QmfQhPGMAbHL31qcqAEYpSP5gXwXWQa3HZjkNVzZ2mRsRs/metadata.json" --env mainnet|testnet|develop|experimental
 ```
 
 _See code: [dist/commands/create/nft.ts](https://github.com/holographxyz/holograph-cli/blob/v0.0.12/dist/commands/create/nft.ts)_

@@ -12,6 +12,8 @@ import {
   UpdateNftInput,
   NftQueryResponse,
   NftMutationResponse,
+  BlockHeightProcessType,
+  BlockHeightResponse,
 } from '../types/api'
 import {AbstractError} from '../types/errors'
 import {StructuredLogInfo} from '../types/interfaces'
@@ -241,6 +243,50 @@ class ApiService {
     const result = await this.client.rawRequest(mutation, {
       createOrUpdateCrossChainTransactionInput: updateCrossChainTransactionStatusInput,
     })
+    return result
+  }
+
+  async getBlockHeights(process: BlockHeightProcessType, chainId?: number) {
+    const query = gql`
+      query GetAllBlockHeights($getBlockHeight: GetAllBlockHeightInput) {
+        getAllBlockHeights(getBlockHeight: $getBlockHeight) {
+          chainId
+          process
+          blockHeight
+          isActive
+        }
+      }
+    `
+    const input = {getBlockHeight: {chainId, process}}
+    const data: BlockHeightResponse = await this.client.request(query, input)
+    return data.getAllBlockHeights
+  }
+
+  async updateBlockHeight<T>(
+    process: BlockHeightProcessType,
+    chainId: number,
+    blockHeight: number,
+  ): Promise<Response<T> | undefined> {
+    const mutation = gql`
+      mutation SetBlockHeight($createBlockHeightInput: CreateBlockHeightInput!) {
+        setBlockHeight(createBlockHeightInput: $createBlockHeightInput) {
+          chainId
+          process
+          blockHeight
+          isActive
+        }
+      }
+    `
+
+    const updateBlockHeightInput = {
+      createBlockHeightInput: {
+        process,
+        chainId,
+        blockHeight,
+      },
+    }
+
+    const result = await this.client.rawRequest(mutation, updateBlockHeightInput)
     return result
   }
 }
