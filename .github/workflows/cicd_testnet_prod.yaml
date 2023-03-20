@@ -57,10 +57,10 @@ env:
   #
   TESTNET_HOLO_INDEXER_HOST: 'http://testtitan-holo-api.testnet.svc.cluster.local:443' # Notice <-- the release from API
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.83
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.84
   INDEXER_RELEASE_NAME: titan-indexer-testnet # format -> [release_name]-indexer-[env]
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.61
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.62
   OPERATOR_RELEASE_NAME: titan-operator-testnet # format -> [release_name]-operator-[env]
   #######################################
 
