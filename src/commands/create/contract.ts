@@ -449,6 +449,7 @@ export default class Contract extends Command {
             const account = userWallet.connect(provider)
 
             // Deploy a metadata renderer contract
+            // TODO: this needs to be removed in the future and a reference to the deployed EditionsMetadataRendererProxy needs to be made here
             const renderAbi = JSON.parse(fs.readFileSync(`./src/abi/develop/EditionsMetadataRenderer.json`).toString())
             const rendererFactory = new ContractFactory(renderAbi, EditionsMetadataRenderer.bytecode, account)
             const metadataRenderer = await rendererFactory.deploy()
@@ -474,7 +475,14 @@ export default class Contract extends Command {
               royaltyBps,
               allEventsEnabled(), // eventConfig
               false, // skipInit
-              '0x', // initializer initCode
+              generateInitCode(
+                ['bytes32', 'address', 'bytes'],
+                [
+                  '0x' + web3.utils.asciiToHex('HolographDropERC721').slice(2).padStart(64, '0'), // contractType
+                  this.networkMonitor.registryContract.address, // registry
+                  generateDropInitCode(dropInitializerTuple), // initCode
+                ],
+              ), // initializer initCode
             )
 
             break
