@@ -560,8 +560,8 @@ export default class Contract extends Command {
     const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
       network: targetNetwork,
       // NOTE: gas can be overriden by here
-      gasPrice: ethers.BigNumber.from(100000000000), // 100 gwei
-      gasLimit: ethers.BigNumber.from(7000000), // 7 million
+      gasPrice: ethers.BigNumber.from(100_000_000_000), // 100 gwei
+      gasLimit: ethers.BigNumber.from(7_000_000), // 7 million
       contract: this.networkMonitor.factoryContract.connect(provider),
       methodName: 'deployHolographableContract',
       args: [
