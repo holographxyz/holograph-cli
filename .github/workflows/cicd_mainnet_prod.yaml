@@ -18,6 +18,7 @@ env:
   ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }} # TIP: the 2 CERTs are separated with \, in Github secret
   #
   MAINNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_MAINNET_OPERATOR_API_KEY }}
+  MAINNET_HOLO_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_OPERATOR_MAINNET_OPERATOR_API_KEY}}
   #
   MAINNET_HOLOGRAPH_INDEXER_HOST: 'http://titan-holo-api.mainnet.svc.cluster.local:443'
   MAINNET_HOLOGRAPH_OPERATOR_HOST: 'http://titan-holo-api.mainnet.svc.cluster.local:443'
@@ -57,8 +58,7 @@ env:
   SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
   MAINNET_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
   MAINNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/mainnet-indexer-processor'
-  #
-  MAINNET_HOLO_INDEXER_HOST: 'http://titan-holo-api.mainnet.svc.cluster.local:443' # Notice <-- the release from API
+
   #######################################
   MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.84
   INDEXER_RELEASE_NAME: titan-indexer-mainnet # format -> [release_name]-indexer-[env]
@@ -190,7 +190,7 @@ jobs:
             --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
             --set holo_indexer_password=${{ env.MAINNET_HOLO_INDEXER_PASSWORD }} \
-            --set HOLO_INDEXER_HOST=${{ env.MAINNET_HOLO_INDEXER_HOST }} \
+            --set HOLO_INDEXER_HOST=${{ env.MAINNET_HOLOGRAPH_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.MAINNET_HOLO_INDEXER_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
@@ -279,8 +279,8 @@ jobs:
             --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.MAINNET_HOLO_OPERATOR_PASSWORD }} \
-            --set HOLO_INDEXER_HOST=${{ env.MAINNET_HOLO_INDEXER_HOST }} \
-            --set OPERATOR_API_KEY=${{ env.MAINNET_HOLO_INDEXER_OPERATOR_API_KEY }} \
+            --set HOLO_OPERATOR_HOST=${{ env.MAINNET_HOLOGRAPH_OPERATOR_HOST }} \
+            --set OPERATOR_API_KEY=${{ env.MAINNET_HOLO_OPERATOR_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
