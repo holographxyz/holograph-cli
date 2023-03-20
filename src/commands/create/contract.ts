@@ -455,34 +455,72 @@ export default class Contract extends Command {
             const metadataRenderer = await rendererFactory.deploy()
             this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
 
-            const salesConfigurationTuple = generateSalesConfiguationTuple(salesConfig)
-            const dropInitializerTuple = generateDropInitializerTuple(
-              zeroAddress, // erc721TransferHelper
-              zeroAddress, // marketFilterAddress
-              userWallet.address, // initialOwner
-              userWallet.address, // fundsRecipient
-              numOfEditions, // number of editions
-              royaltyBps, // percentage of royalties in bps
-              false, // enableOpenSeaRoyaltyRegistry
-              salesConfigurationTuple, // SalesConfiguration
-              metadataRenderer.address, // metadataRenderer
-              generateMetadataRendererInitCode(description, imageURI, animationURI), // metadataRendererInit
-            )
+            // const salesConfigurationTuple = generateSalesConfiguationTuple(salesConfig)
+            // const dropInitializerTuple = generateDropInitializerTuple(
+            //   zeroAddress, // erc721TransferHelper
+            //   zeroAddress, // marketFilterAddress
+            //   userWallet.address, // initialOwner
+            //   userWallet.address, // fundsRecipient
+            //   numOfEditions, // number of editions
+            //   royaltyBps, // percentage of royalties in bps
+            //   false, // enableOpenSeaRoyaltyRegistry
+            //   salesConfigurationTuple, // SalesConfiguration
+            //   metadataRenderer.address, // metadataRenderer
+            //   generateMetadataRendererInitCode(description, imageURI, animationURI), // metadataRendererInit
+            // )
 
-            const holographERC721Tuple = generateHolographERC721ConfigTuple(
-              collectionName,
-              collectionSymbol,
-              royaltyBps,
-              allEventsEnabled(), // eventConfig
-              false, // skipInit
-              generateInitCode(
-                ['bytes32', 'address', 'bytes'],
-                [
-                  '0x' + web3.utils.asciiToHex('HolographDropERC721').slice(2).padStart(64, '0'), // contractType
-                  this.networkMonitor.registryContract.address, // registry
-                  generateDropInitCode(dropInitializerTuple), // initCode
-                ],
-              ), // initializer initCode
+            // const holographERC721Tuple = generateHolographERC721ConfigTuple(
+            //   collectionName,
+            //   collectionSymbol,
+            //   royaltyBps,
+            //   allEventsEnabled(), // eventConfig
+            //   false, // skipInit
+            //   generateInitCode(
+            //     ['bytes32', 'address', 'bytes'],
+            //     [
+            //       '0x' + web3.utils.asciiToHex('HolographDropERC721').slice(2).padStart(64, '0'), // contractType
+            //       this.networkMonitor.registryContract.address, // registry
+            //       generateDropInitCode(dropInitializerTuple), // initCode
+            //     ],
+            //   ), // initializer initCode
+            // )
+
+            initCode = generateInitCode(
+              ['string', 'string', 'uint16', 'uint256', 'bool', 'bytes'],
+              [
+                collectionName, // string memory contractName
+                collectionSymbol, // string memory contractSymbol
+                royaltyBps, // uint16 contractBps
+                allEventsEnabled(), // uint256 eventConfig -  all 32 bytes of f
+                false, // bool skipInit
+                generateInitCode(
+                  ['bytes32', 'address', 'bytes'],
+                  [
+                    // eslint-disable-next-line unicorn/prefer-string-slice
+                    '0x' + web3.utils.asciiToHex('HolographDropERC721').substring(2).padStart(64, '0'),
+                    this.networkMonitor.registryAddress,
+                    generateInitCode(
+                      [
+                        'tuple(address,address,address,address,uint64,uint16,bool,tuple(uint104,uint32,uint64,uint64,uint64,uint64,bytes32),address,bytes)',
+                      ],
+                      [
+                        [
+                          '0x0000000000000000000000000000000000000000', // erc721TransferHelper
+                          '0x0000000000000000000000000000000000000000', // marketFilterAddress (opensea)
+                          userWallet.address, // initialOwner
+                          userWallet.address, // fundsRecipient
+                          numOfEditions, // number of editions
+                          royaltyBps, // percentage of royalties in bps
+                          false, // enableOpenSeaRoyaltyRegistry
+                          salesConfig,
+                          metadataRenderer.address, // metadataRenderer
+                          generateInitCode(['string', 'string', 'string'], [description, imageURI, animationURI]), // metadataRendererInit
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ],
             )
 
             break
