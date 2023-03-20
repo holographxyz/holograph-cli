@@ -980,7 +980,7 @@ export class NetworkMonitor {
         this.structuredLog(job.network, `Block processing complete ✅`, job.block)
       }
 
-      // this.updateLastProcessedBlock(job)
+      this.updateLastProcessedBlock(job)
 
       this.blockJobs[job.network].shift()
     }
