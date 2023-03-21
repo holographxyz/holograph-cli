@@ -980,7 +980,9 @@ export class NetworkMonitor {
         this.structuredLog(job.network, `Block processing complete ✅`, job.block)
       }
 
-      this.updateLastProcessedBlock(job)
+      if (this.parent.id === 'indexer' || this.parent.id === 'operator') {
+        this.updateLastProcessedBlock(job)
+      }
 
       this.blockJobs[job.network].shift()
     }
