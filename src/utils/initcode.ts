@@ -50,7 +50,7 @@ export function generateHolographDropERC721InitCode(
   )
 }
 
-export function generateOuterInitCode(
+export function generateHolographERC721InitCode(
   collectionName: string,
   collectionSymbol: string,
   royaltyBps: number,

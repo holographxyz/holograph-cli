@@ -41,7 +41,7 @@ import {
   generateHolographDropERC721InitCode,
   generateInitCode,
   generateMetadataRendererInitCode,
-  generateOuterInitCode,
+  generateHolographERC721InitCode,
 } from '../../utils/initcode'
 
 import {SalesConfiguration} from '../../types/drops'
@@ -472,7 +472,7 @@ export default class Contract extends Command {
               metadataRendererInitCode, // metadataRendererInit
             )
 
-            initCode = generateOuterInitCode(
+            initCode = generateHolographERC721InitCode(
               collectionName, // string memory contractName
               collectionSymbol, // string memory contractSymbol
               royaltyBps, // uint16 contractBps
