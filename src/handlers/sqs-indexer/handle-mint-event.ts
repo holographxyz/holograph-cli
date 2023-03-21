@@ -4,7 +4,7 @@ import {NetworkMonitor} from '../../utils/network-monitor'
 
 import SqsService from '../../services/sqs-service'
 import {networkToChainId} from '../../utils/utils'
-import {PayloadType, SqsMessageBody} from '../../types/sqs'
+import {EventName, PayloadType, SqsMessageBody} from '../../types/sqs'
 import {hexZeroPad} from '@ethersproject/bytes'
 
 async function handleMintEvent(
@@ -42,7 +42,8 @@ async function handleMintEvent(
 
       const messageBody: SqsMessageBody = {
         type: PayloadType.ERC721,
-        eventName: 'Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId)',
+        eventName: EventName.MintNft,
+        eventSignature: 'Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId)',
         tagId: tags,
         chainId: networkToChainId[network],
         holographAddress: networkMonitor.HOLOGRAPH_ADDRESSES[networkMonitor.environment],

@@ -143,3 +143,18 @@ export type Collection = {
 }
 
 export type UpdateCollectionInput = {updateCollectionInput: Omit<Collection, 'id'>}
+
+export enum BlockHeightProcessType {
+  INDEXER = 'INDEXER',
+  OPERATOR = 'OPERATOR',
+}
+
+export type BlockHeight = {
+  process: BlockHeightProcessType
+  chainId: number
+  blockHeight: bigint
+  isActive: boolean | null
+}
+export interface BlockHeightResponse {
+  getAllBlockHeights: BlockHeight[]
+}

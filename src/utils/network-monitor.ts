@@ -19,12 +19,21 @@ import {
   TransactionRequest,
 } from '@ethersproject/abstract-provider'
 import {Environment, getEnvironment} from '@holographxyz/environment'
-import {supportedNetworks, supportedShortNetworks, networks, getNetworkByShortKey} from '@holographxyz/networks'
+import {
+  supportedNetworks,
+  supportedShortNetworks,
+  networks,
+  getNetworkByShortKey,
+  getNetworkByKey,
+  getNetworkByChainId,
+} from '@holographxyz/networks'
 
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {GasPricing, initializeGasPricing, updateGasPricing} from './gas'
 import {capitalize, NETWORK_COLORS, zeroAddress} from './utils'
 import {CXIP_ERC721_ADDRESSES, HOLOGRAPH_ADDRESSES} from './contracts'
+import {BlockHeight, BlockHeightProcessType} from '../types/api'
+import ApiService from '../services/api-service'
 
 export const repairFlag = {
   repair: Flags.integer({
@@ -351,6 +360,7 @@ type NetworkMonitorOptions = {
   lastBlockFilename?: string
   repair?: number
   verbose?: boolean
+  apiService?: ApiService
 }
 
 export class NetworkMonitor {
@@ -400,6 +410,7 @@ export class NetworkMonitor {
   cxipERC721Contract!: Contract
   messagingModuleContract!: Contract
   HOLOGRAPH_ADDRESSES = HOLOGRAPH_ADDRESSES
+  apiService!: ApiService
 
   // this is specifically for handling localhost-based CLI usage with holograph-protocol package
   localhostWallets: {[key: string]: Wallet} = {}
@@ -521,6 +532,10 @@ export class NetworkMonitor {
       options.networks = Object.keys(this.configFile.networks)
     }
 
+    if (options.apiService !== undefined) {
+      this.apiService = options.apiService
+    }
+
     options.networks = options.networks.filter((network: string) => {
       if (network === '') {
         return false
@@ -611,6 +626,7 @@ export class NetworkMonitor {
 
       // Process blocks 🧱
       this.blockJobHandler(network)
+
       // Activate Job Monitor for disconnect recovery after 10 seconds / Monitor every second
       setTimeout((): void => {
         this.blockJobMonitorProcess[network] = setInterval(this.monitorBuilder.bind(this)(network), 1000)
@@ -633,6 +649,24 @@ export class NetworkMonitor {
     }
 
     return lastBlocks
+  }
+
+  async loadLastBlocksHeights(processType: BlockHeightProcessType) {
+    if (this.apiService === undefined) {
+      throw new Error('API service is undefined')
+    }
+
+    const blockHeights: BlockHeight[] = await this.apiService.getBlockHeights(processType)
+    this.log('blockHeights:', blockHeights)
+
+    const latestBlockHeight: {[key: string]: number} = {}
+
+    for (const blockHeight of blockHeights) {
+      const network = getNetworkByChainId(blockHeight.chainId).key
+      latestBlockHeight[network] = Number(blockHeight.blockHeight)
+    }
+
+    return latestBlockHeight
   }
 
   saveLastBlocks(configDir: string, lastBlocks: {[key: string]: number}): void {
@@ -943,8 +977,10 @@ export class NetworkMonitor {
     if (job !== undefined) {
       this.latestBlockHeight[job.network] = job.block
       if (this.verbose) {
-        this.structuredLog(job.network, `Block procesing complete ✅`, job.block)
+        this.structuredLog(job.network, `Block processing complete ✅`, job.block)
       }
+
+      this.updateLastProcessedBlock(job)
 
       this.blockJobs[job.network].shift()
     }
@@ -1035,6 +1071,41 @@ export class NetworkMonitor {
       this.gasPrices[network].gasPrice = tx.gasPrice!
     } else {
       this.gasPrices[network].gasPrice = this.gasPrices[network].gasPrice!.add(tx.gasPrice!).div(TWO)
+    }
+  }
+
+  async updateLastProcessedBlock(job: BlockJob): Promise<void> {
+    if (this.apiService === undefined) {
+      this.structuredLog(job.network, `updateLastProcessedBlock: API is undefined`)
+      return
+    }
+
+    let processType: BlockHeightProcessType | undefined
+
+    if (this.parent.constructor.name === 'Indexer') {
+      processType = BlockHeightProcessType.INDEXER
+    } else if (this.parent.constructor.name === 'Operator') {
+      processType = BlockHeightProcessType.OPERATOR
+    }
+
+    if (processType === undefined) {
+      throw new Error(`updateLastProcessedBlock: processType is neither Indexer or Operator`)
+    }
+
+    try {
+      const rawResponse = await this.apiService.updateBlockHeight(
+        processType,
+        getNetworkByKey(job.network).chain,
+        job.block,
+      )
+      if (rawResponse !== undefined) {
+        const {data: response, headers} = rawResponse
+
+        const requestId = headers.get('x-request-id') ?? ''
+        this.structuredLog(job.network, `Mutation response ${JSON.stringify(response)}`, [requestId])
+      }
+    } catch (error: any) {
+      this.structuredLogError(job.network, error, [`Request failed with errors: ${error}`])
     }
   }
 
@@ -1903,7 +1974,7 @@ export class NetworkMonitor {
     tags = [] as (string | number)[],
     attempts = 10,
     canFail = false,
-    interval = 1000,
+    interval = 3000,
   }: SendTransactionParams): Promise<TransactionResponse | null> {
     return new Promise<TransactionResponse | null>((topResolve, _topReject) => {
       let txHash: string | null
@@ -1911,7 +1982,7 @@ export class NetworkMonitor {
       let sent = false
       let sendTxInterval: NodeJS.Timeout | null = null
       const handleError = (error: any) => {
-        // process.stdout.write('sendTransaction' + JSON.stringify(error, undefined, 2))
+        process.stdout.write('sendTransaction' + JSON.stringify(error, undefined, 2))
         counter++
         if (canFail && counter > attempts) {
           this.structuredLogError(network, error, tags)
@@ -2029,7 +2100,7 @@ export class NetworkMonitor {
     gasPrice,
     gasLimit,
     value = ZERO,
-    nonce,
+    // nonce, disabled to let ethers.js handle it
     tags = [] as (string | number)[],
     attempts = 10,
     canFail = false,
@@ -2040,7 +2111,7 @@ export class NetworkMonitor {
       let sent = false
       let populateTxInterval: NodeJS.Timeout | null = null
       const handleError = (error: any) => {
-        // process.stdout.write('populateTransaction' + JSON.stringify(error, undefined, 2))
+        process.stdout.write('populateTransaction' + JSON.stringify(error, undefined, 2))
         counter++
         if (canFail && counter > attempts) {
           this.structuredLogError(network, error, tags)
@@ -2058,7 +2129,7 @@ export class NetworkMonitor {
           rawTx = await contract.populateTransaction[methodName](...args, {
             gasPrice,
             gasLimit,
-            nonce,
+            // nonce disabled to let ethers.js handle it,
             value,
             from: this.wallets[network].address,
           })

@@ -22,7 +22,7 @@ import {
   checkTokenIdFlag,
 } from '../../utils/validation'
 import {GasPricing} from '../../utils/gas'
-import {generateInitCode} from '../../utils/utils'
+import {generateInitCode} from '../../utils/initcode'
 
 export default class BridgeNFT extends Command {
   static description = 'Bridge a Holographable NFT from one network to another.'
@@ -263,7 +263,7 @@ export default class BridgeNFT extends Command {
     CliUx.ux.action.stop()
 
     if (receipt === null) {
-      throw new Error('failed to confirm that the transaction was mined')
+      throw new Error('Failed to confirm that the transaction was mined')
     } else {
       const jobHash: string | undefined = this.networkMonitor.decodeCrossChainMessageSentEvent(
         receipt,
