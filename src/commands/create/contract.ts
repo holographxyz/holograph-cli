@@ -441,6 +441,7 @@ export default class Contract extends Command {
                 presaleMerkleRoot: '0x0000000000000000000000000000000000000000000000000000000000000000', // No presale
               }
 
+              // The sales config must be serialized to an array of it's values to be passed as a tuple when abi encoded
               salesConfig = Object.values(saleConfig)
             }
 
