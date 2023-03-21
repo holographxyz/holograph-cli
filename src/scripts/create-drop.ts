@@ -91,7 +91,7 @@ require('dotenv').config()
 
   const configHash = sha3(
     '0x' +
-      (contractType as string).slice(2) +
+      (contractTypeHash as string).slice(2) +
       (chainType as string).slice(2) +
       (salt as string).slice(2) +
       sha3(byteCode as string).slice(2) +
@@ -122,8 +122,7 @@ require('dotenv').config()
     signer: signer.address,
   }
 
-  console.log(`Deployment config: ${JSON.stringify(deploymentConfig)}`)
-
+  console.log(`Deployment config: ${(JSON.stringify(deploymentConfig), null, 2)}`)
   console.log(`Preparing to deploy HolographDropERC721 contract...`)
   // Get the ENVIRONMENT
   const ENVIRONMENT = 'develop'
@@ -132,10 +131,10 @@ require('dotenv').config()
   const abis = await getABIs(ENVIRONMENT)
 
   // Set the contract address
-  const contractAddress = '0x90425798cc0e33932f11edc3EeDBD4f3f88DFF64' // HolographFactoryProxy
+  const factoryProxyAddress = '0x90425798cc0e33932f11edc3EeDBD4f3f88DFF64' // HolographFactoryProxy
 
   // Create a contract instance
-  const contract = new Contract(contractAddress, abis.HolographFactoryABI, signer)
+  const contract = new Contract(factoryProxyAddress, abis.HolographFactoryABI, signer)
 
   console.log('Calling deployHolographableContract...')
   // Call the deployHolographableContract function
