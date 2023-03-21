@@ -174,6 +174,24 @@ export default class Indexer extends HealthCheck {
         this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocksHeights(
           BlockHeightProcessType.INDEXER,
         )
+
+        // Check if the operator has previous missed blocks
+        let canSync = false
+        const lastBlockKeys: string[] = Object.keys(this.networkMonitor.latestBlockHeight)
+        for (let i = 0, l: number = lastBlockKeys.length; i < l; i++) {
+          if (this.networkMonitor.latestBlockHeight[lastBlockKeys[i]] > 0) {
+            canSync = true
+            break
+          }
+        }
+
+        if (canSync) {
+          this.log('Indexer has previous (missed) blocks.')
+        }
+
+        this.log('Skipping block syncing...')
+        this.networkMonitor.latestBlockHeight = {}
+        this.networkMonitor.currentBlockHeight = {}
       }
     }
 
