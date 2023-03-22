@@ -12,7 +12,7 @@ import {strictECDSA, Signature} from '../utils/signature'
 import {DeploymentConfig} from '../utils/contract-deployment'
 import {getABIs} from '../utils/contracts'
 import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
-import {NetworkMonitor} from '../utils/network-monitor'
+import {decodeBridgeableContractDeployedEvent} from '../events/events'
 require('dotenv').config()
 
 const HOLOGRAPH_FACTORY_PROXY_ADDRESS = '0x90425798cc0e33932f11edc3EeDBD4f3f88DFF64'
@@ -169,32 +169,3 @@ const METADATA_RENDERER_ADDRESS = '0x11b7B5f0Ba1A54b2068c2bDEB3CD1C7d99146f84'
     console.error('Error:', error)
   }
 })()
-
-// TODO: Start to decouple these functions from the network monitor so they can be used
-function decodeBridgeableContractDeployedEvent(receipt: TransactionReceipt, target?: string): string[] | undefined {
-  const targetEvents = {
-    BridgeableContractDeployed: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
-    '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b': 'BridgeableContractDeployed',
-  }
-  if (target !== undefined) {
-    target = target.toLowerCase().trim()
-  }
-
-  if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
-    for (let i = 0, l = receipt.logs.length; i < l; i++) {
-      const log = receipt.logs[i]
-      if (
-        log.topics[0] === targetEvents.BridgeableContractDeployed &&
-        (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
-      ) {
-        return NetworkMonitor.iface.decodeEventLog(
-          NetworkMonitor.bridgeableContractDeployedEventFragment,
-          log.data,
-          log.topics,
-        ) as string[]
-      }
-    }
-  }
-
-  return undefined
-}

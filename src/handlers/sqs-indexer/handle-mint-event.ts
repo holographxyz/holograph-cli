@@ -6,6 +6,7 @@ import SqsService from '../../services/sqs-service'
 import {networkToChainId} from '../../utils/utils'
 import {EventName, PayloadType, SqsMessageBody} from '../../types/sqs'
 import {hexZeroPad} from '@ethersproject/bytes'
+import {decodeErc721TransferEvent} from '../../events/events'
 
 async function handleMintEvent(
   networkMonitor: NetworkMonitor,
@@ -28,10 +29,7 @@ async function handleMintEvent(
     networkMonitor.structuredLog(network, `Checking for mint details`, tags)
 
     const holographableContractAddress: string = transaction.to!
-    const erc721TransferEvent: any[] | undefined = networkMonitor.decodeErc721TransferEvent(
-      receipt,
-      holographableContractAddress,
-    )
+    const erc721TransferEvent: any[] | undefined = decodeErc721TransferEvent(receipt, holographableContractAddress)
     if (erc721TransferEvent === undefined) {
       networkMonitor.structuredLog(network, `No Transfer event found`, tags)
     } else {

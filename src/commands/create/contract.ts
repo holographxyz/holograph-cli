@@ -45,6 +45,7 @@ import {
 } from '../../utils/initcode'
 
 import {SalesConfiguration} from '../../types/drops'
+import {decodeBridgeableContractDeployedEvent} from '../../events/events'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
   const codeFile: string = await checkStringFlag(undefined, prompt)
@@ -585,10 +586,7 @@ export default class Contract extends Command {
     if (receipt === null) {
       throw new Error('Failed to confirm that the transaction was mined')
     } else {
-      const logs: any[] | undefined = this.networkMonitor.decodeBridgeableContractDeployedEvent(
-        receipt,
-        this.networkMonitor.factoryAddress,
-      )
+      const logs: any[] | undefined = decodeBridgeableContractDeployedEvent(receipt, this.networkMonitor.factoryAddress)
       if (logs === undefined) {
         throw new Error('Failed to extract transfer event from transaction receipt')
       } else {

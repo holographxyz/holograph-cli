@@ -23,6 +23,7 @@ import {
 } from '../../utils/validation'
 import {GasPricing} from '../../utils/gas'
 import {generateInitCode} from '../../utils/initcode'
+import {decodeCrossChainMessageSentEvent} from '../../events/events'
 
 export default class BridgeNFT extends Command {
   static description = 'Bridge a Holographable NFT from one network to another.'
@@ -265,10 +266,7 @@ export default class BridgeNFT extends Command {
     if (receipt === null) {
       throw new Error('Failed to confirm that the transaction was mined')
     } else {
-      const jobHash: string | undefined = this.networkMonitor.decodeCrossChainMessageSentEvent(
-        receipt,
-        this.networkMonitor.operatorAddress,
-      )
+      const jobHash: string | undefined = decodeCrossChainMessageSentEvent(receipt, this.networkMonitor.operatorAddress)
       if (jobHash === undefined) {
         this.log('Failed to extract cross-chain job hash transaction receipt')
       }
