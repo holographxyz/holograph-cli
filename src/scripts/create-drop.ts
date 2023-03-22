@@ -1,6 +1,6 @@
-import {Contract, ContractFactory, ethers} from 'ethers'
+import {Contract, ethers} from 'ethers'
 import {SalesConfiguration} from '../types/drops'
-import {bytecodes, EditionsMetadataRenderer} from '../utils/bytecodes'
+import {bytecodes} from '../utils/bytecodes'
 import {
   generateHolographDropERC721InitCode,
   generateHolographERC721InitCode,
@@ -11,7 +11,13 @@ import {networks} from '@holographxyz/networks'
 import {strictECDSA, Signature} from '../utils/signature'
 import {DeploymentConfig} from '../utils/contract-deployment'
 import {getABIs} from '../utils/contracts'
+import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
+import {NetworkMonitor} from '../utils/network-monitor'
 require('dotenv').config()
+
+const HOLOGRAPH_FACTORY_PROXY_ADDRESS = '0x90425798cc0e33932f11edc3EeDBD4f3f88DFF64'
+const METADATA_RENDERER_ADDRESS = '0x11b7B5f0Ba1A54b2068c2bDEB3CD1C7d99146f84'
+
 ;(async () => {
   // Create a provider using the provider URL from the .env file
   const provider = new ethers.providers.JsonRpcProvider(process.env.SCRIPT_PROVIDER_URL)
@@ -49,7 +55,8 @@ require('dotenv').config()
   // The sales config must be serialized to an array of it's values to be passed as a tuple when abi encoded
   const salesConfig = Object.values(saleConfig)
 
-  console.log('Deploying metadata renderer contract...')
+  // NOTE: Disabled to save gas by using previously deployed metadata renderer contract
+  // console.log('Deploying metadata renderer contract...')
   // Deploy a metadata renderer contract
   // TODO: this needs to be removed in the future and a reference to the deployed EditionsMetadataRendererProxy needs to be made here
   // const renderAbi = JSON.parse(fs.readFileSync(`./src/abi/develop/EditionsMetadataRenderer.json`).toString())
@@ -70,7 +77,7 @@ require('dotenv').config()
     royaltyBps, // percentage of royalties in bps
     false, // enableOpenSeaRoyaltyRegistry
     salesConfig,
-    '0x11b7B5f0Ba1A54b2068c2bDEB3CD1C7d99146f84', // metadataRenderer (using previously deployed contract to save gas)
+    METADATA_RENDERER_ADDRESS, // metadataRenderer (using previously deployed contract to save gas)
     metadataRendererInitCode, // metadataRendererInit
   )
 
@@ -85,9 +92,9 @@ require('dotenv').config()
 
   // Deployment config
   console.log('Creating deployment config...')
-  const chainType = '0x' + networks['avalancheTestnet'].holographId.toString(16).padStart(8, '0') // fuji
+  const chainType = '0x' + networks.avalancheTestnet.holographId.toString(16).padStart(8, '0') // fuji
   const salt = '0x' + web3.utils.randomHex(32).slice(2).padStart(64, '0') // random salt
-  const byteCode = bytecodes['HolographDropERC721']
+  const byteCode = bytecodes.HolographDropERC721
 
   const configHash = sha3(
     '0x' +
@@ -131,26 +138,63 @@ require('dotenv').config()
   const abis = await getABIs(ENVIRONMENT)
 
   // Set the contract address
-  const factoryProxyAddress = '0x90425798cc0e33932f11edc3EeDBD4f3f88DFF64' // HolographFactoryProxy
+  const factoryProxyAddress = HOLOGRAPH_FACTORY_PROXY_ADDRESS // HolographFactoryProxy
 
   // Create a contract instance
   const contract = new Contract(factoryProxyAddress, abis.HolographFactoryABI, signer)
 
   console.log('Calling deployHolographableContract...')
-  // Call the deployHolographableContract function
-  async function callDeployHolographableContract() {
-    try {
-      const tx = await contract.deployHolographableContract(
-        deploymentConfig.config,
-        deploymentConfig.signature,
-        signer.address,
-      )
-      console.log('Transaction:', tx)
-      const receipt = await tx.wait()
-      console.log('Transaction receipt:', receipt)
-    } catch (error) {
-      console.error('Error:', error)
+  try {
+    const tx: TransactionResponse = await contract.deployHolographableContract(
+      deploymentConfig.config,
+      deploymentConfig.signature,
+      signer.address,
+    )
+    console.log('Transaction:', tx)
+    const receipt: TransactionReceipt = await tx.wait()
+    console.log('Transaction receipt:', receipt)
+
+    if (receipt === null) {
+      throw new Error('Failed to confirm that the transaction was mined')
+    } else {
+      const logs: any[] | undefined = decodeBridgeableContractDeployedEvent(receipt, HOLOGRAPH_FACTORY_PROXY_ADDRESS)
+      if (logs === undefined) {
+        throw new Error('Failed to extract transfer event from transaction receipt')
+      } else {
+        const deploymentAddress = logs[0] as string
+        console.log(`Contract has been deployed to address ${deploymentAddress} on ${'targetNetwork'} network`)
+      }
+    }
+  } catch (error) {
+    console.error('Error:', error)
+  }
+})()
+
+// TODO: Start to decouple these functions from the network monitor so they can be used
+function decodeBridgeableContractDeployedEvent(receipt: TransactionReceipt, target?: string): string[] | undefined {
+  const targetEvents = {
+    BridgeableContractDeployed: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
+    '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b': 'BridgeableContractDeployed',
+  }
+  if (target !== undefined) {
+    target = target.toLowerCase().trim()
+  }
+
+  if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+    for (let i = 0, l = receipt.logs.length; i < l; i++) {
+      const log = receipt.logs[i]
+      if (
+        log.topics[0] === targetEvents.BridgeableContractDeployed &&
+        (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
+      ) {
+        return NetworkMonitor.iface.decodeEventLog(
+          NetworkMonitor.bridgeableContractDeployedEventFragment,
+          log.data,
+          log.topics,
+        ) as string[]
+      }
     }
   }
-  await callDeployHolographableContract()
-})()
+
+  return undefined
+}
