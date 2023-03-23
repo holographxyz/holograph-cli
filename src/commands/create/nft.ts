@@ -22,6 +22,7 @@ import {
 } from '../../utils/validation'
 import {UriTypeIndex} from '../../utils/asset-deployment'
 import {BigNumber, ethers} from 'ethers'
+import {decodeErc721TransferEvent} from '../../events/events'
 
 export default class NFT extends Command {
   static description = 'Mint a Holographable NFT.'
@@ -233,7 +234,7 @@ export default class NFT extends Command {
     if (receipt === null) {
       throw new Error('Failed to confirm that the transaction was mined')
     } else {
-      const logs: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(receipt, collectionAddress)
+      const logs: any[] | undefined = decodeErc721TransferEvent(receipt, collectionAddress)
       if (logs === undefined) {
         throw new Error('Failed to extract transfer event from transaction receipt')
       } else {

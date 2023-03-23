@@ -19,6 +19,13 @@ import {toAscii, sha3, storageSlot} from '../../utils/utils'
 import {FilterType, BlockJob, NetworkMonitor, TransactionType} from '../../utils/network-monitor'
 import ApiService from '../../services/api-service'
 import {CrossChainTransaction, TransactionStatus, Logger} from '../../types/api'
+import {
+  decodeAvailableOperatorJobEvent,
+  decodeCrossChainMessageSentEvent,
+  decodeErc721TransferEvent,
+  decodeLzEvent,
+  decodeLzPacketEvent,
+} from '../../events/events'
 
 enum LogType {
   ContractDeployment = 'ContractDeployment',
@@ -500,12 +507,9 @@ export default class Analyze extends Command {
 
       switch (this.environment) {
         case Environment.localhost:
-          operatorJobHash = this.networkMonitor.decodeCrossChainMessageSentEvent(
-            receipt,
-            this.networkMonitor.operatorAddress,
-          )
+          operatorJobHash = decodeCrossChainMessageSentEvent(receipt, this.networkMonitor.operatorAddress)
           if (operatorJobHash !== undefined) {
-            args = this.networkMonitor.decodeLzEvent(receipt, this.networkMonitor.lzEndpointAddress[network])
+            args = decodeLzEvent(receipt, this.networkMonitor.lzEndpointAddress[network])
             if (args !== undefined) {
               operatorJobPayload = args[2] as string
             }
@@ -513,12 +517,9 @@ export default class Analyze extends Command {
 
           break
         default:
-          operatorJobHash = this.networkMonitor.decodeCrossChainMessageSentEvent(
-            receipt,
-            this.networkMonitor.operatorAddress,
-          )
+          operatorJobHash = decodeCrossChainMessageSentEvent(receipt, this.networkMonitor.operatorAddress)
           if (operatorJobHash !== undefined) {
-            operatorJobPayload = this.networkMonitor.decodeLzPacketEvent(receipt)
+            operatorJobPayload = decodeLzPacketEvent(receipt, this.networkMonitor.messagingModuleAddress)
           }
 
           break
@@ -565,7 +566,7 @@ export default class Analyze extends Command {
               beam.jobType = TransactionType.erc721
 
               // creating json data field
-              const erc721TransferEvent: string[] | undefined = this.networkMonitor.decodeErc721TransferEvent(
+              const erc721TransferEvent: string[] | undefined = decodeErc721TransferEvent(
                 receipt,
                 holographableContractAddress,
               )
@@ -617,10 +618,7 @@ export default class Analyze extends Command {
     }
 
     if (receipt.status === 1) {
-      const args: any[] | undefined = this.networkMonitor.decodeAvailableOperatorJobEvent(
-        receipt,
-        this.networkMonitor.operatorAddress,
-      )
+      const args: any[] | undefined = decodeAvailableOperatorJobEvent(receipt, this.networkMonitor.operatorAddress)
       const operatorJobHash: string | undefined = args === undefined ? undefined : args[0]
       const operatorJobPayload: string | undefined = args === undefined ? undefined : args[1]
       if (operatorJobHash === undefined) {

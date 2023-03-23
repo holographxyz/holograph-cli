@@ -12,6 +12,7 @@ import {DeploymentConfig, decodeDeploymentConfigInput} from '../../utils/contrac
 
 import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor, repairFlag} from '../../utils/network-monitor'
 import {HealthCheck} from '../../base-commands/healthcheck'
+import {decodeBridgeableContractDeployedEvent} from '../../events/events'
 
 type RecoveryData = {
   // eslint-disable-next-line camelcase
@@ -237,10 +238,7 @@ export default class Propagator extends HealthCheck {
         network,
         `Checking if a new Holograph contract was deployed at tx: ${transaction.hash}`,
       )
-      const deploymentInfo = this.networkMonitor.decodeBridgeableContractDeployedEvent(
-        receipt,
-        this.networkMonitor.factoryAddress,
-      )
+      const deploymentInfo = decodeBridgeableContractDeployedEvent(receipt, this.networkMonitor.factoryAddress)
       if (deploymentInfo === undefined) {
         this.networkMonitor.structuredLog(network, `BridgeableContractDeployed event not found in ${transaction.hash}`)
       } else {
@@ -290,7 +288,7 @@ export default class Propagator extends HealthCheck {
           network,
           `Transaction minted with hash ${deployReceipt.transactionHash} for collection ${deploymentAddress}`,
         )
-        const deploymentInfo: any[] | undefined = this.networkMonitor.decodeBridgeableContractDeployedEvent(
+        const deploymentInfo: any[] | undefined = decodeBridgeableContractDeployedEvent(
           deployReceipt as ethers.providers.TransactionReceipt,
           this.networkMonitor.factoryAddress,
         )

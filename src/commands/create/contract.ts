@@ -45,6 +45,7 @@ import {
 } from '../../utils/initcode'
 
 import {SalesConfiguration} from '../../types/drops'
+import {decodeBridgeableContractDeployedEvent} from '../../events/events'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
   const codeFile: string = await checkStringFlag(undefined, prompt)
@@ -441,6 +442,7 @@ export default class Contract extends Command {
                 presaleMerkleRoot: '0x0000000000000000000000000000000000000000000000000000000000000000', // No presale
               }
 
+              // The sales config must be serialized to an array of it's values to be passed as a tuple when abi encoded
               salesConfig = Object.values(saleConfig)
             }
 
@@ -584,10 +586,7 @@ export default class Contract extends Command {
     if (receipt === null) {
       throw new Error('Failed to confirm that the transaction was mined')
     } else {
-      const logs: any[] | undefined = this.networkMonitor.decodeBridgeableContractDeployedEvent(
-        receipt,
-        this.networkMonitor.factoryAddress,
-      )
+      const logs: any[] | undefined = decodeBridgeableContractDeployedEvent(receipt, this.networkMonitor.factoryAddress)
       if (logs === undefined) {
         throw new Error('Failed to extract transfer event from transaction receipt')
       } else {

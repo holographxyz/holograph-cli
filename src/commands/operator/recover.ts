@@ -16,6 +16,7 @@ import {Environment} from '@holographxyz/environment'
 import ApiService from '../../services/api-service'
 import {CrossChainTransaction, Logger, TransactionStatus} from '../../types/api'
 import color from '@oclif/color'
+import {decodeAvailableOperatorJobEvent, decodeLzPacketEvent} from '../../events/events'
 
 enum Step {
   OPERATOR,
@@ -192,7 +193,8 @@ export default class Recover extends OperatorJobAwareCommand {
     if (receipt.status === 1) {
       this.networkMonitor.structuredLog(network, `Checking if a bridge request was made at tx: ${transaction.hash}`)
       const operatorJobPayload =
-        this.networkMonitor.decodePacketEvent(receipt) ?? this.networkMonitor.decodeLzPacketEvent(receipt)
+        this.networkMonitor.decodePacketEvent(receipt) ??
+        decodeLzPacketEvent(receipt, this.networkMonitor.messagingModuleAddress)
       const operatorJobHash = operatorJobPayload === undefined ? undefined : sha3(operatorJobPayload)
       if (operatorJobHash === undefined) {
         this.networkMonitor.structuredLog(network, `Could not extract cross-chain packet for ${transaction.hash}`)
@@ -247,7 +249,7 @@ export default class Recover extends OperatorJobAwareCommand {
         network,
         `Checking if Operator was sent a bridge job via the LayerZero Relayer at tx: ${transaction.hash}`,
       )
-      const operatorJobEvent: string[] | undefined = this.networkMonitor.decodeAvailableOperatorJobEvent(
+      const operatorJobEvent: string[] | undefined = decodeAvailableOperatorJobEvent(
         receipt,
         this.networkMonitor.operatorAddress,
       )
