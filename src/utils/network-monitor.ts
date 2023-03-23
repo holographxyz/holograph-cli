@@ -1248,6 +1248,7 @@ export class NetworkMonitor {
           }
         }
       }
+
       return null
     }
 
@@ -1299,6 +1300,7 @@ export class NetworkMonitor {
           }
         }
       }
+
       return null
     }
 
@@ -1337,6 +1339,7 @@ export class NetworkMonitor {
           return tx as TransactionResponse
         }
       }
+
       return null
     }
 
@@ -1375,6 +1378,7 @@ export class NetworkMonitor {
           return receipt as TransactionReceipt
         }
       }
+
       return null
     }
 
@@ -1413,6 +1417,7 @@ export class NetworkMonitor {
           }
         }
       }
+
       return BigNumber.from(0)
     }
 
@@ -1430,6 +1435,7 @@ export class NetworkMonitor {
   }: WalletParams): Promise<number> {
     let counter = 0
 
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       try {
         const nonce: number = await this.providers[network].getTransactionCount(walletAddress, 'latest')
@@ -1440,6 +1446,7 @@ export class NetworkMonitor {
           this.structuredLog(network, `Failed getting ${walletAddress} nonce`, tags)
           throw error
         }
+
         await sleep(interval)
       }
     }
@@ -1459,6 +1466,7 @@ export class NetworkMonitor {
   }: GasLimitParams): Promise<BigNumber | null> {
     let counter = 0
 
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       try {
         const gasLimit: BigNumber | null = await contract
@@ -1471,12 +1479,12 @@ export class NetworkMonitor {
 
         if (gasLimit !== null) {
           return gasLimit
-        } else {
-          counter++
-          if (canFail && counter > attempts) {
-            this.structuredLog(network, `Failed calculating gas limit`, tags)
-            return null
-          }
+        }
+
+        counter++
+        if (canFail && counter > attempts) {
+          this.structuredLog(network, `Failed calculating gas limit`, tags)
+          return null
         }
       } catch (error: any) {
         // Handle error
@@ -1541,6 +1549,7 @@ export class NetworkMonitor {
       }
     }
 
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       let populatedTx: TransactionRequest | null
       let signedTx: string | null
@@ -1652,6 +1661,7 @@ export class NetworkMonitor {
   }: PopulateTransactionParams): Promise<PopulatedTransaction | null> {
     let counter = 0
 
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       try {
         const rawTx = await contract.populateTransaction[methodName](...args, {
