@@ -1,6 +1,5 @@
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
-import path from 'node:path'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import {Contract} from '@ethersproject/contracts'
@@ -23,6 +22,7 @@ import {
 import {UriTypeIndex} from '../../utils/asset-deployment'
 import {BigNumber, ethers} from 'ethers'
 import {decodeErc721TransferEvent} from '../../events/events'
+import {getABIs} from '../../utils/contracts'
 
 export default class NFT extends Command {
   static description = 'Mint a Holographable NFT.'
@@ -66,7 +66,8 @@ export default class NFT extends Command {
 
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
-    const environment = getEnvironment()
+    const ENVIRONMENT = getEnvironment()
+    const abis = await getABIs(ENVIRONMENT)
     const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
       this.config.configDir,
       undefined,
@@ -125,10 +126,10 @@ export default class NFT extends Command {
     let abiPath: string
     switch (collectionType) {
       case 'CxipERC721':
-        abiPath = path.join(__dirname, `../../abi/${environment}/CxipERC721.json`)
+        abiPath = abis.CxipERC721ABI
         break
       case 'HolographDropERC721':
-        abiPath = path.join(__dirname, `../../abi/${environment}/HolographDropERC721.json`)
+        abiPath = abis.HolographDropERC721ABI
         break
       default:
         this.log('Invalid collection type')
@@ -221,6 +222,7 @@ export default class NFT extends Command {
           args: [numToMint],
           waitForReceipt: true,
         })
+
         CliUx.ux.action.stop()
       } else {
         this.log('NFT minting was canceled')

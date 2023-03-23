@@ -17,6 +17,9 @@ export const getABIs = async (environment: string): Promise<any> => {
     HolographOperatorABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographOperator.json`)),
     HolographRegistryABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographRegistry.json`)),
     LayerZeroABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/LayerZeroEndpointInterface.json`)),
+    EditionsMetadataRendererABI: await fs.readJson(
+      path.join(__dirname, `../abi/${environment}/EditionsMetadataRenderer.json`),
+    ),
   }
 }
 
