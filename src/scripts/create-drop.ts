@@ -13,11 +13,17 @@ import {DeploymentConfig} from '../utils/contract-deployment'
 import {getABIs} from '../utils/contracts'
 import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
 import {decodeBridgeableContractDeployedEvent} from '../events/events'
+import {getEnvironment} from '@holographxyz/environment'
 require('dotenv').config()
 
 const HOLOGRAPH_FACTORY_PROXY_ADDRESS = '0x90425798cc0e33932f11edc3EeDBD4f3f88DFF64'
 const METADATA_RENDERER_ADDRESS = '0x11b7B5f0Ba1A54b2068c2bDEB3CD1C7d99146f84'
 
+/**
+ * This script is used to create a new Drop contract on the Holograph protocol.
+ * The script will create a new HolographERC721 contract, and then create a new Drop contract that extends the HolographERC721 contract.
+ * This script is meant to be an internal tool to be used for testing purposes and to provide an example of how to create a Drop contract using ethers.js.
+ */
 ;(async () => {
   // Create a provider using the provider URL from the .env file
   const provider = new ethers.providers.JsonRpcProvider(process.env.SCRIPT_PROVIDER_URL)
@@ -131,8 +137,9 @@ const METADATA_RENDERER_ADDRESS = '0x11b7B5f0Ba1A54b2068c2bDEB3CD1C7d99146f84'
 
   console.log(`Deployment config: ${(JSON.stringify(deploymentConfig), null, 2)}`)
   console.log(`Preparing to deploy HolographDropERC721 contract...`)
+
   // Get the ENVIRONMENT
-  const ENVIRONMENT = 'develop'
+  const ENVIRONMENT = getEnvironment()
 
   // Get the ABI
   const abis = await getABIs(ENVIRONMENT)
