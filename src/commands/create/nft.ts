@@ -1,6 +1,5 @@
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
-import path from 'node:path'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import {Contract} from '@ethersproject/contracts'
@@ -22,6 +21,8 @@ import {
 } from '../../utils/validation'
 import {UriTypeIndex} from '../../utils/asset-deployment'
 import {BigNumber, ethers} from 'ethers'
+import {decodeErc721TransferEvent} from '../../events/events'
+import {getABIs} from '../../utils/contracts'
 
 export default class NFT extends Command {
   static description = 'Mint a Holographable NFT.'
@@ -65,7 +66,8 @@ export default class NFT extends Command {
 
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
-    const environment = getEnvironment()
+    const ENVIRONMENT = getEnvironment()
+    const abis = await getABIs(ENVIRONMENT)
     const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
       this.config.configDir,
       undefined,
@@ -115,7 +117,7 @@ export default class NFT extends Command {
 
     // Select the contract type to deploy
     const collectionType = await checkOptionFlag(
-      ['CxipERC721', 'HolographDropsEditionsV1'],
+      ['CxipERC721', 'HolographDropERC721'],
       undefined,
       "Select the type of collection you'd like to mint from",
     )
@@ -124,10 +126,10 @@ export default class NFT extends Command {
     let abiPath: string
     switch (collectionType) {
       case 'CxipERC721':
-        abiPath = path.join(__dirname, `../../abi/${environment}/CxipERC721.json`)
+        abiPath = abis.CxipERC721ABI
         break
-      case 'HolographDropsEditionsV1':
-        abiPath = path.join(__dirname, `../../abi/${environment}/HolographDropsEditionsV1.json`)
+      case 'HolographDropERC721':
+        abiPath = abis.HolographDropERC721ABI
         break
       default:
         this.log('Invalid collection type')
@@ -185,7 +187,7 @@ export default class NFT extends Command {
         this.log('NFT minting was canceled')
         this.exit()
       }
-    } else if (collectionType === 'HolographDropsEditionsV1') {
+    } else if (collectionType === 'HolographDropERC721') {
       const numToMint = await checkNumberFlag(undefined, 'How many NFTs would you like to mint/purchase?')
       // Connect wallet for signing txns
       const account = userWallet.connect(this.networkMonitor.providers[network])
@@ -220,6 +222,7 @@ export default class NFT extends Command {
           args: [numToMint],
           waitForReceipt: true,
         })
+
         CliUx.ux.action.stop()
       } else {
         this.log('NFT minting was canceled')
@@ -233,7 +236,7 @@ export default class NFT extends Command {
     if (receipt === null) {
       throw new Error('Failed to confirm that the transaction was mined')
     } else {
-      const logs: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(receipt, collectionAddress)
+      const logs: any[] | undefined = decodeErc721TransferEvent(receipt, collectionAddress)
       if (logs === undefined) {
         throw new Error('Failed to extract transfer event from transaction receipt')
       } else {

@@ -9,7 +9,7 @@ import {Contract, PopulatedTransaction} from '@ethersproject/contracts'
 import {BigNumber} from '@ethersproject/bignumber'
 import {formatUnits} from '@ethersproject/units'
 import {keccak256} from '@ethersproject/keccak256'
-import {Interface, EventFragment, defaultAbiCoder} from '@ethersproject/abi'
+import {defaultAbiCoder} from '@ethersproject/abi'
 import {WebSocketProvider, JsonRpcProvider} from '@ethersproject/providers'
 import {
   Block,
@@ -34,6 +34,16 @@ import {capitalize, NETWORK_COLORS, zeroAddress} from './utils'
 import {CXIP_ERC721_ADDRESSES, HOLOGRAPH_ADDRESSES} from './contracts'
 import {BlockHeight, BlockHeightProcessType} from '../types/api'
 import ApiService from '../services/api-service'
+import {iface, packetEventFragment, targetEvents} from '../events/events'
+import {
+  BlockParams,
+  ExecuteTransactionParams,
+  GasLimitParams,
+  PopulateTransactionParams,
+  SendTransactionParams,
+  TransactionParams,
+  WalletParams,
+} from '../types/network-monitor'
 
 export const repairFlag = {
   repair: Flags.integer({
@@ -247,85 +257,6 @@ export const keepAlive = ({
   })
 }
 
-export type ExecuteTransactionParams = {
-  network: string
-  tags?: (string | number)[]
-  contract: Contract
-  methodName: string
-  args: any[]
-  gasPrice?: BigNumber
-  gasLimit?: BigNumber | null
-  value?: BigNumber
-  attempts?: number
-  canFail?: boolean
-  interval?: number
-  waitForReceipt?: boolean
-}
-
-export type SendTransactionParams = {
-  network: string
-  tags?: (string | number)[]
-  rawTx: PopulatedTransaction
-  attempts?: number
-  canFail?: boolean
-  interval?: number
-}
-
-export type PopulateTransactionParams = {
-  network: string
-  contract: Contract
-  methodName: string
-  args: any[]
-  gasPrice: BigNumber
-  gasLimit: BigNumber
-  value: BigNumber
-  nonce: number
-  tags?: (string | number)[]
-  attempts?: number
-  canFail?: boolean
-  interval?: number
-}
-
-export type GasLimitParams = {
-  network: string
-  tags?: (string | number)[]
-  contract: Contract
-  methodName: string
-  args: any[]
-  gasPrice?: BigNumber
-  value?: BigNumber
-  attempts?: number
-  canFail?: boolean
-  interval?: number
-}
-
-export type BlockParams = {
-  network: string
-  blockNumber: number
-  tags?: (string | number)[]
-  attempts?: number
-  canFail?: boolean
-  interval?: number
-}
-
-export type WalletParams = {
-  network: string
-  walletAddress: string
-  tags?: (string | number)[]
-  attempts?: number
-  canFail?: boolean
-  interval?: number
-}
-
-export type TransactionParams = {
-  network: string
-  transactionHash: string
-  tags?: (string | number)[]
-  attempts?: number
-  canFail?: boolean
-  interval?: number
-}
-
 const cleanTags = (tagIds?: string | number | (number | string)[]): string => {
   if (tagIds === undefined) {
     return ''
@@ -432,38 +363,6 @@ export class NetworkMonitor {
 
   needToSubscribe = false
   repair = 0
-
-  targetEvents: Record<string, string> = {
-    AvailableJob: '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11',
-    '0x6114b34f1f941c01691c47744b4fbc0dd9d542be34241ba84fc4c0bd9bef9b11': 'AvailableJob',
-
-    AvailableOperatorJob: '0x4422a85db963f113e500bc4ada8f9e9f1a7bcd57cbec6907fbb2bf6aaf5878ff',
-    '0x4422a85db963f113e500bc4ada8f9e9f1a7bcd57cbec6907fbb2bf6aaf5878ff': 'AvailableOperatorJob',
-
-    FinishedOperatorJob: '0xfc3963369d694e97f35e33cc03fcd382bfa4dbb688ae43d318fcf344f479425e',
-    '0xfc3963369d694e97f35e33cc03fcd382bfa4dbb688ae43d318fcf344f479425e': 'FinishedOperatorJob',
-
-    FailedOperatorJob: '0x26dc03e6c4feb5e9d33804dc1646860c976c3aeabb458f4719c53dcbadbf44b5',
-    '0x26dc03e6c4feb5e9d33804dc1646860c976c3aeabb458f4719c53dcbadbf44b5': 'FailedOperatorJob',
-
-    BridgeableContractDeployed: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
-    '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b': 'BridgeableContractDeployed',
-
-    CrossChainMessageSent: '0x0f5759b4182507dcfc771071166f98d7ca331262e5134eaa74b676adce2138b7',
-    '0x0f5759b4182507dcfc771071166f98d7ca331262e5134eaa74b676adce2138b7': 'CrossChainMessageSent',
-
-    LzEvent: '0x138bae39f5887c9423d9c61fbf2cba537d68671ee69f2008423dbc28c8c41663',
-    '0x138bae39f5887c9423d9c61fbf2cba537d68671ee69f2008423dbc28c8c41663': 'LzEvent',
-
-    LzPacket: '0xe9bded5f24a4168e4f3bf44e00298c993b22376aad8c58c7dda9718a54cbea82',
-    '0xe9bded5f24a4168e4f3bf44e00298c993b22376aad8c58c7dda9718a54cbea82': 'LzPacket',
-
-    Packet: '0xe8d23d927749ec8e512eb885679c2977d57068839d8cca1a85685dbbea0648f6',
-    '0xe8d23d927749ec8e512eb885679c2977d57068839d8cca1a85685dbbea0648f6': 'Packet',
-
-    Transfer: '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
-    '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef': 'Transfer',
-  }
 
   getProviderStatus(): {[key: string]: ProviderStatus} {
     const output: {[key: string]: ProviderStatus} = {}
@@ -1275,43 +1174,6 @@ export class NetworkMonitor {
     )
   }
 
-  static iface: Interface = new Interface([])
-  static packetEventFragment: EventFragment = EventFragment.from('Packet(uint16 chainId, bytes payload)')
-
-  static lzPacketEventFragment: EventFragment = EventFragment.from('Packet(bytes payload)')
-
-  static lzEventFragment: EventFragment = EventFragment.from(
-    'LzEvent(uint16 _dstChainId, bytes _destination, bytes _payload)',
-  )
-
-  static erc20TransferEventFragment: EventFragment = EventFragment.from(
-    'Transfer(address indexed _from, address indexed _to, uint256 _value)',
-  )
-
-  static erc721TransferEventFragment: EventFragment = EventFragment.from(
-    'Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId)',
-  )
-
-  static availableJobEventFragment: EventFragment = EventFragment.from('AvailableJob(bytes payload)')
-
-  static bridgeableContractDeployedEventFragment: EventFragment = EventFragment.from(
-    'BridgeableContractDeployed(address indexed contractAddress, bytes32 indexed hash)',
-  )
-
-  static availableOperatorJobEventFragment: EventFragment = EventFragment.from(
-    'AvailableOperatorJob(bytes32 jobHash, bytes payload)',
-  )
-
-  static crossChainMessageSentEventFragment: EventFragment = EventFragment.from(
-    'CrossChainMessageSent(bytes32 messageHash)',
-  )
-
-  static finishedOperatorJobEventFragment: EventFragment = EventFragment.from(
-    'FinishedOperatorJob(bytes32 jobHash, address operator)',
-  )
-
-  static failedOperatorJobEventFragment: EventFragment = EventFragment.from('FailedOperatorJob(bytes32 jobHash)')
-
   decodePacketEvent(receipt: TransactionReceipt, target?: string): string | undefined {
     if (target !== undefined) {
       target = target.toLowerCase().trim()
@@ -1322,14 +1184,10 @@ export class NetworkMonitor {
       for (let i = 0, l = receipt.logs.length; i < l; i++) {
         const log = receipt.logs[i]
         if (
-          log.topics[0] === this.targetEvents.Packet &&
+          log.topics[0] === targetEvents.Packet &&
           (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
         ) {
-          const packetPayload = NetworkMonitor.iface.decodeEventLog(
-            NetworkMonitor.packetEventFragment,
-            log.data,
-            log.topics,
-          )[1] as string
+          const packetPayload = iface.decodeEventLog(packetEventFragment, log.data, log.topics)[1] as string
           if (packetPayload.indexOf(toFind) > 0) {
             let index: number = packetPayload.indexOf(toFind)
             // address + address
@@ -1341,281 +1199,6 @@ export class NetworkMonitor {
     }
 
     return undefined
-  }
-
-  decodeLzPacketEvent(receipt: TransactionReceipt, target?: string): string | undefined {
-    if (target !== undefined) {
-      target = target.toLowerCase().trim()
-    }
-
-    const toFind = this.messagingModuleAddress.slice(2, 42)
-    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        const log = receipt.logs[i]
-        if (
-          log.topics[0] === this.targetEvents.LzPacket &&
-          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
-        ) {
-          const packetPayload = NetworkMonitor.iface.decodeEventLog(
-            NetworkMonitor.lzPacketEventFragment,
-            log.data,
-            log.topics,
-          )[0] as string
-          if (packetPayload.indexOf(toFind) > 0) {
-            let index: number = packetPayload.indexOf(toFind)
-            // address + bytes2 + address
-            index += 40 + 4 + 40
-            return ('0x' + packetPayload.slice(Math.max(0, index))).toLowerCase()
-          }
-        }
-      }
-    }
-
-    return undefined
-  }
-
-  decodeLzEvent(receipt: TransactionReceipt, target?: string): any[] | undefined {
-    if (target !== undefined) {
-      target = target.toLowerCase().trim()
-    }
-
-    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        const log = receipt.logs[i]
-        if (
-          log.topics[0] === this.targetEvents.LzEvent &&
-          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
-        ) {
-          const event = NetworkMonitor.iface.decodeEventLog(
-            NetworkMonitor.lzEventFragment,
-            log.data,
-            log.topics,
-          ) as any[]
-          return this.lowerCaseAllStrings(event)
-        }
-      }
-    }
-
-    return undefined
-  }
-
-  decodeErc20TransferEvent(receipt: TransactionReceipt, target?: string): string[] | undefined {
-    if (target !== undefined) {
-      target = target.toLowerCase().trim()
-    }
-
-    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        const log = receipt.logs[i]
-        if (
-          log.topics[0] === this.targetEvents.Transfer &&
-          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
-        ) {
-          const event = NetworkMonitor.iface.decodeEventLog(
-            NetworkMonitor.erc20TransferEventFragment,
-            log.data,
-            log.topics,
-          ) as string[]
-          return this.lowerCaseAllStrings(event, log.address)
-        }
-      }
-    }
-
-    return undefined
-  }
-
-  decodeErc721TransferEvent(receipt: TransactionReceipt, target?: string): string[] | undefined {
-    if (target !== undefined) {
-      target = target.toLowerCase().trim()
-    }
-
-    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        const log = receipt.logs[i]
-        if (
-          log.topics[0] === this.targetEvents.Transfer &&
-          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
-        ) {
-          const event = NetworkMonitor.iface.decodeEventLog(
-            NetworkMonitor.erc721TransferEventFragment,
-            log.data,
-            log.topics,
-          ) as string[]
-          return this.lowerCaseAllStrings(event, log.address)
-        }
-      }
-    }
-
-    return undefined
-  }
-
-  decodeAvailableJobEvent(receipt: TransactionReceipt, target?: string): string | undefined {
-    if (target !== undefined) {
-      target = target.toLowerCase().trim()
-    }
-
-    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        const log = receipt.logs[i]
-        if (
-          log.topics[0] === this.targetEvents.AvailableJob &&
-          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
-        ) {
-          return (
-            NetworkMonitor.iface.decodeEventLog(
-              NetworkMonitor.availableJobEventFragment,
-              log.data,
-              log.topics,
-            )[0] as string
-          ).toLowerCase()
-        }
-      }
-    }
-
-    return undefined
-  }
-
-  decodeAvailableOperatorJobEvent(receipt: TransactionReceipt, target?: string): string[] | undefined {
-    if (target !== undefined) {
-      target = target.toLowerCase().trim()
-    }
-
-    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        const log = receipt.logs[i]
-        if (
-          log.topics[0] === this.targetEvents.AvailableOperatorJob &&
-          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
-        ) {
-          const output: string[] = NetworkMonitor.iface.decodeEventLog(
-            NetworkMonitor.availableOperatorJobEventFragment,
-            log.data,
-            log.topics,
-          ) as string[]
-          return this.lowerCaseAllStrings(output) as string[]
-        }
-      }
-    }
-
-    return undefined
-  }
-
-  decodeBridgeableContractDeployedEvent(receipt: TransactionReceipt, target?: string): string[] | undefined {
-    if (target !== undefined) {
-      target = target.toLowerCase().trim()
-    }
-
-    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        const log = receipt.logs[i]
-        if (
-          log.topics[0] === this.targetEvents.BridgeableContractDeployed &&
-          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
-        ) {
-          return this.lowerCaseAllStrings(
-            NetworkMonitor.iface.decodeEventLog(
-              NetworkMonitor.bridgeableContractDeployedEventFragment,
-              log.data,
-              log.topics,
-            ) as string[],
-          )
-        }
-      }
-    }
-
-    return undefined
-  }
-
-  decodeCrossChainMessageSentEvent(receipt: TransactionReceipt, target?: string): string | undefined {
-    if (target !== undefined) {
-      target = target.toLowerCase().trim()
-    }
-
-    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        const log = receipt.logs[i]
-        if (
-          log.topics[0] === this.targetEvents.CrossChainMessageSent &&
-          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
-        ) {
-          return (
-            NetworkMonitor.iface.decodeEventLog(
-              NetworkMonitor.crossChainMessageSentEventFragment,
-              log.data,
-              log.topics,
-            )[0] as string
-          ).toLowerCase()
-        }
-      }
-    }
-
-    return undefined
-  }
-
-  decodeFinishedOperatorJobEvent(receipt: TransactionReceipt, target?: string): string[] | undefined {
-    if (target !== undefined) {
-      target = target.toLowerCase().trim()
-    }
-
-    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        const log = receipt.logs[i]
-        if (
-          log.topics[0] === this.targetEvents.FinishedOperatorJob &&
-          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
-        ) {
-          const output: string[] = NetworkMonitor.iface.decodeEventLog(
-            NetworkMonitor.finishedOperatorJobEventFragment,
-            log.data,
-            log.topics,
-          ) as string[]
-          return this.lowerCaseAllStrings(output) as string[]
-        }
-      }
-    }
-
-    return undefined
-  }
-
-  decodeFailedOperatorJobEvent(receipt: TransactionReceipt, target?: string): string | undefined {
-    if (target !== undefined) {
-      target = target.toLowerCase().trim()
-    }
-
-    if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
-      for (let i = 0, l = receipt.logs.length; i < l; i++) {
-        const log = receipt.logs[i]
-        if (
-          log.topics[0] === this.targetEvents.FailedOperatorJob &&
-          (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
-        ) {
-          return (
-            NetworkMonitor.iface.decodeEventLog(
-              NetworkMonitor.failedOperatorJobEventFragment,
-              log.data,
-              log.topics,
-            )[0] as string
-          ).toLowerCase()
-        }
-      }
-    }
-
-    return undefined
-  }
-
-  lowerCaseAllStrings(input: any[], add?: string): any[] {
-    const output = [...input]
-    if (add !== undefined) {
-      output.push(add)
-    }
-
-    for (let i = 0, l = output.length; i < l; i++) {
-      if (typeof output[i] === 'string') {
-        output[i] = (output[i] as string).toLowerCase()
-      }
-    }
-
-    return output
   }
 
   randomTag(): string {
