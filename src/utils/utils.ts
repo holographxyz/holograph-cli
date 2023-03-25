@@ -50,16 +50,20 @@ export const networkToChainId: Record<string, number> = {
 }
 
 export const NETWORK_COLORS: Record<string, string> = {
-  localhost: '##83EEFF',
+  localhost: '#83EEFF',
   localhost2: '#ff0000',
   avalancheTestnet: '#ff0000',
   avalanche: '#ff0000',
   binanceSmartChain: '#f0b90b',
   binanceSmartChainTestnet: '#f0b90b',
-  polygonTestnet: '##B026FF ',
+  polygonTestnet: '#B026FF ',
   polygon: '#B026FF ',
   ethereumTestnetGoerli: '#83EEFF',
-  ethereum: '##83EEFF',
+  ethereum: '#83EEFF',
+  arbitrumTestnetGoerli: '#28a0f0',
+  arbitrum: '#28a0f0',
+  optimismTestnetGoerli: '#3498db',
+  optimism: '#3498db',
 }
 
 export const rgbToHex = (rgb: number): string => {
