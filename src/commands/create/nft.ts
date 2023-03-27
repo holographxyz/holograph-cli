@@ -1,5 +1,6 @@
 import * as inquirer from 'inquirer'
 import * as fs from 'fs-extra'
+import path from 'node:path'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import {Contract} from '@ethersproject/contracts'
@@ -22,7 +23,6 @@ import {
 import {UriTypeIndex} from '../../utils/asset-deployment'
 import {BigNumber, ethers} from 'ethers'
 import {decodeErc721TransferEvent} from '../../events/events'
-import {getABIs} from '../../utils/contracts'
 
 export default class NFT extends Command {
   static description = 'Mint a Holographable NFT.'
@@ -66,8 +66,7 @@ export default class NFT extends Command {
 
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
-    const ENVIRONMENT = getEnvironment()
-    const abis = await getABIs(ENVIRONMENT)
+    const environment = getEnvironment()
     const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
       this.config.configDir,
       undefined,
@@ -126,10 +125,10 @@ export default class NFT extends Command {
     let abiPath: string
     switch (collectionType) {
       case 'CxipERC721':
-        abiPath = abis.CxipERC721ABI
+        abiPath = path.join(__dirname, `../../abi/${environment}/CxipERC721.json`)
         break
       case 'HolographDropERC721':
-        abiPath = abis.HolographDropERC721ABI
+        abiPath = path.join(__dirname, `../../abi/${environment}/HolographDropERC721.json`)
         break
       default:
         this.log('Invalid collection type')
@@ -195,7 +194,7 @@ export default class NFT extends Command {
 
       // Interact with drop contract
       const drop = new ethers.Contract(collectionAddress, collectionABI, account)
-      const salesConfig = await drop.saleDetails()
+      const nativePrice = (await drop.getNativePrice()).mul(numToMint)
 
       // Confirm if user wants to mint
       const mintPrompt: any = await inquirer.prompt([
@@ -203,9 +202,7 @@ export default class NFT extends Command {
           name: 'shouldContinue',
           message: `\nMinting ${numToMint} NFTs from the following collection: ${await drop} at ${
             drop.address
-          } for ${ethers.utils.formatEther(salesConfig.publicSalePrice.mul(numToMint).toString())} ${
-            networks[network].tokenSymbol
-          } on ${network}.\n`,
+          } for ${ethers.utils.formatEther(nativePrice)} ${networks[network].tokenSymbol} on ${network}.\n`,
           type: 'confirm',
           default: false,
         },
@@ -217,7 +214,7 @@ export default class NFT extends Command {
           gasLimit: BigNumber.from('700000'),
           network,
           contract: collection,
-          value: salesConfig.publicSalePrice.mul(numToMint), // must send the price of the drop times the number to purchase
+          value: nativePrice, // must send the price of the drop times the number to purchase
           methodName: 'purchase',
           args: [numToMint],
           waitForReceipt: true,

@@ -493,6 +493,19 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "getNativePrice",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "bytes",
@@ -902,6 +915,19 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newDropsPriceOracle",
+        "type": "address"
+      }
+    ],
+    "name": "setDropsPriceOracle",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {

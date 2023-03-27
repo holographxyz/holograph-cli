@@ -43,13 +43,13 @@ const METADATA_RENDERER_ADDRESS = '0x11b7B5f0Ba1A54b2068c2bDEB3CD1C7d99146f84'
   const animationURI = ''
   const numOfEditions = 100
   const royaltyBps = 5000 // 50%
-  const publicSalePrice = '0.001' // in ether units
+  const publicSalePrice = '1000000' // in USDC with 6 decimals
   const maxSalePurchasePerAddress = 1
   const publicSaleStart = 0 // January 1, 1970 beginning of unix time
   const publicSaleEnd = Math.floor(new Date('9999-12-31').getTime() / 1000) // December 31, 9999, which is the maximum representable date in JavaScript
 
   const saleConfig: SalesConfiguration = {
-    publicSalePrice: ethers.utils.parseEther(publicSalePrice), // in ETH
+    publicSalePrice: ethers.BigNumber.from(publicSalePrice), // in USD
     maxSalePurchasePerAddress: maxSalePurchasePerAddress, // in number of editions an address can purchase
     publicSaleStart: publicSaleStart, // in unix time
     publicSaleEnd: publicSaleEnd, // in unix time
@@ -170,6 +170,19 @@ const METADATA_RENDERER_ADDRESS = '0x11b7B5f0Ba1A54b2068c2bDEB3CD1C7d99146f84'
       } else {
         const deploymentAddress = logs[0] as string
         console.log(`Contract has been deployed to address ${deploymentAddress} on ${'targetNetwork'} network`)
+
+        console.log('Connecting new contract to HolographDropERC721 interface...')
+        // Attach the Holographer interface to the newly deployed contract address
+        const holographDrop = new Contract(deploymentAddress, abis.HolographDropERC721ABI, signer)
+        console.log('HolographDropERC721 contract instance:', holographDrop)
+
+        console.log('Setting price oracle...')
+        const setPriceOracleTx: TransactionResponse = await holographDrop.setDropsPriceOracle(
+          '0x812963cF94bE79d21614ef39cD456A9Abcc3f510',
+        )
+        console.log('Transaction:', setPriceOracleTx.hash)
+        const setPriceOracleReceipt: TransactionReceipt = await setPriceOracleTx.wait()
+        console.log('Transaction receipt:', setPriceOracleReceipt)
       }
     }
   } catch (error) {
