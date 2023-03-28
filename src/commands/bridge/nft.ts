@@ -1,6 +1,4 @@
 import * as inquirer from 'inquirer'
-import * as fs from 'fs-extra'
-import path from 'node:path'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import {formatUnits} from '@ethersproject/units'
@@ -24,6 +22,8 @@ import {
 import {GasPricing} from '../../utils/gas'
 import {generateInitCode} from '../../utils/initcode'
 import {decodeCrossChainMessageSentEvent} from '../../events/events'
+import {getABIs} from '../../utils/contracts'
+import {getEnvironment} from '@holographxyz/environment'
 
 export default class BridgeNFT extends Command {
   static description = 'Bridge a Holographable NFT from one network to another.'
@@ -87,7 +87,9 @@ export default class BridgeNFT extends Command {
 
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
-    const {environment, userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
+    const environment = getEnvironment()
+    const abis = await getABIs(environment)
+    const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
       this.config.configDir,
       undefined,
       true,
@@ -172,7 +174,7 @@ export default class BridgeNFT extends Command {
     }
 
     CliUx.ux.action.start('Retrieving collection smart contract')
-    const collectionABI = await fs.readJson(path.join(__dirname, `../../abi/${environment}/HolographERC721.json`))
+    const collectionABI = abis.HolographDropERC721ABI
     const collection = new Contract(collectionAddress, collectionABI, this.networkMonitor.providers[sourceNetwork])
     CliUx.ux.action.stop()
 
