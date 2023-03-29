@@ -184,6 +184,11 @@ export default class Indexer extends HealthCheck {
         match: functionSignature('cxipMint(uint224,uint8,string)'),
         networkDependant: false,
       },
+      {
+        type: FilterType.functionSig,
+        match: functionSignature('purchase(uint256)'),
+        networkDependant: false,
+      },
     ]
   }
 
