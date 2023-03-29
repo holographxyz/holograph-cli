@@ -438,24 +438,10 @@ export default class Indexer extends HealthCheck {
               // )
 
               await sqsHandleAvailableOperatorJobEvent.call(this, this.networkMonitor, transaction, job.network, tags)
-            } else if (functionSig === functionSignature('cxipMint(uint224,uint8,string)')) {
-              this.networkMonitor.structuredLog(
-                job.network,
-                `handleMintEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
-                tags,
-              )
-
-              // await handleMintEvent.call(
-              //   this,
-              //   this.networkMonitor,
-              //   transaction,
-              //   job.network,
-              //   tags,
-              //   this.updateMintedERC721,
-              // )
-
-              await sqsHandleMintEvent.call(this, this.networkMonitor, transaction, job.network, tags)
-            } else if (functionSig === functionSignature('purchase(uint256)')) {
+            } else if (
+              functionSig === functionSignature('cxipMint(uint224,uint8,string)') ||
+              functionSig === functionSignature('purchase(uint256)')
+            ) {
               this.networkMonitor.structuredLog(
                 job.network,
                 `handleMintEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
