@@ -968,10 +968,13 @@ export class NetworkMonitor {
       }
     }
     // for legacy networks, get average gasPrice
-    else if (this.gasPrices[network].gasPrice === null) {
-      this.gasPrices[network].gasPrice = tx.gasPrice!
-    } else {
-      this.gasPrices[network].gasPrice = this.gasPrices[network].gasPrice!.add(tx.gasPrice!).div(TWO)
+    // it's important to skip this calculation if gas price is 0, which happens in some instances like on BSC
+    else if (tx.gasPrice !== null && tx.gasPrice!.gt(ZERO)) {
+      if (this.gasPrices[network].gasPrice === null) {
+        this.gasPrices[network].gasPrice = tx.gasPrice!
+      } else {
+        this.gasPrices[network].gasPrice = this.gasPrices[network].gasPrice!.add(tx.gasPrice!).div(TWO)
+      }
     }
   }
 
