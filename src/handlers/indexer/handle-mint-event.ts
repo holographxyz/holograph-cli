@@ -2,6 +2,7 @@ import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-p
 
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {UpdateMintedERC721} from '../../types/indexer'
+import {decodeErc721TransferEvent} from '../../events/events'
 
 async function handleMintEvent(
   networkMonitor: NetworkMonitor,
@@ -25,10 +26,7 @@ async function handleMintEvent(
     networkMonitor.structuredLog(network, `Checking for mint details`, tags)
 
     const holographableContractAddress: string = transaction.to!
-    const erc721TransferEvent: string[] | undefined = networkMonitor.decodeErc721TransferEvent(
-      receipt,
-      holographableContractAddress,
-    )
+    const erc721TransferEvent: string[] | undefined = decodeErc721TransferEvent(receipt, holographableContractAddress)
     if (erc721TransferEvent === undefined) {
       networkMonitor.structuredLog(network, `No Transfer event found`, tags)
     } else {
