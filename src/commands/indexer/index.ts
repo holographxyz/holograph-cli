@@ -184,6 +184,11 @@ export default class Indexer extends HealthCheck {
         match: functionSignature('cxipMint(uint224,uint8,string)'),
         networkDependant: false,
       },
+      {
+        type: FilterType.functionSig,
+        match: functionSignature('purchase(uint256)'),
+        networkDependant: false,
+      },
     ]
   }
 
@@ -438,7 +443,10 @@ export default class Indexer extends HealthCheck {
               // )
 
               await sqsHandleAvailableOperatorJobEvent.call(this, this.networkMonitor, transaction, job.network, tags)
-            } else if (functionSig === functionSignature('cxipMint(uint224,uint8,string)')) {
+            } else if (
+              functionSig === functionSignature('cxipMint(uint224,uint8,string)') ||
+              functionSig === functionSignature('purchase(uint256)')
+            ) {
               this.networkMonitor.structuredLog(
                 job.network,
                 `handleMintEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
