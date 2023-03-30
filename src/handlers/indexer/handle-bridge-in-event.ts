@@ -12,6 +12,13 @@ import {
   DeploymentConfig,
   deploymentConfigHash,
 } from '../../utils/contract-deployment'
+import {
+  decodeBridgeableContractDeployedEvent,
+  decodeErc20TransferEvent,
+  decodeErc721TransferEvent,
+  decodeFailedOperatorJobEvent,
+  decodeFinishedOperatorJobEvent,
+} from '../../events/events'
 
 async function handleBridgeInEvent(
   networkMonitor: NetworkMonitor,
@@ -48,7 +55,7 @@ async function handleBridgeInEvent(
       if (operatorJobHash === undefined) {
         networkMonitor.structuredLog(network, `Could not find bridgeInRequest in ${transaction.hash}`, tags)
       } else {
-        const finishedOperatorJobEvent = networkMonitor.decodeFinishedOperatorJobEvent(receipt)
+        const finishedOperatorJobEvent = decodeFinishedOperatorJobEvent(receipt)
 
         if (finishedOperatorJobEvent !== undefined) {
           networkMonitor.structuredLog(
@@ -58,7 +65,7 @@ async function handleBridgeInEvent(
           )
         }
 
-        const failedOperatorJobEvent = networkMonitor.decodeFailedOperatorJobEvent(receipt)
+        const failedOperatorJobEvent = decodeFailedOperatorJobEvent(receipt)
 
         if (failedOperatorJobEvent !== undefined) {
           networkMonitor.structuredLog(
@@ -87,7 +94,7 @@ async function handleBridgeInEvent(
           if (holographableContractAddress === networkMonitor.factoryAddress) {
             networkMonitor.structuredLog(network, `BridgeInRequest identified as contract deployment`, tags)
             networkMonitor.structuredLog(network, `Extracting deployment details`, tags)
-            const deploymentEvent: string[] | undefined = networkMonitor.decodeBridgeableContractDeployedEvent(
+            const deploymentEvent: string[] | undefined = decodeBridgeableContractDeployedEvent(
               receipt,
               networkMonitor.factoryAddress,
             )
@@ -139,7 +146,7 @@ async function handleBridgeInEvent(
               networkMonitor.structuredLog(network, `BridgeInRequest identified as ERC20 transfer`, tags)
               // BRIDGE IN ERC20 TOKENS
               const erc20BeamInfo: BridgeInErc20Args = decodeBridgeInErc20Args(bridgeInPayload)
-              const erc20TransferEvent: any[] | undefined = networkMonitor.decodeErc20TransferEvent(
+              const erc20TransferEvent: any[] | undefined = decodeErc20TransferEvent(
                 receipt,
                 holographableContractAddress,
               )
@@ -156,7 +163,7 @@ async function handleBridgeInEvent(
             } else if (contractType === 'HolographERC721') {
               networkMonitor.structuredLog(network, `BridgeInRequest identified as ERC721 transfer`, tags)
               // Bridge i
-              const erc721TransferEvent: any[] | undefined = networkMonitor.decodeErc721TransferEvent(
+              const erc721TransferEvent: any[] | undefined = decodeErc721TransferEvent(
                 receipt,
                 holographableContractAddress,
               )

@@ -14,6 +14,7 @@ import {
   decodeBridgeInErc721Args,
   decodeBridgeOutErc20Args,
 } from '../../utils/bridge'
+import {decodeAvailableOperatorJobEvent, decodeErc20TransferEvent} from '../../events/events'
 
 async function handleAvailableOperatorJobEvent(
   networkMonitor: NetworkMonitor,
@@ -37,10 +38,7 @@ async function handleAvailableOperatorJobEvent(
 
   if (receipt.status === 1) {
     networkMonitor.structuredLog(network, `Checking for job hash`, tags)
-    const operatorJobPayloadData = networkMonitor.decodeAvailableOperatorJobEvent(
-      receipt,
-      networkMonitor.operatorAddress,
-    )
+    const operatorJobPayloadData = decodeAvailableOperatorJobEvent(receipt, networkMonitor.operatorAddress)
 
     const operatorJobHash = operatorJobPayloadData === undefined ? undefined : operatorJobPayloadData[0]
     const operatorJobPayload = operatorJobPayloadData === undefined ? undefined : operatorJobPayloadData[1]
@@ -93,7 +91,7 @@ async function handleAvailableOperatorJobEvent(
           if (contractType === 'HolographERC20') {
             // Bridge out ERC20 token
             const erc20BeamInfo: BridgeOutErc20Args = decodeBridgeOutErc20Args(bridgeInPayload)
-            const erc20TransferEvent: any[] | undefined = networkMonitor.decodeErc20TransferEvent(
+            const erc20TransferEvent: any[] | undefined = decodeErc20TransferEvent(
               receipt,
               holographableContractAddress,
             )
