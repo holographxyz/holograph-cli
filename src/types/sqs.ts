@@ -11,6 +11,7 @@ export enum EventName {
   BridgePreProcess = 'BridgePreProcess',
   ContractDeployed = 'ContractDeployed',
   AvailableOperatorJob = 'AvailableOperatorJob',
+  Transfer = 'Transfer',
 }
 
 export type SqsMessageBody = {
