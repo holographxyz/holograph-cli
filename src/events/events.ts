@@ -147,13 +147,8 @@ export function decodeErc721TransferEvent(receipt: TransactionReceipt, target?: 
         log.topics[0] === targetEvents.Transfer &&
         (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
       ) {
-        try {
-          const event = iface.decodeEventLog(erc721TransferEventFragment, log.data, log.topics) as string[]
-          return lowerCaseAllStrings(event, log.address)
-        } catch (error) {
-          console.error('Error decoding ERC721 transfer event', error)
-          // TODO: handle this better
-        }
+        const event = iface.decodeEventLog(erc721TransferEventFragment, log.data, log.topics) as string[]
+        return lowerCaseAllStrings(event, log.address)
       }
     }
   }
