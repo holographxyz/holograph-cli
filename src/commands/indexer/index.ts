@@ -457,6 +457,8 @@ export default class Indexer extends HealthCheck {
               // )
 
               await sqsHandleAvailableOperatorJobEvent.call(this, this.networkMonitor, transaction, job.network, tags)
+
+              // eslint-disable-next-line unicorn/prefer-switch
             } else if (
               functionSig === functionSignature('cxipMint(uint224,uint8,string)') ||
               functionSig === functionSignature('purchase(uint256)')
@@ -503,7 +505,7 @@ export default class Indexer extends HealthCheck {
                 tags,
               )
 
-              const decodedEvent = decodeErc721TransferEvent(receipt, undefined)
+              const decodedEvent = decodeErc721TransferEvent(receipt)
               if (decodedEvent !== undefined) {
                 await handleTransferEvent.call(this, this.networkMonitor, transaction, job.network, decodedEvent, tags)
               }
@@ -542,7 +544,7 @@ export default class Indexer extends HealthCheck {
                 tags,
               )
 
-              const decodedEvent = decodeErc721TransferEvent(receipt, undefined)
+              const decodedEvent = decodeErc721TransferEvent(receipt)
               if (decodedEvent !== undefined) {
                 await handleTransferEvent.call(this, this.networkMonitor, transaction, job.network, decodedEvent, tags)
               }
