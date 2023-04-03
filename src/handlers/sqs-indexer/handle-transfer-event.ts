@@ -38,7 +38,7 @@ async function handleTransferEvent(
 
   const messageBody: SqsMessageBody = {
     type: PayloadType.HolographProtocol,
-    eventName: EventName.Transfer,
+    eventName: EventName.TransferERC721,
     tagId: tags,
     chainId: networkToChainId[network],
     holographAddress: networkMonitor.HOLOGRAPH_ADDRESSES[networkMonitor.environment],
