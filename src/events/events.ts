@@ -1,5 +1,6 @@
 import {EventFragment, Interface} from '@ethersproject/abi'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
+import {NetworkMonitor} from '../utils/network-monitor'
 import {lowerCaseAllStrings} from './utils'
 
 const iface: Interface = new Interface([])
@@ -147,8 +148,13 @@ export function decodeErc721TransferEvent(receipt: TransactionReceipt, target?: 
         log.topics[0] === targetEvents.Transfer &&
         (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
       ) {
-        const event = iface.decodeEventLog(erc721TransferEventFragment, log.data, log.topics) as string[]
-        return lowerCaseAllStrings(event, log.address)
+        try {
+          const event = iface.decodeEventLog(erc721TransferEventFragment, log.data, log.topics) as string[]
+          return lowerCaseAllStrings(event, log.address)
+        } catch (e) {
+          console.error('Error decoding ERC721 transfer event', e)
+          // TODO: handle this better
+        }
       }
     }
   }
