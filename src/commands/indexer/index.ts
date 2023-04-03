@@ -479,47 +479,13 @@ export default class Indexer extends HealthCheck {
               // )
 
               await sqsHandleMintEvent.call(this, this.networkMonitor, transaction, job.network, tags)
-            } else if (functionSig === functionSignature('transfer(address,uint256)')) {
-              this.networkMonitor.structuredLog(job.network, `Transfer detected on ${networks[job.network].name}`, tags)
-              this.networkMonitor.structuredLog(
-                job.network,
-                `handleTransferEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
-                tags,
-              )
-
-              const network = job.network
-              const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
-                network,
-                transactionHash: transaction.hash,
-                attempts: 10,
-                canFail: true,
-              })
-
-              if (receipt === null) {
-                throw new Error(`Could not get receipt for ${transaction.hash}`)
-              }
-
-              this.networkMonitor.structuredLog(
-                job.network,
-                `Decoding ERC721 Transfer Event on ${networks[job.network].name}`,
-                tags,
-              )
-
-              const decodedEvent = decodeErc721TransferEvent(receipt)
-              if (decodedEvent !== undefined) {
-                await handleTransferEvent.call(this, this.networkMonitor, transaction, job.network, decodedEvent, tags)
-              }
             } else if (
-              functionSig ===
+              functionSig === functionSignature('transfer(address,uint256)') ||
               functionSignature(
                 'fulfillBasicOrder_efficient_6GL6yc((address,uint256,uint256,address,address,address,uint256,uint256,uint8,uint256,uint256,bytes32,uint256,bytes32,bytes32,uint256,(uint256,address)[],bytes))',
               )
             ) {
-              this.networkMonitor.structuredLog(
-                job.network,
-                `OpenSea sale detected on ${networks[job.network].name}`,
-                tags,
-              )
+              this.networkMonitor.structuredLog(job.network, `Transfer detected on ${networks[job.network].name}`, tags)
               this.networkMonitor.structuredLog(
                 job.network,
                 `handleTransferEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
