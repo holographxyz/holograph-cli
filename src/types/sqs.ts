@@ -36,6 +36,8 @@ export type MintEventPayload = {
 export type TransferEventPayload = {
   tx: string
   blockNum: number
+  from: string
+  to: string
   contractAddress: string
   tokenId: string
 }

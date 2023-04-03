@@ -46,6 +46,8 @@ async function handleTransferEvent(
     payload: {
       tx: transaction.hash,
       blockNum: Number(transaction.blockNumber),
+      from,
+      to,
       contractAddress,
       tokenId,
     },
