@@ -36,7 +36,7 @@ async function handleTransferEvent(
     tags,
   )
 
-  let nftTokenId = tokenId.toString()
+  const nftTokenId = tokenId.toString()
 
   const messageBody: SqsMessageBody = {
     type: PayloadType.HolographProtocol,
