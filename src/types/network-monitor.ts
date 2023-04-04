@@ -1,4 +1,14 @@
 import {BigNumber, Contract, PopulatedTransaction} from 'ethers'
+import {Log, TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
+
+export type LogsParams = {
+  network: string
+  blockNumber: number
+  tags?: (string | number)[]
+  attempts?: number
+  canFail?: boolean
+  interval?: number
+}
 
 export type ExecuteTransactionParams = {
   network: string
@@ -77,4 +87,11 @@ export type TransactionParams = {
   attempts?: number
   canFail?: boolean
   interval?: number
+}
+
+export interface InterestingTransaction {
+  bloomId: string
+  transaction: TransactionResponse
+  receipt?: TransactionReceipt
+  log?: Log
 }

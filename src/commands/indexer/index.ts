@@ -1,5 +1,6 @@
-import {Block, TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
+import {Block, Log, TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
 import {hexZeroPad} from '@ethersproject/bytes'
+import {keccak256} from '@ethersproject/keccak256'
 import {Environment} from '@holographxyz/environment'
 import {networks} from '@holographxyz/networks'
 import {CliUx, Flags} from '@oclif/core'
@@ -15,6 +16,26 @@ import {
   UpdateCrossChainTransactionStatusInput,
   UpdateNftInput,
 } from '../../types/api'
+import {InterestingTransaction} from '../../types/network-monitor'
+import {ContractType, CachedContractMap} from '../../utils/contract'
+import {
+  EventValidator,
+  EventType,
+  BloomType,
+  BloomFilter,
+  buildFilter,
+  BloomFilterMap,
+  TransferERC20Event,
+  TransferERC721Event,
+  TransferSingleERC1155Event,
+  TransferBatchERC1155Event,
+  BridgeableContractDeployedEvent,
+  CrossChainMessageSentEvent,
+  AvailableOperatorJobEvent,
+  FinishedOperatorJobEvent,
+  FailedOperatorJobEvent,
+} from '../../utils/event'
+
 import {BlockJob, FilterType, NetworkMonitor, networksFlag, repairFlag} from '../../utils/network-monitor'
 import {capitalize, functionSignature, numberfy, numericSort, sleep} from '../../utils/utils'
 import {BridgeInErc20Args, BridgeOutErc20Args} from '../../utils/bridge'
@@ -70,6 +91,8 @@ export default class Indexer extends HealthCheck {
   apiColor = color.keyword('orange')
   errorColor = color.keyword('red')
   networkMonitor!: NetworkMonitor
+  bloomFilters!: BloomFilterMap
+  cachedContracts!: CachedContractMap
   dbJobMap: DBJobMap = {}
   environment!: Environment
 
@@ -358,11 +381,91 @@ export default class Indexer extends HealthCheck {
     }
   }
 
+  checkAgainstCachedContracts(contractType: ContractType): EventValidator {
+    return (transaction: TransactionResponse, log: Log): boolean => {
+      return this.cachedContracts[contractType]!.includes(log.address.toLowerCase())
+    }
+  }
+
+  async filterBuilder2(): Promise<void> {
+    this.bloomFilters = {
+      [EventType.BridgeableContractDeployed]: buildFilter(
+        BloomType.topic,
+        EventType.BridgeableContractDeployed,
+        undefined,
+        [
+          {
+            bloomType: BloomType.contract,
+            bloomValue: this.networkMonitor.factoryAddress,
+            bloomValueHashed: this.networkMonitor.factoryAddress,
+          },
+        ],
+      ),
+      [EventType.TransferERC20]: buildFilter(
+        BloomType.topic,
+        EventType.TransferERC20,
+        undefined,
+        undefined,
+        this.checkAgainstCachedContracts(ContractType.ERC20),
+      ),
+      [EventType.TransferERC721]: buildFilter(
+        BloomType.topic,
+        EventType.TransferERC721,
+        undefined,
+        undefined,
+        this.checkAgainstCachedContracts(ContractType.ERC721),
+      ),
+      [EventType.TransferSingleERC1155]: buildFilter(
+        BloomType.topic,
+        EventType.TransferSingleERC1155,
+        undefined,
+        undefined,
+        this.checkAgainstCachedContracts(ContractType.ERC1155),
+      ),
+      [EventType.TransferBatchERC1155]: buildFilter(
+        BloomType.topic,
+        EventType.TransferBatchERC1155,
+        undefined,
+        undefined,
+        this.checkAgainstCachedContracts(ContractType.ERC1155),
+      ),
+      [EventType.CrossChainMessageSent]: buildFilter(BloomType.topic, EventType.CrossChainMessageSent, undefined, [
+        {
+          bloomType: BloomType.contract,
+          bloomValue: this.networkMonitor.operatorAddress,
+          bloomValueHashed: keccak256(this.networkMonitor.operatorAddress),
+        },
+      ]),
+      [EventType.AvailableOperatorJob]: buildFilter(BloomType.topic, EventType.AvailableOperatorJob, undefined, [
+        {
+          bloomType: BloomType.contract,
+          bloomValue: this.networkMonitor.operatorAddress,
+          bloomValueHashed: keccak256(this.networkMonitor.operatorAddress),
+        },
+      ]),
+      [EventType.FinishedOperatorJob]: buildFilter(BloomType.topic, EventType.FinishedOperatorJob, undefined, [
+        {
+          bloomType: BloomType.contract,
+          bloomValue: this.networkMonitor.operatorAddress,
+          bloomValueHashed: keccak256(this.networkMonitor.operatorAddress),
+        },
+      ]),
+      [EventType.FailedOperatorJob]: buildFilter(BloomType.topic, EventType.FailedOperatorJob, undefined, [
+        {
+          bloomType: BloomType.contract,
+          bloomValue: this.networkMonitor.operatorAddress,
+          bloomValueHashed: keccak256(this.networkMonitor.operatorAddress),
+        },
+      ]),
+    }
+    this.networkMonitor.bloomFilters = Object.values(this.bloomFilters) as BloomFilter[]
+  }
+
   async processTransactions(job: BlockJob, transactions: TransactionResponse[]): Promise<void> {
     if (transactions.length > 0) {
       for (const transaction of transactions) {
         const tags: (string | number)[] = []
-        tags.push(transaction.blockNumber as number, this.networkMonitor.randomTag())
+        tags.push(transaction.blockNumber as number)
         this.networkMonitor.structuredLog(
           job.network,
           `Processing transaction ${transaction.hash} at block ${transaction.blockNumber}`,
@@ -1301,4 +1404,204 @@ export default class Indexer extends HealthCheck {
     await SqsService.Instance.healthCheck()
     this.log('SQS service is reachable')
   }
+
+  /* eslint-disable no-case-declarations */
+  async processTransactions2(job: BlockJob, interestingTransactions: InterestingTransaction[]): Promise<void> {
+    if (interestingTransactions.length > 0) {
+      for (let i = 0, l: number = interestingTransactions.length; i < l; i++) {
+        const interestingTransaction: InterestingTransaction = interestingTransactions[i]
+        const transaction: TransactionResponse = interestingTransaction.transaction
+        const tags: (string | number)[] = []
+        tags.push(transaction.blockNumber as number)
+        this.networkMonitor.structuredLog(
+          job.network,
+          `Processing transaction ${transaction.hash} at block ${transaction.blockNumber}`,
+          tags,
+        )
+        const type: EventType = EventType[interestingTransaction.bloomId as keyof typeof EventType]
+        this.networkMonitor.structuredLog(
+          job.network,
+          `Identified this as a ${interestingTransaction.bloomId} event`,
+          tags,
+        )
+        switch (type) {
+          case EventType.BridgeableContractDeployed:
+            const bridgeableContractDeployedEvent: BridgeableContractDeployedEvent | null = this.bloomFilters[
+              type
+            ]!.bloomEvent.decode<BridgeableContractDeployedEvent>(type, interestingTransaction.log!)
+            if (bridgeableContractDeployedEvent !== null) {
+              await this.handleBridgeableContractDeployedEvent(
+                job,
+                interestingTransaction,
+                bridgeableContractDeployedEvent,
+                tags,
+              )
+            }
+
+            break
+          case EventType.TransferERC20:
+            const transferERC20Event: TransferERC20Event | null = this.bloomFilters[
+              type
+            ]!.bloomEvent.decode<TransferERC20Event>(type, interestingTransaction.log!)
+            if (transferERC20Event !== null) {
+              await this.handleTransferERC20Event(job, interestingTransaction, transferERC20Event, tags)
+            }
+
+            break
+          case EventType.TransferERC721:
+            const transferERC721Event: TransferERC721Event | null = this.bloomFilters[
+              type
+            ]!.bloomEvent.decode<TransferERC721Event>(type, interestingTransaction.log!)
+            //            log('transferERC721Event', transferERC721Event);
+            if (transferERC721Event !== null) {
+              await this.handleTransferERC721Event(job, interestingTransaction, transferERC721Event, tags)
+            }
+
+            break
+          case EventType.TransferSingleERC1155:
+            const transferSingleERC1155Event: TransferSingleERC1155Event | null = this.bloomFilters[
+              type
+            ]!.bloomEvent.decode<TransferSingleERC1155Event>(type, interestingTransaction.log!)
+            if (transferSingleERC1155Event !== null) {
+              await this.handleTransferSingleERC1155Event(job, interestingTransaction, transferSingleERC1155Event, tags)
+            }
+
+            break
+          case EventType.TransferBatchERC1155:
+            const transferBatchERC1155Event: TransferBatchERC1155Event | null = this.bloomFilters[
+              type
+            ]!.bloomEvent.decode<TransferBatchERC1155Event>(type, interestingTransaction.log!)
+            if (transferBatchERC1155Event !== null) {
+              await this.handleTransferBatchERC1155Event(job, interestingTransaction, transferBatchERC1155Event, tags)
+            }
+
+            break
+          case EventType.CrossChainMessageSent:
+            const crossChainMessageSentEvent: CrossChainMessageSentEvent | null = this.bloomFilters[
+              type
+            ]!.bloomEvent.decode<CrossChainMessageSentEvent>(type, interestingTransaction.log!)
+            if (crossChainMessageSentEvent !== null) {
+              await this.handleCrossChainMessageSentEvent(job, interestingTransaction, crossChainMessageSentEvent, tags)
+            }
+
+            break
+          case EventType.AvailableOperatorJob:
+            const availableOperatorJobEvent: AvailableOperatorJobEvent | null = this.bloomFilters[
+              type
+            ]!.bloomEvent.decode<AvailableOperatorJobEvent>(type, interestingTransaction.log!)
+            if (availableOperatorJobEvent !== null) {
+              await this.handleAvailableOperatorJobEvent(job, interestingTransaction, availableOperatorJobEvent, tags)
+            }
+
+            break
+          case EventType.FinishedOperatorJob:
+            const finishedOperatorJobEvent: FinishedOperatorJobEvent | null = this.bloomFilters[
+              type
+            ]!.bloomEvent.decode<FinishedOperatorJobEvent>(type, interestingTransaction.log!)
+            if (finishedOperatorJobEvent !== null) {
+              await this.handleFinishedOperatorJobEvent(job, interestingTransaction, finishedOperatorJobEvent, tags)
+            }
+
+            break
+          case EventType.FailedOperatorJob:
+            const failedOperatorJobEvent: FailedOperatorJobEvent | null = this.bloomFilters[
+              type
+            ]!.bloomEvent.decode<FailedOperatorJobEvent>(type, interestingTransaction.log!)
+            if (failedOperatorJobEvent !== null) {
+              await this.handleFailedOperatorJobEvent(job, interestingTransaction, failedOperatorJobEvent, tags)
+            }
+
+            break
+          case EventType.TBD:
+            let filterResult: InterestingTransaction | undefined
+            for (const filter of this.networkMonitor.bloomFilters) {
+              filterResult = await this.networkMonitor.applyFilter(
+                filter,
+                interestingTransaction.log!,
+                interestingTransaction.transaction,
+                this,
+              )
+              if (filterResult !== undefined) {
+                interestingTransactions[i] = filterResult as InterestingTransaction
+                i -= 1
+                break
+              }
+            }
+
+            break
+          default:
+            this.networkMonitor.structuredLogError(job.network, `UNKNOWN EVENT`, tags)
+            break
+        }
+      }
+    }
+  }
+  /* eslint-enable no-case-declarations */
+
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+  /* eslint-disable @typescript-eslint/no-empty-function */
+  async handleBridgeableContractDeployedEvent(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: BridgeableContractDeployedEvent,
+    tags: (string | number)[] = [],
+  ): Promise<void> {}
+
+  async handleTransferERC20Event(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: TransferERC20Event,
+    tags: (string | number)[] = [],
+  ): Promise<void> {}
+
+  async handleTransferERC721Event(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: TransferERC721Event,
+    tags: (string | number)[] = [],
+  ): Promise<void> {}
+
+  async handleTransferSingleERC1155Event(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: TransferSingleERC1155Event,
+    tags: (string | number)[] = [],
+  ): Promise<void> {}
+
+  async handleTransferBatchERC1155Event(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: TransferBatchERC1155Event,
+    tags: (string | number)[] = [],
+  ): Promise<void> {}
+
+  async handleCrossChainMessageSentEvent(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: CrossChainMessageSentEvent,
+    tags: (string | number)[] = [],
+  ): Promise<void> {}
+
+  async handleAvailableOperatorJobEvent(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: AvailableOperatorJobEvent,
+    tags: (string | number)[] = [],
+  ): Promise<void> {}
+
+  async handleFinishedOperatorJobEvent(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: FinishedOperatorJobEvent,
+    tags: (string | number)[] = [],
+  ): Promise<void> {}
+
+  async handleFailedOperatorJobEvent(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: FailedOperatorJobEvent,
+    tags: (string | number)[] = [],
+  ): Promise<void> {}
+  /* eslint-enable @typescript-eslint/no-unused-vars */
+  /* eslint-enable @typescript-eslint/no-empty-function */
 }
