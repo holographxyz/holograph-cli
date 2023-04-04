@@ -39,7 +39,7 @@ export type TransferEventPayload = {
   from: string
   to: string
   contractAddress: string
-  hexEncodedTokenId: string
+  tokenId: string
 }
 
 export type BridgeEventPayload = {
