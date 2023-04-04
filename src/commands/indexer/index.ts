@@ -1,4 +1,4 @@
-import {Block, TransactionResponse} from '@ethersproject/abstract-provider'
+import {Block, TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
 import {hexZeroPad} from '@ethersproject/bytes'
 import {Environment} from '@holographxyz/environment'
 import {networks} from '@holographxyz/networks'
@@ -40,6 +40,8 @@ import {
   handleBridgeEvent,
 } from '../../handlers/sqs-indexer'
 import SqsService from '../../services/sqs-service'
+import {decodeErc721TransferEvent} from '../../events/events'
+import handleTransferEvent from '../../handlers/sqs-indexer/handle-transfer-event'
 
 dotenv.config()
 
@@ -187,6 +189,18 @@ export default class Indexer extends HealthCheck {
       {
         type: FilterType.functionSig,
         match: functionSignature('purchase(uint256)'),
+        networkDependant: false,
+      },
+      {
+        type: FilterType.functionSig,
+        match: functionSignature('transfer(address,uint256)'),
+        networkDependant: false,
+      },
+      {
+        type: FilterType.functionSig,
+        match: functionSignature(
+          'fulfillBasicOrder_efficient_6GL6yc((address,uint256,uint256,address,address,address,uint256,uint256,uint8,uint256,uint256,bytes32,uint256,bytes32,bytes32,uint256,(uint256,address)[],bytes))', // OpenSea Seaport purchase event
+        ),
         networkDependant: false,
       },
     ]
@@ -424,7 +438,7 @@ export default class Indexer extends HealthCheck {
             break
           }
 
-          default:
+          default: {
             if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
               this.networkMonitor.structuredLog(
                 job.network,
@@ -443,6 +457,8 @@ export default class Indexer extends HealthCheck {
               // )
 
               await sqsHandleAvailableOperatorJobEvent.call(this, this.networkMonitor, transaction, job.network, tags)
+
+              // eslint-disable-next-line unicorn/prefer-switch
             } else if (
               functionSig === functionSignature('cxipMint(uint224,uint8,string)') ||
               functionSig === functionSignature('purchase(uint256)')
@@ -463,9 +479,45 @@ export default class Indexer extends HealthCheck {
               // )
 
               await sqsHandleMintEvent.call(this, this.networkMonitor, transaction, job.network, tags)
+            } else if (
+              functionSig === functionSignature('transfer(address,uint256)') ||
+              functionSignature(
+                'fulfillBasicOrder_efficient_6GL6yc((address,uint256,uint256,address,address,address,uint256,uint256,uint8,uint256,uint256,bytes32,uint256,bytes32,bytes32,uint256,(uint256,address)[],bytes))',
+              )
+            ) {
+              this.networkMonitor.structuredLog(job.network, `Transfer detected on ${networks[job.network].name}`, tags)
+              this.networkMonitor.structuredLog(
+                job.network,
+                `handleTransferEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
+                tags,
+              )
+
+              const network = job.network
+              const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
+                network,
+                transactionHash: transaction.hash,
+                attempts: 10,
+                canFail: true,
+              })
+
+              if (receipt === null) {
+                throw new Error(`Could not get receipt for ${transaction.hash}`)
+              }
+
+              this.networkMonitor.structuredLog(
+                job.network,
+                `Decoding ERC721 Transfer Event on ${networks[job.network].name}`,
+                tags,
+              )
+
+              const decodedEvent = decodeErc721TransferEvent(receipt)
+              if (decodedEvent !== undefined) {
+                await handleTransferEvent.call(this, this.networkMonitor, transaction, job.network, decodedEvent, tags)
+              }
             } else {
-              this.networkMonitor.structuredLog(job.network, `irrelevant transaction ${transaction.hash}`, tags)
+              this.networkMonitor.structuredLog(job.network, `Irrelevant transaction ${transaction.hash}`, tags)
             }
+          }
         }
       }
     }
