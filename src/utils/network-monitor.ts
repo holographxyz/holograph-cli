@@ -922,6 +922,7 @@ export class NetworkMonitor {
     if (transaction.hash === '0xcd7ab8a4a47a553f4d1e4c8dfa6291c59d12a09cbe7f85ad863ed32c5e2adb4f') {
       console.log('FOUND IT')
     }
+
     let data: string
     for (const filter of this.filters) {
       const match: string = filter.networkDependant
