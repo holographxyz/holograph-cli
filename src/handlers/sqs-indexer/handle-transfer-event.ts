@@ -53,6 +53,11 @@ async function handleTransferEvent(
     },
   }
 
+  networkMonitor.structuredLog(
+    network,
+    `Sending message with MessageBody: ${JSON.stringify(messageBody)} to queue...`,
+    tags,
+  )
   const response = await SqsService.Instance.sendMessage(messageBody)
   networkMonitor.structuredLog(network, `Response: ${JSON.stringify(response)}`, tags)
 }
