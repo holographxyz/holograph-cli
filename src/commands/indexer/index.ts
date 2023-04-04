@@ -480,7 +480,7 @@ export default class Indexer extends HealthCheck {
 
               await sqsHandleMintEvent.call(this, this.networkMonitor, transaction, job.network, tags)
             } else if (
-              functionSig === functionSignature('transfer(address,uint256)') ||
+              functionSig ===
               functionSignature(
                 'fulfillBasicOrder_efficient_6GL6yc((address,uint256,uint256,address,address,address,uint256,uint256,uint8,uint256,uint256,bytes32,uint256,bytes32,bytes32,uint256,(uint256,address)[],bytes))',
               )

@@ -4,6 +4,8 @@ import {NetworkMonitor} from '../../utils/network-monitor'
 import {EventName, PayloadType, SqsMessageBody} from '../../types/sqs'
 import {networkToChainId} from '../../utils/utils'
 import SqsService from '../../services/sqs-service'
+import {hexZeroPad} from '@ethersproject/bytes'
+import {BigNumber} from 'ethers'
 
 async function handleTransferEvent(
   networkMonitor: NetworkMonitor,
@@ -36,6 +38,8 @@ async function handleTransferEvent(
     tags,
   )
 
+  const hexEncodedTokenId = hexZeroPad(BigNumber.from(tokenId).toHexString(), 32)
+
   const messageBody: SqsMessageBody = {
     type: PayloadType.HolographProtocol,
     eventName: EventName.TransferERC721,
@@ -49,7 +53,7 @@ async function handleTransferEvent(
       from,
       to,
       contractAddress,
-      tokenId,
+      tokenId: hexEncodedTokenId,
     },
   }
 
