@@ -11,6 +11,8 @@ import {formatUnits} from '@ethersproject/units'
 import {keccak256} from '@ethersproject/keccak256'
 import {defaultAbiCoder} from '@ethersproject/abi'
 import {WebSocketProvider, JsonRpcProvider} from '@ethersproject/providers'
+import {isBloom, isTopicInBloom} from 'ethereum-bloom-filters'
+
 import {
   Block,
   BlockWithTransactions,
@@ -34,7 +36,7 @@ import {capitalize, NETWORK_COLORS, zeroAddress} from './utils'
 import {CXIP_ERC721_ADDRESSES, HOLOGRAPH_ADDRESSES} from './contracts'
 import {BlockHeight, BlockHeightProcessType} from '../types/api'
 import ApiService from '../services/api-service'
-import {iface, packetEventFragment, targetEvents} from '../events/events'
+import {erc721TransferEventFragment, iface, packetEventFragment, targetEvents} from '../events/events'
 import {
   BlockParams,
   ExecuteTransactionParams,
@@ -44,6 +46,7 @@ import {
   TransactionParams,
   WalletParams,
 } from '../types/network-monitor'
+import {ethers} from 'ethers'
 
 export const repairFlag = {
   repair: Flags.integer({
@@ -910,13 +913,17 @@ export class NetworkMonitor {
     }
   }
 
-  filterTransaction(
+  async filterTransaction(
     job: BlockJob,
     transaction: TransactionResponse,
     interestingTransactions: TransactionResponse[],
-  ): void {
+  ): Promise<void> {
     const to: string = transaction.to?.toLowerCase() || ''
     const from: string = transaction.from?.toLowerCase() || ''
+
+    if (transaction.hash === '0xcd7ab8a4a47a553f4d1e4c8dfa6291c59d12a09cbe7f85ad863ed32c5e2adb4f') {
+      console.log('FOUND IT')
+    }
     let data: string
     for (const filter of this.filters) {
       const match: string = filter.networkDependant
@@ -946,6 +953,31 @@ export class NetworkMonitor {
           break
       }
     }
+
+    console.log('Catching unfiltred transaction')
+    const transferEventSignature = ethers.utils.Interface.getEventTopic(erc721TransferEventFragment)
+
+    const network = job.network
+    const receipt: TransactionReceipt | null = await this.getTransactionReceipt({
+      network,
+      transactionHash: transaction.hash,
+      attempts: 10,
+      canFail: true,
+    })
+
+    if (receipt === null) {
+      this.structuredLog(network, 'Failed to get transaction receipt', transaction.hash)
+      return
+    }
+
+    if (!isBloom(receipt.logsBloom)) {
+      return
+    }
+
+    // Check if the event signature is present in the Bloom filter
+    const isInBloom = isTopicInBloom(receipt.logsBloom, transferEventSignature)
+
+    console.log('isInBloom', isInBloom)
   }
 
   extractGasData(network: string, block: Block | BlockWithTransactions, tx: TransactionResponse): void {
@@ -1066,7 +1098,7 @@ export class NetworkMonitor {
           this.extractGasData(job.network, block, block.transactions[i])
         }
 
-        this.filterTransaction(job, block.transactions[i], interestingTransactions)
+        await this.filterTransaction(job, block.transactions[i], interestingTransactions)
       }
 
       if (recentBlock) {
