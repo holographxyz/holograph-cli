@@ -37,7 +37,7 @@ import {
 } from '../../utils/event'
 
 import {BlockJob, FilterType, NetworkMonitor, networksFlag, repairFlag} from '../../utils/network-monitor'
-import {capitalize, functionSignature, numberfy, numericSort, sleep} from '../../utils/utils'
+import {capitalize, functionSignature, numberfy, numericSort, sleep, zeroAddress} from '../../utils/utils'
 import {BridgeInErc20Args, BridgeOutErc20Args} from '../../utils/bridge'
 import {DeploymentConfig} from '../../utils/contract-deployment'
 import {HealthCheck} from '../../base-commands/healthcheck'
@@ -141,11 +141,13 @@ export default class Indexer extends HealthCheck {
     }
 
     this.networkMonitor = new NetworkMonitor({
+      enableV2: true,
       parent: this,
       configFile,
       networks: flags.networks,
       debug: this.debug,
       processTransactions: this.processTransactions,
+      processTransactions2: this.processTransactions2,
       lastBlockFilename: 'indexer-blocks.json',
       repair: flags.repair,
       apiService: this.apiService,
@@ -170,7 +172,7 @@ export default class Indexer extends HealthCheck {
 
     CliUx.ux.action.start(`Starting indexer`)
     const continuous = !flags.repair // If repair is set, run network monitor stops after catching up to the latest block
-    await this.networkMonitor.run(continuous, undefined, this.filterBuilder)
+    await this.networkMonitor.run(continuous, undefined, this.filterBuilder2)
     CliUx.ux.action.stop('🚀')
 
     // Start health check server on port 6000 or healthCheckPort
@@ -1545,7 +1547,16 @@ export default class Indexer extends HealthCheck {
     interestingTransaction: InterestingTransaction,
     event: BridgeableContractDeployedEvent,
     tags: (string | number)[] = [],
-  ): Promise<void> {}
+  ): Promise<void> {
+    // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
+    await sqsHandleContractDeployedEvent.call(
+      this,
+      this.networkMonitor,
+      interestingTransaction.transaction,
+      job.network,
+      tags,
+    )
+  }
 
   async handleTransferERC20Event(
     job: BlockJob,
@@ -1559,7 +1570,30 @@ export default class Indexer extends HealthCheck {
     interestingTransaction: InterestingTransaction,
     event: TransferERC721Event,
     tags: (string | number)[] = [],
-  ): Promise<void> {}
+  ): Promise<void> {
+    let isNewMint = false
+    if (event.from === zeroAddress) {
+      isNewMint = true
+      for (const log of interestingTransaction.allLogs!) {
+        if (
+          this.networkMonitor.operatorAddress === log.address.toLowerCase() &&
+          this.bloomFilters[EventType.FinishedOperatorJob]!.bloomEvent.sigHash === log.topics[0]
+        ) {
+          isNewMint = false
+          break
+        }
+      }
+    }
+
+    await (isNewMint ? sqsHandleMintEvent.call(this, this.networkMonitor, interestingTransaction.transaction, job.network, tags) : handleTransferEvent.call(
+        this,
+        this.networkMonitor,
+        interestingTransaction.transaction,
+        job.network,
+        [event.from, event.to, event.tokenId.toHexString(), event.contract] as string[],
+        tags,
+      ));
+  }
 
   async handleTransferSingleERC1155Event(
     job: BlockJob,
@@ -1580,21 +1614,36 @@ export default class Indexer extends HealthCheck {
     interestingTransaction: InterestingTransaction,
     event: CrossChainMessageSentEvent,
     tags: (string | number)[] = [],
-  ): Promise<void> {}
+  ): Promise<void> {
+    // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
+    await handleBridgeEvent.call(this, this.networkMonitor, interestingTransaction.transaction, job.network, tags)
+  }
 
   async handleAvailableOperatorJobEvent(
     job: BlockJob,
     interestingTransaction: InterestingTransaction,
     event: AvailableOperatorJobEvent,
     tags: (string | number)[] = [],
-  ): Promise<void> {}
+  ): Promise<void> {
+    // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
+    await sqsHandleAvailableOperatorJobEvent.call(
+      this,
+      this.networkMonitor,
+      interestingTransaction.transaction,
+      job.network,
+      tags,
+    )
+  }
 
   async handleFinishedOperatorJobEvent(
     job: BlockJob,
     interestingTransaction: InterestingTransaction,
     event: FinishedOperatorJobEvent,
     tags: (string | number)[] = [],
-  ): Promise<void> {}
+  ): Promise<void> {
+    // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
+    await handleBridgeEvent.call(this, this.networkMonitor, interestingTransaction.transaction, job.network, tags)
+  }
 
   async handleFailedOperatorJobEvent(
     job: BlockJob,

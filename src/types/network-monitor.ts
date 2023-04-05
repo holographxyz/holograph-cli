@@ -94,4 +94,5 @@ export interface InterestingTransaction {
   transaction: TransactionResponse
   receipt?: TransactionReceipt
   log?: Log
+  allLogs?: Log[]
 }

@@ -301,6 +301,7 @@ type NetworkMonitorOptions = {
   configFile: ConfigFile
   networks?: string[]
   debug: (...args: string[]) => void
+  enableV2?: boolean
   processTransactions?: (job: BlockJob, transactions: TransactionResponse[]) => Promise<void>
   processTransactions2?: (job: BlockJob, transactions: InterestingTransaction[]) => Promise<void>
   filters?: TransactionFilter[]
@@ -312,6 +313,7 @@ type NetworkMonitorOptions = {
 }
 
 export class NetworkMonitor {
+  enableV2 = false
   verbose = true
   environment: Environment
   parent: ImplementsCommand
@@ -431,6 +433,10 @@ export class NetworkMonitor {
     this.debug = options.debug.bind(this.parent)
     if (options.filters !== undefined) {
       this.filters = options.filters
+    }
+
+    if (options.enableV2) {
+      this.enableV2 = options.enableV2
     }
 
     if (options.verbose !== undefined) {
@@ -916,7 +922,11 @@ export class NetworkMonitor {
     this.lastProcessBlockDone[network] = Date.now()
     if (this.blockJobs[network].length > 0) {
       const blockJob: BlockJob = this.blockJobs[network][0] as BlockJob
-      this.processBlock(blockJob)
+      if (this.enableV2) {
+        this.processBlock2(blockJob)
+      } else {
+        this.processBlock(blockJob)
+      }
     } else if (this.needToSubscribe) {
       setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
     } else {
@@ -1022,12 +1032,14 @@ export class NetworkMonitor {
                 bloomId: filter.bloomId,
                 transaction: txMap[log.transactionHash],
                 log,
+                allLogs: logs,
               } as InterestingTransaction)
             } else if (this.tbdCachedContracts.includes(log.address.toLowerCase()) && !tbdLogs.includes(log.logIndex)) {
               interestingTransactions.push({
                 bloomId: 'TBD',
                 transaction: txMap[log.transactionHash],
                 log,
+                allLogs: logs,
               } as InterestingTransaction)
               tbdLogs.push(log.logIndex)
             }
@@ -1036,6 +1048,7 @@ export class NetworkMonitor {
               bloomId: filter.bloomId,
               transaction: txMap[log.transactionHash],
               log,
+              allLogs: logs,
             } as InterestingTransaction)
           }
         }
