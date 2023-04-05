@@ -92,7 +92,11 @@ export default class Indexer extends HealthCheck {
   errorColor = color.keyword('red')
   networkMonitor!: NetworkMonitor
   bloomFilters!: BloomFilterMap
-  cachedContracts!: CachedContractMap
+  cachedContracts: CachedContractMap = {
+    [ContractType.ERC20]: [],
+    [ContractType.ERC721]: [],
+    [ContractType.ERC1155]: [],
+  }
   dbJobMap: DBJobMap = {}
   environment!: Environment
 
