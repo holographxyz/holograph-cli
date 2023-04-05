@@ -1562,6 +1562,8 @@ export default class Indexer extends HealthCheck {
     event: BridgeableContractDeployedEvent,
     tags: (string | number)[] = [],
   ): Promise<void> {
+    // add contract to holographable contracts cache
+    this.cachedContracts[event.contractAddress] = true
     // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
     await sqsHandleContractDeployedEvent.call(
       this,
