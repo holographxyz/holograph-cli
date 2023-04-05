@@ -465,7 +465,7 @@ export default class Indexer extends HealthCheck {
     if (transactions.length > 0) {
       for (const transaction of transactions) {
         const tags: (string | number)[] = []
-        tags.push(transaction.blockNumber as number)
+        tags.push(transaction.blockNumber as number, this.networkMonitor.randomTag())
         this.networkMonitor.structuredLog(
           job.network,
           `Processing transaction ${transaction.hash} at block ${transaction.blockNumber}`,
@@ -1412,7 +1412,7 @@ export default class Indexer extends HealthCheck {
         const interestingTransaction: InterestingTransaction = interestingTransactions[i]
         const transaction: TransactionResponse = interestingTransaction.transaction
         const tags: (string | number)[] = []
-        tags.push(transaction.blockNumber as number)
+        tags.push(transaction.blockNumber as number, this.networkMonitor.randomTag())
         this.networkMonitor.structuredLog(
           job.network,
           `Processing transaction ${transaction.hash} at block ${transaction.blockNumber}`,
