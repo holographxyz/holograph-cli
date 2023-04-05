@@ -1585,14 +1585,16 @@ export default class Indexer extends HealthCheck {
       }
     }
 
-    await (isNewMint ? sqsHandleMintEvent.call(this, this.networkMonitor, interestingTransaction.transaction, job.network, tags) : handleTransferEvent.call(
-        this,
-        this.networkMonitor,
-        interestingTransaction.transaction,
-        job.network,
-        [event.from, event.to, event.tokenId.toHexString(), event.contract] as string[],
-        tags,
-      ));
+    await (isNewMint
+      ? sqsHandleMintEvent.call(this, this.networkMonitor, interestingTransaction.transaction, job.network, tags)
+      : handleTransferEvent.call(
+          this,
+          this.networkMonitor,
+          interestingTransaction.transaction,
+          job.network,
+          [event.from, event.to, event.tokenId.toHexString(), event.contract] as string[],
+          tags,
+        ))
   }
 
   async handleTransferSingleERC1155Event(
