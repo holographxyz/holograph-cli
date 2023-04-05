@@ -97,6 +97,7 @@ export default class Indexer extends HealthCheck {
     [ContractType.ERC721]: [],
     [ContractType.ERC1155]: [],
   }
+
   dbJobMap: DBJobMap = {}
   environment!: Environment
 
