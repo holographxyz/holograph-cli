@@ -18,7 +18,7 @@ export interface BloomFilterValidator {
   bloomValueHashed: string
 }
 
-export type EventValidator = (transaction: TransactionResponse, log: Log) => boolean
+export type EventValidator = (network: string, transaction: TransactionResponse, log: Log) => Promise<boolean>
 
 export interface BloomFilter {
   bloomEvent: Event

@@ -17,7 +17,7 @@ import {
   UpdateNftInput,
 } from '../../types/api'
 import {InterestingTransaction} from '../../types/network-monitor'
-import {ContractType, CachedContractMap} from '../../utils/contract'
+import {ContractType} from '../../utils/contract'
 import {
   EventValidator,
   EventType,
@@ -92,11 +92,7 @@ export default class Indexer extends HealthCheck {
   errorColor = color.keyword('red')
   networkMonitor!: NetworkMonitor
   bloomFilters!: BloomFilterMap
-  cachedContracts: CachedContractMap = {
-    [ContractType.ERC20]: [],
-    [ContractType.ERC721]: [],
-    [ContractType.ERC1155]: [],
-  }
+  cachedContracts: {[key: string]: boolean} = {}
 
   dbJobMap: DBJobMap = {}
   environment!: Environment
@@ -389,8 +385,20 @@ export default class Indexer extends HealthCheck {
   }
 
   checkAgainstCachedContracts(contractType: ContractType): EventValidator {
-    return (transaction: TransactionResponse, log: Log): boolean => {
-      return this.cachedContracts[contractType]!.includes(log.address.toLowerCase())
+    return async (network: string, transaction: TransactionResponse, log: Log): Promise<boolean> => {
+      if (contractType === ContractType.ERC20 || contractType === ContractType.ERC1155) {
+        // drop currently unsupported contracts
+        return false
+      }
+
+      if (!(log.address.toLowerCase() in this.cachedContracts)) {
+        // check on-chain data, add result to cache
+        const registryContract = this.networkMonitor.registryContract.connect(this.networkMonitor.providers[network])
+        this.cachedContracts[log.address.toLowerCase()] = await registryContract.isHolographedContract(log.address)
+      }
+
+      // return cached data
+      return this.cachedContracts[log.address.toLowerCase()]
     }
   }
 
@@ -1527,6 +1535,7 @@ export default class Indexer extends HealthCheck {
                 interestingTransaction.log!,
                 interestingTransaction.transaction,
                 this,
+                job.network,
               )
               if (filterResult !== undefined) {
                 interestingTransactions[i] = filterResult as InterestingTransaction
