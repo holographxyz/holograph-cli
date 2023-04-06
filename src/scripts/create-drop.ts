@@ -6,7 +6,7 @@ import {
   generateHolographERC721InitCode,
   generateMetadataRendererInitCode,
 } from '../utils/initcode'
-import {allEventsEnabled, sha3, web3} from '../utils/utils'
+import {dropEventsEnabled, sha3, web3} from '../utils/utils'
 import {networks} from '@holographxyz/networks'
 import {strictECDSA, Signature} from '../utils/signature'
 import {DeploymentConfig} from '../utils/contract-deployment'
@@ -36,9 +36,9 @@ const METADATA_RENDERER_ADDRESS = '0x03714aCb8E3325E43d967A2549541295a672d999' /
   const contractTypeHash = '0x' + web3.utils.asciiToHex(contractType).slice(2).padStart(64, '0')
 
   // Set the static values for the test
-  const collectionName = 'My Collection'
-  const collectionSymbol = 'MYC'
-  const description = 'My Description'
+  const collectionName = 'Holograph Test Edition'
+  const collectionSymbol = 'EDT'
+  const description = 'This is a test edition'
   const imageURI = 'ipfs://asdf'
   const animationURI = ''
   const numOfEditions = 1000
@@ -91,7 +91,7 @@ const METADATA_RENDERER_ADDRESS = '0x03714aCb8E3325E43d967A2549541295a672d999' /
     collectionName, // string memory contractName
     collectionSymbol, // string memory contractSymbol
     royaltyBps, // uint16 contractBps
-    allEventsEnabled(), // uint256 eventConfig -  all 32 bytes of f
+    dropEventsEnabled(), // uint256 eventConfig - encoded hash of event config for drops
     false, // bool skipInit
     holographDropERC721InitCode,
   )
@@ -171,18 +171,19 @@ const METADATA_RENDERER_ADDRESS = '0x03714aCb8E3325E43d967A2549541295a672d999' /
         const deploymentAddress = logs[0] as string
         console.log(`Contract has been deployed to address ${deploymentAddress} on ${'targetNetwork'} network`)
 
-        console.log('Connecting new contract to HolographDropERC721 interface...')
-        // Attach the Holographer interface to the newly deployed contract address
-        const holographDrop = new Contract(deploymentAddress, abis.HolographDropERC721ABI, signer)
-        console.log('HolographDropERC721 contract instance:', holographDrop)
+        // Disable now that the price oracle is hardcoded in the contract
+        // console.log('Connecting new contract to HolographDropERC721 interface...')
+        // // Attach the Holographer interface to the newly deployed contract address
+        // const holographDrop = new Contract(deploymentAddress, abis.HolographDropERC721ABI, signer)
+        // console.log('HolographDropERC721 contract instance:', holographDrop)
 
-        console.log('Setting price oracle...')
-        const setPriceOracleTx: TransactionResponse = await holographDrop.setDropsPriceOracle(
-          '0x812963cF94bE79d21614ef39cD456A9Abcc3f510',
-        )
-        console.log('Transaction:', setPriceOracleTx.hash)
-        const setPriceOracleReceipt: TransactionReceipt = await setPriceOracleTx.wait()
-        console.log('Transaction receipt:', setPriceOracleReceipt)
+        // console.log('Setting price oracle...')
+        // const setPriceOracleTx: TransactionResponse = await holographDrop.setDropsPriceOracle(
+        //   '0x812963cF94bE79d21614ef39cD456A9Abcc3f510',
+        // )
+        // console.log('Transaction:', setPriceOracleTx.hash)
+        // const setPriceOracleReceipt: TransactionReceipt = await setPriceOracleTx.wait()
+        // console.log('Transaction receipt:', setPriceOracleReceipt)
       }
     }
   } catch (error) {

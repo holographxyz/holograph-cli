@@ -71,7 +71,7 @@ export function generateHolographERC721InitCode(
 //     collectionName, // string memory contractName
 //     collectionSymbol, // string memory contractSymbol
 //     royaltyBps, // uint16 contractBps
-//     allEventsEnabled(), // uint256 eventConfig -  all 32 bytes of f
+//     dropEventsEnabled(), // uint256 eventConfig - dropEventsEnabled
 //     false, // bool skipInit
 //     generateInitCode(
 //       ['bytes32', 'address', 'bytes'],

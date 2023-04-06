@@ -8,7 +8,7 @@ import {networks} from '@holographxyz/networks'
 
 import {BytecodeType, bytecodes, EditionsMetadataRenderer} from '../../utils/bytecodes'
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {web3, zeroAddress, remove0x, sha3} from '../../utils/utils'
+import {web3, zeroAddress, remove0x, sha3, dropEventsEnabled} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {
   ContractDeployment,
@@ -18,12 +18,7 @@ import {
   decodeDeploymentConfigInput,
 } from '../../utils/contract-deployment'
 import {Signature, strictECDSA} from '../../utils/signature'
-import {
-  HolographERC20Event,
-  HolographERC721Event,
-  allEventsEnabled,
-  configureEvents,
-} from '../../utils/holograph-contract-events'
+import {HolographERC20Event, HolographERC721Event, configureEvents} from '../../utils/holograph-contract-events'
 import {
   validateBytes,
   checkBytecodeTypeFlag,
@@ -35,7 +30,7 @@ import {
   checkTransactionHashFlag,
   checkUriTypeFlag,
 } from '../../utils/validation'
-import {ContractFactory, ethers} from 'ethers'
+import {ethers} from 'ethers'
 import {UriTypeIndex} from '../../utils/asset-deployment'
 import {
   generateHolographDropERC721InitCode,
@@ -135,7 +130,7 @@ export default class Contract extends Command {
     let contractType = ''
     let contractTypeHash: string
     let byteCode: string
-    let eventConfig: string = allEventsEnabled()
+    let eventConfig: string = dropEventsEnabled()
     let sourceInitCode: string = generateInitCode(['bytes'], ['0x00'])
     let initCode: string = generateInitCode(['bytes'], [sourceInitCode])
 
@@ -159,6 +154,8 @@ export default class Contract extends Command {
     let sig: string
     let signature: Signature
     let needToSign = false
+
+    const METADATA_RENDERER_ADDRESS = '0x03714aCb8E3325E43d967A2549541295a672d999'
 
     const deploymentType: DeploymentType = await checkDeploymentTypeFlag(
       flags.deploymentType,
@@ -446,13 +443,13 @@ export default class Contract extends Command {
 
             // Deploy a metadata renderer contract
             // TODO: this needs to be removed in the future and a reference to the deployed EditionsMetadataRendererProxy needs to be made here
-            const rendererFactory = new ContractFactory(
-              abis.EditionsMetadataRendererABI,
-              EditionsMetadataRenderer.bytecode,
-              account,
-            )
-            const metadataRenderer = await rendererFactory.deploy()
-            this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
+            // const rendererFactory = new ContractFactory(
+            //   abis.EditionsMetadataRendererABI,
+            //   EditionsMetadataRenderer.bytecode,
+            //   account,
+            // )
+            // const metadataRenderer = await rendererFactory.deploy()
+            // this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
 
             const metadataRendererInitCode = generateMetadataRendererInitCode(description, imageURI, animationURI)
             const holographDropERC721InitCode = generateHolographDropERC721InitCode(
@@ -467,7 +464,7 @@ export default class Contract extends Command {
               royaltyBps, // percentage of royalties in bps
               false, // enableOpenSeaRoyaltyRegistry
               salesConfig,
-              metadataRenderer.address, // metadataRenderer
+              'METADATA_RENDERER_ADDRESS',
               metadataRendererInitCode, // metadataRendererInit
             )
 
@@ -475,7 +472,7 @@ export default class Contract extends Command {
               collectionName, // string memory contractName
               collectionSymbol, // string memory contractSymbol
               royaltyBps, // uint16 contractBps
-              allEventsEnabled(), // uint256 eventConfig -  all 32 bytes of f
+              dropEventsEnabled(), // uint256 eventConfig - encoded hash of the event config for drops
               false, // bool skipInit
               holographDropERC721InitCode,
             )

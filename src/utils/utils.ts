@@ -77,6 +77,10 @@ export function allEventsEnabled(): string {
   return '0x' + 'ff'.repeat(32)
 }
 
+export function dropEventsEnabled(): string {
+  return '0x0000000000000000000000000000000000000000000000000000000000065000'
+}
+
 export function remove0x(input: string): string {
   if (input.startsWith('0x')) {
     return input.slice(2)
