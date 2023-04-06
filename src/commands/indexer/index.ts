@@ -386,7 +386,7 @@ export default class Indexer extends HealthCheck {
 
   checkAgainstCachedContracts(contractType: ContractType): EventValidator {
     return async (network: string, transaction: TransactionResponse, log: Log): Promise<boolean> => {
-      if (contractType === ContractType.ERC20 || contractType === ContractType.ERC1155) {
+      if (contractType === ContractType.ERC1155) {
         // drop currently unsupported contracts
         return false
       }
@@ -1433,7 +1433,7 @@ export default class Indexer extends HealthCheck {
           `Processing transaction ${transaction.hash} at block ${transaction.blockNumber}`,
           tags,
         )
-        const type: EventType = EventType[interestingTransaction.bloomId as keyof typeof EventType]
+        let type: EventType = EventType[interestingTransaction.bloomId as keyof typeof EventType]
         this.networkMonitor.structuredLog(
           job.network,
           `Identified this as a ${interestingTransaction.bloomId} event`,
@@ -1455,21 +1455,26 @@ export default class Indexer extends HealthCheck {
 
             break
           case EventType.TransferERC20:
-            const transferERC20Event: TransferERC20Event | null = this.bloomFilters[
-              type
-            ]!.bloomEvent.decode<TransferERC20Event>(type, interestingTransaction.log!)
-            if (transferERC20Event !== null) {
-              await this.handleTransferERC20Event(job, interestingTransaction, transferERC20Event, tags)
-            }
-
-            break
           case EventType.TransferERC721:
-            const transferERC721Event: TransferERC721Event | null = this.bloomFilters[
-              type
-            ]!.bloomEvent.decode<TransferERC721Event>(type, interestingTransaction.log!)
-            //            log('transferERC721Event', transferERC721Event);
-            if (transferERC721Event !== null) {
-              await this.handleTransferERC721Event(job, interestingTransaction, transferERC721Event, tags)
+            const testLog = interestingTransaction.log!
+            if (testLog.data === undefined || testLog.data === null || testLog.data === '' || testLog.data === '0x') {
+              type = EventType.TransferERC721
+              // this is ERC721
+              const transferERC721Event: TransferERC721Event | null = this.bloomFilters[
+                type
+              ]!.bloomEvent.decode<TransferERC721Event>(type, interestingTransaction.log!)
+              //            log('transferERC721Event', transferERC721Event);
+              if (transferERC721Event !== null) {
+                await this.handleTransferERC721Event(job, interestingTransaction, transferERC721Event, tags)
+              }
+            } else {
+              // this is ERC20
+              const transferERC20Event: TransferERC20Event | null = this.bloomFilters[
+                type
+              ]!.bloomEvent.decode<TransferERC20Event>(type, interestingTransaction.log!)
+              if (transferERC20Event !== null) {
+                await this.handleTransferERC20Event(job, interestingTransaction, transferERC20Event, tags)
+              }
             }
 
             break

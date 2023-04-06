@@ -1332,7 +1332,7 @@ export class NetworkMonitor {
           this.structuredLog(job.network, `${color.red('Could not get logs for block')}`, job.block)
         } else {
           logs = this.sortLogs(logs as Log[])
-          this.filterTransactions2(job, block.transactions, logs as Log[], interestingTransactions)
+          await this.filterTransactions2(job, block.transactions, logs as Log[], interestingTransactions)
         }
       }
 
