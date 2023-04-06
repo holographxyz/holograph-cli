@@ -1398,10 +1398,10 @@
     dotenv "^10.0.0"
     path "^0.12.7"
 
-"@holographxyz/networks@0.1.19":
-  version "0.1.19"
-  resolved "https://registry.yarnpkg.com/@holographxyz/networks/-/networks-0.1.19.tgz#be572198945633d337b7468fd431bd3a83caedde"
-  integrity sha512-FbPfofoU4jtu2aiNKDg+Lop3qrZRef6JYRhU3PX8WGjyWz1oliK2X3E/N025NtVfFlatfLPP4WsBQWubAaXBBw==
+"@holographxyz/networks@0.1.21":
+  version "0.1.21"
+  resolved "https://registry.yarnpkg.com/@holographxyz/networks/-/networks-0.1.21.tgz#1f654227591ac3a73f4a159782df4c861144dd8c"
+  integrity sha512-+QNdmdwyfSeKUI1toyOCSFQ50BJg4b4Ixzf5ElfQBXqnrKqFByxDPH4ryETrmh1zXM1SISmgYPmH63hWnt/P2w==
   dependencies:
     "@ethersproject/bignumber" "^5.7.0"
     "@holographxyz/environment" "0.1.10"
