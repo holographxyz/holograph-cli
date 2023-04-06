@@ -6,7 +6,7 @@ import {BytesLike} from '@ethersproject/bytes'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {networks} from '@holographxyz/networks'
 
-import {BytecodeType, bytecodes, EditionsMetadataRenderer} from '../../utils/bytecodes'
+import {BytecodeType, bytecodes} from '../../utils/bytecodes'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {web3, zeroAddress, remove0x, sha3, dropEventsEnabled} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
@@ -41,8 +41,6 @@ import {
 
 import {SalesConfiguration} from '../../types/drops'
 import {decodeBridgeableContractDeployedEvent} from '../../events/events'
-import {getABIs} from '../../utils/contracts'
-import {getEnvironment} from '@holographxyz/environment'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
   const codeFile: string = await checkStringFlag(undefined, prompt)
@@ -81,8 +79,6 @@ export default class Contract extends Command {
     const {flags} = await this.parse(Contract)
     this.log('User configurations loaded.')
 
-    const ENVIRONMENT = getEnvironment()
-    const abis = await getABIs(ENVIRONMENT)
     let configHash: BytesLike
     let tx!: string
     let txNetwork: string | undefined
@@ -437,20 +433,6 @@ export default class Contract extends Command {
               salesConfig = Object.values(saleConfig)
             }
 
-            // Connect wallet to the provider
-            const provider = this.networkMonitor.providers[chainType]
-            const account = userWallet.connect(provider)
-
-            // Deploy a metadata renderer contract
-            // TODO: this needs to be removed in the future and a reference to the deployed EditionsMetadataRendererProxy needs to be made here
-            // const rendererFactory = new ContractFactory(
-            //   abis.EditionsMetadataRendererABI,
-            //   EditionsMetadataRenderer.bytecode,
-            //   account,
-            // )
-            // const metadataRenderer = await rendererFactory.deploy()
-            // this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
-
             const metadataRendererInitCode = generateMetadataRendererInitCode(description, imageURI, animationURI)
             const holographDropERC721InitCode = generateHolographDropERC721InitCode(
               // eslint-disable-next-line unicorn/prefer-string-slice
@@ -464,7 +446,7 @@ export default class Contract extends Command {
               royaltyBps, // percentage of royalties in bps
               false, // enableOpenSeaRoyaltyRegistry
               salesConfig,
-              'METADATA_RENDERER_ADDRESS',
+              METADATA_RENDERER_ADDRESS,
               metadataRendererInitCode, // metadataRendererInit
             )
 

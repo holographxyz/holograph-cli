@@ -182,12 +182,12 @@ export default class BridgeNFT extends Command {
     CliUx.ux.action.start('Checking if token ID exists on ' + sourceNetwork + ' network.')
 
     // TODO: There seems to be a bug with the exists function. It throws an error
-    // const tokenExists: boolean = await collection.exists(tokenId)
-    // CliUx.ux.action.stop()
-    // if (!tokenExists) {
-    //   this.log('Token does not exist.')
-    //   this.exit()
-    // }
+    const tokenExists: boolean = await collection.exists(tokenId)
+    CliUx.ux.action.stop()
+    if (!tokenExists) {
+      this.log('Token does not exist.')
+      this.exit()
+    }
 
     const data: BytesLike = generateInitCode(
       ['address', 'address', 'uint256'],
