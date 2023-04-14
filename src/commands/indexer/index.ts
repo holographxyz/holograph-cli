@@ -93,7 +93,7 @@ export default class Indexer extends HealthCheck {
   networkMonitor!: NetworkMonitor
   bloomFilters!: BloomFilterMap
   cachedContracts: {[key: string]: boolean} = {}
-  allDeployedCollections: string[] = []
+  allDeployedCollections?: string[]
 
   dbJobMap: DBJobMap = {}
   environment!: Environment
@@ -161,7 +161,7 @@ export default class Indexer extends HealthCheck {
 
       this.log(`API: getting all deployed collections from DB`)
       this.allDeployedCollections = await this.apiService.getAllDeployedCollections()
-      for (const holographableContract of this.allDeployedCollections) {
+      for (const holographableContract of this.allDeployedCollections!) {
         this.cachedContracts[holographableContract.toLowerCase()] = true
       }
 
@@ -1476,8 +1476,8 @@ export default class Indexer extends HealthCheck {
               let isPartOfBridgeTx = false
               for (const log of interestingTransaction.allLogs!) {
                 if (
-                  log.topic[0] === this.bloomFilters[EventType.CrossChainMessageSent].bloomValueHashed ||
-                  log.topic[0] === this.bloomFilters[EventType.FinishedOperatorJob].bloomValueHashed
+                  log.topics[0] === this.bloomFilters[EventType.CrossChainMessageSent]!.bloomValueHashed ||
+                  log.topics[0] === this.bloomFilters[EventType.FinishedOperatorJob]!.bloomValueHashed
                 ) {
                   isPartOfBridgeTx = true
                   break

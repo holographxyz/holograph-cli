@@ -954,7 +954,7 @@ export class NetworkMonitor {
     const event: Event = filter.bloomEvent
     if (log.topics.length > 0 && log.topics[0] === event.sigHash) {
       if (filter.eventValidator) {
-        if (await filter.eventValidator.bind(parent)(network, tx, log)) {
+        if (filter.eventValidator.bind(parent)(network, tx, log)) {
           return {
             bloomId: filter.bloomId,
             transaction: tx,
@@ -1028,7 +1028,7 @@ export class NetworkMonitor {
       for (const log of logs) {
         if (log.topics.length > 0 && log.topics[0] === event.sigHash) {
           if (filter.eventValidator) {
-            if (await filter.eventValidator.bind(this.parent)(job.network, txMap[log.transactionHash], log)) {
+            if (filter.eventValidator.bind(this.parent)(job.network, txMap[log.transactionHash], log)) {
               interestingTransactions.push({
                 bloomId: filter.bloomId,
                 transaction: txMap[log.transactionHash],
