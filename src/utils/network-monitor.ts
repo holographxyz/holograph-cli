@@ -967,11 +967,18 @@ export class NetworkMonitor {
         this.gasPrices[network].nextPriorityFee = this.gasPrices[network].nextPriorityFee!.add(priorityFee).div(TWO)
       }
     }
-    // for legacy networks, get average gasPrice
-    else if (this.gasPrices[network].gasPrice === null) {
-      this.gasPrices[network].gasPrice = tx.gasPrice!
-    } else {
-      this.gasPrices[network].gasPrice = this.gasPrices[network].gasPrice!.add(tx.gasPrice!).div(TWO)
+    // for legacy networks (non EIP-1559), get average rolling gasPrice
+    // it's important to skip this calculation if gas price is 0, which happens in some instances like on BSC
+    // we check first that gasPrice variable is actually set, and we check that it is greater than zero
+    else if (tx.gasPrice !== undefined && tx.gasPrice !== null && tx.gasPrice!.gt(ZERO)) {
+      // if current network gas pricing is null, then this means it's the first time that gas price data is being set
+      if (this.gasPrices[network].gasPrice === null) {
+        this.gasPrices[network].gasPrice = tx.gasPrice!
+      }
+      // otherwise we already have gas price data set, we just add new value to it and divide by two to get the floating average
+      else {
+        this.gasPrices[network].gasPrice = this.gasPrices[network].gasPrice!.add(tx.gasPrice!).div(TWO)
+      }
     }
   }
 
