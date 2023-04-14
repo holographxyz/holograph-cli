@@ -267,7 +267,7 @@ jobs:
           AVALANCHE_NETWORK: 'fuji'
           POLYGON_NETWORK: 'mumbai'
           ETHEREUM_NETWORK: 'goerli'
-          BINANCE_NETWORK: 'bscTestnet'
+          BINANCE_NETWORK: 'binanceSmartChainTestnet'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
