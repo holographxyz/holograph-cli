@@ -26,6 +26,7 @@ export enum EventType {
 export interface BaseEvent {
   type: EventType
   contract: string
+  logIndex: number
 }
 
 export interface TransferERC20Event extends BaseEvent {
@@ -110,6 +111,7 @@ export const decodeKnownEvent = <T extends DecodedEvent>(
       output = {
         type,
         contract: (log.address as string).toLowerCase(),
+        logIndex: log.logIndex,
         from: (decodedLog._from as string).toLowerCase(),
         to: (decodedLog._to as string).toLowerCase(),
         value: BigNumber.from(decodedLog._value),
@@ -119,6 +121,7 @@ export const decodeKnownEvent = <T extends DecodedEvent>(
       output = {
         type,
         contract: (log.address as string).toLowerCase(),
+        logIndex: log.logIndex,
         from: (decodedLog._from as string).toLowerCase(),
         to: (decodedLog._to as string).toLowerCase(),
         tokenId: BigNumber.from(decodedLog._tokenId),
@@ -128,6 +131,7 @@ export const decodeKnownEvent = <T extends DecodedEvent>(
       output = {
         type,
         contract: (log.address as string).toLowerCase(),
+        logIndex: log.logIndex,
         from: (decodedLog._from as string).toLowerCase(),
         to: (decodedLog._to as string).toLowerCase(),
         tokenId: BigNumber.from(decodedLog._tokenId),
@@ -138,6 +142,7 @@ export const decodeKnownEvent = <T extends DecodedEvent>(
       output = {
         type,
         contract: (log.address as string).toLowerCase(),
+        logIndex: log.logIndex,
         from: (decodedLog._from as string).toLowerCase(),
         to: (decodedLog._to as string).toLowerCase(),
         tokenIds: decodedLog._tokenIds as BigNumber[],
@@ -148,6 +153,7 @@ export const decodeKnownEvent = <T extends DecodedEvent>(
       output = {
         type,
         contract: (log.address as string).toLowerCase(),
+        logIndex: log.logIndex,
         contractAddress: (decodedLog._contractAddress as string).toLowerCase(),
         hash: (decodedLog._hash as string).toLowerCase(),
       } as unknown as T
@@ -156,6 +162,7 @@ export const decodeKnownEvent = <T extends DecodedEvent>(
       output = {
         type,
         contract: (log.address as string).toLowerCase(),
+        logIndex: log.logIndex,
         messageHash: (decodedLog._messageHash as string).toLowerCase(),
       } as unknown as T
       break
@@ -163,6 +170,7 @@ export const decodeKnownEvent = <T extends DecodedEvent>(
       output = {
         type,
         contract: (log.address as string).toLowerCase(),
+        logIndex: log.logIndex,
         jobHash: (decodedLog._jobHash as string).toLowerCase(),
         payload: (decodedLog._payload as string).toLowerCase(),
       } as unknown as T
@@ -171,6 +179,7 @@ export const decodeKnownEvent = <T extends DecodedEvent>(
       output = {
         type,
         contract: (log.address as string).toLowerCase(),
+        logIndex: log.logIndex,
         jobHash: (decodedLog._jobHash as string).toLowerCase(),
         operator: (decodedLog._operator as string).toLowerCase(),
       } as unknown as T
@@ -179,6 +188,7 @@ export const decodeKnownEvent = <T extends DecodedEvent>(
       output = {
         type,
         contract: (log.address as string).toLowerCase(),
+        logIndex: log.logIndex,
         jobHash: (decodedLog._jobHash as string).toLowerCase(),
       } as unknown as T
       break

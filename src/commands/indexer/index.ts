@@ -161,6 +161,14 @@ export default class Indexer extends HealthCheck {
 
       this.log(`API: getting all deployed collections from DB`)
       this.allDeployedCollections = await this.apiService.getAllDeployedCollections()
+      for (const holographableContract of this.allDeployedCollections) {
+        this.cachedContracts[holographableContract.toLowerCase()] = true
+      }
+
+      // set to empty, to drop memory
+      this.allDeployedCollections = []
+      // just in case, delete it
+      delete this.allDeployedCollections
 
       if (flags.repair === 0) {
         this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocksHeights(
@@ -388,23 +396,13 @@ export default class Indexer extends HealthCheck {
     }
   }
 
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   checkAgainstCachedContracts(contractType: ContractType): EventValidator {
-    return async (network: string, transaction: TransactionResponse, log: Log): Promise<boolean> => {
-      if (contractType === ContractType.ERC1155) {
-        // drop currently unsupported contracts
-        return false
-      }
-
-      if (!(log.address.toLowerCase() in this.cachedContracts)) {
-        // check on-chain data, add result to cache
-        const registryContract = this.networkMonitor.registryContract.connect(this.networkMonitor.providers[network])
-        this.cachedContracts[log.address.toLowerCase()] = await registryContract.isHolographedContract(log.address)
-      }
-
-      // return cached data
-      return this.cachedContracts[log.address.toLowerCase()]
+    return (network: string, transaction: TransactionResponse, log: Log): boolean => {
+      return log.address.toLowerCase() in this.cachedContracts
     }
   }
+  /* eslint-enable @typescript-eslint/no-unused-vars */
 
   async filterBuilder2(): Promise<void> {
     this.bloomFilters = {
@@ -1473,6 +1471,24 @@ export default class Indexer extends HealthCheck {
             if (testLog.data === undefined || testLog.data === null || testLog.data === '' || testLog.data === '0x') {
               type = EventType.TransferERC721
               // this is ERC721
+              // *** START OF TEMP CODE ***
+              // we are adding a temporary filter that skips transfer events inside of bridge-in and bridge-out transactions
+              let isPartOfBridgeTx = false
+              for (const log of interestingTransaction.allLogs!) {
+                if (
+                  log.topic[0] === this.bloomFilters[EventType.CrossChainMessageSent].bloomValueHashed ||
+                  log.topic[0] === this.bloomFilters[EventType.FinishedOperatorJob].bloomValueHashed
+                ) {
+                  isPartOfBridgeTx = true
+                  break
+                }
+              }
+
+              if (isPartOfBridgeTx) {
+                break
+              }
+
+              // *** END OF TEMP CODE ***
               try {
                 const transferERC721Event: TransferERC721Event | null = this.bloomFilters[
                   type
@@ -1634,7 +1650,7 @@ export default class Indexer extends HealthCheck {
     tags: (string | number)[] = [],
   ): Promise<void> {
     // add contract to holographable contracts cache
-    this.cachedContracts[event.contractAddress] = true
+    this.cachedContracts[event.contractAddress.toLowerCase()] = true
     // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
     await sqsHandleContractDeployedEvent.call(
       this,
