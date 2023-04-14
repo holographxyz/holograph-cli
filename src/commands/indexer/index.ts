@@ -93,6 +93,7 @@ export default class Indexer extends HealthCheck {
   networkMonitor!: NetworkMonitor
   bloomFilters!: BloomFilterMap
   cachedContracts: {[key: string]: boolean} = {}
+  allDeployedCollections: string[] = []
 
   dbJobMap: DBJobMap = {}
   environment!: Environment
@@ -157,6 +158,9 @@ export default class Indexer extends HealthCheck {
     if (this.apiService !== undefined) {
       this.apiService.setStructuredLog(this.networkMonitor.structuredLog.bind(this.networkMonitor))
       this.apiService.setStructuredLogError(this.networkMonitor.structuredLogError.bind(this.networkMonitor))
+
+      this.log(`API: getting all deployed collections from DB`)
+      this.allDeployedCollections = await this.apiService.getAllDeployedCollections()
 
       if (flags.repair === 0) {
         this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocksHeights(

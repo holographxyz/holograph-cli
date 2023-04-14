@@ -103,6 +103,10 @@ export type Nft = {
   tokenId: string | null
 }
 
+export interface DeployedCollectionsResponse {
+  deployedCollections: string[]
+}
+
 export interface NftQueryResponse {
   nftByTx: Nft
   nftByIpfsCid: Nft
