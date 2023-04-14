@@ -1441,14 +1441,23 @@ export default class Indexer extends HealthCheck {
         )
         switch (type) {
           case EventType.BridgeableContractDeployed:
-            const bridgeableContractDeployedEvent: BridgeableContractDeployedEvent | null = this.bloomFilters[
-              type
-            ]!.bloomEvent.decode<BridgeableContractDeployedEvent>(type, interestingTransaction.log!)
-            if (bridgeableContractDeployedEvent !== null) {
-              await this.handleBridgeableContractDeployedEvent(
-                job,
-                interestingTransaction,
-                bridgeableContractDeployedEvent,
+            try {
+              const bridgeableContractDeployedEvent: BridgeableContractDeployedEvent | null = this.bloomFilters[
+                type
+              ]!.bloomEvent.decode<BridgeableContractDeployedEvent>(type, interestingTransaction.log!)
+
+              if (bridgeableContractDeployedEvent !== null) {
+                await this.handleBridgeableContractDeployedEvent(
+                  job,
+                  interestingTransaction,
+                  bridgeableContractDeployedEvent,
+                  tags,
+                )
+              }
+            } catch (error: any) {
+              this.networkMonitor.structuredLogError(
+                job.network,
+                this.errorColor(`Decoding BridgeableContractDeployedEvent error: `, error),
                 tags,
               )
             }
@@ -1460,20 +1469,36 @@ export default class Indexer extends HealthCheck {
             if (testLog.data === undefined || testLog.data === null || testLog.data === '' || testLog.data === '0x') {
               type = EventType.TransferERC721
               // this is ERC721
-              const transferERC721Event: TransferERC721Event | null = this.bloomFilters[
-                type
-              ]!.bloomEvent.decode<TransferERC721Event>(type, interestingTransaction.log!)
-              //            log('transferERC721Event', transferERC721Event);
-              if (transferERC721Event !== null) {
-                await this.handleTransferERC721Event(job, interestingTransaction, transferERC721Event, tags)
+              try {
+                const transferERC721Event: TransferERC721Event | null = this.bloomFilters[
+                  type
+                ]!.bloomEvent.decode<TransferERC721Event>(type, interestingTransaction.log!)
+                //            log('transferERC721Event', transferERC721Event);
+                if (transferERC721Event !== null) {
+                  await this.handleTransferERC721Event(job, interestingTransaction, transferERC721Event, tags)
+                }
+              } catch (error: any) {
+                this.networkMonitor.structuredLogError(
+                  job.network,
+                  this.errorColor(`Decoding TransferERC721Event error: `, error),
+                  tags,
+                )
               }
             } else {
               // this is ERC20
-              const transferERC20Event: TransferERC20Event | null = this.bloomFilters[
-                type
-              ]!.bloomEvent.decode<TransferERC20Event>(type, interestingTransaction.log!)
-              if (transferERC20Event !== null) {
-                await this.handleTransferERC20Event(job, interestingTransaction, transferERC20Event, tags)
+              try {
+                const transferERC20Event: TransferERC20Event | null = this.bloomFilters[
+                  type
+                ]!.bloomEvent.decode<TransferERC20Event>(type, interestingTransaction.log!)
+                if (transferERC20Event !== null) {
+                  await this.handleTransferERC20Event(job, interestingTransaction, transferERC20Event, tags)
+                }
+              } catch (error: any) {
+                this.networkMonitor.structuredLogError(
+                  job.network,
+                  this.errorColor(`Decoding TransferERC20Event error: `, error),
+                  tags,
+                )
               }
             }
 
@@ -1497,38 +1522,75 @@ export default class Indexer extends HealthCheck {
 
             break
           case EventType.CrossChainMessageSent:
-            const crossChainMessageSentEvent: CrossChainMessageSentEvent | null = this.bloomFilters[
-              type
-            ]!.bloomEvent.decode<CrossChainMessageSentEvent>(type, interestingTransaction.log!)
-            if (crossChainMessageSentEvent !== null) {
-              await this.handleCrossChainMessageSentEvent(job, interestingTransaction, crossChainMessageSentEvent, tags)
+            try {
+              const crossChainMessageSentEvent: CrossChainMessageSentEvent | null = this.bloomFilters[
+                type
+              ]!.bloomEvent.decode<CrossChainMessageSentEvent>(type, interestingTransaction.log!)
+              if (crossChainMessageSentEvent !== null) {
+                await this.handleCrossChainMessageSentEvent(
+                  job,
+                  interestingTransaction,
+                  crossChainMessageSentEvent,
+                  tags,
+                )
+              }
+            } catch (error: any) {
+              this.networkMonitor.structuredLogError(
+                job.network,
+                this.errorColor(`Decoding CrossChainMessageSentEvent error: `, error),
+                tags,
+              )
             }
 
             break
           case EventType.AvailableOperatorJob:
-            const availableOperatorJobEvent: AvailableOperatorJobEvent | null = this.bloomFilters[
-              type
-            ]!.bloomEvent.decode<AvailableOperatorJobEvent>(type, interestingTransaction.log!)
-            if (availableOperatorJobEvent !== null) {
-              await this.handleAvailableOperatorJobEvent(job, interestingTransaction, availableOperatorJobEvent, tags)
+            try {
+              const availableOperatorJobEvent: AvailableOperatorJobEvent | null = this.bloomFilters[
+                type
+              ]!.bloomEvent.decode<AvailableOperatorJobEvent>(type, interestingTransaction.log!)
+              if (availableOperatorJobEvent !== null) {
+                await this.handleAvailableOperatorJobEvent(job, interestingTransaction, availableOperatorJobEvent, tags)
+              }
+            } catch (error: any) {
+              this.networkMonitor.structuredLogError(
+                job.network,
+                this.errorColor(`Decoding AvailableOperatorJobEvent error: `, error),
+                tags,
+              )
             }
 
             break
           case EventType.FinishedOperatorJob:
-            const finishedOperatorJobEvent: FinishedOperatorJobEvent | null = this.bloomFilters[
-              type
-            ]!.bloomEvent.decode<FinishedOperatorJobEvent>(type, interestingTransaction.log!)
-            if (finishedOperatorJobEvent !== null) {
-              await this.handleFinishedOperatorJobEvent(job, interestingTransaction, finishedOperatorJobEvent, tags)
+            try {
+              const finishedOperatorJobEvent: FinishedOperatorJobEvent | null = this.bloomFilters[
+                type
+              ]!.bloomEvent.decode<FinishedOperatorJobEvent>(type, interestingTransaction.log!)
+              if (finishedOperatorJobEvent !== null) {
+                await this.handleFinishedOperatorJobEvent(job, interestingTransaction, finishedOperatorJobEvent, tags)
+              }
+            } catch (error: any) {
+              this.networkMonitor.structuredLogError(
+                job.network,
+                this.errorColor(`Decoding FinishedOperatorJobEvent error: `, error),
+                tags,
+              )
             }
 
             break
           case EventType.FailedOperatorJob:
-            const failedOperatorJobEvent: FailedOperatorJobEvent | null = this.bloomFilters[
-              type
-            ]!.bloomEvent.decode<FailedOperatorJobEvent>(type, interestingTransaction.log!)
-            if (failedOperatorJobEvent !== null) {
-              await this.handleFailedOperatorJobEvent(job, interestingTransaction, failedOperatorJobEvent, tags)
+            try {
+              const failedOperatorJobEvent: FailedOperatorJobEvent | null = this.bloomFilters[
+                type
+              ]!.bloomEvent.decode<FailedOperatorJobEvent>(type, interestingTransaction.log!)
+              if (failedOperatorJobEvent !== null) {
+                await this.handleFailedOperatorJobEvent(job, interestingTransaction, failedOperatorJobEvent, tags)
+              }
+            } catch (error: any) {
+              this.networkMonitor.structuredLogError(
+                job.network,
+                this.errorColor(`Decoding FailedOperatorJobEvent error: `, error),
+                tags,
+              )
             }
 
             break
