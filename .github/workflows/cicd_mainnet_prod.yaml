@@ -178,7 +178,7 @@ jobs:
           AVALANCHE_NETWORK: 'avax'
           ETHEREUM_NETWORK: 'eth'
           POLYGON_NETWORK: 'matic'
-          BINANCE_NETWORK: 'bsc'
+          BINANCE_NETWORK: 'binanceSmartChain'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -267,7 +267,7 @@ jobs:
           AVALANCHE_NETWORK: 'avax'
           POLYGON_NETWORK: 'matic'
           ETHEREUM_NETWORK: 'eth'
-          BINANCE_NETWORK: 'bsc'
+          BINANCE_NETWORK: 'binanceSmartChain'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
