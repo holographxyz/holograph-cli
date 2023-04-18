@@ -1011,6 +1011,13 @@ export class NetworkMonitor {
     }
   }
 
+  isInterestingTransactionLogAlreadyIncluded(log: Log, interestingTransactions: InterestingTransaction[]): boolean {
+    const interestingTx = interestingTransactions.find(
+      tx => tx.log?.transactionHash === log.transactionHash && tx.log.logIndex === log.logIndex,
+    )
+    return interestingTx !== undefined
+  }
+
   async filterTransactions2(
     job: BlockJob,
     transactions: TransactionResponse[],
@@ -1026,7 +1033,11 @@ export class NetworkMonitor {
     for (const filter of this.bloomFilters) {
       const event: Event = filter.bloomEvent
       for (const log of logs) {
-        if (log.topics.length > 0 && log.topics[0] === event.sigHash) {
+        if (
+          log.topics.length > 0 &&
+          log.topics[0] === event.sigHash &&
+          !this.isInterestingTransactionLogAlreadyIncluded(log, interestingTransactions)
+        ) {
           if (filter.eventValidator) {
             if (filter.eventValidator.bind(this.parent)(job.network, txMap[log.transactionHash], log)) {
               interestingTransactions.push({
