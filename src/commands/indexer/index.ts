@@ -61,8 +61,9 @@ import {
   handleBridgeEvent,
 } from '../../handlers/sqs-indexer'
 import SqsService from '../../services/sqs-service'
-import {decodeErc721TransferEvent} from '../../events/events'
+import {decodeErc721TransferEvent, getLogIndexFromErc721TransferEvent} from '../../events/events'
 import handleTransferEvent from '../../handlers/sqs-indexer/handle-transfer-event'
+import {BigNumber} from 'ethers'
 
 dotenv.config()
 
@@ -631,8 +632,17 @@ export default class Indexer extends HealthCheck {
               )
 
               const decodedEvent = decodeErc721TransferEvent(receipt)
-              if (decodedEvent !== undefined) {
-                await handleTransferEvent.call(this, this.networkMonitor, transaction, job.network, decodedEvent, tags)
+              const logIndex = getLogIndexFromErc721TransferEvent(receipt)
+              if (decodedEvent !== undefined && logIndex !== undefined) {
+                const event: TransferERC721Event = {
+                  logIndex,
+                  from: decodedEvent[0],
+                  to: decodedEvent[1],
+                  tokenId: BigNumber.from(decodedEvent[2]),
+                  contract: transaction.to!,
+                  type: EventType.TransferERC721,
+                }
+                await handleTransferEvent.call(this, this.networkMonitor, transaction, job.network, event, tags)
               }
             } else {
               this.networkMonitor.structuredLog(job.network, `Irrelevant transaction ${transaction.hash}`, tags)
@@ -1695,7 +1705,7 @@ export default class Indexer extends HealthCheck {
           this.networkMonitor,
           interestingTransaction.transaction,
           job.network,
-          [event.from, event.to, event.tokenId.toHexString(), event.contract] as string[],
+          event,
           tags,
         ))
   }
