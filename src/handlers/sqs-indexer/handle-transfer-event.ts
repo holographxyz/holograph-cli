@@ -37,8 +37,6 @@ async function handleTransferEvent(
     tags,
   )
 
-  const hexEncodedTokenId = hexZeroPad(BigNumber.from(tokenId).toHexString(), 32)
-
   const messageBody: SqsMessageBody = {
     type: PayloadType.HolographProtocol,
     eventName: EventName.TransferERC721,

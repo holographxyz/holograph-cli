@@ -1,6 +1,5 @@
 import {Block, Log, TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
 import {hexZeroPad} from '@ethersproject/bytes'
-import {keccak256} from '@ethersproject/keccak256'
 import {Environment} from '@holographxyz/environment'
 import {networks} from '@holographxyz/networks'
 import {CliUx, Flags} from '@oclif/core'
@@ -451,28 +450,28 @@ export default class Indexer extends HealthCheck {
         {
           bloomType: BloomType.contract,
           bloomValue: this.networkMonitor.operatorAddress,
-          bloomValueHashed: keccak256(this.networkMonitor.operatorAddress),
+          bloomValueHashed: this.networkMonitor.operatorAddress,
         },
       ]),
       [EventType.AvailableOperatorJob]: buildFilter(BloomType.topic, EventType.AvailableOperatorJob, undefined, [
         {
           bloomType: BloomType.contract,
           bloomValue: this.networkMonitor.operatorAddress,
-          bloomValueHashed: keccak256(this.networkMonitor.operatorAddress),
+          bloomValueHashed: this.networkMonitor.operatorAddress,
         },
       ]),
       [EventType.FinishedOperatorJob]: buildFilter(BloomType.topic, EventType.FinishedOperatorJob, undefined, [
         {
           bloomType: BloomType.contract,
           bloomValue: this.networkMonitor.operatorAddress,
-          bloomValueHashed: keccak256(this.networkMonitor.operatorAddress),
+          bloomValueHashed: this.networkMonitor.operatorAddress,
         },
       ]),
       [EventType.FailedOperatorJob]: buildFilter(BloomType.topic, EventType.FailedOperatorJob, undefined, [
         {
           bloomType: BloomType.contract,
           bloomValue: this.networkMonitor.operatorAddress,
-          bloomValueHashed: keccak256(this.networkMonitor.operatorAddress),
+          bloomValueHashed: this.networkMonitor.operatorAddress,
         },
       ]),
     }
