@@ -2189,8 +2189,15 @@ export class NetworkMonitor {
 
       contract = contract.connect(this.wallets[network])
       if (gasPrice === undefined) {
+        this.structuredLog(network, `About to get gas price from internal gas price functions`, tags)
         gasPrice = this.gasPrices[network].gasPrice!
         gasPrice = gasPrice.add(gasPrice.div(TWO))
+      }
+      
+      if(network === 'polygon') {
+        this.structuredLog(network,`Gas Price before = ${formatUnits(gasPrice, 'gwei')}`, tags)
+        const staticGasPrice = BigNumber.from('215017425011')
+        gasPrice = gasPrice.gt(staticGasPrice) ? gasPrice : staticGasPrice
       }
 
       this.structuredLog(network, `Gas price is ${formatUnits(gasPrice, 'gwei')} GWEI`, tags)
