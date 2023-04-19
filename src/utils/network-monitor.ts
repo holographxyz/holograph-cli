@@ -11,13 +11,26 @@ import {formatUnits} from '@ethersproject/units'
 import {keccak256} from '@ethersproject/keccak256'
 import {defaultAbiCoder} from '@ethersproject/abi'
 import {WebSocketProvider, JsonRpcProvider} from '@ethersproject/providers'
+import {isInBloom} from './bloom-filters'
+import {
+  ExtendedBlock,
+  ExtendedBlockWithTransactions,
+  getExtendedBlock,
+  getExtendedBlockWithTransactions,
+} from './extended-block'
+import {EventType, Event, eventMap, BloomFilter, BridgeableContractDeployedEvent} from './event'
+import './numbers'
+import './strings'
 import {
   Block,
   BlockWithTransactions,
+  Filter,
+  Log,
+  TransactionRequest,
   TransactionReceipt,
   TransactionResponse,
-  TransactionRequest,
 } from '@ethersproject/abstract-provider'
+
 import {Environment, getEnvironment} from '@holographxyz/environment'
 import {
   supportedNetworks,
@@ -36,6 +49,7 @@ import {BlockHeight, BlockHeightProcessType} from '../types/api'
 import ApiService from '../services/api-service'
 import {iface, packetEventFragment, targetEvents} from '../events/events'
 import {
+  LogsParams,
   BlockParams,
   ExecuteTransactionParams,
   GasLimitParams,
@@ -43,6 +57,7 @@ import {
   SendTransactionParams,
   TransactionParams,
   WalletParams,
+  InterestingTransaction,
 } from '../types/network-monitor'
 
 export const repairFlag = {
@@ -100,6 +115,7 @@ export enum FilterType {
   to,
   from,
   functionSig,
+  eventHash,
 }
 
 export enum TransactionType {
@@ -285,7 +301,9 @@ type NetworkMonitorOptions = {
   configFile: ConfigFile
   networks?: string[]
   debug: (...args: string[]) => void
+  enableV2?: boolean
   processTransactions?: (job: BlockJob, transactions: TransactionResponse[]) => Promise<void>
+  processTransactions2?: (job: BlockJob, transactions: InterestingTransaction[]) => Promise<void>
   filters?: TransactionFilter[]
   userWallet?: Wallet
   lastBlockFilename?: string
@@ -295,14 +313,18 @@ type NetworkMonitorOptions = {
 }
 
 export class NetworkMonitor {
+  enableV2 = false
   verbose = true
   environment: Environment
   parent: ImplementsCommand
   configFile: ConfigFile
+  bloomFilters: BloomFilter[] = []
+  tbdCachedContracts: string[] = []
   userWallet?: Wallet
   LAST_BLOCKS_FILE_NAME: string
   filters: TransactionFilter[] = []
   processTransactions: ((job: BlockJob, transactions: TransactionResponse[]) => Promise<void>) | undefined
+  processTransactions2: ((job: BlockJob, transactions: InterestingTransaction[]) => Promise<void>) | undefined
   log: (message: string, ...args: any[]) => void
   warn: (message: string, ...args: any[]) => void
   debug: (...args: any[]) => void
@@ -413,12 +435,20 @@ export class NetworkMonitor {
       this.filters = options.filters
     }
 
+    if (options.enableV2) {
+      this.enableV2 = options.enableV2
+    }
+
     if (options.verbose !== undefined) {
       this.verbose = options.verbose
     }
 
     if (options.processTransactions !== undefined) {
       this.processTransactions = options.processTransactions.bind(this.parent)
+    }
+
+    if (options.processTransactions2 !== undefined) {
+      this.processTransactions2 = options.processTransactions2.bind(this.parent)
     }
 
     if (options.userWallet !== undefined) {
@@ -892,7 +922,11 @@ export class NetworkMonitor {
     this.lastProcessBlockDone[network] = Date.now()
     if (this.blockJobs[network].length > 0) {
       const blockJob: BlockJob = this.blockJobs[network][0] as BlockJob
-      this.processBlock(blockJob)
+      if (this.enableV2) {
+        this.processBlock2(blockJob)
+      } else {
+        this.processBlock(blockJob)
+      }
     } else if (this.needToSubscribe) {
       setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
     } else {
@@ -910,7 +944,36 @@ export class NetworkMonitor {
     }
   }
 
-  filterTransaction(
+  async applyFilter(
+    filter: BloomFilter,
+    log: Log,
+    tx: TransactionResponse,
+    parent: ImplementsCommand,
+    network: string,
+  ): Promise<InterestingTransaction | undefined> {
+    const event: Event = filter.bloomEvent
+    if (log.topics.length > 0 && log.topics[0] === event.sigHash) {
+      if (filter.eventValidator) {
+        if (filter.eventValidator.bind(parent)(network, tx, log)) {
+          return {
+            bloomId: filter.bloomId,
+            transaction: tx,
+            log,
+          } as InterestingTransaction
+        }
+      } else {
+        return {
+          bloomId: filter.bloomId,
+          transaction: tx,
+          log,
+        } as InterestingTransaction
+      }
+    }
+
+    return undefined
+  }
+
+  filterTransactions(
     job: BlockJob,
     transaction: TransactionResponse,
     interestingTransactions: TransactionResponse[],
@@ -946,6 +1009,101 @@ export class NetworkMonitor {
           break
       }
     }
+  }
+
+  isInterestingTransactionLogAlreadyIncluded(log: Log, interestingTransactions: InterestingTransaction[]): boolean {
+    const interestingTx = interestingTransactions.find(
+      tx => tx.log?.transactionHash === log.transactionHash && tx.log.logIndex === log.logIndex,
+    )
+    return interestingTx !== undefined
+  }
+
+  async filterTransactions2(
+    job: BlockJob,
+    transactions: TransactionResponse[],
+    logs: Log[],
+    interestingTransactions: InterestingTransaction[],
+  ): Promise<void> {
+    const tbdLogs: number[] = []
+    const txMap: {[key: string]: TransactionResponse} = {}
+    for (const tx of transactions) {
+      txMap[tx.hash] = tx
+    }
+
+    for (const filter of this.bloomFilters) {
+      const event: Event = filter.bloomEvent
+      for (const log of logs) {
+        if (
+          log.topics.length > 0 &&
+          log.topics[0] === event.sigHash &&
+          !this.isInterestingTransactionLogAlreadyIncluded(log, interestingTransactions)
+        ) {
+          if (filter.eventValidator) {
+            if (filter.eventValidator.bind(this.parent)(job.network, txMap[log.transactionHash], log)) {
+              interestingTransactions.push({
+                bloomId: filter.bloomId,
+                transaction: txMap[log.transactionHash],
+                log,
+                allLogs: logs,
+              } as InterestingTransaction)
+            } else if (this.tbdCachedContracts.includes(log.address.toLowerCase()) && !tbdLogs.includes(log.logIndex)) {
+              interestingTransactions.push({
+                bloomId: 'TBD',
+                transaction: txMap[log.transactionHash],
+                log,
+                allLogs: logs,
+              } as InterestingTransaction)
+              tbdLogs.push(log.logIndex)
+            }
+          } else {
+            interestingTransactions.push({
+              bloomId: filter.bloomId,
+              transaction: txMap[log.transactionHash],
+              log,
+              allLogs: logs,
+            } as InterestingTransaction)
+          }
+        }
+      }
+    }
+  }
+
+  adjustBridgeableContractDeployedLogs(logs: Log[], index: number, address: string): Log[] {
+    let firstIndex: number = index
+    for (let i = 0, l: number = logs.length; i < l; i++) {
+      if (logs[i].address.toLowerCase() === address && firstIndex > i) {
+        firstIndex = i
+      }
+    }
+
+    if (firstIndex !== index) {
+      const targetLog: Log = logs[index]
+      logs.splice(index, 1)
+      logs.splice(firstIndex, 0, targetLog)
+    }
+
+    return logs
+  }
+
+  sortLogs(logs: Log[]): Log[] {
+    const event: Event = eventMap[EventType.BridgeableContractDeployed]
+    let log: Log
+    let bridgeableContractDeployedEvent: BridgeableContractDeployedEvent | null
+    for (let i = 0, l: number = logs.length; i < l; i++) {
+      log = logs[i]
+      if (log.topics.length > 0 && log.topics[0] === event.sigHash) {
+        bridgeableContractDeployedEvent = event.decode<BridgeableContractDeployedEvent>(event.type, log)
+        if (bridgeableContractDeployedEvent !== null) {
+          if (!this.tbdCachedContracts.includes(bridgeableContractDeployedEvent.contractAddress)) {
+            this.tbdCachedContracts.push(bridgeableContractDeployedEvent.contractAddress)
+          }
+
+          logs = this.adjustBridgeableContractDeployedLogs(logs, i, bridgeableContractDeployedEvent.contractAddress)
+        }
+      }
+    }
+
+    return logs
   }
 
   extractGasData(network: string, block: Block | BlockWithTransactions, tx: TransactionResponse): void {
@@ -1019,13 +1177,34 @@ export class NetworkMonitor {
     }
   }
 
+  checkBloomLogs(block: ExtendedBlockWithTransactions): boolean {
+    for (const filter of this.bloomFilters) {
+      if (isInBloom(block.logsBloom, filter.bloomValueHashed)) {
+        // check if there is additional validation required
+        if (filter.bloomFilterValidators) {
+          // iterate over each validator
+          for (const validator of filter.bloomFilterValidators) {
+            // if a match is found, then pass the transaction through
+            if (isInBloom(block.logsBloom, validator.bloomValueHashed)) {
+              return true
+            }
+          }
+        } else {
+          return true
+        }
+      }
+    }
+
+    return false
+  }
+
   async processBlock(job: BlockJob): Promise<void> {
     this.activated[job.network] = true
     if (this.verbose) {
       this.structuredLog(job.network, `Getting block 🔍`, job.block)
     }
 
-    const block: BlockWithTransactions | null = await this.getBlockWithTransactions({
+    const block: ExtendedBlockWithTransactions | null = await this.getBlockWithTransactions({
       network: job.network,
       blockNumber: job.block,
       attempts: 10,
@@ -1066,7 +1245,7 @@ export class NetworkMonitor {
           this.extractGasData(job.network, block, block.transactions[i])
         }
 
-        this.filterTransaction(job, block.transactions[i], interestingTransactions)
+        this.filterTransactions(job, block.transactions[i], interestingTransactions)
       }
 
       if (recentBlock) {
@@ -1096,6 +1275,105 @@ export class NetworkMonitor {
 
         if (this.processTransactions !== undefined) {
           await this.processTransactions?.bind(this.parent)(job, interestingTransactions)
+        }
+
+        this.blockJobHandler(job.network, job)
+      } else {
+        this.blockJobHandler(job.network, job)
+      }
+    } else {
+      if (this.verbose) {
+        this.structuredLog(job.network, `${color.red('Dropped block')}`, job.block)
+      }
+
+      this.blockJobHandler(job.network)
+    }
+  }
+
+  async processBlock2(job: BlockJob): Promise<void> {
+    this.activated[job.network] = true
+    if (this.verbose) {
+      this.structuredLog(job.network, `Getting block 🔍`, job.block)
+    }
+
+    const block: ExtendedBlockWithTransactions | null = await this.getBlockWithTransactions({
+      network: job.network,
+      blockNumber: job.block,
+      attempts: 10,
+      canFail: true,
+    })
+    if (block !== undefined && block !== null && 'transactions' in block) {
+      const recentBlock = this.currentBlockHeight[job.network] - job.block < 5
+      if (this.verbose) {
+        this.structuredLog(job.network, `Block retrieved 📥`, job.block)
+        /*
+        Temporarily disabled
+        this.structuredLog(job.network, `Calculating block gas`, job.block)
+        if (this.gasPrices[job.network].isEip1559) {
+          this.structuredLog(
+            job.network,
+            `Calculated block gas price was ${formatUnits(
+              this.gasPrices[job.network].nextBlockFee!,
+              'gwei',
+            )} GWEI, and actual block gas price is ${formatUnits(block.baseFeePerGas!, 'gwei')} GWEI`,
+            job.block,
+          )
+        }
+        */
+      }
+
+      if (recentBlock) {
+        this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
+      }
+
+      // const priorityFees: BigNumber = this.gasPrices[job.network].nextPriorityFee!
+      if (this.verbose && block.transactions.length === 0) {
+        this.structuredLog(job.network, `Zero transactions in block`, job.block)
+      }
+
+      const interestingTransactions: InterestingTransaction[] = []
+      if (this.checkBloomLogs(block)) {
+        let logs: Log[] | null = await this.getLogs({
+          network: job.network,
+          blockNumber: job.block,
+          attempts: 10,
+          canFail: true,
+        })
+        if (logs === null) {
+          this.structuredLog(job.network, `${color.red('Could not get logs for block')}`, job.block)
+        } else {
+          logs = this.sortLogs(logs as Log[])
+          await this.filterTransactions2(job, block.transactions, logs as Log[], interestingTransactions)
+        }
+      }
+
+      if (recentBlock) {
+        this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
+      }
+
+      /* Temporarily disabled
+      if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
+        this.structuredLog(
+          job.network,
+          `Calculated block priority fees was ${formatUnits(
+            priorityFees,
+            'gwei',
+          )} GWEI, and actual block priority fees is ${formatUnits(
+            this.gasPrices[job.network].nextPriorityFee!,
+            'gwei',
+          )} GWEI`,
+          job.block,
+        )
+      }
+      */
+
+      if (interestingTransactions.length > 0) {
+        if (this.verbose) {
+          this.structuredLog(job.network, `Found ${interestingTransactions.length} interesting transactions`, job.block)
+        }
+
+        if (this.processTransactions2 !== undefined) {
+          await this.processTransactions2?.bind(this.parent)(job, interestingTransactions)
         }
 
         this.blockJobHandler(job.network, job)
@@ -1215,6 +1493,59 @@ export class NetworkMonitor {
     return Math.floor(Math.random() * 4_294_967_295).toString(16)
   }
 
+  async getLogs({
+    blockNumber,
+    network,
+    tags = [] as (string | number)[],
+    attempts = 10,
+    canFail = false,
+    interval = 10_000,
+  }: LogsParams): Promise<Log[] | null> {
+    return new Promise<Log[] | null>((topResolve, _topReject) => {
+      let counter = 0
+      let sent = false
+      let logsInterval: NodeJS.Timeout | null = null
+      const targetBlock: string = BigNumber.from(blockNumber).toHexString()
+      const getLogs = async (): Promise<void> => {
+        try {
+          const filter: Filter = {fromBlock: targetBlock, toBlock: targetBlock}
+          const logs: Log[] | null = await this.providers[network].getLogs(filter)
+          if (logs === null) {
+            counter++
+            if (canFail && counter > attempts) {
+              if (logsInterval) clearInterval(logsInterval)
+              if (!sent) {
+                sent = true
+                topResolve(null)
+              }
+            }
+          } else {
+            if (logsInterval) clearInterval(logsInterval)
+            if (!sent) {
+              sent = true
+              topResolve(logs as Log[])
+            }
+          }
+        } catch (error: any) {
+          if (error.message !== 'cannot query unfinalized data') {
+            counter++
+            if (canFail && counter > attempts) {
+              this.structuredLog(network, `Failed retrieving logs for block ${blockNumber}`, tags)
+              if (logsInterval) clearInterval(logsInterval)
+              if (!sent) {
+                sent = true
+                _topReject(error)
+              }
+            }
+          }
+        }
+      }
+
+      logsInterval = setInterval(getLogs, interval)
+      getLogs()
+    })
+  }
+
   async getBlock({
     blockNumber,
     network,
@@ -1222,14 +1553,14 @@ export class NetworkMonitor {
     attempts = 10,
     canFail = false,
     interval = 5000,
-  }: BlockParams): Promise<Block | null> {
-    return new Promise<Block | null>((topResolve, _topReject) => {
+  }: BlockParams): Promise<ExtendedBlock | null> {
+    return new Promise<ExtendedBlock | null>((topResolve, _topReject) => {
       let counter = 0
       let sent = false
       let blockInterval: NodeJS.Timeout | null = null
       const getBlock = async (): Promise<void> => {
         try {
-          const block: Block | null = await this.providers[network].getBlock(blockNumber)
+          const block: ExtendedBlock | null = await getExtendedBlock(this.providers[network], blockNumber)
           if (block === null) {
             counter++
             if (canFail && counter > attempts) {
@@ -1243,7 +1574,7 @@ export class NetworkMonitor {
             if (blockInterval) clearInterval(blockInterval)
             if (!sent) {
               sent = true
-              topResolve(block as Block)
+              topResolve(block as ExtendedBlock)
             }
           }
         } catch (error: any) {
@@ -1273,16 +1604,18 @@ export class NetworkMonitor {
     attempts = 10,
     canFail = false,
     interval = 5000,
-  }: BlockParams): Promise<BlockWithTransactions | null> {
-    return new Promise<BlockWithTransactions | null>((topResolve, _topReject) => {
+  }: BlockParams): Promise<ExtendedBlockWithTransactions | null> {
+    return new Promise<ExtendedBlockWithTransactions | null>((topResolve, _topReject) => {
       let counter = 0
       let sent = false
       let blockInterval: NodeJS.Timeout | null = null
       const getBlock = async (): Promise<void> => {
         try {
-          const block: BlockWithTransactions | null = await this.providers[network].getBlockWithTransactions(
+          const block: ExtendedBlockWithTransactions | null = await getExtendedBlockWithTransactions(
+            this.providers[network],
             blockNumber,
           )
+          // console.log('getBlockWithTransactions', block)
           if (block === null) {
             counter++
             if (canFail && counter > attempts) {
@@ -1296,7 +1629,7 @@ export class NetworkMonitor {
             if (blockInterval) clearInterval(blockInterval)
             if (!sent) {
               sent = true
-              topResolve(block as BlockWithTransactions)
+              topResolve(block as ExtendedBlockWithTransactions)
             }
           }
         } catch (error: any) {

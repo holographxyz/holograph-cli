@@ -35,6 +35,7 @@ export type MintEventPayload = {
 
 export type TransferEventPayload = {
   tx: string
+  logIndex: number
   blockNum: number
   from: string
   to: string
