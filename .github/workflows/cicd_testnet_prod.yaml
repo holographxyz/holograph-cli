@@ -20,8 +20,8 @@ env:
   TESTNET_HOLOGRAPH_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO - create new gh secret for TESTNET. should be different from staging????
   TESTNET_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
-  TESTNET_HOLOGRAPH_INDEXER_HOST: 'http://testtitan-holo-api.testnet.svc.cluster.local:443'
-  TESTNET_HOLOGRAPH_OPERATOR_HOST: 'http://testtitan-holo-api.testnet.svc.cluster.local:443'
+  TESTNET_HOLOGRAPH_INDEXER_HOST: 'http://testuranus-holo-api.testnet.svc.cluster.local:443'
+  TESTNET_HOLOGRAPH_OPERATOR_HOST: 'http://testuranus-holo-api.testnet.svc.cluster.local:443'
   #
   TESTNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
   TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
@@ -60,11 +60,11 @@ env:
   TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
 
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.84
-  INDEXER_RELEASE_NAME: titan-indexer-testnet # format -> [release_name]-indexer-[env]
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.86
+  INDEXER_RELEASE_NAME: uranus-indexer-testnet # format -> [release_name]-indexer-[env]
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.62
-  OPERATOR_RELEASE_NAME: titan-operator-testnet # format -> [release_name]-operator-[env]
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.64
+  OPERATOR_RELEASE_NAME: uranus-operator-testnet # format -> [release_name]-operator-[env]
   #######################################
 
 # notice: the trigger
@@ -223,10 +223,25 @@ jobs:
             --set autoscaling.polygon.maxReplicas=1 \
             --set autoscaling.binance.maxReplicas=1 \
             \
-            --set resources.ethereum.limits.cpu=150m \
+            --set resources.ethereum.limits.cpu=350m \
             --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=200Mi \
+            --set resources.ethereum.requests.cpu=200m \
+            --set resources.ethereum.requests.memory=450Mi \
+            \
+            --set resources.polygon.limits.cpu=150m \
+            --set resources.polygon.limits.memory=220Mi \
+            --set resources.polygon.requests.cpu=100m \
+            --set resources.polygon.requests.memory=200Mi \
+            \
+            --set resources.avalanche.limits.cpu=150m \
+            --set resources.avalanche.limits.memory=220Mi \
+            --set resources.avalanche.requests.cpu=100m \
+            --set resources.avalanche.requests.memory=200Mi \
+            \
+            --set resources.binance.limits.cpu=150m \
+            --set resources.binance.limits.memory=320Mi \
+            --set resources.binance.requests.cpu=100m \
+            --set resources.binance.requests.memory=300Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -302,10 +317,25 @@ jobs:
             --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
             \
-            --set resources.ethereum.limits.cpu=150m \
+            --set resources.ethereum.limits.cpu=350m \
             --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=200Mi \
+            --set resources.ethereum.requests.cpu=200m \
+            --set resources.ethereum.requests.memory=450Mi \
+            \
+            --set resources.polygon.limits.cpu=150m \
+            --set resources.polygon.limits.memory=300Mi \
+            --set resources.polygon.requests.cpu=100m \
+            --set resources.polygon.requests.memory=200Mi \
+            \
+            --set resources.avalanche.limits.cpu=150m \
+            --set resources.avalanche.limits.memory=300Mi \
+            --set resources.avalanche.requests.cpu=100m \
+            --set resources.avalanche.requests.memory=200Mi \
+            \
+            --set resources.binance.limits.cpu=150m \
+            --set resources.binance.limits.memory=320Mi \
+            --set resources.binance.requests.cpu=100m \
+            --set resources.binance.requests.memory=300Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
