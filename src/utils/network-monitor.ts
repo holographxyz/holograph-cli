@@ -2121,8 +2121,8 @@ export class NetworkMonitor {
         gasPrice = gasPrice.add(gasPrice.div(TWO))
       }
 
-      if(network === 'polygon') {
-        this.structuredLog(network,`Gas Price before = ${formatUnits(gasPrice, 'gwei')}`, tags)
+      if (network === 'polygon') {
+        this.structuredLog(network, `Gas Price before = ${formatUnits(gasPrice, 'gwei')}`, tags)
         const staticGasPrice = BigNumber.from('400017425011')
         gasPrice = gasPrice.gt(staticGasPrice) ? gasPrice : staticGasPrice
       }
