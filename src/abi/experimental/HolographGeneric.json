@@ -131,19 +131,6 @@
   },
   {
     "inputs": [],
-    "name": "getContractType",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "contractType",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
     "name": "getOwner",
     "outputs": [
       {
