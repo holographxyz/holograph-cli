@@ -37,10 +37,10 @@ env:
   STG_COMMON_NAMESPACE: develop
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.85
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.86
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.63
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.64
   OPERATOR_RELEASE_NAME: operator-dev # format -> [release_name]-operator-[env]
   #######################################
   #
@@ -216,10 +216,25 @@ jobs:
             --set autoscaling.polygon.maxReplicas=1 \
             --set autoscaling.binance.maxReplicas=1 \
             \
-            --set resources.ethereum.limits.cpu=150m \
+            --set resources.ethereum.limits.cpu=350m \
             --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=200Mi \
+            --set resources.ethereum.requests.cpu=200m \
+            --set resources.ethereum.requests.memory=300Mi \
+            \
+            --set resources.polygon.limits.cpu=150m \
+            --set resources.polygon.limits.memory=220Mi \
+            --set resources.polygon.requests.cpu=100m \
+            --set resources.polygon.requests.memory=200Mi \
+            \
+            --set resources.avalanche.limits.cpu=150m \
+            --set resources.avalanche.limits.memory=220Mi \
+            --set resources.avalanche.requests.cpu=100m \
+            --set resources.avalanche.requests.memory=200Mi \
+            \
+            --set resources.binance.limits.cpu=150m \
+            --set resources.binance.limits.memory=320Mi \
+            --set resources.binance.requests.cpu=100m \
+            --set resources.binance.requests.memory=300Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -299,6 +314,21 @@ jobs:
             --set resources.ethereum.limits.memory=520Mi \
             --set resources.ethereum.requests.cpu=100m \
             --set resources.ethereum.requests.memory=200Mi \
+            \
+            --set resources.polygon.limits.cpu=120m \
+            --set resources.polygon.limits.memory=300Mi \
+            --set resources.polygon.requests.cpu=100m \
+            --set resources.polygon.requests.memory=170Mi \
+            \
+            --set resources.avalanche.limits.cpu=120m \
+            --set resources.avalanche.limits.memory=300Mi \
+            --set resources.avalanche.requests.cpu=100m \
+            --set resources.avalanche.requests.memory=170Mi \
+            \
+            --set resources.binance.limits.cpu=120m \
+            --set resources.binance.limits.memory=300Mi \
+            --set resources.binance.requests.cpu=100m \
+            --set resources.binance.requests.memory=170Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
@@ -396,10 +426,25 @@ jobs:
             --set autoscaling.enabled=false \
             --set replicaCount=0 \
             \
-            --set resources.ethereum.limits.cpu=150m \
+            --set resources.ethereum.limits.cpu=350m \
             --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=200Mi \
+            --set resources.ethereum.requests.cpu=200m \
+            --set resources.ethereum.requests.memory=300Mi \
+            \
+            --set resources.polygon.limits.cpu=150m \
+            --set resources.polygon.limits.memory=220Mi \
+            --set resources.polygon.requests.cpu=100m \
+            --set resources.polygon.requests.memory=200Mi \
+            \
+            --set resources.avalanche.limits.cpu=150m \
+            --set resources.avalanche.limits.memory=220Mi \
+            --set resources.avalanche.requests.cpu=100m \
+            --set resources.avalanche.requests.memory=200Mi \
+            \
+            --set resources.binance.limits.cpu=150m \
+            --set resources.binance.limits.memory=320Mi \
+            --set resources.binance.requests.cpu=100m \
+            --set resources.binance.requests.memory=300Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -463,6 +508,21 @@ jobs:
             --set resources.ethereum.limits.memory=520Mi \
             --set resources.ethereum.requests.cpu=100m \
             --set resources.ethereum.requests.memory=200Mi \
+            \
+            --set resources.polygon.limits.cpu=120m \
+            --set resources.polygon.limits.memory=300Mi \
+            --set resources.polygon.requests.cpu=100m \
+            --set resources.polygon.requests.memory=170Mi \
+            \
+            --set resources.avalanche.limits.cpu=120m \
+            --set resources.avalanche.limits.memory=300Mi \
+            --set resources.avalanche.requests.cpu=100m \
+            --set resources.avalanche.requests.memory=170Mi \
+            \
+            --set resources.binance.limits.cpu=120m \
+            --set resources.binance.limits.memory=300Mi \
+            --set resources.binance.requests.cpu=100m \
+            --set resources.binance.requests.memory=170Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
