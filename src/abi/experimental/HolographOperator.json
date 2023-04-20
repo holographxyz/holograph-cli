@@ -571,6 +571,19 @@
   {
     "inputs": [
       {
+        "internalType": "bytes",
+        "name": "bridgeInRequestPayload",
+        "type": "bytes"
+      }
+    ],
+    "name": "recoverJob",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint256",
         "name": "gasLimit",
         "type": "uint256"

@@ -19,7 +19,7 @@
                 "type": "uint256"
               }
             ],
-            "internalType": "struct ZoraDecimal",
+            "internalType": "struct HolographDecimal",
             "name": "prevOwner",
             "type": "tuple"
           },
@@ -31,7 +31,7 @@
                 "type": "uint256"
               }
             ],
-            "internalType": "struct ZoraDecimal",
+            "internalType": "struct HolographDecimal",
             "name": "creator",
             "type": "tuple"
           },
@@ -43,12 +43,12 @@
                 "type": "uint256"
               }
             ],
-            "internalType": "struct ZoraDecimal",
+            "internalType": "struct HolographDecimal",
             "name": "owner",
             "type": "tuple"
           }
         ],
-        "internalType": "struct ZoraBidShares",
+        "internalType": "struct HolographBidShares",
         "name": "bidShares",
         "type": "tuple"
       }
