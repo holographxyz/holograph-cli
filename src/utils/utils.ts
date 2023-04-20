@@ -41,7 +41,7 @@ export const webSocketConfig = {
 export const networkToChainId: Record<string, number> = {
   ethereum: 1,
   ethereumTestnetGoerli: 5,
-  polygon: 89,
+  polygon: 137,
   polygonTestnet: 80_001,
   avalanche: 43_114,
   avalancheTestnet: 43_113,
