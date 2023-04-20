@@ -24,7 +24,7 @@ RUN npm install -location=global ../holograph-cli
 ENV HOLOGRAPH_ENVIRONMENT=a-super-fancy-environment
 ENV CONFIG_FILE=a-super-config-file.json
 ENV PASSWORD=a-super-secret-password
-ENV HOLOGRAPH_CLI_CMD=TeRmInAtOr
+ENV HOLO_CLI_CMD=TeRmInAtOr
 ENV HOLOGRAPH_INDEXER_HOST=ThE_FuTuRe
 ENV HOLOGRAPH_OPERATOR_HOST=ThE_FuTuRe
 #

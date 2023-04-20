@@ -8,6 +8,7 @@ import {
   DeploymentConfig,
   deploymentConfigHash,
 } from '../../utils/contract-deployment'
+import {decodeBridgeableContractDeployedEvent} from '../../events/events'
 
 async function handleContractDeployedEvent(
   networkMonitor: NetworkMonitor,
@@ -30,7 +31,7 @@ async function handleContractDeployedEvent(
   if (receipt.status === 1) {
     networkMonitor.structuredLog(network, `Checking for deployment details`, tags)
 
-    const deploymentEvent: string[] | undefined = networkMonitor.decodeBridgeableContractDeployedEvent(
+    const deploymentEvent: string[] | undefined = decodeBridgeableContractDeployedEvent(
       receipt,
       networkMonitor.factoryAddress,
     )
