@@ -1018,6 +1018,17 @@ export class NetworkMonitor {
     return interestingTx !== undefined
   }
 
+  filterLogsByTx(tx: string, logs: Log[]): Log[] {
+    const output: Log[] = []
+    for (const log of logs) {
+      if (log.transactionHash === tx) {
+        output.push(log)
+      }
+    }
+
+    return output
+  }
+
   async filterTransactions2(
     job: BlockJob,
     transactions: TransactionResponse[],
@@ -1032,7 +1043,12 @@ export class NetworkMonitor {
 
     for (const filter of this.bloomFilters) {
       const event: Event = filter.bloomEvent
+      const allLogs: {[key: string]: Log[]} = {}
       for (const log of logs) {
+        if (!(log.transactionHash in allLogs)) {
+          allLogs[log.transactionHash] = this.filterLogsByTx(log.transactionHash, logs)
+        }
+
         if (
           log.topics.length > 0 &&
           log.topics[0] === event.sigHash &&
@@ -1044,14 +1060,14 @@ export class NetworkMonitor {
                 bloomId: filter.bloomId,
                 transaction: txMap[log.transactionHash],
                 log,
-                allLogs: logs,
+                allLogs: allLogs[log.transactionHash]!,
               } as InterestingTransaction)
             } else if (this.tbdCachedContracts.includes(log.address.toLowerCase()) && !tbdLogs.includes(log.logIndex)) {
               interestingTransactions.push({
                 bloomId: 'TBD',
                 transaction: txMap[log.transactionHash],
                 log,
-                allLogs: logs,
+                allLogs: allLogs[log.transactionHash]!,
               } as InterestingTransaction)
               tbdLogs.push(log.logIndex)
             }
@@ -1060,7 +1076,7 @@ export class NetworkMonitor {
               bloomId: filter.bloomId,
               transaction: txMap[log.transactionHash],
               log,
-              allLogs: logs,
+              allLogs: allLogs[log.transactionHash]!,
             } as InterestingTransaction)
           }
         }
