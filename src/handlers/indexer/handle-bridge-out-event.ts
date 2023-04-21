@@ -8,6 +8,13 @@ import {UpdateBridgedContract, UpdateBridgedERC20, UpdateBridgedERC721} from '..
 import {BridgeOutArgs, BridgeOutErc20Args, decodeBridgeOutErc20Args} from '../../utils/bridge'
 import {sha3, storageSlot, toAscii} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
+import {
+  decodeCrossChainMessageSentEvent,
+  decodeErc20TransferEvent,
+  decodeErc721TransferEvent,
+  decodeLzEvent,
+  decodeLzPacketEvent,
+} from '../../events/events'
 
 async function handleBridgeOutEvent(
   networkMonitor: NetworkMonitor,
@@ -38,9 +45,9 @@ async function handleBridgeOutEvent(
 
     switch (environment) {
       case Environment.localhost:
-        operatorJobHash = networkMonitor.decodeCrossChainMessageSentEvent(receipt, networkMonitor.operatorAddress)
+        operatorJobHash = decodeCrossChainMessageSentEvent(receipt, networkMonitor.operatorAddress)
         if (operatorJobHash !== undefined) {
-          args = networkMonitor.decodeLzEvent(receipt, networkMonitor.lzEndpointAddress[network])
+          args = decodeLzEvent(receipt, networkMonitor.lzEndpointAddress[network])
           if (args !== undefined) {
             operatorJobPayload = args[2] as string
           }
@@ -48,9 +55,9 @@ async function handleBridgeOutEvent(
 
         break
       default:
-        operatorJobHash = networkMonitor.decodeCrossChainMessageSentEvent(receipt, networkMonitor.operatorAddress)
+        operatorJobHash = decodeCrossChainMessageSentEvent(receipt, networkMonitor.operatorAddress)
         if (operatorJobHash !== undefined) {
-          operatorJobPayload = networkMonitor.decodeLzPacketEvent(receipt)
+          operatorJobPayload = decodeLzPacketEvent(receipt, networkMonitor.messagingModuleAddress)
         }
 
         break
@@ -101,7 +108,7 @@ async function handleBridgeOutEvent(
           if (contractType === 'HolographERC20') {
             // Bridge out ERC20 token
             const erc20BeamInfo: BridgeOutErc20Args = decodeBridgeOutErc20Args(bridgeOutPayload)
-            const erc20TransferEvent: any[] | undefined = networkMonitor.decodeErc20TransferEvent(
+            const erc20TransferEvent: any[] | undefined = decodeErc20TransferEvent(
               receipt,
               holographableContractAddress,
             )
@@ -122,7 +129,7 @@ async function handleBridgeOutEvent(
             }
           } else if (contractType === 'HolographERC721') {
             // Bridge in ERC721 token
-            const erc721TransferEvent: any[] | undefined = networkMonitor.decodeErc721TransferEvent(
+            const erc721TransferEvent: any[] | undefined = decodeErc721TransferEvent(
               receipt,
               holographableContractAddress,
             )

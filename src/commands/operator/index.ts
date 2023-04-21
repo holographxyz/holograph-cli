@@ -17,6 +17,7 @@ import {HealthCheck} from '../../base-commands/healthcheck'
 import {BlockHeightProcessType, Logger} from '../../types/api'
 import ApiService from '../../services/api-service'
 import color from '@oclif/color'
+import {decodeAvailableOperatorJobEvent, decodeCrossChainMessageSentEvent, decodeLzEvent} from '../../events/events'
 
 /**
  * Operator
@@ -318,7 +319,7 @@ export default class Operator extends OperatorJobAwareCommand {
 
     if (receipt.status === 1) {
       this.networkMonitor.structuredLog(network, `Checking for job hash`, tags)
-      const operatorJobHash: string | undefined = this.networkMonitor.decodeCrossChainMessageSentEvent(
+      const operatorJobHash: string | undefined = decodeCrossChainMessageSentEvent(
         receipt,
         this.networkMonitor.operatorAddress,
       )
@@ -328,7 +329,7 @@ export default class Operator extends OperatorJobAwareCommand {
         const bridgeTransaction = await this.networkMonitor.bridgeContract.interface.parseTransaction({
           data: transaction.data,
         })
-        const args: any[] = this.networkMonitor.decodeLzEvent(receipt, this.networkMonitor.lzEndpointAddress[network])!
+        const args: any[] = decodeLzEvent(receipt, this.networkMonitor.lzEndpointAddress[network])!
         const jobHash: string = web3.utils.keccak256(args[2] as string)
         this.networkMonitor.structuredLog(network, `Bridge request found for job hash ${jobHash}`, tags)
         // adding this double check for just in case
@@ -417,10 +418,7 @@ export default class Operator extends OperatorJobAwareCommand {
 
     if (receipt.status === 1) {
       this.networkMonitor.structuredLog(network, `Checking for job hash`, tags)
-      const operatorJobPayloadData = this.networkMonitor.decodeAvailableOperatorJobEvent(
-        receipt,
-        this.networkMonitor.operatorAddress,
-      )
+      const operatorJobPayloadData = decodeAvailableOperatorJobEvent(receipt, this.networkMonitor.operatorAddress)
       const operatorJobHash = operatorJobPayloadData === undefined ? undefined : operatorJobPayloadData[0]
       const operatorJobPayload = operatorJobPayloadData === undefined ? undefined : operatorJobPayloadData[1]
       if (operatorJobHash === undefined) {

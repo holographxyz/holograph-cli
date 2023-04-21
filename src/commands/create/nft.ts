@@ -1,6 +1,4 @@
 import * as inquirer from 'inquirer'
-import * as fs from 'fs-extra'
-import path from 'node:path'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import {Contract} from '@ethersproject/contracts'
@@ -22,6 +20,8 @@ import {
 } from '../../utils/validation'
 import {UriTypeIndex} from '../../utils/asset-deployment'
 import {BigNumber, ethers} from 'ethers'
+import {decodeErc721TransferEvent} from '../../events/events'
+import {getABIs} from '../../utils/contracts'
 
 export default class NFT extends Command {
   static description = 'Mint a Holographable NFT.'
@@ -66,6 +66,7 @@ export default class NFT extends Command {
   public async run(): Promise<void> {
     this.log('Loading user configurations...')
     const environment = getEnvironment()
+    const abis = await getABIs(environment)
     const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
       this.config.configDir,
       undefined,
@@ -115,19 +116,19 @@ export default class NFT extends Command {
 
     // Select the contract type to deploy
     const collectionType = await checkOptionFlag(
-      ['CxipERC721', 'HolographDropsEditionsV1'],
+      ['CxipERC721', 'HolographDropERC721'],
       undefined,
       "Select the type of collection you'd like to mint from",
     )
 
     // Load the ABI for the collection type to mint from
-    let abiPath: string
+    let collectionABI: string
     switch (collectionType) {
       case 'CxipERC721':
-        abiPath = path.join(__dirname, `../../abi/${environment}/CxipERC721.json`)
+        collectionABI = abis.CxipERC721ABI
         break
-      case 'HolographDropsEditionsV1':
-        abiPath = path.join(__dirname, `../../abi/${environment}/HolographDropsEditionsV1.json`)
+      case 'HolographDropERC721':
+        collectionABI = abis.HolographDropERC721ABI
         break
       default:
         this.log('Invalid collection type')
@@ -135,7 +136,7 @@ export default class NFT extends Command {
     }
 
     CliUx.ux.action.start('Retrieving collection smart contract')
-    const collectionABI = await fs.readJson(abiPath)
+
     const collection: Contract = new Contract(collectionAddress, collectionABI, this.networkMonitor.providers[network])
     CliUx.ux.action.stop()
 
@@ -185,7 +186,7 @@ export default class NFT extends Command {
         this.log('NFT minting was canceled')
         this.exit()
       }
-    } else if (collectionType === 'HolographDropsEditionsV1') {
+    } else if (collectionType === 'HolographDropERC721') {
       const numToMint = await checkNumberFlag(undefined, 'How many NFTs would you like to mint/purchase?')
       // Connect wallet for signing txns
       const account = userWallet.connect(this.networkMonitor.providers[network])
@@ -193,7 +194,7 @@ export default class NFT extends Command {
 
       // Interact with drop contract
       const drop = new ethers.Contract(collectionAddress, collectionABI, account)
-      const salesConfig = await drop.saleDetails()
+      const nativePrice = (await drop.getNativePrice()).mul(numToMint)
 
       // Confirm if user wants to mint
       const mintPrompt: any = await inquirer.prompt([
@@ -201,9 +202,7 @@ export default class NFT extends Command {
           name: 'shouldContinue',
           message: `\nMinting ${numToMint} NFTs from the following collection: ${await drop} at ${
             drop.address
-          } for ${ethers.utils.formatEther(salesConfig.publicSalePrice.mul(numToMint).toString())} ${
-            networks[network].tokenSymbol
-          } on ${network}.\n`,
+          } for ${ethers.utils.formatEther(nativePrice)} ${networks[network].tokenSymbol} on ${network}.\n`,
           type: 'confirm',
           default: false,
         },
@@ -215,11 +214,12 @@ export default class NFT extends Command {
           gasLimit: BigNumber.from('700000'),
           network,
           contract: collection,
-          value: salesConfig.publicSalePrice.mul(numToMint), // must send the price of the drop times the number to purchase
+          value: nativePrice, // must send the price of the drop times the number to purchase
           methodName: 'purchase',
           args: [numToMint],
           waitForReceipt: true,
         })
+
         CliUx.ux.action.stop()
       } else {
         this.log('NFT minting was canceled')
@@ -233,7 +233,7 @@ export default class NFT extends Command {
     if (receipt === null) {
       throw new Error('Failed to confirm that the transaction was mined')
     } else {
-      const logs: any[] | undefined = this.networkMonitor.decodeErc721TransferEvent(receipt, collectionAddress)
+      const logs: any[] | undefined = decodeErc721TransferEvent(receipt, collectionAddress)
       if (logs === undefined) {
         throw new Error('Failed to extract transfer event from transaction receipt')
       } else {

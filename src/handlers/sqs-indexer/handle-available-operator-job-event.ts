@@ -29,7 +29,7 @@ async function handleAvailableOperatorJobEvent(
 
   networkMonitor.structuredLog(
     network,
-    `sending message with MessageBody: ${JSON.stringify(messageBody)} to queue...`,
+    `Sending message with MessageBody: ${JSON.stringify(messageBody)} to queue...`,
     tags,
   )
 

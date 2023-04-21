@@ -15,6 +15,7 @@ import {DeploymentConfig} from '../../utils/contract-deployment'
 import {validateNetwork, validateNonEmptyString, checkOptionFlag, checkStringFlag} from '../../utils/validation'
 import {GasPricing} from '../../utils/gas'
 import {generateInitCode} from '../../utils/initcode'
+import {decodeCrossChainMessageSentEvent} from '../../events/events'
 
 export default class BridgeContract extends Command {
   static description =
@@ -215,10 +216,7 @@ export default class BridgeContract extends Command {
       this.networkMonitor.structuredLogError(sourceNetwork, `Failed to confirm that the transaction was mined`)
       this.exit()
     } else {
-      const jobHash: string | undefined = this.networkMonitor.decodeCrossChainMessageSentEvent(
-        receipt,
-        this.networkMonitor.operatorAddress,
-      )
+      const jobHash: string | undefined = decodeCrossChainMessageSentEvent(receipt, this.networkMonitor.operatorAddress)
       if (jobHash === undefined) {
         this.log('Failed to extract cross-chain job hash transaction receipt')
       }
