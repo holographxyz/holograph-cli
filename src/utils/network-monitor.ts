@@ -1035,6 +1035,7 @@ export class NetworkMonitor {
     logs: Log[],
     interestingTransactions: InterestingTransaction[],
   ): Promise<void> {
+    const allLogs: {[key: string]: Log[]} = {}
     const tbdLogs: number[] = []
     const txMap: {[key: string]: TransactionResponse} = {}
     for (const tx of transactions) {
@@ -1043,7 +1044,6 @@ export class NetworkMonitor {
 
     for (const filter of this.bloomFilters) {
       const event: Event = filter.bloomEvent
-      const allLogs: {[key: string]: Log[]} = {}
       for (const log of logs) {
         if (!(log.transactionHash in allLogs)) {
           allLogs[log.transactionHash] = this.filterLogsByTx(log.transactionHash, logs)
