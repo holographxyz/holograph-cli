@@ -225,22 +225,22 @@ jobs:
             \
             --set resources.ethereum.limits.cpu=350m \
             --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=200m \
-            --set resources.ethereum.requests.memory=450Mi \
+            --set resources.ethereum.requests.cpu=250m \
+            --set resources.ethereum.requests.memory=300Mi \
             \
-            --set resources.polygon.limits.cpu=150m \
-            --set resources.polygon.limits.memory=220Mi \
-            --set resources.polygon.requests.cpu=100m \
-            --set resources.polygon.requests.memory=200Mi \
+            --set resources.polygon.limits.cpu=350m \
+            --set resources.polygon.limits.memory=520Mi \
+            --set resources.polygon.requests.cpu=250m \
+            --set resources.polygon.requests.memory=300Mi \
             \
-            --set resources.avalanche.limits.cpu=150m \
-            --set resources.avalanche.limits.memory=220Mi \
-            --set resources.avalanche.requests.cpu=100m \
-            --set resources.avalanche.requests.memory=200Mi \
+            --set resources.avalanche.limits.cpu=350m \
+            --set resources.avalanche.limits.memory=520Mi \
+            --set resources.avalanche.requests.cpu=250m \
+            --set resources.avalanche.requests.memory=300Mi \
             \
-            --set resources.binance.limits.cpu=150m \
-            --set resources.binance.limits.memory=320Mi \
-            --set resources.binance.requests.cpu=100m \
+            --set resources.binance.limits.cpu=350m \
+            --set resources.binance.limits.memory=520Mi \
+            --set resources.binance.requests.cpu=250m \
             --set resources.binance.requests.memory=300Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \

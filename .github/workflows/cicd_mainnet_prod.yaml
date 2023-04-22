@@ -223,25 +223,25 @@ jobs:
             --set autoscaling.polygon.maxReplicas=1 \
             --set autoscaling.binance.maxReplicas=1 \
             \
-            --set resources.ethereum.limits.cpu=350m \
+            --set resources.ethereum.limits.cpu=450m \
             --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=200m \
+            --set resources.ethereum.requests.cpu=300m \
             --set resources.ethereum.requests.memory=450Mi \
             \
-            --set resources.polygon.limits.cpu=210m \
-            --set resources.polygon.limits.memory=220Mi \
-            --set resources.polygon.requests.cpu=200m \
-            --set resources.polygon.requests.memory=200Mi \
+            --set resources.polygon.limits.cpu=600m \
+            --set resources.polygon.limits.memory=600Mi \
+            --set resources.polygon.requests.cpu=500m \
+            --set resources.polygon.requests.memory=500Mi \
             \
-            --set resources.avalanche.limits.cpu=150m \
-            --set resources.avalanche.limits.memory=220Mi \
-            --set resources.avalanche.requests.cpu=100m \
-            --set resources.avalanche.requests.memory=200Mi \
+            --set resources.avalanche.limits.cpu=450m \
+            --set resources.avalanche.limits.memory=520Mi \
+            --set resources.avalanche.requests.cpu=300m \
+            --set resources.avalanche.requests.memory=450Mi \
             \
-            --set resources.binance.limits.cpu=150m \
-            --set resources.binance.limits.memory=320Mi \
-            --set resources.binance.requests.cpu=100m \
-            --set resources.binance.requests.memory=300Mi \
+            --set resources.binance.limits.cpu=600m \
+            --set resources.binance.limits.memory=600Mi \
+            --set resources.binance.requests.cpu=500m \
+            --set resources.binance.requests.memory=500Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
