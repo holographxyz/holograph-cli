@@ -1416,9 +1416,9 @@ export class NetworkMonitor {
         let latest = this.currentBlockHeight[network]
         // If the current network's block number is ahead of the network monitor's latest block, add the blocks to the queue
         while (block - latest > 0) {
-          if (this.verbose) {
-            this.structuredLog(network, `Block (Syncing)`, latest)
-          }
+          // if (this.verbose) {
+          //   this.structuredLog(network, `Block (Syncing)`, latest)
+          // }
 
           this.blockJobs[network].push({
             network: network,
