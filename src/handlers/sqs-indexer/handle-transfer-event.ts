@@ -2,7 +2,7 @@ import {TransactionResponse} from '@ethersproject/abstract-provider'
 
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {EventName, PayloadType, SqsMessageBody} from '../../types/sqs'
-import {networkToChainId} from '../../utils/utils'
+import {networkToChainId, remove0x} from '../../utils/utils'
 import SqsService from '../../services/sqs-service'
 import {TransferERC721Event} from '../../utils/event'
 
@@ -51,7 +51,7 @@ async function handleTransferEvent(
       from,
       to,
       contractAddress,
-      tokenId: tokenId.toHexString(),
+      tokenId: '0x' + remove0x(tokenId.toHexString()).padStart(64, '0'),
     },
   }
 
