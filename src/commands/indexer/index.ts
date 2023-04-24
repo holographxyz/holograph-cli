@@ -127,12 +127,6 @@ export default class Indexer extends HealthCheck {
       apiService: this.apiService,
     })
 
-    // Start health check server on port 6000 or healthCheckPort
-    // Can be used to monitor that the operator is online and running
-    if (enableHealthCheckServer) {
-      await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, healthCheckPort})
-    }
-
     if (this.apiService !== undefined) {
       this.apiService.setStructuredLog(this.networkMonitor.structuredLog.bind(this.networkMonitor))
       this.apiService.setStructuredLogError(this.networkMonitor.structuredLogError.bind(this.networkMonitor))
@@ -161,6 +155,12 @@ export default class Indexer extends HealthCheck {
     const continuous = !flags.repair // If repair is set, run network monitor stops after catching up to the latest block
     await this.networkMonitor.run(continuous, undefined, this.filterBuilder2)
     CliUx.ux.action.stop('🚀')
+
+    // Start health check server on port 6000 or healthCheckPort
+    // Can be used to monitor that the operator is online and running
+    if (enableHealthCheckServer) {
+      await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, healthCheckPort})
+    }
   }
 
   /* eslint-disable @typescript-eslint/no-unused-vars */
