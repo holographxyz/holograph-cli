@@ -1970,7 +1970,21 @@ export class NetworkMonitor {
             txHash = keccak256(signedTx)
           }
 
-          this.structuredLog(network, 'Attempting to send transaction -> ' + JSON.stringify(populatedTx), tags)
+          // Transform tx details to be human readable and log them
+          const txDetails = {
+            to: populatedTx.to,
+            from: populatedTx.from,
+            nonce: populatedTx.nonce,
+            data: populatedTx.data,
+            value: BigNumber.from(populatedTx.value ?? 0).toNumber(),
+            gasLimit: BigNumber.from(populatedTx.gasLimit ?? 0).toNumber(),
+            gasPrice: gasPricing.isEip1559 ? 0 : formatUnits(BigNumber.from(populatedTx.gasPrice ?? 0), 'gwei'),
+            maxFeePerGas: gasPricing.isEip1559 ? formatUnits(BigNumber.from(populatedTx.maxFeePerGas ?? 0), 'gwei') : 0,
+            maxPriorityFeePerGas: gasPricing.isEip1559
+              ? formatUnits(BigNumber.from(populatedTx.maxPriorityFeePerGas ?? 0), 'gwei')
+              : 0,
+          }
+          this.structuredLog(network, 'Attempting to send transaction -> ' + JSON.stringify(txDetails), tags)
           tx = await this.providers[network].sendTransaction(signedTx)
           if (tx === null) {
             counter++
