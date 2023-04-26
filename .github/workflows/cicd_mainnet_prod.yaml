@@ -18,6 +18,10 @@ env:
   ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }} # TIP: the 2 CERTs are separated with \, in Github secret
   #
   MAINNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_MAINNET_OPERATOR_API_KEY }}
+  MAINNET_HOLO_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_OPERATOR_MAINNET_OPERATOR_API_KEY}}
+  #
+  MAINNET_HOLOGRAPH_INDEXER_HOST: 'http://uranus-holo-api.mainnet.svc.cluster.local:443'
+  MAINNET_HOLOGRAPH_OPERATOR_HOST: 'http://uranus-holo-api.mainnet.svc.cluster.local:443'
   #
   MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.MAINNET_HOLO_INDEXER_PASSWORD }}
   MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.MAINNET_HOLO_OPERATOR_PASSWORD }}
@@ -54,14 +58,13 @@ env:
   SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
   MAINNET_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
   MAINNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/mainnet-indexer-processor'
-  #
-  MAINNET_HOLO_INDEXER_HOST: 'http://titan-holo-api.mainnet.svc.cluster.local:443' # Notice <-- the release from API
+
   #######################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.82
-  INDEXER_RELEASE_NAME: titan-indexer-mainnet # format -> [release_name]-indexer-[env]
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.86
+  INDEXER_RELEASE_NAME: uranus-indexer-mainnet # format -> [release_name]-indexer-[env]
   #
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.60
-  OPERATOR_RELEASE_NAME: titan-operator-mainnet # format -> [release_name]-operator-[env]
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.64
+  OPERATOR_RELEASE_NAME: uranus-operator-mainnet # format -> [release_name]-operator-[env]
   #######################################
 
 ## notice: the trigger
@@ -175,7 +178,7 @@ jobs:
           AVALANCHE_NETWORK: 'avax'
           ETHEREUM_NETWORK: 'eth'
           POLYGON_NETWORK: 'matic'
-          BINANCE_NETWORK: 'bsc'
+          BINANCE_NETWORK: 'binanceSmartChain'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -187,7 +190,7 @@ jobs:
             --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
             --set holo_indexer_password=${{ env.MAINNET_HOLO_INDEXER_PASSWORD }} \
-            --set HOLO_INDEXER_HOST=${{ env.MAINNET_HOLO_INDEXER_HOST }} \
+            --set HOLO_INDEXER_HOST=${{ env.MAINNET_HOLOGRAPH_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.MAINNET_HOLO_INDEXER_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
@@ -220,10 +223,25 @@ jobs:
             --set autoscaling.polygon.maxReplicas=1 \
             --set autoscaling.binance.maxReplicas=1 \
             \
-            --set resources.ethereum.limits.cpu=150m \
+            --set resources.ethereum.limits.cpu=450m \
             --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=200Mi \
+            --set resources.ethereum.requests.cpu=300m \
+            --set resources.ethereum.requests.memory=450Mi \
+            \
+            --set resources.polygon.limits.cpu=600m \
+            --set resources.polygon.limits.memory=600Mi \
+            --set resources.polygon.requests.cpu=500m \
+            --set resources.polygon.requests.memory=500Mi \
+            \
+            --set resources.avalanche.limits.cpu=450m \
+            --set resources.avalanche.limits.memory=520Mi \
+            --set resources.avalanche.requests.cpu=300m \
+            --set resources.avalanche.requests.memory=450Mi \
+            \
+            --set resources.binance.limits.cpu=600m \
+            --set resources.binance.limits.memory=600Mi \
+            --set resources.binance.requests.cpu=500m \
+            --set resources.binance.requests.memory=500Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -264,7 +282,7 @@ jobs:
           AVALANCHE_NETWORK: 'avax'
           POLYGON_NETWORK: 'matic'
           ETHEREUM_NETWORK: 'eth'
-          BINANCE_NETWORK: 'bsc'
+          BINANCE_NETWORK: 'binanceSmartChain'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -276,6 +294,8 @@ jobs:
             --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.MAINNET_HOLO_OPERATOR_PASSWORD }} \
+            --set HOLO_OPERATOR_HOST=${{ env.MAINNET_HOLOGRAPH_OPERATOR_HOST }} \
+            --set OPERATOR_API_KEY=${{ env.MAINNET_HOLO_OPERATOR_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
@@ -297,10 +317,25 @@ jobs:
             --set mainnet_rpc_config_values.private_key=${{ env.operator_mainnet_private_key }} \
             --set mainnet_rpc_config_values.address=${{ env.operator_mainnet_address }} \
             \
-            --set resources.ethereum.limits.cpu=150m \
+            --set resources.ethereum.limits.cpu=350m \
             --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=200Mi \
+            --set resources.ethereum.requests.cpu=200m \
+            --set resources.ethereum.requests.memory=450Mi \
+            \
+            --set resources.polygon.limits.cpu=220m \
+            --set resources.polygon.limits.memory=300Mi \
+            --set resources.polygon.requests.cpu=200m \
+            --set resources.polygon.requests.memory=200Mi \
+            \
+            --set resources.avalanche.limits.cpu=150m \
+            --set resources.avalanche.limits.memory=300Mi \
+            --set resources.avalanche.requests.cpu=100m \
+            --set resources.avalanche.requests.memory=200Mi \
+            \
+            --set resources.binance.limits.cpu=150m \
+            --set resources.binance.limits.memory=320Mi \
+            --set resources.binance.requests.cpu=100m \
+            --set resources.binance.requests.memory=300Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \

@@ -46,6 +46,8 @@ import {
 
 import {SalesConfiguration} from '../../types/drops'
 import {decodeBridgeableContractDeployedEvent} from '../../events/events'
+import {getABIs} from '../../utils/contracts'
+import {getEnvironment} from '@holographxyz/environment'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
   const codeFile: string = await checkStringFlag(undefined, prompt)
@@ -84,8 +86,9 @@ export default class Contract extends Command {
     const {flags} = await this.parse(Contract)
     this.log('User configurations loaded.')
 
+    const ENVIRONMENT = getEnvironment()
+    const abis = await getABIs(ENVIRONMENT)
     let configHash: BytesLike
-
     let tx!: string
     let txNetwork: string | undefined
     const deploymentConfig: DeploymentConfig = {
@@ -128,7 +131,7 @@ export default class Contract extends Command {
     let chainId: string
     let salt: string
     let bytecodeType: BytecodeType
-    const contractTypes: string[] = ['HolographERC20', 'HolographERC721', 'HolographDropERC721']
+    const contractTypes: string[] = Object.values(BytecodeType)
     let contractType = ''
     let contractTypeHash: string
     let byteCode: string
@@ -209,17 +212,8 @@ export default class Contract extends Command {
           case BytecodeType.Custom:
             contractType = await checkOptionFlag(contractTypes, undefined, 'Select the contract type to create')
             break
-          case BytecodeType.SampleERC20:
-            contractType = 'HolographERC20'
-            break
-          case BytecodeType.SampleERC721:
-            contractType = 'HolographERC721'
-            break
-          case BytecodeType.HolographDropERC721:
-            contractType = 'HolographDropERC721'
-            break
           default:
-            contractType = 'HolographERC721'
+            contractType = bytecodeType.toString()
             break
         }
 
@@ -233,7 +227,7 @@ export default class Contract extends Command {
             : bytecodes[bytecodeType]
 
         switch (contractType) {
-          case 'HolographERC20':
+          case BytecodeType.SampleERC20:
             tokenName = await checkStringFlag(undefined, 'Enter the token name to use')
             tokenSymbol = await checkStringFlag(undefined, 'Enter the token symbol to use')
             domainSeperator = tokenName
@@ -284,7 +278,7 @@ export default class Contract extends Command {
             )
             break
 
-          case 'HolographERC721':
+          case BytecodeType.HolographERC721:
             collectionName = await checkStringFlag(undefined, 'Enter the name of the collection')
             collectionSymbol = await checkStringFlag(undefined, 'Enter the collection symbol to use')
             royaltyBps = await checkNumberFlag(
@@ -346,7 +340,7 @@ export default class Contract extends Command {
 
             break
 
-          case 'HolographDropERC721': {
+          case BytecodeType.HolographDropERC721: {
             // NOTE: Since the Drop contract is an extension of the HolographERC721 enforcer, the contract type must be updated accordingly
             contractType = 'HolographERC721'
             contractTypeHash = '0x' + web3.utils.asciiToHex(contractType).slice(2).padStart(64, '0')
@@ -452,8 +446,11 @@ export default class Contract extends Command {
 
             // Deploy a metadata renderer contract
             // TODO: this needs to be removed in the future and a reference to the deployed EditionsMetadataRendererProxy needs to be made here
-            const renderAbi = JSON.parse(fs.readFileSync(`./src/abi/develop/EditionsMetadataRenderer.json`).toString())
-            const rendererFactory = new ContractFactory(renderAbi, EditionsMetadataRenderer.bytecode, account)
+            const rendererFactory = new ContractFactory(
+              abis.EditionsMetadataRendererABI,
+              EditionsMetadataRenderer.bytecode,
+              account,
+            )
             const metadataRenderer = await rendererFactory.deploy()
             this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
 

@@ -17,7 +17,11 @@ env:
   AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
   ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }} # TIP: the 2 CERTs are separated with \, in Github secret
   #
-  TESTNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO - create new gh secret for TESTNET. should be different from staging????
+  TESTNET_HOLOGRAPH_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO - create new gh secret for TESTNET. should be different from staging????
+  TESTNET_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
+  #
+  TESTNET_HOLOGRAPH_INDEXER_HOST: 'http://testuranus-holo-api.testnet.svc.cluster.local:443'
+  TESTNET_HOLOGRAPH_OPERATOR_HOST: 'http://testuranus-holo-api.testnet.svc.cluster.local:443'
   #
   TESTNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
   TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
@@ -54,14 +58,13 @@ env:
   SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
   TESTNET_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
   TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
-  #
-  TESTNET_HOLO_INDEXER_HOST: 'http://testtitan-holo-api.testnet.svc.cluster.local:443' # Notice <-- the release from API
+
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.82
-  INDEXER_RELEASE_NAME: titan-indexer-testnet # format -> [release_name]-indexer-[env]
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.86
+  INDEXER_RELEASE_NAME: uranus-indexer-testnet # format -> [release_name]-indexer-[env]
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.60
-  OPERATOR_RELEASE_NAME: titan-operator-testnet # format -> [release_name]-operator-[env]
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.64
+  OPERATOR_RELEASE_NAME: uranus-operator-testnet # format -> [release_name]-operator-[env]
   #######################################
 
 # notice: the trigger
@@ -175,7 +178,7 @@ jobs:
           AVALANCHE_NETWORK: 'fuji'
           ETHEREUM_NETWORK: 'goerli'
           POLYGON_NETWORK: 'mumbai'
-          BINANCE_NETWORK: 'bscTestnet'
+          BINANCE_NETWORK: 'binanceSmartChainTestnet'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -187,8 +190,8 @@ jobs:
             --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
             --set holo_indexer_password=${{ env.TESTNET_HOLO_INDEXER_PASSWORD }} \
-            --set HOLO_INDEXER_HOST=${{ env.TESTNET_HOLO_INDEXER_HOST }} \
-            --set OPERATOR_API_KEY=${{ env.TESTNET_HOLO_INDEXER_OPERATOR_API_KEY }} \
+            --set HOLO_INDEXER_HOST=${{ env.TESTNET_HOLOGRAPH_INDEXER_HOST }} \
+            --set OPERATOR_API_KEY=${{ env.TESTNET_HOLOGRAPH_INDEXER_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
@@ -220,10 +223,25 @@ jobs:
             --set autoscaling.polygon.maxReplicas=1 \
             --set autoscaling.binance.maxReplicas=1 \
             \
-            --set resources.ethereum.limits.cpu=150m \
+            --set resources.ethereum.limits.cpu=350m \
             --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=200Mi \
+            --set resources.ethereum.requests.cpu=250m \
+            --set resources.ethereum.requests.memory=300Mi \
+            \
+            --set resources.polygon.limits.cpu=350m \
+            --set resources.polygon.limits.memory=520Mi \
+            --set resources.polygon.requests.cpu=250m \
+            --set resources.polygon.requests.memory=300Mi \
+            \
+            --set resources.avalanche.limits.cpu=350m \
+            --set resources.avalanche.limits.memory=520Mi \
+            --set resources.avalanche.requests.cpu=250m \
+            --set resources.avalanche.requests.memory=300Mi \
+            \
+            --set resources.binance.limits.cpu=350m \
+            --set resources.binance.limits.memory=520Mi \
+            --set resources.binance.requests.cpu=250m \
+            --set resources.binance.requests.memory=300Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -264,7 +282,7 @@ jobs:
           AVALANCHE_NETWORK: 'fuji'
           POLYGON_NETWORK: 'mumbai'
           ETHEREUM_NETWORK: 'goerli'
-          BINANCE_NETWORK: 'bscTestnet'
+          BINANCE_NETWORK: 'binanceSmartChainTestnet'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -276,6 +294,8 @@ jobs:
             --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.TESTNET_HOLO_OPERATOR_PASSWORD }} \
+            --set HOLO_OPERATOR_HOST=${{ env.TESTNET_HOLOGRAPH_OPERATOR_HOST }} \
+            --set OPERATOR_API_KEY=${{ env.TESTNET_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
@@ -297,10 +317,25 @@ jobs:
             --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
             \
-            --set resources.ethereum.limits.cpu=150m \
+            --set resources.ethereum.limits.cpu=350m \
             --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=200Mi \
+            --set resources.ethereum.requests.cpu=200m \
+            --set resources.ethereum.requests.memory=450Mi \
+            \
+            --set resources.polygon.limits.cpu=150m \
+            --set resources.polygon.limits.memory=300Mi \
+            --set resources.polygon.requests.cpu=100m \
+            --set resources.polygon.requests.memory=200Mi \
+            \
+            --set resources.avalanche.limits.cpu=150m \
+            --set resources.avalanche.limits.memory=300Mi \
+            --set resources.avalanche.requests.cpu=100m \
+            --set resources.avalanche.requests.memory=200Mi \
+            \
+            --set resources.binance.limits.cpu=150m \
+            --set resources.binance.limits.memory=320Mi \
+            --set resources.binance.requests.cpu=100m \
+            --set resources.binance.requests.memory=300Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \

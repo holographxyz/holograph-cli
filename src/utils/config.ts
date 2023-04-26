@@ -178,14 +178,6 @@ export async function validateBeta3Schema(config: Record<string, unknown>): Prom
   const networkObjects: {[k: string]: any} = {} as {[k: string]: any}
   for (const network of supportedNetworks) {
     networkObjects[network] = Joi.object({
-      providerUrl: Joi.string().required(),
-    })
-
-    // temporary change to bypass binance config check
-    networkObjects.binanceSmartChainTestnet = Joi.object({
-      providerUrl: Joi.string(),
-    })
-    networkObjects.binanceSmartChain = Joi.object({
       providerUrl: Joi.string(),
     })
   }

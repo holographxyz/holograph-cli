@@ -8,6 +8,7 @@ export const getABIs = async (environment: string): Promise<any> => {
     CxipERC721ABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/CxipERC721.json`)),
     FaucetABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/Faucet.json`)),
     HolographABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/Holograph.json`)),
+    HolographerABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/Holographer.json`)),
     HolographBridgeABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographBridge.json`)),
     HolographERC20ABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographERC20.json`)),
     HolographERC721ABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographERC721.json`)),
@@ -17,6 +18,9 @@ export const getABIs = async (environment: string): Promise<any> => {
     HolographOperatorABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographOperator.json`)),
     HolographRegistryABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographRegistry.json`)),
     LayerZeroABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/LayerZeroEndpointInterface.json`)),
+    EditionsMetadataRendererABI: await fs.readJson(
+      path.join(__dirname, `../abi/${environment}/EditionsMetadataRenderer.json`),
+    ),
   }
 }
 

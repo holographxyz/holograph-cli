@@ -11,6 +11,7 @@ export enum EventName {
   BridgePreProcess = 'BridgePreProcess',
   ContractDeployed = 'ContractDeployed',
   AvailableOperatorJob = 'AvailableOperatorJob',
+  TransferERC721 = 'TransferERC721',
 }
 
 export type SqsMessageBody = {
@@ -21,7 +22,7 @@ export type SqsMessageBody = {
   chainId: number
   holographAddress: string
   environment: Environment
-  payload: MintEventPayload | BridgeEventPayload
+  payload: MintEventPayload | BridgeEventPayload | TransferEventPayload
 }
 
 export type MintEventPayload = {
@@ -30,6 +31,16 @@ export type MintEventPayload = {
   collectionAddress: string
   nftTokenId: string
   to: string
+}
+
+export type TransferEventPayload = {
+  tx: string
+  logIndex: number
+  blockNum: number
+  from: string
+  to: string
+  contractAddress: string
+  tokenId: string
 }
 
 export type BridgeEventPayload = {

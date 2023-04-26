@@ -14,6 +14,7 @@ import {
   NftMutationResponse,
   BlockHeightProcessType,
   BlockHeightResponse,
+  DeployedCollectionsResponse,
 } from '../types/api'
 import {AbstractError} from '../types/errors'
 import {StructuredLogInfo} from '../types/interfaces'
@@ -119,6 +120,20 @@ class ApiService {
       return await this.client.rawRequest(mutation, props)
     } catch (error: any) {
       this.logError('Error sending mutation request', error, structuredLogInfo)
+    }
+  }
+
+  async getAllDeployedCollections() {
+    const query = gql`
+        query Query {
+          deployedCollections
+        }
+    `
+    try {
+      const data: DeployedCollectionsResponse = await this.client.request(query)
+      return data.deployedCollections
+    } catch (error: any) {
+      this.logger.error(`Error sending query request ${error}`)
     }
   }
 

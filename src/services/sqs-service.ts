@@ -53,7 +53,7 @@ class SqsService {
         }),
       )
 
-    retry(sendMessage, this.maxRetries)
+    return retry(sendMessage, this.maxRetries)
   }
 
   validateConfig() {

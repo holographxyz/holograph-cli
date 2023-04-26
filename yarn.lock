@@ -1398,10 +1398,10 @@
     dotenv "^10.0.0"
     path "^0.12.7"
 
-"@holographxyz/networks@0.1.17":
-  version "0.1.17"
-  resolved "https://registry.yarnpkg.com/@holographxyz/networks/-/networks-0.1.17.tgz#880d4fb6ddee180bc49ea94b936766ec691f1f65"
-  integrity sha512-2rpjMvUI/yAGduB6gZ2YUtNrddwWsErBVdOx8/Tv8s5b+7OXkemRv0k3p27ic7lYLBdvmMvhw1qZ1r4vy6Dctw==
+"@holographxyz/networks@0.1.19":
+  version "0.1.19"
+  resolved "https://registry.yarnpkg.com/@holographxyz/networks/-/networks-0.1.19.tgz#be572198945633d337b7468fd431bd3a83caedde"
+  integrity sha512-FbPfofoU4jtu2aiNKDg+Lop3qrZRef6JYRhU3PX8WGjyWz1oliK2X3E/N025NtVfFlatfLPP4WsBQWubAaXBBw==
   dependencies:
     "@ethersproject/bignumber" "^5.7.0"
     "@holographxyz/environment" "0.1.10"
@@ -4365,7 +4365,7 @@ eth-sig-util@^1.4.2:
     ethereumjs-abi "git+https://github.com/ethereumjs/ethereumjs-abi.git"
     ethereumjs-util "^5.1.1"
 
-ethereum-bloom-filters@^1.0.6:
+ethereum-bloom-filters@^1.0.10, ethereum-bloom-filters@^1.0.6:
   version "1.0.10"
   resolved "https://registry.yarnpkg.com/ethereum-bloom-filters/-/ethereum-bloom-filters-1.0.10.tgz#3ca07f4aed698e75bd134584850260246a5fed8a"
   integrity sha512-rxJ5OFN3RwjQxDcFP2Z5+Q9ho4eIdEmSc2ht0fCu8Se9nbXjZ7/031uXoUYJ87KHCOdVeiUuwSnoS7hmYAGVHA==
