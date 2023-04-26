@@ -59,6 +59,7 @@ import {
   WalletParams,
   InterestingTransaction,
 } from '../types/network-monitor'
+import {BlockHeightOptions} from '../flags/update-block-height.flag'
 
 export const repairFlag = {
   repair: Flags.integer({
@@ -310,6 +311,7 @@ type NetworkMonitorOptions = {
   repair?: number
   verbose?: boolean
   apiService?: ApiService
+  BlockHeightOptions?: BlockHeightOptions
 }
 
 export class NetworkMonitor {
@@ -364,6 +366,7 @@ export class NetworkMonitor {
   messagingModuleContract!: Contract
   HOLOGRAPH_ADDRESSES = HOLOGRAPH_ADDRESSES
   apiService!: ApiService
+  blockHeightOptions?: BlockHeightOptions
 
   // this is specifically for handling localhost-based CLI usage with holograph-protocol package
   localhostWallets: {[key: string]: Wallet} = {}
@@ -465,6 +468,10 @@ export class NetworkMonitor {
 
     if (options.apiService !== undefined) {
       this.apiService = options.apiService
+    }
+
+    if (options.BlockHeightOptions !== undefined) {
+      this.blockHeightOptions = options.BlockHeightOptions
     }
 
     options.networks = options.networks.filter((network: string) => {
@@ -793,13 +800,28 @@ export class NetworkMonitor {
 
   exitCallback?: () => void
 
+  isUpdateBlockHeightUsingApiEnabled = () => {
+    return Boolean(
+      this.apiService !== undefined &&
+        this.blockHeightOptions !== undefined &&
+        this.blockHeightOptions === BlockHeightOptions.API,
+    )
+  }
+
+  isSaveBlockHeightEnabled = () => {
+    return Boolean(
+      this.blockHeightOptions &&
+        (this.blockHeightOptions === BlockHeightOptions.FILE || this.blockHeightOptions === BlockHeightOptions.API),
+    )
+  }
+
   exitHandler = async (exitCode: number): Promise<void> => {
     /**
      * Before exit, save the block heights to the local db
      */
     if (this.exited === false) {
       this.log('')
-      if (this.needToSubscribe) {
+      if (this.needToSubscribe && this.isSaveBlockHeightEnabled()) {
         this.log(`\n💾 Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}\n`)
         this.saveLastBlocks(this.parent.config.configDir, this.latestBlockHeight)
       }
@@ -817,7 +839,7 @@ export class NetworkMonitor {
     if ((exitCode && exitCode === 0) || exitCode === 'SIGINT' || exitCode === 'SIGTERM') {
       if (this.exited === false) {
         this.log('')
-        if (this.needToSubscribe) {
+        if (this.needToSubscribe && this.isSaveBlockHeightEnabled()) {
           this.log(`\n💾 Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}\n`)
           this.saveLastBlocks(this.parent.config.configDir, this.latestBlockHeight)
         }
@@ -911,7 +933,10 @@ export class NetworkMonitor {
         this.structuredLog(job.network, `Block processing complete ✅`, job.block)
       }
 
-      if (this.parent.id === 'indexer' || this.parent.id === 'operator') {
+      if (
+        (this.parent.id === 'indexer' || this.parent.id === 'operator') &&
+        this.isUpdateBlockHeightUsingApiEnabled()
+      ) {
         this.updateLastProcessedBlock(job)
       }
 
@@ -1159,11 +1184,6 @@ export class NetworkMonitor {
   }
 
   async updateLastProcessedBlock(job: BlockJob): Promise<void> {
-    if (this.apiService === undefined) {
-      this.structuredLog(job.network, `updateLastProcessedBlock: API is undefined`)
-      return
-    }
-
     let processType: BlockHeightProcessType | undefined
 
     if (this.parent.constructor.name === 'Indexer') {
