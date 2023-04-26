@@ -1522,6 +1522,7 @@ export class NetworkMonitor {
     const targetBlock: string = BigNumber.from(blockNumber).toHexString()
 
     const getLogs = async (): Promise<Log[] | null> => {
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         try {
           const filter: Filter = {fromBlock: targetBlock, toBlock: targetBlock}
@@ -1531,14 +1532,16 @@ export class NetworkMonitor {
             if (canFail && counter > attempts) {
               if (!sent) {
                 sent = true
-                return null
               }
+
+              return null
             }
           } else {
             if (!sent) {
               sent = true
-              return logs as Log[]
             }
+
+            return logs as Log[]
           }
         } catch (error: any) {
           if (error.message !== 'cannot query unfinalized data') {
@@ -1559,6 +1562,7 @@ export class NetworkMonitor {
 
         await sleep(interval)
       }
+
       return null
     }
 
@@ -1577,6 +1581,7 @@ export class NetworkMonitor {
     let sent = false
 
     const getBlock = async (): Promise<ExtendedBlock | null> => {
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         try {
           const block: ExtendedBlock | null = await getExtendedBlock(this.providers[network], blockNumber)
@@ -1585,14 +1590,16 @@ export class NetworkMonitor {
             if (canFail && counter > attempts) {
               if (!sent) {
                 sent = true
-                return null
               }
+
+              return null
             }
           } else {
             if (!sent) {
               sent = true
-              return block as ExtendedBlock
             }
+
+            return block as ExtendedBlock
           }
         } catch (error: any) {
           if (error.message !== 'cannot query unfinalized data') {
@@ -1632,6 +1639,7 @@ export class NetworkMonitor {
     let sent = false
 
     const getBlock = async (): Promise<ExtendedBlockWithTransactions | null> => {
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         try {
           const block: ExtendedBlockWithTransactions | null = await getExtendedBlockWithTransactions(
@@ -1643,14 +1651,16 @@ export class NetworkMonitor {
             if (canFail && counter > attempts) {
               if (!sent) {
                 sent = true
-                return null
               }
+
+              return null
             }
           } else {
             if (!sent) {
               sent = true
-              return block as ExtendedBlockWithTransactions
             }
+
+            return block as ExtendedBlockWithTransactions
           }
         } catch (error: any) {
           if (error.message !== 'cannot query unfinalized data') {
@@ -1659,8 +1669,9 @@ export class NetworkMonitor {
               this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
               if (!sent) {
                 sent = true
-                throw error
               }
+
+              throw error
             }
           }
         }
@@ -1690,6 +1701,7 @@ export class NetworkMonitor {
     let sent = false
 
     const getTx = async (): Promise<TransactionResponse | null> => {
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         const tx: TransactionResponse | null = await this.providers[network].getTransaction(transactionHash)
         if (tx === null) {
@@ -1698,14 +1710,16 @@ export class NetworkMonitor {
             if (!sent) {
               sent = true
               this.structuredLog(network, `Failed getting transaction ${transactionHash}`, tags)
-              return null
             }
+
+            return null
           }
         } else {
           if (!sent) {
             sent = true
-            return tx as TransactionResponse
           }
+
+          return tx as TransactionResponse
         }
 
         if (sent) {
@@ -1733,6 +1747,7 @@ export class NetworkMonitor {
     let sent = false
 
     const getTxReceipt = async (): Promise<TransactionReceipt | null> => {
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         const receipt: TransactionReceipt | null = await this.providers[network].getTransactionReceipt(transactionHash)
         if (receipt === null) {
@@ -1741,14 +1756,16 @@ export class NetworkMonitor {
             if (!sent) {
               sent = true
               this.structuredLog(network, `Failed getting transaction ${transactionHash} receipt`, tags)
-              return null
             }
+
+            return null
           }
         } else {
           if (!sent) {
             sent = true
-            return receipt as TransactionReceipt
           }
+
+          return receipt as TransactionReceipt
         }
 
         if (sent) {
@@ -1776,21 +1793,24 @@ export class NetworkMonitor {
     let sent = false
 
     const getBalance = async (): Promise<BigNumber | null> => {
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         try {
           const balance: BigNumber = await this.providers[network].getBalance(walletAddress, 'latest')
           if (!sent) {
             sent = true
-            return balance
           }
+
+          return balance
         } catch (error: any) {
           counter++
           if (canFail && counter > attempts) {
             if (!sent) {
               sent = true
               this.structuredLog(network, `Failed getting ${walletAddress} balance`, tags)
-              throw error
             }
+
+            throw error
           }
         }
 
@@ -1923,7 +1943,7 @@ export class NetworkMonitor {
     let txHash: string | null = null
     let counter = 0
     let sent = false
-    let sendTxInterval: NodeJS.Timeout | null = null
+    const sendTxInterval: NodeJS.Timeout | null = null
     const handleError = (error: any) => {
       process.stdout.write('sendTransaction' + JSON.stringify(error, undefined, 2))
       counter++
