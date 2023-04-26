@@ -120,7 +120,7 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
         gasLimit,
         gasPrice,
         jobDetails,
-        tags
+        tags,
       } as OperatorJob
       // process.stdout.write('\n\n' + JSON.stringify(this.operatorJobs[operatorJobHash],undefined,2) + '\n\n')
       return this.operatorJobs[operatorJobHash]
@@ -168,11 +168,11 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
   async checkJobStatus(operatorJobHash: string, tags?: (string | number)[]): Promise<void> {
     if (operatorJobHash !== undefined && operatorJobHash !== '' && operatorJobHash in this.operatorJobs) {
       const job: OperatorJob = this.operatorJobs[operatorJobHash]
-      if ((await this.decodeOperatorJob(job.network, job.hash, job.payload, tags ?? [] as string[])) === undefined) {
+      if ((await this.decodeOperatorJob(job.network, job.hash, job.payload, tags ?? ([] as string[]))) === undefined) {
         this.networkMonitor.structuredLogError(
           job.network,
           `Job ${job.hash} is no longer active/valid, removing it from list`,
-          tags ?? [] as string[],
+          tags ?? ([] as string[]),
         )
         delete this.operatorJobs[job.hash]
       }
