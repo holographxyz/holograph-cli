@@ -1788,11 +1788,11 @@ export class NetworkMonitor {
     attempts = 10,
     canFail = false,
     interval = 1000,
-  }: WalletParams): Promise<BigNumber | null> {
+  }: WalletParams): Promise<BigNumber> {
     let counter = 0
     let sent = false
 
-    const getBalance = async (): Promise<BigNumber | null> => {
+    const getBalance = async (): Promise<BigNumber> => {
       // eslint-disable-next-line no-constant-condition
       while (true) {
         try {
@@ -1821,7 +1821,7 @@ export class NetworkMonitor {
         await sleep(interval)
       }
 
-      return null
+      return BigNumber.from(0)
     }
 
     return getBalance()
