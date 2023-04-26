@@ -23,6 +23,7 @@ export interface OperatorJob {
   gasLimit: BigNumberish
   gasPrice: BigNumberish
   jobDetails: OperatorJobDetails
+  tags?: (string | number)[]
 }
 
 export interface OperatorStatus {
@@ -95,6 +96,8 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
       fallbackOperators: rawJobDetails[5] as number[],
     } as OperatorJobDetails
     if (jobDetails.startBlock > 0) {
+      // for some reason these logs dont have tag attached.
+
       this.networkMonitor.structuredLog(network, `Decoded valid job ${operatorJobHash}`, tags)
       this.networkMonitor.structuredLog(network, `Selected operator for job is ${jobDetails.operator}`, tags)
       const targetTime: number = this.getTargetTime(network, jobDetails)
@@ -117,6 +120,7 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
         gasLimit,
         gasPrice,
         jobDetails,
+        tags
       } as OperatorJob
       // process.stdout.write('\n\n' + JSON.stringify(this.operatorJobs[operatorJobHash],undefined,2) + '\n\n')
       return this.operatorJobs[operatorJobHash]
@@ -161,14 +165,14 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
     }
   }
 
-  async checkJobStatus(operatorJobHash: string): Promise<void> {
+  async checkJobStatus(operatorJobHash: string, tags?: (string | number)[]): Promise<void> {
     if (operatorJobHash !== undefined && operatorJobHash !== '' && operatorJobHash in this.operatorJobs) {
       const job: OperatorJob = this.operatorJobs[operatorJobHash]
-      if ((await this.decodeOperatorJob(job.network, job.hash, job.payload, [] as string[])) === undefined) {
+      if ((await this.decodeOperatorJob(job.network, job.hash, job.payload, tags ?? [] as string[])) === undefined) {
         this.networkMonitor.structuredLogError(
           job.network,
           `Job ${job.hash} is no longer active/valid, removing it from list`,
-          [] as string[],
+          tags ?? [] as string[],
         )
         delete this.operatorJobs[job.hash]
       }
