@@ -1268,7 +1268,8 @@ export class NetworkMonitor {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
 
-      /* Temporarily disabled
+      /* 
+      Temporarily disabled
       if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
         this.structuredLog(
           job.network,
@@ -1367,7 +1368,8 @@ export class NetworkMonitor {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
 
-      /* Temporarily disabled
+      /* 
+      Temporarily disabled
       if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
         this.structuredLog(
           job.network,
@@ -1521,52 +1523,48 @@ export class NetworkMonitor {
     let sent = false
     const targetBlock: string = BigNumber.from(blockNumber).toHexString()
 
-    const getLogs = async (): Promise<Log[] | null> => {
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        try {
-          const filter: Filter = {fromBlock: targetBlock, toBlock: targetBlock}
-          const logs: Log[] | null = await this.providers[network].getLogs(filter)
-          if (logs === null) {
-            counter++
-            if (canFail && counter > attempts) {
-              if (!sent) {
-                sent = true
-              }
-
-              return null
-            }
-          } else {
+    // eslint-disable-next-line no-unmodified-loop-condition
+    for (let i = 0; i < attempts || !canFail; i++) {
+      try {
+        const filter: Filter = {fromBlock: targetBlock, toBlock: targetBlock}
+        const logs: Log[] | null = await this.providers[network].getLogs(filter)
+        if (logs === null) {
+          counter++
+          if (canFail && counter > attempts) {
             if (!sent) {
               sent = true
             }
 
-            return logs as Log[]
+            return null
           }
-        } catch (error: any) {
-          if (error.message !== 'cannot query unfinalized data') {
-            counter++
-            if (canFail && counter > attempts) {
-              this.structuredLog(network, `Failed retrieving logs for block ${blockNumber}`, tags)
-              if (!sent) {
-                sent = true
-                throw error
-              }
+        } else {
+          if (!sent) {
+            sent = true
+          }
+
+          return logs as Log[]
+        }
+      } catch (error: any) {
+        if (error.message !== 'cannot query unfinalized data') {
+          counter++
+          if (canFail && counter > attempts) {
+            this.structuredLog(network, `Failed retrieving logs for block ${blockNumber}`, tags)
+            if (!sent) {
+              sent = true
+              throw error
             }
           }
         }
-
-        if (sent) {
-          break
-        }
-
-        await sleep(interval)
       }
 
-      return null
+      if (sent) {
+        break
+      }
+
+      await sleep(interval)
     }
 
-    return getLogs()
+    return null
   }
 
   async getBlock({
@@ -1580,51 +1578,46 @@ export class NetworkMonitor {
     let counter = 0
     let sent = false
 
-    const getBlock = async (): Promise<ExtendedBlock | null> => {
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        try {
-          const block: ExtendedBlock | null = await getExtendedBlock(this.providers[network], blockNumber)
-          if (block === null) {
-            counter++
-            if (canFail && counter > attempts) {
-              if (!sent) {
-                sent = true
-              }
-
-              return null
-            }
-          } else {
+    for (let i = 0; i < attempts; i++) {
+      try {
+        const block: ExtendedBlock | null = await getExtendedBlock(this.providers[network], blockNumber)
+        if (block === null) {
+          counter++
+          if (canFail && counter > attempts) {
             if (!sent) {
               sent = true
             }
 
-            return block as ExtendedBlock
+            return null
           }
-        } catch (error: any) {
-          if (error.message !== 'cannot query unfinalized data') {
-            counter++
-            if (canFail && counter > attempts) {
-              this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
-              if (!sent) {
-                sent = true
-                throw error
-              }
+        } else {
+          if (!sent) {
+            sent = true
+          }
+
+          return block as ExtendedBlock
+        }
+      } catch (error: any) {
+        if (error.message !== 'cannot query unfinalized data') {
+          counter++
+          if (canFail && counter > attempts) {
+            this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
+            if (!sent) {
+              sent = true
+              throw error
             }
           }
         }
-
-        if (sent) {
-          break
-        }
-
-        await sleep(interval)
       }
 
-      return null
+      if (sent) {
+        break
+      }
+
+      await sleep(interval)
     }
 
-    return getBlock()
+    return null
   }
 
   async getBlockWithTransactions({
@@ -1638,55 +1631,51 @@ export class NetworkMonitor {
     let counter = 0
     let sent = false
 
-    const getBlock = async (): Promise<ExtendedBlockWithTransactions | null> => {
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        try {
-          const block: ExtendedBlockWithTransactions | null = await getExtendedBlockWithTransactions(
-            this.providers[network],
-            blockNumber,
-          )
-          if (block === null) {
-            counter++
-            if (canFail && counter > attempts) {
-              if (!sent) {
-                sent = true
-              }
-
-              return null
-            }
-          } else {
+    // eslint-disable-next-line no-unmodified-loop-condition
+    for (let i = 0; i < attempts || !canFail; i++) {
+      try {
+        const block: ExtendedBlockWithTransactions | null = await getExtendedBlockWithTransactions(
+          this.providers[network],
+          blockNumber,
+        )
+        if (block === null) {
+          counter++
+          if (canFail && counter > attempts) {
             if (!sent) {
               sent = true
             }
 
-            return block as ExtendedBlockWithTransactions
+            return null
           }
-        } catch (error: any) {
-          if (error.message !== 'cannot query unfinalized data') {
-            counter++
-            if (canFail && counter > attempts) {
-              this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
-              if (!sent) {
-                sent = true
-              }
+        } else {
+          if (!sent) {
+            sent = true
+          }
 
-              throw error
+          return block as ExtendedBlockWithTransactions
+        }
+      } catch (error: any) {
+        if (error.message !== 'cannot query unfinalized data') {
+          counter++
+          if (canFail && counter > attempts) {
+            this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
+            if (!sent) {
+              sent = true
             }
+
+            throw error
           }
         }
-
-        if (sent) {
-          break
-        }
-
-        await sleep(interval)
       }
 
-      return null
+      if (sent) {
+        break
+      }
+
+      await sleep(interval)
     }
 
-    return getBlock()
+    return null
   }
 
   async getTransaction({
@@ -1700,39 +1689,35 @@ export class NetworkMonitor {
     let counter = 0
     let sent = false
 
-    const getTx = async (): Promise<TransactionResponse | null> => {
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const tx: TransactionResponse | null = await this.providers[network].getTransaction(transactionHash)
-        if (tx === null) {
-          counter++
-          if (canFail && counter > attempts) {
-            if (!sent) {
-              sent = true
-              this.structuredLog(network, `Failed getting transaction ${transactionHash}`, tags)
-            }
-
-            return null
-          }
-        } else {
+    // eslint-disable-next-line no-unmodified-loop-condition
+    for (let i = 0; i < attempts || !canFail; i++) {
+      const tx: TransactionResponse | null = await this.providers[network].getTransaction(transactionHash)
+      if (tx === null) {
+        counter++
+        if (canFail && counter > attempts) {
           if (!sent) {
             sent = true
+            this.structuredLog(network, `Failed getting transaction ${transactionHash}`, tags)
           }
 
-          return tx as TransactionResponse
+          return null
+        }
+      } else {
+        if (!sent) {
+          sent = true
         }
 
-        if (sent) {
-          break
-        }
-
-        await sleep(interval)
+        return tx as TransactionResponse
       }
 
-      return null
+      if (sent) {
+        break
+      }
+
+      await sleep(interval)
     }
 
-    return getTx()
+    return null
   }
 
   async getTransactionReceipt({
@@ -1746,39 +1731,35 @@ export class NetworkMonitor {
     let counter = 0
     let sent = false
 
-    const getTxReceipt = async (): Promise<TransactionReceipt | null> => {
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const receipt: TransactionReceipt | null = await this.providers[network].getTransactionReceipt(transactionHash)
-        if (receipt === null) {
-          counter++
-          if (canFail && counter > attempts) {
-            if (!sent) {
-              sent = true
-              this.structuredLog(network, `Failed getting transaction ${transactionHash} receipt`, tags)
-            }
-
-            return null
-          }
-        } else {
+    // eslint-disable-next-line no-unmodified-loop-condition
+    for (let i = 0; i < attempts || !canFail; i++) {
+      const receipt: TransactionReceipt | null = await this.providers[network].getTransactionReceipt(transactionHash)
+      if (receipt === null) {
+        counter++
+        if (canFail && counter > attempts) {
           if (!sent) {
             sent = true
+            this.structuredLog(network, `Failed getting transaction ${transactionHash} receipt`, tags)
           }
 
-          return receipt as TransactionReceipt
+          return null
+        }
+      } else {
+        if (!sent) {
+          sent = true
         }
 
-        if (sent) {
-          break
-        }
-
-        await sleep(interval)
+        return receipt as TransactionReceipt
       }
 
-      return null
+      if (sent) {
+        break
+      }
+
+      await sleep(interval)
     }
 
-    return getTxReceipt()
+    return null
   }
 
   async getBalance({
@@ -1792,39 +1773,35 @@ export class NetworkMonitor {
     let counter = 0
     let sent = false
 
-    const getBalance = async (): Promise<BigNumber> => {
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        try {
-          const balance: BigNumber = await this.providers[network].getBalance(walletAddress, 'latest')
+    // eslint-disable-next-line no-unmodified-loop-condition
+    for (let i = 0; i < attempts || !canFail; i++) {
+      try {
+        const balance: BigNumber = await this.providers[network].getBalance(walletAddress, 'latest')
+        if (!sent) {
+          sent = true
+        }
+
+        return balance
+      } catch (error: any) {
+        counter++
+        if (canFail && counter > attempts) {
           if (!sent) {
             sent = true
+            this.structuredLog(network, `Failed getting ${walletAddress} balance`, tags)
           }
 
-          return balance
-        } catch (error: any) {
-          counter++
-          if (canFail && counter > attempts) {
-            if (!sent) {
-              sent = true
-              this.structuredLog(network, `Failed getting ${walletAddress} balance`, tags)
-            }
-
-            throw error
-          }
+          throw error
         }
-
-        if (sent) {
-          break
-        }
-
-        await sleep(interval)
       }
 
-      return BigNumber.from(0)
+      if (sent) {
+        break
+      }
+
+      await sleep(interval)
     }
 
-    return getBalance()
+    return BigNumber.from(0)
   }
 
   async getNonce({
@@ -1837,8 +1814,8 @@ export class NetworkMonitor {
   }: WalletParams): Promise<number> {
     let counter = 0
 
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
+    // eslint-disable-next-line no-unmodified-loop-condition
+    for (let i = 0; i < attempts || !canFail; i++) {
       try {
         const nonce: number = await this.providers[network].getTransactionCount(walletAddress, 'latest')
         return nonce
@@ -1852,6 +1829,8 @@ export class NetworkMonitor {
         await sleep(interval)
       }
     }
+
+    return 0
   }
 
   async getGasLimit({
@@ -1868,8 +1847,8 @@ export class NetworkMonitor {
   }: GasLimitParams): Promise<BigNumber | null> {
     let counter = 0
 
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
+    // eslint-disable-next-line no-unmodified-loop-condition
+    for (let i = 0; i < attempts || !canFail; i++) {
       try {
         const gasLimit: BigNumber | null = await contract
           .connect(this.wallets[network])
@@ -1930,6 +1909,8 @@ export class NetworkMonitor {
         await sleep(interval)
       }
     }
+
+    return null
   }
 
   async sendTransaction({
@@ -1944,6 +1925,7 @@ export class NetworkMonitor {
     let counter = 0
     let sent = false
     const sendTxInterval: NodeJS.Timeout | null = null
+
     const handleError = (error: any) => {
       process.stdout.write('sendTransaction' + JSON.stringify(error, undefined, 2))
       counter++
@@ -1956,8 +1938,8 @@ export class NetworkMonitor {
       }
     }
 
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
+    // eslint-disable-next-line no-unmodified-loop-condition
+    for (let i = 0; i < attempts || !canFail; i++) {
       let populatedTx: TransactionRequest | null
       let signedTx: string | null
       let tx: TransactionResponse | null
@@ -1992,6 +1974,7 @@ export class NetworkMonitor {
 
         this.structuredLog(network, 'Attempting to send transaction -> ' + JSON.stringify(populatedTx), tags)
         tx = await this.providers[network].sendTransaction(signedTx)
+
         if (tx === null) {
           counter++
           if (canFail && counter > attempts) {
@@ -2052,6 +2035,12 @@ export class NetworkMonitor {
       // Wait for the interval before trying again.
       await sleep(interval)
     }
+
+    if (!sent) {
+      return null
+    }
+
+    return null
   }
 
   async populateTransaction({
@@ -2067,10 +2056,8 @@ export class NetworkMonitor {
     canFail = false,
     interval = 1000,
   }: PopulateTransactionParams): Promise<PopulatedTransaction | null> {
-    let counter = 0
-
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
+    // eslint-disable-next-line no-unmodified-loop-condition
+    for (let counter = 0; !canFail || counter < attempts; counter++) {
       try {
         const rawTx = await contract.populateTransaction[methodName](...args, {
           gasPrice,
@@ -2083,16 +2070,14 @@ export class NetworkMonitor {
           return rawTx
         }
 
-        counter++
-        if (canFail && counter > attempts) {
+        if (canFail && counter >= attempts - 1) {
           this.structuredLog(network, 'Failed populating transaction', tags)
           return null
         }
       } catch (error: any) {
         process.stdout.write('populateTransaction' + JSON.stringify(error, undefined, 2))
-        counter++
 
-        if (canFail && counter > attempts) {
+        if (canFail && counter >= attempts - 1) {
           this.structuredLogError(network, error, tags)
           return null
         }
@@ -2101,6 +2086,8 @@ export class NetworkMonitor {
       // Wait for the interval before trying again.
       await sleep(interval)
     }
+
+    return null
   }
 
   async executeTransaction({
