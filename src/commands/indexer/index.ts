@@ -39,6 +39,7 @@ import {
   sqsHandleTransferEvent,
 } from '../../handlers/sqs-indexer'
 import SqsService from '../../services/sqs-service'
+import {shouldSync, syncFlag} from '../../flags/sync.flag'
 
 dotenv.config()
 
@@ -54,6 +55,7 @@ export default class Indexer extends HealthCheck {
       char: 'h',
       default: 'http://localhost:6000',
     }),
+    ...syncFlag,
     ...networksFlag,
     ...repairFlag,
     ...HealthCheck.flags,
@@ -80,6 +82,7 @@ export default class Indexer extends HealthCheck {
     this.BASE_URL = flags.host
     const enableHealthCheckServer = flags.healthCheck
     const healthCheckPort = flags.healthCheckPort
+    const syncFlag = flags.sync
 
     this.log('Loading user configurations...')
     const {environment, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
@@ -150,6 +153,11 @@ export default class Indexer extends HealthCheck {
     }
 
     await this.checkSqsServiceAvailability()
+
+    if ((await shouldSync(syncFlag, this.networkMonitor.latestBlockHeight)) === false) {
+      this.networkMonitor.latestBlockHeight = {}
+      this.networkMonitor.currentBlockHeight = {}
+    }
 
     CliUx.ux.action.start(`Starting indexer`)
     const continuous = !flags.repair // If repair is set, run network monitor stops after catching up to the latest block
