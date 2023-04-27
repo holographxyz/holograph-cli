@@ -168,6 +168,7 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
+          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           AVALANCHE_NETWORK: 'fuji'
           ETHEREUM_NETWORK: 'goerli'
           POLYGON_NETWORK: 'mumbai'
@@ -197,6 +198,7 @@ jobs:
             --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
             \
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_dev_avalancheTestnet_rpc_url }} \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_dev_polygonTestnet_rpc_url }} \
@@ -272,6 +274,7 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
+          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           AVALANCHE_NETWORK: 'fuji'
           POLYGON_NETWORK: 'mumbai'
           ETHEREUM_NETWORK: 'goerli'
@@ -296,6 +299,7 @@ jobs:
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
             \
             --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
             --set POLYGON_NETWORK=$POLYGON_NETWORK \
@@ -380,6 +384,7 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
+          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           AVALANCHE_NETWORK: 'fuji'
           ETHEREUM_NETWORK: 'goerli'
           POLYGON_NETWORK: 'mumbai'
@@ -409,6 +414,7 @@ jobs:
             --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
             \
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_dev_avalancheTestnet_rpc_url }} \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_dev_polygonTestnet_rpc_url }} \
@@ -463,6 +469,7 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
+          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           AVALANCHE_NETWORK: 'fuji'
           POLYGON_NETWORK: 'mumbai'
           ETHEREUM_NETWORK: 'goerli'
@@ -487,6 +494,7 @@ jobs:
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
             \
             --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
             --set POLYGON_NETWORK=$POLYGON_NETWORK \

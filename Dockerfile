@@ -34,6 +34,8 @@ ENV HEALTHCHECK=defaul-value
 ENV MODE=defaul-value
 #
 ENV ENABLE_UNSAFE=defaul-value
+# api[default] / file / disable
+ENV UPDATE_BLOCK_HEIGHT=default-value
 
 # we use liveness/readiness probes in k8s
 HEALTHCHECK none
