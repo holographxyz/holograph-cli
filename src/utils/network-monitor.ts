@@ -1574,49 +1574,22 @@ export class NetworkMonitor {
     canFail = false,
     interval = 5000,
   }: BlockParams): Promise<ExtendedBlock | null> {
-    let counter = 0
-    let sent = false
+    const getBlockAttempt = async () => {
+      const block: ExtendedBlock | null = await getExtendedBlock(this.providers[network], blockNumber)
 
-    for (let i = 0; i < attempts; i++) {
-      try {
-        const block: ExtendedBlock | null = await getExtendedBlock(this.providers[network], blockNumber)
-        if (block === null) {
-          counter++
-          if (canFail && counter > attempts) {
-            if (!sent) {
-              sent = true
-            }
-
-            return null
-          }
-        } else {
-          if (!sent) {
-            sent = true
-          }
-
-          return block as ExtendedBlock
-        }
-      } catch (error: any) {
-        if (error.message !== 'cannot query unfinalized data') {
-          counter++
-          if (canFail && counter > attempts) {
-            this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
-            if (!sent) {
-              sent = true
-              throw error
-            }
-          }
-        }
+      if (block === null && canFail) {
+        throw new Error('Failed retrieving block')
       }
 
-      if (sent) {
-        break
-      }
-
-      await sleep(interval)
+      return block
     }
 
-    return null
+    try {
+      return await retry(getBlockAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
+      throw error
+    }
   }
 
   async getBlockWithTransactions({
