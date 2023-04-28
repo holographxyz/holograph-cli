@@ -39,6 +39,7 @@ import {
   sqsHandleTransferEvent,
 } from '../../handlers/sqs-indexer'
 import SqsService from '../../services/sqs-service'
+import {BlockHeightOptions, blockHeightFlag} from '../../flags/update-block-height.flag'
 
 dotenv.config()
 
@@ -52,8 +53,9 @@ export default class Indexer extends HealthCheck {
     host: Flags.string({
       description: 'The host to send data to',
       char: 'h',
-      default: 'http://localhost:6000',
+      default: 'http://127.0.0.1:6000',
     }),
+    ...blockHeightFlag,
     ...networksFlag,
     ...repairFlag,
     ...HealthCheck.flags,
@@ -80,12 +82,18 @@ export default class Indexer extends HealthCheck {
     this.BASE_URL = flags.host
     const enableHealthCheckServer = flags.healthCheck
     const healthCheckPort = flags.healthCheckPort
+    let updateBlockHeight = flags.updateBlockHeight
 
     this.log('Loading user configurations...')
     const {environment, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
     this.log('User configurations loaded.')
 
     this.environment = environment
+
+    if (flags.repair > 0) {
+      this.log('Repair flag enabled, will not load or save block heights.')
+      updateBlockHeight = BlockHeightOptions.DISABLE
+    }
 
     if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
       this.log(`Skipping API authentication for ${Environment[this.environment]} environment`)
@@ -125,7 +133,28 @@ export default class Indexer extends HealthCheck {
       lastBlockFilename: 'indexer-blocks.json',
       repair: flags.repair,
       apiService: this.apiService,
+      BlockHeightOptions: updateBlockHeight as BlockHeightOptions,
     })
+
+    switch (updateBlockHeight) {
+      case BlockHeightOptions.API:
+        if (flags.host === undefined) {
+          this.errorColor(`--blockHeight flag option API requires the --host flag`)
+        }
+
+        this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocksHeights(
+          BlockHeightProcessType.INDEXER,
+        )
+        break
+      case BlockHeightOptions.FILE:
+        this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
+        break
+      case BlockHeightOptions.DISABLE:
+        this.log(`Block height update is disable, it'll not be saved or updated anywhere`)
+        this.networkMonitor.latestBlockHeight = {}
+        this.networkMonitor.currentBlockHeight = {}
+        break
+    }
 
     if (this.apiService !== undefined) {
       this.apiService.setStructuredLog(this.networkMonitor.structuredLog.bind(this.networkMonitor))
@@ -142,11 +171,6 @@ export default class Indexer extends HealthCheck {
       // just in case, delete it
       delete this.allDeployedCollections
       this.log(`API: processed all deployed collections from DB`)
-      if (flags.repair === 0) {
-        this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocksHeights(
-          BlockHeightProcessType.INDEXER,
-        )
-      }
     }
 
     await this.checkSqsServiceAvailability()

@@ -25,8 +25,8 @@ ENV HOLOGRAPH_ENVIRONMENT=a-super-fancy-environment
 ENV CONFIG_FILE=a-super-config-file.json
 ENV PASSWORD=a-super-secret-password
 ENV HOLO_CLI_CMD=TeRmInAtOr
-ENV HOLOGRAPH_INDEXER_HOST=ThE_FuTuRe
-ENV HOLOGRAPH_OPERATOR_HOST=ThE_FuTuRe
+ENV HOLO_INDEXER_HOST=ThE_FuTuRe
+ENV HOLO_OPERATOR_HOST=ThE_FuTuRe
 #
 ENV ENABLE_DEBUG=defaul-value
 ENV ENABLE_SYNC=defaul-value
@@ -34,6 +34,8 @@ ENV HEALTHCHECK=defaul-value
 ENV MODE=defaul-value
 #
 ENV ENABLE_UNSAFE=defaul-value
+# api[default] / file / disable
+ENV UPDATE_BLOCK_HEIGHT=api
 
 # we use liveness/readiness probes in k8s
 HEALTHCHECK none
