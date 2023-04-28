@@ -184,6 +184,8 @@ export default class Operator extends OperatorJobAwareCommand {
           this.operatorJobs[jobHash].jobDetails.startTimestamp,
         )
         // if job is still valid, it will stay in object, otherwise it will be removed
+        // Tags not passed in because they do not exist
+        // Maybe save tags with the job hash so we can pass it back in here
         await this.checkJobStatus(jobHash)
       }
     } else {
@@ -436,19 +438,20 @@ export default class Operator extends OperatorJobAwareCommand {
     // if success then pass back payload hash to remove it from list
     if (await this.executeJob(jobHash, tags)) {
       // check job status just in case
-      await this.checkJobStatus(jobHash)
+      await this.checkJobStatus(jobHash, tags)
       // job was a success
-      this.processOperatorJobs(network, jobHash)
+      this.processOperatorJobs(network, jobHash) // here the jobHash will be deleted
     } else {
       // check job status just in case
-      await this.checkJobStatus(jobHash)
+      await this.checkJobStatus(jobHash, tags)
       // job failed, gotta try again
       this.processOperatorJobs(network)
     }
   }
 
+  // This method is call to cycle through all operator jobs that were previously detected
   processOperatorJobs = (network: string, jobHash?: string): void => {
-    const tags: (string | number)[] = [this.networkMonitor.randomTag()]
+    // IF processOperatorJobs has a jobHash, delete it from this.operatorJobs? Why do this here? why not delete it before?
     if (jobHash !== undefined && jobHash !== '' && jobHash in this.operatorJobs) {
       delete this.operatorJobs[jobHash]
     }
@@ -494,6 +497,9 @@ export default class Operator extends OperatorJobAwareCommand {
       let foundCandidate = false
       for (const candidate of candidates) {
         if (BigNumber.from(candidate.gasPrice).gte(compareGas)) {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          const tags = this.operatorJobs[candidate.hash].tags ?? [this.networkMonitor.randomTag()]
           this.networkMonitor.structuredLog(network, `Sending job ${candidate.hash} for execution`, tags)
           // have a valid job to do right away
           this.processOperatorJob(network, candidate.hash, tags)
@@ -515,7 +521,7 @@ export default class Operator extends OperatorJobAwareCommand {
    */
   async executeJob(jobHash: string, tags: (string | number)[]): Promise<boolean> {
     // quickly check that job is still valid
-    await this.checkJobStatus(jobHash)
+    await this.checkJobStatus(jobHash, tags)
     if (jobHash in this.operatorJobs) {
       const job: OperatorJob = this.operatorJobs[jobHash]
       const network: string = job.network
