@@ -18,6 +18,7 @@ import {BlockHeightProcessType, Logger} from '../../types/api'
 import ApiService from '../../services/api-service'
 import color from '@oclif/color'
 import {decodeAvailableOperatorJobEvent, decodeCrossChainMessageSentEvent, decodeLzEvent} from '../../events/events'
+import {shouldSync, syncFlag} from '../../flags/sync.flag'
 import {BlockHeightOptions, blockHeightFlag} from '../../flags/update-block-height.flag'
 
 /**
@@ -34,10 +35,6 @@ export default class Operator extends OperatorJobAwareCommand {
       options: Object.values(OperatorMode),
       char: 'm',
     }),
-    sync: Flags.boolean({
-      description: 'Start from last saved block position instead of latest block position',
-      default: false,
-    }),
     unsafePassword: Flags.string({
       description: 'Enter the plain text password for the wallet in the holograph cli config',
     }),
@@ -47,6 +44,7 @@ export default class Operator extends OperatorJobAwareCommand {
       required: false,
     }),
     ...blockHeightFlag,
+    ...syncFlag,
     ...networksFlag,
     ...HealthCheck.flags,
   }
@@ -160,29 +158,9 @@ export default class Operator extends OperatorJobAwareCommand {
         break
     }
 
-    // Check if the operator has previous missed blocks
-    let canSync = false
-    const lastBlockKeys: string[] = Object.keys(this.networkMonitor.latestBlockHeight)
-    for (let i = 0, l: number = lastBlockKeys.length; i < l; i++) {
-      if (this.networkMonitor.latestBlockHeight[lastBlockKeys[i]] > 0) {
-        canSync = true
-        break
-      }
-    }
-
-    if (canSync && !syncFlag) {
-      const syncPrompt: any = await inquirer.prompt([
-        {
-          name: 'shouldSync',
-          message: 'Operator has previous (missed) blocks that can be synced. Would you like to sync?',
-          type: 'confirm',
-          default: true,
-        },
-      ])
-      if (syncPrompt.shouldSync === false) {
-        this.networkMonitor.latestBlockHeight = {}
-        this.networkMonitor.currentBlockHeight = {}
-      }
+    if ((await shouldSync(syncFlag, this.networkMonitor.latestBlockHeight)) === false) {
+      this.networkMonitor.latestBlockHeight = {}
+      this.networkMonitor.currentBlockHeight = {}
     }
 
     this.operatorStatus.address = userWallet.address.toLowerCase()

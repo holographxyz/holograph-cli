@@ -48,7 +48,7 @@ then
 
 elif [[ $HOLO_CLI_CMD == "indexer" ]]
 then
-  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_INDEXER_HOST $HEALTHCHECK $ENABLE_UNSAFE --update-block-height $UPDATE_BLOCK_HEIGHT
+  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_INDEXER_HOST $HEALTHCHECK $ENABLE_UNSAFE $ENABLE_SYNC --update-block-height $UPDATE_BLOCK_HEIGHT
 
 else
   echo

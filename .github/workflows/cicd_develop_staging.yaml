@@ -37,7 +37,7 @@ env:
   STG_COMMON_NAMESPACE: develop
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.87
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.88
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
   STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.64
@@ -168,6 +168,7 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
+          ENABLE_SYNC: 'true'
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           AVALANCHE_NETWORK: 'fuji'
           ETHEREUM_NETWORK: 'goerli'
@@ -189,6 +190,7 @@ jobs:
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
             \
@@ -381,6 +383,7 @@ jobs:
           RELEASE_NAME: dummy-${{ env.INDEXER_RELEASE_NAME }} # notice
           #
           ENABLE_DEBUG: 'true'
+          ENABLE_SYNC: 'true'
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
@@ -405,6 +408,7 @@ jobs:
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
             \
