@@ -26,7 +26,6 @@ import {
   BlockWithTransactions,
   Filter,
   Log,
-  TransactionRequest,
   TransactionReceipt,
   TransactionResponse,
 } from '@ethersproject/abstract-provider'
@@ -1628,54 +1627,16 @@ export class NetworkMonitor {
     canFail = false,
     interval = 5000,
   }: BlockParams): Promise<ExtendedBlockWithTransactions | null> {
-    let counter = 0
-    let sent = false
-
-    // eslint-disable-next-line no-unmodified-loop-condition
-    for (let i = 0; i < attempts || !canFail; i++) {
-      try {
-        const block: ExtendedBlockWithTransactions | null = await getExtendedBlockWithTransactions(
-          this.providers[network],
-          blockNumber,
-        )
-        if (block === null) {
-          counter++
-          if (canFail && counter > attempts) {
-            if (!sent) {
-              sent = true
-            }
-
-            return null
-          }
-        } else {
-          if (!sent) {
-            sent = true
-          }
-
-          return block as ExtendedBlockWithTransactions
-        }
-      } catch (error: any) {
-        if (error.message !== 'cannot query unfinalized data') {
-          counter++
-          if (canFail && counter > attempts) {
-            this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
-            if (!sent) {
-              sent = true
-            }
-
-            throw error
-          }
-        }
-      }
-
-      if (sent) {
-        break
-      }
-
-      await sleep(interval)
+    const getBlock = async () => {
+      return getExtendedBlockWithTransactions(this.providers[network], blockNumber)
     }
 
-    return null
+    try {
+      return retry(getBlock, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, `Failed getting block ${blockNumber} with transactions`, tags)
+      throw error
+    }
   }
 
   async getTransaction({
@@ -1686,38 +1647,16 @@ export class NetworkMonitor {
     canFail = false,
     interval = 2000,
   }: TransactionParams): Promise<TransactionResponse | null> {
-    let counter = 0
-    let sent = false
-
-    // eslint-disable-next-line no-unmodified-loop-condition
-    for (let i = 0; i < attempts || !canFail; i++) {
-      const tx: TransactionResponse | null = await this.providers[network].getTransaction(transactionHash)
-      if (tx === null) {
-        counter++
-        if (canFail && counter > attempts) {
-          if (!sent) {
-            sent = true
-            this.structuredLog(network, `Failed getting transaction ${transactionHash}`, tags)
-          }
-
-          return null
-        }
-      } else {
-        if (!sent) {
-          sent = true
-        }
-
-        return tx as TransactionResponse
-      }
-
-      if (sent) {
-        break
-      }
-
-      await sleep(interval)
+    const getTransactionAttempt = async () => {
+      return this.providers[network].getTransaction(transactionHash)
     }
 
-    return null
+    try {
+      return retry(getTransactionAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, `Failed getting transaction ${transactionHash}`, tags)
+      throw error
+    }
   }
 
   async getTransactionReceipt({
@@ -1728,38 +1667,16 @@ export class NetworkMonitor {
     canFail = false,
     interval = 2000,
   }: TransactionParams): Promise<TransactionReceipt | null> {
-    let counter = 0
-    let sent = false
-
-    // eslint-disable-next-line no-unmodified-loop-condition
-    for (let i = 0; i < attempts || !canFail; i++) {
-      const receipt: TransactionReceipt | null = await this.providers[network].getTransactionReceipt(transactionHash)
-      if (receipt === null) {
-        counter++
-        if (canFail && counter > attempts) {
-          if (!sent) {
-            sent = true
-            this.structuredLog(network, `Failed getting transaction ${transactionHash} receipt`, tags)
-          }
-
-          return null
-        }
-      } else {
-        if (!sent) {
-          sent = true
-        }
-
-        return receipt as TransactionReceipt
-      }
-
-      if (sent) {
-        break
-      }
-
-      await sleep(interval)
+    const getTransactionReceiptAttempt = async () => {
+      return this.providers[network].getTransactionReceipt(transactionHash)
     }
 
-    return null
+    try {
+      return retry(getTransactionReceiptAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, `Failed getting transaction ${transactionHash} receipt`, tags)
+      throw error
+    }
   }
 
   async getBalance({
@@ -1770,38 +1687,17 @@ export class NetworkMonitor {
     canFail = false,
     interval = 1000,
   }: WalletParams): Promise<BigNumber> {
-    let counter = 0
-    let sent = false
-
-    // eslint-disable-next-line no-unmodified-loop-condition
-    for (let i = 0; i < attempts || !canFail; i++) {
-      try {
-        const balance: BigNumber = await this.providers[network].getBalance(walletAddress, 'latest')
-        if (!sent) {
-          sent = true
-        }
-
-        return balance
-      } catch (error: any) {
-        counter++
-        if (canFail && counter > attempts) {
-          if (!sent) {
-            sent = true
-            this.structuredLog(network, `Failed getting ${walletAddress} balance`, tags)
-          }
-
-          throw error
-        }
-      }
-
-      if (sent) {
-        break
-      }
-
-      await sleep(interval)
+    const getBalanceAttempt = async () => {
+      return this.providers[network].getBalance(walletAddress, 'latest')
     }
 
-    return BigNumber.from(0)
+    try {
+      const result = await retry(getBalanceAttempt, attempts, canFail, interval)
+      return result as BigNumber
+    } catch (error: any) {
+      this.structuredLog(network, `Failed getting ${walletAddress} balance`, tags)
+      throw error
+    }
   }
 
   async getNonce({
@@ -1812,25 +1708,17 @@ export class NetworkMonitor {
     canFail = false,
     interval = 1000,
   }: WalletParams): Promise<number> {
-    let counter = 0
-
-    // eslint-disable-next-line no-unmodified-loop-condition
-    for (let i = 0; i < attempts || !canFail; i++) {
-      try {
-        const nonce: number = await this.providers[network].getTransactionCount(walletAddress, 'latest')
-        return nonce
-      } catch (error: any) {
-        counter++
-        if (canFail && counter > attempts) {
-          this.structuredLog(network, `Failed getting ${walletAddress} nonce`, tags)
-          throw error
-        }
-
-        await sleep(interval)
-      }
+    const getNonceAttempt = async () => {
+      return this.providers[network].getTransactionCount(walletAddress, 'latest')
     }
 
-    return 0
+    try {
+      const result = await retry(getNonceAttempt, attempts, canFail, interval)
+      return result as number
+    } catch (error: any) {
+      this.structuredLog(network, `Failed getting ${walletAddress} nonce`, tags)
+      throw error
+    }
   }
 
   async getGasLimit({
@@ -1845,72 +1733,60 @@ export class NetworkMonitor {
     canFail = false,
     interval = 5000,
   }: GasLimitParams): Promise<BigNumber | null> {
-    let counter = 0
+    const getGasLimitAttempt = async () => {
+      const gasLimit: BigNumber | null = await contract
+        .connect(this.wallets[network])
+        .estimateGas[methodName](...args, {
+          gasPrice: gasPrice!.mul(TWO),
+          value,
+          from: this.wallets[network].address,
+        })
 
-    // eslint-disable-next-line no-unmodified-loop-condition
-    for (let i = 0; i < attempts || !canFail; i++) {
-      try {
-        const gasLimit: BigNumber | null = await contract
-          .connect(this.wallets[network])
-          .estimateGas[methodName](...args, {
-            gasPrice: gasPrice!.mul(TWO),
-            value,
-            from: this.wallets[network].address,
-          })
-
-        if (gasLimit !== null) {
-          return gasLimit
-        }
-
-        counter++
-        if (canFail && counter > attempts) {
-          this.structuredLog(network, `Failed calculating gas limit`, tags)
-          return null
-        }
-      } catch (error: any) {
-        // Handle error
-        let revertReason = 'unknown revert reason'
-        let revertExplanation = 'unknown'
-        let knownReason = false
-        if ('reason' in error && error.reason.startsWith('execution reverted:')) {
-          // transaction reverted, we got a `revert` error from web3 call
-          revertReason = error.reason.split('execution reverted: ')[1]
-          switch (revertReason) {
-            case 'HOLOGRAPH: already deployed': {
-              revertExplanation = 'The deploy request is invalid, since requested contract is already deployed.'
-              knownReason = true
-              break
-            }
-
-            case 'HOLOGRAPH: invalid job': {
-              revertExplanation =
-                'Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.'
-              knownReason = true
-              break
-            }
-
-            case 'HOLOGRAPH: not holographed': {
-              revertExplanation = 'Need to first deploy a holographable contract on destination chain.'
-              knownReason = true
-              break
-            }
-          }
-
-          if (knownReason) {
-            this.structuredLog(network, `[web3] ${revertReason} (${revertExplanation})`, tags)
-          } else {
-            this.structuredLog(network, JSON.stringify(error), tags)
-          }
-        }
-
-        this.structuredLog(network, `Transaction is expected to revert`, tags)
-        return null
-      } finally {
-        await sleep(interval)
-      }
+      return gasLimit
     }
 
-    return null
+    try {
+      return retry(getGasLimitAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, `Failed calculating gas limit`, tags)
+      // Error handling logic for known reasons
+      let revertReason = 'unknown revert reason'
+      let revertExplanation = 'unknown'
+      let knownReason = false
+      if ('reason' in error && error.reason.startsWith('execution reverted:')) {
+        // transaction reverted, we got a `revert` error from web3 call
+        revertReason = error.reason.split('execution reverted: ')[1]
+        switch (revertReason) {
+          case 'HOLOGRAPH: already deployed': {
+            revertExplanation = 'The deploy request is invalid, since requested contract is already deployed.'
+            knownReason = true
+            break
+          }
+
+          case 'HOLOGRAPH: invalid job': {
+            revertExplanation =
+              'Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.'
+            knownReason = true
+            break
+          }
+
+          case 'HOLOGRAPH: not holographed': {
+            revertExplanation = 'Need to first deploy a holographable contract on destination chain.'
+            knownReason = true
+            break
+          }
+        }
+
+        if (knownReason) {
+          this.structuredLog(network, `[web3] ${revertReason} (${revertExplanation})`, tags)
+        } else {
+          this.structuredLog(network, JSON.stringify(error), tags)
+        }
+      }
+
+      this.structuredLog(network, `Transaction is expected to revert`, tags)
+      return null
+    }
   }
 
   async sendTransaction({
@@ -1921,28 +1797,8 @@ export class NetworkMonitor {
     canFail = false,
     interval = 3000,
   }: SendTransactionParams): Promise<TransactionResponse | null> {
-    let txHash: string | null = null
-    let counter = 0
-    let sent = false
-    const sendTxInterval: NodeJS.Timeout | null = null
-
-    const handleError = (error: any) => {
-      process.stdout.write('sendTransaction' + JSON.stringify(error, undefined, 2))
-      counter++
-      if (canFail && counter > attempts) {
-        this.structuredLogError(network, error, tags)
-        if (!sent) {
-          sent = true
-          return null
-        }
-      }
-    }
-
-    // eslint-disable-next-line no-unmodified-loop-condition
-    for (let i = 0; i < attempts || !canFail; i++) {
-      let populatedTx: TransactionRequest | null
-      let signedTx: string | null
-      let tx: TransactionResponse | null
+    const sendTransactionAttempt = async (): Promise<TransactionResponse> => {
+      let txHash: string | null = null
       const gasPricing: GasPricing = this.gasPrices[network]
       let gasPrice: BigNumber | undefined
       const rawTxGasPrice: BigNumber = BigNumber.from(rawTx.gasPrice ?? 0)
@@ -1966,81 +1822,53 @@ export class NetworkMonitor {
           delete rawTx.value
         }
 
-        populatedTx = await this.wallets[network].populateTransaction(rawTx)
-        signedTx = await this.wallets[network].signTransaction(populatedTx)
+        const populatedTx = await this.wallets[network].populateTransaction(rawTx)
+        const signedTx = await this.wallets[network].signTransaction(populatedTx)
         if (txHash === null) {
           txHash = keccak256(signedTx)
         }
 
         this.structuredLog(network, 'Attempting to send transaction -> ' + JSON.stringify(populatedTx), tags)
-        tx = await this.providers[network].sendTransaction(signedTx)
+        const tx = await this.providers[network].sendTransaction(signedTx)
 
         if (tx === null) {
-          counter++
-          if (canFail && counter > attempts) {
-            this.structuredLog(network, 'Failed submitting transaction', tags)
-            if (sendTxInterval) clearInterval(sendTxInterval)
-            if (!sent) {
-              sent = true
-              return null
-            }
-          }
+          throw new Error('Failed submitting transaction')
         } else {
           this.structuredLog(network, `Transaction sent to mempool ${tx.hash}`, tags)
-          if (sendTxInterval) clearInterval(sendTxInterval)
-          if (!sent) {
-            sent = true
-            return tx
-          }
+          return tx
         }
       } catch (error: any) {
-        switch (error.message) {
-          case 'already known': {
-            // we are aware that more than one message has been sent, so avoid all errors echoed
-            tx = await this.getTransaction({transactionHash: txHash!, network, tags, attempts, canFail, interval})
-            if (tx !== null) {
-              if (sendTxInterval) clearInterval(sendTxInterval)
-              if (!sent) {
-                this.structuredLog(network, 'Transaction already submitted', tags)
-                sent = true
-                return tx
-              }
-            }
-
-            break
+        if (error.message === 'already known' || error.message === 'nonce has already been used') {
+          const tx = await this.getTransaction({
+            transactionHash: txHash!,
+            network,
+            tags,
+            attempts,
+            canFail,
+            interval,
+          })
+          if (tx === null) {
+            throw error
+          } else {
+            this.structuredLog(
+              network,
+              error.message === 'already known' ? 'Transaction already submitted' : 'Transaction already mined',
+              tags,
+            )
+            return tx
           }
-
-          case 'nonce has already been used': {
-            // we will see this when a transaction has already been submitted and is no longer in tx pool
-            tx = await this.getTransaction({transactionHash: txHash!, network, tags, attempts, canFail, interval})
-            if (tx !== null) {
-              if (sendTxInterval) clearInterval(sendTxInterval)
-              if (!sent) {
-                this.structuredLog(network, 'Transaction already mined', tags)
-                sent = true
-                return tx
-              }
-            }
-
-            break
-          }
-
-          default: {
-            handleError(error)
-            break
-          }
+        } else {
+          throw error
         }
       }
-
-      // Wait for the interval before trying again.
-      await sleep(interval)
     }
 
-    if (!sent) {
-      return null
+    try {
+      return retry(sendTransactionAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLogError(network, 'Failed submitting transaction', tags)
+      throw error
     }
-
-    return null
   }
 
   async populateTransaction({
@@ -2056,38 +1884,27 @@ export class NetworkMonitor {
     canFail = false,
     interval = 1000,
   }: PopulateTransactionParams): Promise<PopulatedTransaction | null> {
-    // eslint-disable-next-line no-unmodified-loop-condition
-    for (let counter = 0; !canFail || counter < attempts; counter++) {
-      try {
-        const rawTx = await contract.populateTransaction[methodName](...args, {
-          gasPrice,
-          gasLimit,
-          value,
-          from: this.wallets[network].address,
-        })
+    const populateTransactionAttempt = async (): Promise<PopulatedTransaction> => {
+      const rawTx = await contract.populateTransaction[methodName](...args, {
+        gasPrice,
+        gasLimit,
+        value,
+        from: this.wallets[network].address,
+      })
 
-        if (rawTx) {
-          return rawTx
-        }
-
-        if (canFail && counter >= attempts - 1) {
-          this.structuredLog(network, 'Failed populating transaction', tags)
-          return null
-        }
-      } catch (error: any) {
-        process.stdout.write('populateTransaction' + JSON.stringify(error, undefined, 2))
-
-        if (canFail && counter >= attempts - 1) {
-          this.structuredLogError(network, error, tags)
-          return null
-        }
+      if (rawTx) {
+        return rawTx
       }
 
-      // Wait for the interval before trying again.
-      await sleep(interval)
+      throw new Error('Failed populating transaction')
     }
 
-    return null
+    try {
+      return retry(populateTransactionAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, 'Failed populating transaction', tags)
+      throw error
+    }
   }
 
   async executeTransaction({
@@ -2245,4 +2062,54 @@ export class NetworkMonitor {
 
     return receipt
   }
+}
+
+// Generic retry function
+async function retry<T>(func: () => Promise<T>, attempts = 10, canFail = false, interval = 5000): Promise<T | null> {
+  let counter = 0
+  let sent = false
+
+  // canFail remains constant because it determines if the function is allowed to fail or not.
+  // the canFail parameter is determined by the function that calls retry
+  // If canFail is true, the loop will terminate after the specified number of attempts.
+  // If canFail is false, the loop will continue indefinitely until the async function succeeds.
+  // eslint-disable-next-line no-unmodified-loop-condition
+  for (let i = 0; i < attempts || !canFail; i++) {
+    try {
+      const result: T | null = await func()
+      if (result === null) {
+        counter++
+        if (canFail && counter > attempts) {
+          if (!sent) {
+            sent = true
+          }
+
+          return null
+        }
+      } else {
+        if (!sent) {
+          sent = true
+        }
+
+        return result
+      }
+    } catch (error: any) {
+      counter++
+      if (canFail && counter > attempts) {
+        if (!sent) {
+          sent = true
+        }
+
+        throw error
+      }
+    }
+
+    if (sent) {
+      break
+    }
+
+    await sleep(interval)
+  }
+
+  return null
 }
