@@ -26,7 +26,6 @@ import {
   BlockWithTransactions,
   Filter,
   Log,
-  TransactionRequest,
   TransactionReceipt,
   TransactionResponse,
 } from '@ethersproject/abstract-provider'
@@ -43,7 +42,7 @@ import {
 
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {GasPricing, initializeGasPricing, updateGasPricing} from './gas'
-import {capitalize, NETWORK_COLORS, zeroAddress} from './utils'
+import {capitalize, NETWORK_COLORS, sleep, zeroAddress} from './utils'
 import {CXIP_ERC721_ADDRESSES, HOLOGRAPH_ADDRESSES} from './contracts'
 import {BlockHeight, BlockHeightProcessType} from '../types/api'
 import ApiService from '../services/api-service'
@@ -181,7 +180,7 @@ export const keepAlive = ({
   let counter = 0
   let errorCounter = 0
   let terminator: NodeJS.Timeout | null = null
-  const errHandler: (err: ExtendedError) => void = (err: ExtendedError) => {
+  const errorHandler: (err: ExtendedError) => void = (err: ExtendedError) => {
     if (errorCounter === 0) {
       errorCounter++
       debug(`websocket error event triggered ${err.code} ${JSON.stringify(err.reason)}`)
@@ -233,7 +232,7 @@ export const keepAlive = ({
 
   websocket.on('open', () => {
     debug(`websocket open event triggered`)
-    websocket.off('error', errHandler)
+    websocket.off('error', errorHandler)
     if (terminator) {
       clearTimeout(terminator)
     }
@@ -265,7 +264,7 @@ export const keepAlive = ({
     }
   })
 
-  websocket.on('error', errHandler)
+  websocket.on('error', errorHandler)
 
   websocket.on('pong', () => {
     if (pingTimeout) {
@@ -1288,7 +1287,8 @@ export class NetworkMonitor {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
 
-      /* Temporarily disabled
+      /* 
+      Temporarily disabled
       if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
         this.structuredLog(
           job.network,
@@ -1387,7 +1387,8 @@ export class NetworkMonitor {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
 
-      /* Temporarily disabled
+      /* 
+      Temporarily disabled
       if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
         this.structuredLog(
           job.network,
@@ -1537,49 +1538,52 @@ export class NetworkMonitor {
     canFail = false,
     interval = 10_000,
   }: LogsParams): Promise<Log[] | null> {
-    return new Promise<Log[] | null>((topResolve, _topReject) => {
-      let counter = 0
-      let sent = false
-      let logsInterval: NodeJS.Timeout | null = null
-      const targetBlock: string = BigNumber.from(blockNumber).toHexString()
-      const getLogs = async (): Promise<void> => {
-        try {
-          const filter: Filter = {fromBlock: targetBlock, toBlock: targetBlock}
-          const logs: Log[] | null = await this.providers[network].getLogs(filter)
-          if (logs === null) {
-            counter++
-            if (canFail && counter > attempts) {
-              if (logsInterval) clearInterval(logsInterval)
-              if (!sent) {
-                sent = true
-                topResolve(null)
-              }
-            }
-          } else {
-            if (logsInterval) clearInterval(logsInterval)
+    let counter = 0
+    let sent = false
+    const targetBlock: string = BigNumber.from(blockNumber).toHexString()
+
+    // eslint-disable-next-line no-unmodified-loop-condition
+    for (let i = 0; i < attempts || !canFail; i++) {
+      try {
+        const filter: Filter = {fromBlock: targetBlock, toBlock: targetBlock}
+        const logs: Log[] | null = await this.providers[network].getLogs(filter)
+        if (logs === null) {
+          counter++
+          if (canFail && counter > attempts) {
             if (!sent) {
               sent = true
-              topResolve(logs as Log[])
             }
+
+            return null
           }
-        } catch (error: any) {
-          if (error.message !== 'cannot query unfinalized data') {
-            counter++
-            if (canFail && counter > attempts) {
-              this.structuredLog(network, `Failed retrieving logs for block ${blockNumber}`, tags)
-              if (logsInterval) clearInterval(logsInterval)
-              if (!sent) {
-                sent = true
-                _topReject(error)
-              }
+        } else {
+          if (!sent) {
+            sent = true
+          }
+
+          return logs as Log[]
+        }
+      } catch (error: any) {
+        if (error.message !== 'cannot query unfinalized data') {
+          counter++
+          if (canFail && counter > attempts) {
+            this.structuredLog(network, `Failed retrieving logs for block ${blockNumber}`, tags)
+            if (!sent) {
+              sent = true
+              throw error
             }
           }
         }
       }
 
-      logsInterval = setInterval(getLogs, interval)
-      getLogs()
-    })
+      if (sent) {
+        break
+      }
+
+      await sleep(interval)
+    }
+
+    return null
   }
 
   async getBlock({
@@ -1590,47 +1594,22 @@ export class NetworkMonitor {
     canFail = false,
     interval = 5000,
   }: BlockParams): Promise<ExtendedBlock | null> {
-    return new Promise<ExtendedBlock | null>((topResolve, _topReject) => {
-      let counter = 0
-      let sent = false
-      let blockInterval: NodeJS.Timeout | null = null
-      const getBlock = async (): Promise<void> => {
-        try {
-          const block: ExtendedBlock | null = await getExtendedBlock(this.providers[network], blockNumber)
-          if (block === null) {
-            counter++
-            if (canFail && counter > attempts) {
-              if (blockInterval) clearInterval(blockInterval)
-              if (!sent) {
-                sent = true
-                topResolve(null)
-              }
-            }
-          } else {
-            if (blockInterval) clearInterval(blockInterval)
-            if (!sent) {
-              sent = true
-              topResolve(block as ExtendedBlock)
-            }
-          }
-        } catch (error: any) {
-          if (error.message !== 'cannot query unfinalized data') {
-            counter++
-            if (canFail && counter > attempts) {
-              this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
-              if (blockInterval) clearInterval(blockInterval)
-              if (!sent) {
-                sent = true
-                _topReject(error)
-              }
-            }
-          }
-        }
+    const getBlockAttempt = async () => {
+      const block: ExtendedBlock | null = await getExtendedBlock(this.providers[network], blockNumber)
+
+      if (block === null && canFail) {
+        throw new Error('Failed retrieving block')
       }
 
-      blockInterval = setInterval(getBlock, interval)
-      getBlock()
-    })
+      return block
+    }
+
+    try {
+      return await retry(getBlockAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
+      throw error
+    }
   }
 
   async getBlockWithTransactions({
@@ -1641,51 +1620,16 @@ export class NetworkMonitor {
     canFail = false,
     interval = 5000,
   }: BlockParams): Promise<ExtendedBlockWithTransactions | null> {
-    return new Promise<ExtendedBlockWithTransactions | null>((topResolve, _topReject) => {
-      let counter = 0
-      let sent = false
-      let blockInterval: NodeJS.Timeout | null = null
-      const getBlock = async (): Promise<void> => {
-        try {
-          const block: ExtendedBlockWithTransactions | null = await getExtendedBlockWithTransactions(
-            this.providers[network],
-            blockNumber,
-          )
-          // console.log('getBlockWithTransactions', block)
-          if (block === null) {
-            counter++
-            if (canFail && counter > attempts) {
-              if (blockInterval) clearInterval(blockInterval)
-              if (!sent) {
-                sent = true
-                topResolve(null)
-              }
-            }
-          } else {
-            if (blockInterval) clearInterval(blockInterval)
-            if (!sent) {
-              sent = true
-              topResolve(block as ExtendedBlockWithTransactions)
-            }
-          }
-        } catch (error: any) {
-          if (error.message !== 'cannot query unfinalized data') {
-            counter++
-            if (canFail && counter > attempts) {
-              this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
-              if (blockInterval) clearInterval(blockInterval)
-              if (!sent) {
-                sent = true
-                _topReject(error)
-              }
-            }
-          }
-        }
-      }
+    const getBlock = async () => {
+      return getExtendedBlockWithTransactions(this.providers[network], blockNumber)
+    }
 
-      blockInterval = setInterval(getBlock, interval)
-      getBlock()
-    })
+    try {
+      return retry(getBlock, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, `Failed getting block ${blockNumber} with transactions`, tags)
+      throw error
+    }
   }
 
   async getTransaction({
@@ -1696,34 +1640,16 @@ export class NetworkMonitor {
     canFail = false,
     interval = 2000,
   }: TransactionParams): Promise<TransactionResponse | null> {
-    return new Promise<TransactionResponse | null>((topResolve, _topReject) => {
-      let counter = 0
-      let sent = false
-      let txInterval: NodeJS.Timeout | null = null
-      const getTx = async (): Promise<void> => {
-        const tx: TransactionResponse | null = await this.providers[network].getTransaction(transactionHash)
-        if (tx === null) {
-          counter++
-          if (canFail && counter > attempts) {
-            if (txInterval) clearInterval(txInterval)
-            if (!sent) {
-              sent = true
-              this.structuredLog(network, `Failed getting transaction ${transactionHash}`, tags)
-              topResolve(null)
-            }
-          }
-        } else {
-          if (txInterval) clearInterval(txInterval)
-          if (!sent) {
-            sent = true
-            topResolve(tx as TransactionResponse)
-          }
-        }
-      }
+    const getTransactionAttempt = async () => {
+      return this.providers[network].getTransaction(transactionHash)
+    }
 
-      txInterval = setInterval(getTx, interval)
-      getTx()
-    })
+    try {
+      return retry(getTransactionAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, `Failed getting transaction ${transactionHash}`, tags)
+      throw error
+    }
   }
 
   async getTransactionReceipt({
@@ -1734,34 +1660,16 @@ export class NetworkMonitor {
     canFail = false,
     interval = 2000,
   }: TransactionParams): Promise<TransactionReceipt | null> {
-    return new Promise<TransactionReceipt | null>((topResolve, _topReject) => {
-      let counter = 0
-      let sent = false
-      let txReceiptInterval: NodeJS.Timeout | null = null
-      const getTxReceipt = async (): Promise<void> => {
-        const receipt: TransactionReceipt | null = await this.providers[network].getTransactionReceipt(transactionHash)
-        if (receipt === null) {
-          counter++
-          if (canFail && counter > attempts) {
-            if (txReceiptInterval) clearInterval(txReceiptInterval)
-            if (!sent) {
-              sent = true
-              this.structuredLog(network, `Failed getting transaction ${transactionHash} receipt`, tags)
-              topResolve(null)
-            }
-          }
-        } else {
-          if (txReceiptInterval) clearInterval(txReceiptInterval)
-          if (!sent) {
-            sent = true
-            topResolve(receipt as TransactionReceipt)
-          }
-        }
-      }
+    const getTransactionReceiptAttempt = async () => {
+      return this.providers[network].getTransactionReceipt(transactionHash)
+    }
 
-      txReceiptInterval = setInterval(getTxReceipt, interval)
-      getTxReceipt()
-    })
+    try {
+      return retry(getTransactionReceiptAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, `Failed getting transaction ${transactionHash} receipt`, tags)
+      throw error
+    }
   }
 
   async getBalance({
@@ -1772,34 +1680,17 @@ export class NetworkMonitor {
     canFail = false,
     interval = 1000,
   }: WalletParams): Promise<BigNumber> {
-    return new Promise<BigNumber>((topResolve, _topReject) => {
-      let counter = 0
-      let sent = false
-      let balanceInterval: NodeJS.Timeout | null = null
-      const getBalance = async (): Promise<void> => {
-        try {
-          const balance: BigNumber = await this.providers[network].getBalance(walletAddress, 'latest')
-          if (balanceInterval) clearInterval(balanceInterval)
-          if (!sent) {
-            sent = true
-            topResolve(balance)
-          }
-        } catch (error: any) {
-          counter++
-          if (canFail && counter > attempts) {
-            if (balanceInterval) clearInterval(balanceInterval)
-            if (!sent) {
-              sent = true
-              this.structuredLog(network, `Failed getting ${walletAddress} balance`, tags)
-              _topReject(error)
-            }
-          }
-        }
-      }
+    const getBalanceAttempt = async () => {
+      return this.providers[network].getBalance(walletAddress, 'latest')
+    }
 
-      balanceInterval = setInterval(getBalance, interval)
-      getBalance()
-    })
+    try {
+      const result = await retry(getBalanceAttempt, attempts, canFail, interval)
+      return result as BigNumber
+    } catch (error: any) {
+      this.structuredLog(network, `Failed getting ${walletAddress} balance`, tags)
+      throw error
+    }
   }
 
   async getNonce({
@@ -1810,34 +1701,17 @@ export class NetworkMonitor {
     canFail = false,
     interval = 1000,
   }: WalletParams): Promise<number> {
-    return new Promise<number>((topResolve, _topReject) => {
-      let counter = 0
-      let sent = false
-      let nonceInterval: NodeJS.Timeout | null = null
-      const getNonce = async (): Promise<void> => {
-        try {
-          const nonce: number = await this.providers[network].getTransactionCount(walletAddress, 'latest')
-          if (nonceInterval) clearInterval(nonceInterval)
-          if (!sent) {
-            sent = true
-            topResolve(nonce)
-          }
-        } catch (error: any) {
-          counter++
-          if (canFail && counter > attempts) {
-            if (nonceInterval) clearInterval(nonceInterval)
-            if (!sent) {
-              sent = true
-              this.structuredLog(network, `Failed getting ${walletAddress} nonce`, tags)
-              _topReject(error)
-            }
-          }
-        }
-      }
+    const getNonceAttempt = async () => {
+      return this.providers[network].getTransactionCount(walletAddress, 'latest')
+    }
 
-      nonceInterval = setInterval(getNonce, interval)
-      getNonce()
-    })
+    try {
+      const result = await retry(getNonceAttempt, attempts, canFail, interval)
+      return result as number
+    } catch (error: any) {
+      this.structuredLog(network, `Failed getting ${walletAddress} nonce`, tags)
+      throw error
+    }
   }
 
   async getGasLimit({
@@ -1852,83 +1726,60 @@ export class NetworkMonitor {
     canFail = false,
     interval = 5000,
   }: GasLimitParams): Promise<BigNumber | null> {
-    return new Promise<BigNumber | null>((topResolve, _topReject) => {
-      let counter = 0
-      let sent = false
-      let calculateGasInterval: NodeJS.Timeout | null = null
-      const calculateGas = async (): Promise<void> => {
-        try {
-          const gasLimit: BigNumber | null = await contract
-            .connect(this.wallets[network])
-            .estimateGas[methodName](...args, {
-              gasPrice: gasPrice!.mul(TWO),
-              value,
-              from: this.wallets[network].address,
-            })
-          if (gasLimit === null) {
-            counter++
-            if (canFail && counter > attempts) {
-              if (calculateGasInterval) clearInterval(calculateGasInterval)
-              if (!sent) {
-                sent = true
-                this.structuredLog(network, `Failed calculating gas limit`, tags)
-                topResolve(null)
-              }
-            }
-          } else {
-            if (calculateGasInterval) clearInterval(calculateGasInterval)
-            if (!sent) {
-              sent = true
-              topResolve(gasLimit)
-            }
-          }
-        } catch (error: any) {
-          let revertReason = 'unknown revert reason'
-          let revertExplanation = 'unknown'
-          let knownReason = false
-          if ('reason' in error && error.reason.startsWith('execution reverted:')) {
-            // transaction reverted, we got a `revert` error from web3 call
-            revertReason = error.reason.split('execution reverted: ')[1]
-            switch (revertReason) {
-              case 'HOLOGRAPH: already deployed': {
-                revertExplanation = 'The deploy request is invalid, since requested contract is already deployed.'
-                knownReason = true
-                break
-              }
+    const getGasLimitAttempt = async () => {
+      const gasLimit: BigNumber | null = await contract
+        .connect(this.wallets[network])
+        .estimateGas[methodName](...args, {
+          gasPrice: gasPrice!.mul(TWO),
+          value,
+          from: this.wallets[network].address,
+        })
 
-              case 'HOLOGRAPH: invalid job': {
-                revertExplanation =
-                  'Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.'
-                knownReason = true
-                break
-              }
+      return gasLimit
+    }
 
-              case 'HOLOGRAPH: not holographed': {
-                revertExplanation = 'Need to first deploy a holographable contract on destination chain.'
-                knownReason = true
-                break
-              }
-            }
+    try {
+      return retry(getGasLimitAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, `Failed calculating gas limit`, tags)
+      // Error handling logic for known reasons
+      let revertReason = 'unknown revert reason'
+      let revertExplanation = 'unknown'
+      let knownReason = false
+      if ('reason' in error && error.reason.startsWith('execution reverted:')) {
+        // transaction reverted, we got a `revert` error from web3 call
+        revertReason = error.reason.split('execution reverted: ')[1]
+        switch (revertReason) {
+          case 'HOLOGRAPH: already deployed': {
+            revertExplanation = 'The deploy request is invalid, since requested contract is already deployed.'
+            knownReason = true
+            break
           }
 
-          if (knownReason) {
-            this.structuredLog(network, `[web3] ${revertReason} (${revertExplanation})`, tags)
-          } else {
-            this.structuredLog(network, JSON.stringify(error), tags)
+          case 'HOLOGRAPH: invalid job': {
+            revertExplanation =
+              'Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.'
+            knownReason = true
+            break
           }
 
-          if (calculateGasInterval) clearInterval(calculateGasInterval)
-          if (!sent) {
-            sent = true
-            this.structuredLog(network, `Transaction is expected to revert`, tags)
-            topResolve(null)
+          case 'HOLOGRAPH: not holographed': {
+            revertExplanation = 'Need to first deploy a holographable contract on destination chain.'
+            knownReason = true
+            break
           }
+        }
+
+        if (knownReason) {
+          this.structuredLog(network, `[web3] ${revertReason} (${revertExplanation})`, tags)
+        } else {
+          this.structuredLog(network, JSON.stringify(error), tags)
         }
       }
 
-      calculateGasInterval = setInterval(calculateGas, interval)
-      calculateGas()
-    })
+      this.structuredLog(network, `Transaction is expected to revert`, tags)
+      return null
+    }
   }
 
   async sendTransaction({
@@ -1939,120 +1790,78 @@ export class NetworkMonitor {
     canFail = false,
     interval = 3000,
   }: SendTransactionParams): Promise<TransactionResponse | null> {
-    return new Promise<TransactionResponse | null>((topResolve, _topReject) => {
-      let txHash: string | null
-      let counter = 0
-      let sent = false
-      let sendTxInterval: NodeJS.Timeout | null = null
-      const handleError = (error: any) => {
-        process.stdout.write('sendTransaction' + JSON.stringify(error, undefined, 2))
-        counter++
-        if (canFail && counter > attempts) {
-          this.structuredLogError(network, error, tags)
-          if (sendTxInterval) clearInterval(sendTxInterval)
-          if (!sent) {
-            sent = true
-            topResolve(null)
+    const sendTransactionAttempt = async (): Promise<TransactionResponse> => {
+      let txHash: string | null = null
+      const gasPricing: GasPricing = this.gasPrices[network]
+      let gasPrice: BigNumber | undefined
+      const rawTxGasPrice: BigNumber = BigNumber.from(rawTx.gasPrice ?? 0)
+
+      // Remove the gasPrice from rawTx to avoid EIP1559 error that type2 tx does not allow for use of gasPrice
+      delete rawTx.gasPrice
+
+      try {
+        // move gas price info around to support EIP-1559
+        if (gasPricing.isEip1559) {
+          if (gasPrice === undefined) {
+            gasPrice = BigNumber.from(rawTxGasPrice)
           }
+
+          rawTx.type = 2
+          rawTx.maxPriorityFeePerGas = gasPrice!
+          rawTx.maxFeePerGas = gasPrice!
         }
-      }
 
-      const sendTx = async (): Promise<void> => {
-        let populatedTx: TransactionRequest | null
-        let signedTx: string | null
-        let tx: TransactionResponse | null
-        const gasPricing: GasPricing = this.gasPrices[network]
-        let gasPrice: BigNumber | undefined
-        const rawTxGasPrice: BigNumber = BigNumber.from(rawTx.gasPrice ?? 0)
+        if ('value' in rawTx && rawTx.value!.eq(ZERO)) {
+          delete rawTx.value
+        }
 
-        // Remove the gasPrice from rawTx to avoid EIP1559 error that type2 tx does not allow for use of gasPrice
-        delete rawTx.gasPrice
+        const populatedTx = await this.wallets[network].populateTransaction(rawTx)
+        const signedTx = await this.wallets[network].signTransaction(populatedTx)
+        if (txHash === null) {
+          txHash = keccak256(signedTx)
+        }
 
-        try {
-          // move gas price info around to support EIP-1559
-          if (gasPricing.isEip1559) {
-            if (gasPrice === undefined) {
-              gasPrice = BigNumber.from(rawTxGasPrice)
-            }
+        this.structuredLog(network, 'Attempting to send transaction -> ' + JSON.stringify(populatedTx), tags)
+        const tx = await this.providers[network].sendTransaction(signedTx)
 
-            rawTx.type = 2
-            rawTx.maxPriorityFeePerGas = gasPrice!
-            rawTx.maxFeePerGas = gasPrice!
-          }
-
-          if ('value' in rawTx && rawTx.value!.eq(ZERO)) {
-            delete rawTx.value
-          }
-
-          populatedTx = await this.wallets[network].populateTransaction(rawTx)
-          signedTx = await this.wallets[network].signTransaction(populatedTx)
-          if (txHash === null) {
-            txHash = keccak256(signedTx)
-          }
-
-          this.structuredLog(network, 'Attempting to send transaction -> ' + JSON.stringify(populatedTx), tags)
-          tx = await this.providers[network].sendTransaction(signedTx)
+        if (tx === null) {
+          throw new Error('Failed submitting transaction')
+        } else {
+          this.structuredLog(network, `Transaction sent to mempool ${tx.hash}`, tags)
+          return tx
+        }
+      } catch (error: any) {
+        if (error.message === 'already known' || error.message === 'nonce has already been used') {
+          const tx = await this.getTransaction({
+            transactionHash: txHash!,
+            network,
+            tags,
+            attempts,
+            canFail,
+            interval,
+          })
           if (tx === null) {
-            counter++
-            if (canFail && counter > attempts) {
-              this.structuredLog(network, 'Failed submitting transaction', tags)
-              if (sendTxInterval) clearInterval(sendTxInterval)
-              if (!sent) {
-                sent = true
-                topResolve(null)
-              }
-            }
+            throw error
           } else {
-            this.structuredLog(network, `Transaction sent to mempool ${tx.hash}`, tags)
-            if (sendTxInterval) clearInterval(sendTxInterval)
-            if (!sent) {
-              sent = true
-              topResolve(tx)
-            }
+            this.structuredLog(
+              network,
+              error.message === 'already known' ? 'Transaction already submitted' : 'Transaction already mined',
+              tags,
+            )
+            return tx
           }
-        } catch (error: any) {
-          switch (error.message) {
-            case 'already known': {
-              // we are aware that more than one message has been sent, so avoid all errors echoed
-              tx = await this.getTransaction({transactionHash: txHash!, network, tags, attempts, canFail, interval})
-              if (tx !== null) {
-                if (sendTxInterval) clearInterval(sendTxInterval)
-                if (!sent) {
-                  this.structuredLog(network, 'Transaction already submitted', tags)
-                  sent = true
-                  topResolve(tx)
-                }
-              }
-
-              break
-            }
-
-            case 'nonce has already been used': {
-              // we will see this when a transaction has already been submitted and is no longer in tx pool
-              tx = await this.getTransaction({transactionHash: txHash!, network, tags, attempts, canFail, interval})
-              if (tx !== null) {
-                if (sendTxInterval) clearInterval(sendTxInterval)
-                if (!sent) {
-                  this.structuredLog(network, 'Transaction already mined', tags)
-                  sent = true
-                  topResolve(tx)
-                }
-              }
-
-              break
-            }
-
-            default: {
-              handleError(error)
-              break
-            }
-          }
+        } else {
+          throw error
         }
       }
+    }
 
-      sendTxInterval = setInterval(sendTx, interval)
-      sendTx()
-    })
+    try {
+      return retry(sendTransactionAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLogError(network, 'Failed submitting transaction', tags)
+      throw error
+    }
   }
 
   async populateTransaction({
@@ -2063,64 +1872,32 @@ export class NetworkMonitor {
     gasPrice,
     gasLimit,
     value = ZERO,
-    // nonce, disabled to let ethers.js handle it
     tags = [] as (string | number)[],
     attempts = 10,
     canFail = false,
     interval = 1000,
   }: PopulateTransactionParams): Promise<PopulatedTransaction | null> {
-    return new Promise<PopulatedTransaction | null>((topResolve, _topReject) => {
-      let counter = 0
-      let sent = false
-      let populateTxInterval: NodeJS.Timeout | null = null
-      const handleError = (error: any) => {
-        process.stdout.write('populateTransaction' + JSON.stringify(error, undefined, 2))
-        counter++
-        if (canFail && counter > attempts) {
-          this.structuredLogError(network, error, tags)
-          if (populateTxInterval) clearInterval(populateTxInterval)
-          if (!sent) {
-            sent = true
-            topResolve(null)
-          }
-        }
+    const populateTransactionAttempt = async (): Promise<PopulatedTransaction> => {
+      const rawTx = await contract.populateTransaction[methodName](...args, {
+        gasPrice,
+        gasLimit,
+        value,
+        from: this.wallets[network].address,
+      })
+
+      if (rawTx) {
+        return rawTx
       }
 
-      const populateTx = async (): Promise<void> => {
-        let rawTx: PopulatedTransaction | null
-        try {
-          rawTx = await contract.populateTransaction[methodName](...args, {
-            gasPrice,
-            gasLimit,
-            // nonce disabled to let ethers.js handle it,
-            value,
-            from: this.wallets[network].address,
-          })
-          if (rawTx === null) {
-            counter++
-            if (canFail && counter > attempts) {
-              this.structuredLog(network, 'Failed populating transaction', tags)
-              if (populateTxInterval) clearInterval(populateTxInterval)
-              if (!sent) {
-                sent = true
-                topResolve(null)
-              }
-            }
-          } else {
-            if (populateTxInterval) clearInterval(populateTxInterval)
-            if (!sent) {
-              sent = true
-              topResolve(rawTx)
-            }
-          }
-        } catch (error: any) {
-          handleError(error)
-        }
-      }
+      throw new Error('Failed populating transaction')
+    }
 
-      populateTxInterval = setInterval(populateTx, interval)
-      populateTx()
-    })
+    try {
+      return retry(populateTransactionAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, 'Failed populating transaction', tags)
+      throw error
+    }
   }
 
   async executeTransaction({
@@ -2141,148 +1918,191 @@ export class NetworkMonitor {
     tags.push(tag)
     this.structuredLog(network, `Executing contract function ${methodName}`, tags)
     // eslint-disable-next-line no-async-promise-executor
-    return new Promise<TransactionReceipt | null>(async (topResolve, _topReject) => {
-      if (this.walletNonces[network] < 0) {
-        this.walletNonces[network] = await this.getNonce({
-          network,
-          walletAddress: await this.wallets[network].getAddress(),
-          canFail: false,
-        })
-      }
-
-      contract = contract.connect(this.wallets[network])
-      if (gasPrice === undefined) {
-        this.structuredLog(network, `About to get gas price from internal gas price functions`, tags)
-        gasPrice = this.gasPrices[network].gasPrice!
-        gasPrice = gasPrice.add(gasPrice.div(TWO))
-      }
-
-      if (network === 'polygon') {
-        this.structuredLog(network, `Gas Price before = ${formatUnits(gasPrice, 'gwei')}`, tags)
-        const staticGasPrice = BigNumber.from('400017425011')
-        gasPrice = gasPrice.gt(staticGasPrice) ? gasPrice : staticGasPrice
-      }
-
-      this.structuredLog(network, `Gas price is ${formatUnits(gasPrice, 'gwei')} GWEI`, tags)
-      if (gasLimit === undefined) {
-        gasLimit = await this.getGasLimit({
-          network,
-          tags,
-          contract,
-          methodName,
-          args,
-          gasPrice,
-          value,
-          attempts,
-          canFail,
-          interval,
-        })
-      }
-
-      if (gasLimit === null) {
-        topResolve(null)
-        return
-      }
-
-      this.structuredLog(network, `Gas limit is ${gasLimit.toNumber()}`, tags)
-      this.structuredLog(
+    if (this.walletNonces[network] < 0) {
+      this.walletNonces[network] = await this.getNonce({
         network,
-        `Transaction is estimated to cost a total of ${formatUnits(gasLimit.mul(gasPrice), 'ether')} ${
-          networks[network].tokenSymbol
-        }`,
+        walletAddress: await this.wallets[network].getAddress(),
+        canFail: false,
+      })
+    }
+
+    contract = contract.connect(this.wallets[network])
+    if (gasPrice === undefined) {
+      this.structuredLog(network, `About to get gas price from internal gas price functions`, tags)
+      gasPrice = this.gasPrices[network].gasPrice!
+      gasPrice = gasPrice.add(gasPrice.div(TWO))
+    }
+
+    if (network === 'polygon') {
+      this.structuredLog(network, `Gas Price before = ${formatUnits(gasPrice, 'gwei')}`, tags)
+      const staticGasPrice = BigNumber.from('400017425011')
+      gasPrice = gasPrice.gt(staticGasPrice) ? gasPrice : staticGasPrice
+    }
+
+    this.structuredLog(network, `Gas price is ${formatUnits(gasPrice, 'gwei')} GWEI`, tags)
+    if (gasLimit === undefined) {
+      gasLimit = await this.getGasLimit({
+        network,
         tags,
-      )
-      const walletAddress: string = await this.wallets[network].getAddress()
-      const balance: BigNumber | null = await this.getBalance({network, walletAddress, attempts, canFail, interval})
-      if (balance === null) {
-        this.structuredLog(network, `Could not get wallet ${walletAddress} balance`, tags)
-        topResolve(null)
-        return
-      }
-
-      this.structuredLog(network, `Wallet balance is ${formatUnits(balance!, 'ether')}`, tags)
-      if (balance.lt(gasLimit.mul(gasPrice).add(value))) {
-        this.structuredLogError(
-          network,
-          `Wallet balance is lower than the transaction required amount. Balance is ${formatUnits(balance, 'ether')} ${
-            networks[network].tokenSymbol
-          } and required amount is ${formatUnits(gasLimit.mul(gasPrice).add(value), 'ether')} ${
-            networks[network].tokenSymbol
-          }`,
-          tags,
-        )
-        topResolve(null)
-        return
-      }
-
-      const rawTx: PopulatedTransaction | null = await this.populateTransaction({
-        network,
         contract,
         methodName,
         args,
         gasPrice,
-        gasLimit,
         value,
-        nonce: this.walletNonces[network],
-        tags,
         attempts,
         canFail,
         interval,
       })
-      if (rawTx === null) {
-        // populating tx failed
-        this.structuredLog(network, `Failed to populate transaction ${methodName} ${JSON.stringify(args)}`, tags)
-        topResolve(null)
-        return
-      }
+    }
 
-      // reset time to allow for proper transaction submission
-      this.lastBlockJobDone[network] = Date.now()
-      const tx: TransactionResponse | null = await this.sendTransaction({
+    if (gasLimit === null) {
+      return null
+    }
+
+    this.structuredLog(network, `Gas limit is ${gasLimit.toNumber()}`, tags)
+    this.structuredLog(
+      network,
+      `Transaction is estimated to cost a total of ${formatUnits(gasLimit.mul(gasPrice), 'ether')} ${
+        networks[network].tokenSymbol
+      }`,
+      tags,
+    )
+    const walletAddress: string = await this.wallets[network].getAddress()
+    const balance: BigNumber | null = await this.getBalance({network, walletAddress, attempts, canFail, interval})
+    if (balance === null) {
+      this.structuredLog(network, `Could not get wallet ${walletAddress} balance`, tags)
+      return null
+    }
+
+    this.structuredLog(network, `Wallet balance is ${formatUnits(balance!, 'ether')}`, tags)
+    if (balance.lt(gasLimit.mul(gasPrice).add(value))) {
+      this.structuredLogError(
         network,
+        `Wallet balance is lower than the transaction required amount. Balance is ${formatUnits(balance, 'ether')} ${
+          networks[network].tokenSymbol
+        } and required amount is ${formatUnits(gasLimit.mul(gasPrice).add(value), 'ether')} ${
+          networks[network].tokenSymbol
+        }`,
         tags,
-        rawTx,
-        attempts,
-        canFail,
-        interval,
-      })
-      if (tx === null) {
-        // sending tx failed
-        this.structuredLog(network, `Failed to send transaction ${methodName} ${JSON.stringify(args)}`, tags)
-        topResolve(null)
-        return
+      )
+      return null
+    }
+
+    const rawTx: PopulatedTransaction | null = await this.populateTransaction({
+      network,
+      contract,
+      methodName,
+      args,
+      gasPrice,
+      gasLimit,
+      value,
+      nonce: this.walletNonces[network],
+      tags,
+      attempts,
+      canFail,
+      interval,
+    })
+    if (rawTx === null) {
+      // populating tx failed
+      this.structuredLog(network, `Failed to populate transaction ${methodName} ${JSON.stringify(args)}`, tags)
+      return null
+    }
+
+    // reset time to allow for proper transaction submission
+    this.lastBlockJobDone[network] = Date.now()
+    const tx: TransactionResponse | null = await this.sendTransaction({
+      network,
+      tags,
+      rawTx,
+      attempts,
+      canFail,
+      interval,
+    })
+    if (tx === null) {
+      // sending tx failed
+      this.structuredLog(network, `Failed to send transaction ${methodName} ${JSON.stringify(args)}`, tags)
+      return null
+    }
+
+    // reset time to allow for proper transaction confirmation
+    this.lastBlockJobDone[network] = Date.now()
+    this.structuredLog(network, `Transaction ${tx.hash} has been submitted`, tags)
+    const receipt: TransactionReceipt | null = await this.getTransactionReceipt({
+      network,
+      transactionHash: tx.hash,
+      attempts,
+      // allow this promise to resolve as null to not hold up the confirmation process for too long
+      canFail: waitForReceipt ? false : canFail, // canFail,
+    })
+    if (receipt === null) {
+      if (!waitForReceipt) {
+        this.walletNonces[network]++
       }
 
-      // reset time to allow for proper transaction confirmation
-      this.lastBlockJobDone[network] = Date.now()
-      this.structuredLog(network, `Transaction ${tx.hash} has been submitted`, tags)
-      const receipt: TransactionReceipt | null = await this.getTransactionReceipt({
+      this.structuredLog(
         network,
-        transactionHash: tx.hash,
-        attempts,
-        // allow this promise to resolve as null to not hold up the confirmation process for too long
-        canFail: waitForReceipt ? false : canFail, // canFail,
-      })
-      if (receipt === null) {
-        if (!waitForReceipt) {
-          this.walletNonces[network]++
+        `Transaction ${networks[network].explorer}/tx/${tx.hash} could not be confirmed`,
+        tags,
+      )
+    } else {
+      this.walletNonces[network]++
+      this.structuredLog(
+        network,
+        `Transaction ${networks[network].explorer}/tx/${receipt.transactionHash} mined and confirmed`,
+        tags,
+      )
+    }
+
+    return receipt
+  }
+}
+
+// Generic retry function
+async function retry<T>(func: () => Promise<T>, attempts = 10, canFail = false, interval = 5000): Promise<T | null> {
+  let counter = 0
+  let sent = false
+
+  // canFail remains constant because it determines if the function is allowed to fail or not.
+  // the canFail parameter is determined by the function that calls retry
+  // If canFail is true, the loop will terminate after the specified number of attempts.
+  // If canFail is false, the loop will continue indefinitely until the async function succeeds.
+  // eslint-disable-next-line no-unmodified-loop-condition
+  for (let i = 0; i < attempts || !canFail; i++) {
+    try {
+      const result: T | null = await func()
+      if (result === null) {
+        counter++
+        if (canFail && counter > attempts) {
+          if (!sent) {
+            sent = true
+          }
+
+          return null
+        }
+      } else {
+        if (!sent) {
+          sent = true
         }
 
-        this.structuredLog(
-          network,
-          `Transaction ${networks[network].explorer}/tx/${tx.hash} could not be confirmed`,
-          tags,
-        )
-      } else {
-        this.walletNonces[network]++
-        this.structuredLog(
-          network,
-          `Transaction ${networks[network].explorer}/tx/${receipt.transactionHash} mined and confirmed`,
-          tags,
-        )
+        return result
       }
+    } catch (error: any) {
+      counter++
+      if (canFail && counter > attempts) {
+        if (!sent) {
+          sent = true
+        }
 
-      topResolve(receipt)
-    })
+        throw error
+      }
+    }
+
+    if (sent) {
+      break
+    }
+
+    await sleep(interval)
   }
+
+  return null
 }
