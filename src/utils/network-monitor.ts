@@ -179,7 +179,7 @@ export const keepAlive = ({
   let counter = 0
   let errorCounter = 0
   let terminator: NodeJS.Timeout | null = null
-  const errHandler: (err: ExtendedError) => void = (err: ExtendedError) => {
+  const errorHandler: (err: ExtendedError) => void = (err: ExtendedError) => {
     if (errorCounter === 0) {
       errorCounter++
       debug(`websocket error event triggered ${err.code} ${JSON.stringify(err.reason)}`)
@@ -231,7 +231,7 @@ export const keepAlive = ({
 
   websocket.on('open', () => {
     debug(`websocket open event triggered`)
-    websocket.off('error', errHandler)
+    websocket.off('error', errorHandler)
     if (terminator) {
       clearTimeout(terminator)
     }
@@ -263,7 +263,7 @@ export const keepAlive = ({
     }
   })
 
-  websocket.on('error', errHandler)
+  websocket.on('error', errorHandler)
 
   websocket.on('pong', () => {
     if (pingTimeout) {
