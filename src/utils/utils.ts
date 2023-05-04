@@ -171,7 +171,7 @@ export const utf8ToBytes32 = (str: string): string => {
 }
 
 // turns multi-line query into single line and removes extra spaces
-export const cleanRequest = (query: any) => query.replace(/\n+ /g, '').replace(/\s+ /g, ' ')
+export const cleanRequest = (query: string): string => query.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ')
 
 export function numericSort(a: number, b: number): number {
   return a - b

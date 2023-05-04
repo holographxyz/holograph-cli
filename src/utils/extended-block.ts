@@ -25,7 +25,7 @@ export type ExtendedBlockData = ExtendedBlock | ExtendedBlockWithTransactions
 
 export const formatter: Formatter = new Formatter()
 export const extendBlock = <T extends ExtendedBlockData>(
-  rawBlock: any,
+  rawBlock: any, // eslint-disable-line @typescript-eslint/explicit-module-boundary-types
   fullBlock: Block | BlockWithTransactions,
 ): T => {
   const finalBlock: T = {

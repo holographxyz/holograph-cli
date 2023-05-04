@@ -1,4 +1,4 @@
-import {SQSClient, SendMessageCommand} from '@aws-sdk/client-sqs'
+import {SQSClient, SendMessageCommand, SendMessageCommandOutput} from '@aws-sdk/client-sqs'
 import {SqsMessageBody} from '../types/sqs'
 import {retry} from '../utils/utils'
 
@@ -28,7 +28,7 @@ class SqsService {
     return SqsService._instance
   }
 
-  async healthCheck() {
+  async healthCheck(): Promise<SendMessageCommandOutput> {
     try {
       const data = await this.client.send(
         new SendMessageCommand({
@@ -44,7 +44,7 @@ class SqsService {
     }
   }
 
-  async sendMessage(sqsMessage: SqsMessageBody) {
+  async sendMessage(sqsMessage: SqsMessageBody): Promise<SendMessageCommandOutput> {
     const sendMessage = () =>
       this.client.send(
         new SendMessageCommand({
@@ -56,7 +56,7 @@ class SqsService {
     return retry(sendMessage, this.maxRetries)
   }
 
-  validateConfig() {
+  validateConfig(): void {
     if (!process.env.SQS_ENDPOINT) {
       throw new Error('SQS_ENDPOINT env is required')
     }

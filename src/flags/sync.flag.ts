@@ -8,7 +8,10 @@ export const syncFlag = {
   }),
 }
 
-export const shouldSync = async (syncFlagValue: boolean, latestBlockHeight: {[key: string]: number}) => {
+export const shouldSync = async (
+  syncFlagValue: boolean,
+  latestBlockHeight: {[key: string]: number},
+): Promise<boolean> => {
   if (syncFlagValue) {
     return true
   }
