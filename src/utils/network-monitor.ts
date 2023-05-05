@@ -60,9 +60,11 @@ import {
 } from '../types/network-monitor'
 import {BlockHeightOptions} from '../flags/update-block-height.flag'
 
-export const repairFlag = {
-  repair: Flags.integer({
+export const replayFlag = {
+  replay: Flags.integer({
     description: 'Start from block number specified',
+    aliases: ['repair'],
+    deprecateAliases: true,
     default: 0,
     char: 'r',
   }),
@@ -307,7 +309,7 @@ type NetworkMonitorOptions = {
   filters?: TransactionFilter[]
   userWallet?: Wallet
   lastBlockFilename?: string
-  repair?: number
+  replay?: number
   verbose?: boolean
   apiService?: ApiService
   BlockHeightOptions?: BlockHeightOptions
@@ -388,7 +390,7 @@ export class NetworkMonitor {
   }
 
   needToSubscribe = false
-  repair = 0
+  replay = 0
 
   getProviderStatus(): {[key: string]: ProviderStatus} {
     const output: {[key: string]: ProviderStatus} = {}
@@ -457,8 +459,8 @@ export class NetworkMonitor {
       this.userWallet = options.userWallet
     }
 
-    if (options.repair !== undefined && options.repair > 0) {
-      this.repair = options.repair
+    if (options.replay !== undefined && options.replay > 0) {
+      this.replay = options.replay
     }
 
     if (options.networks === undefined || '') {
@@ -501,11 +503,11 @@ export class NetworkMonitor {
 
     this.networks = [...new Set(options.networks)]
 
-    // Repair can only be used with a single network at a time since the block number provided to the repair flag is global
+    // Replay can only be used with a single network at a time since the block number provided to the replay flag is global
     // This can be updated in the future to support multiple networks with different block numbers simple logic is preferred for now
-    if (this.repair > 0 && this.networks.length > 1) {
+    if (this.replay > 0 && this.networks.length > 1) {
       this.log(
-        'Repair mode is not supported for multiple networks. Please use a single network with desired repair block height',
+        'Replay mode is not supported for multiple networks. Please use a single network with desired replay block height',
       )
       this.exitRouter({exit: true}, 'SIGINT')
     }
@@ -678,22 +680,22 @@ export class NetworkMonitor {
         })
       }
 
-      if (this.repair > 0) {
-        this.structuredLog(network, color.red(`🚧 REPAIR MODE ACTIVATED 🚧`))
+      if (this.replay > 0) {
+        this.structuredLog(network, color.red(`🚧 REPLAY MODE ACTIVATED 🚧`))
         const currentBlock = await this.providers[network].getBlockNumber()
         if (this.verbose) {
           this.structuredLog(network, `Current block height [${color.green(currentBlock)}]`)
           this.structuredLog(
             network,
-            `Starting Network Monitor in repair mode from ${color.yellow(
-              currentBlock - this.repair,
-            )} blocks back at block [${color.red(this.repair)}]`,
+            `Starting Network Monitor in replay mode from ${color.yellow(
+              currentBlock - this.replay,
+            )} blocks back at block [${color.red(this.replay)}]`,
           )
         }
 
-        this.latestBlockHeight[network] = this.repair
+        this.latestBlockHeight[network] = this.replay
         this.blockJobs[network] = []
-        for (let n = this.repair; n <= currentBlock; n++) {
+        for (let n = this.replay; n <= currentBlock; n++) {
           this.blockJobs[network].push({
             network,
             block: n,
@@ -1287,7 +1289,7 @@ export class NetworkMonitor {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
 
-      /* 
+      /*
       Temporarily disabled
       if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
         this.structuredLog(
@@ -1387,7 +1389,7 @@ export class NetworkMonitor {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
 
-      /* 
+      /*
       Temporarily disabled
       if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
         this.structuredLog(
