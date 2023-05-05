@@ -32,15 +32,15 @@ import {ensureConfigFileIsValid} from '../../utils/config'
 import ApiService from '../../services/api-service'
 
 import {
-  sqsHandleMintEvent,
   sqsHandleContractDeployedEvent,
   sqsHandleAvailableOperatorJobEvent,
   sqsHandleBridgeEvent,
-  sqsHandleTransferEvent,
 } from '../../handlers/sqs-indexer'
 import SqsService from '../../services/sqs-service'
 import {shouldSync, syncFlag} from '../../flags/sync.flag'
 import {BlockHeightOptions, blockHeightFlag} from '../../flags/update-block-height.flag'
+import handleTransferEvent from '../../handlers/sqs-indexer/handle-transfer-event'
+import handleTransferERC721Event from '../../handlers/sqs-indexer/handle-transfer-erc721-event'
 
 dotenv.config()
 
@@ -552,8 +552,15 @@ export default class Indexer extends HealthCheck {
     }
 
     await (isNewMint
-      ? sqsHandleMintEvent.call(this, this.networkMonitor, interestingTransaction.transaction, job.network, tags)
-      : sqsHandleTransferEvent.call(
+      ? handleTransferERC721Event.call(
+          this,
+          this.networkMonitor,
+          interestingTransaction.transaction,
+          job.network,
+          event,
+          tags,
+        )
+      : handleTransferEvent.call(
           this,
           this.networkMonitor,
           interestingTransaction.transaction,
