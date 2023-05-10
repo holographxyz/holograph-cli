@@ -15,6 +15,7 @@ import {
   BlockHeightProcessType,
   BlockHeightResponse,
   DeployedCollectionsResponse,
+  BlockHeight,
 } from '../types/api'
 import {AbstractError} from '../types/errors'
 import {StructuredLogInfo} from '../types/interfaces'
@@ -34,7 +35,7 @@ class ApiService {
 
   setStructuredLog(
     structuredLog: (network: string, msg: string, tagId?: string | number | (number | string)[]) => void,
-  ) {
+  ): void {
     this.logger.structuredLog = structuredLog
   }
 
@@ -44,11 +45,11 @@ class ApiService {
       error: string | Error | AbstractError,
       tagId?: string | number | (number | string)[],
     ) => void,
-  ) {
+  ): void {
     this.logger.structuredLogError = structuredLogError
   }
 
-  logInfo(description: string, structuredLogInfo?: StructuredLogInfo) {
+  logInfo(description: string, structuredLogInfo?: StructuredLogInfo): void {
     if (this.logger.structuredLog !== undefined && structuredLogInfo !== undefined) {
       this.logger.structuredLog(structuredLogInfo.network, description, structuredLogInfo.tagId)
     } else {
@@ -56,7 +57,8 @@ class ApiService {
     }
   }
 
-  logError(description: string, error: any, structuredLogInfo?: StructuredLogInfo) {
+  /*  eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types */
+  logError(description: string, error: any, structuredLogInfo?: StructuredLogInfo): void {
     if (this.logger.structuredLogError !== undefined && structuredLogInfo !== undefined) {
       this.logger.structuredLogError(structuredLogInfo.network, error, [
         ...(structuredLogInfo.tagId as (string | number)[]),
@@ -96,7 +98,7 @@ class ApiService {
 
   async sendQueryRequest<T = any>(
     query: string,
-    props: any,
+    props: any, // eslint-disable-line @typescript-eslint/explicit-module-boundary-types
     structuredLogInfo?: StructuredLogInfo,
   ): Promise<Response<T> | undefined> {
     this.logInfo(`Sending query request ${cleanRequest(query)} with props ${JSON.stringify(props)}`, structuredLogInfo)
@@ -109,7 +111,7 @@ class ApiService {
 
   async sendMutationRequest<T = any>(
     mutation: string,
-    props: any,
+    props: any, // eslint-disable-line @typescript-eslint/explicit-module-boundary-types
     structuredLogInfo?: StructuredLogInfo,
   ): Promise<Response<T> | undefined> {
     this.logInfo(
@@ -123,7 +125,7 @@ class ApiService {
     }
   }
 
-  async getAllDeployedCollections() {
+  async getAllDeployedCollections(): Promise<string[]> {
     const query = gql`
         query Query {
           deployedCollections
@@ -261,7 +263,7 @@ class ApiService {
     return result
   }
 
-  async getBlockHeights(process: BlockHeightProcessType, chainId?: number) {
+  async getBlockHeights(process: BlockHeightProcessType, chainId?: number): Promise<BlockHeight[]> {
     const query = gql`
       query GetAllBlockHeights($getBlockHeight: GetAllBlockHeightInput) {
         getAllBlockHeights(getBlockHeight: $getBlockHeight) {
