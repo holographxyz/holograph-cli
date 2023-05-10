@@ -1,6 +1,6 @@
 import color from '@oclif/color'
-import {gql, GraphQLClient} from 'graphql-request'
-import {Response} from 'graphql-request/dist/types'
+import {gql, GraphQLClient} from 'graphql-request' // eslint-disable-line node/no-missing-import
+import {GraphQLClientResponse} from 'graphql-request/build/esm/types'
 import {
   Logger,
   AuthOperatorResponse,
@@ -100,7 +100,7 @@ class ApiService {
     query: string,
     props: any, // eslint-disable-line @typescript-eslint/explicit-module-boundary-types
     structuredLogInfo?: StructuredLogInfo,
-  ): Promise<Response<T> | undefined> {
+  ): Promise<GraphQLClientResponse<T> | undefined> {
     this.logInfo(`Sending query request ${cleanRequest(query)} with props ${JSON.stringify(props)}`, structuredLogInfo)
     try {
       return await this.client.rawRequest(query, props)
@@ -113,7 +113,7 @@ class ApiService {
     mutation: string,
     props: any, // eslint-disable-line @typescript-eslint/explicit-module-boundary-types
     structuredLogInfo?: StructuredLogInfo,
-  ): Promise<Response<T> | undefined> {
+  ): Promise<GraphQLClientResponse<T> | undefined> {
     this.logInfo(
       `Sending mutation request ${cleanRequest(mutation)} with props ${JSON.stringify(props)}`,
       structuredLogInfo,
@@ -232,7 +232,7 @@ class ApiService {
     updateCrossChainTransactionStatusInput:
       | UpdateCrossChainTransactionStatusInput
       | UpdateCrossChainTransactionStatusInputWithoutData,
-  ): Promise<Response<T> | undefined> {
+  ): Promise<GraphQLClientResponse<T> | undefined> {
     const mutation = gql`
         mutation CreateOrUpdateCrossChainTransaction($createOrUpdateCrossChainTransactionInput: CreateOrUpdateCrossChainTransactionInput!) {
           createOrUpdateCrossChainTransaction(createOrUpdateCrossChainTransactionInput: $createOrUpdateCrossChainTransactionInput) {
@@ -257,10 +257,9 @@ class ApiService {
           }
         }
     `
-    const result = await this.client.rawRequest(mutation, {
+    return this.client.rawRequest(mutation, {
       createOrUpdateCrossChainTransactionInput: updateCrossChainTransactionStatusInput,
     })
-    return result
   }
 
   async getBlockHeights(process: BlockHeightProcessType, chainId?: number): Promise<BlockHeight[]> {
@@ -283,7 +282,7 @@ class ApiService {
     process: BlockHeightProcessType,
     chainId: number,
     blockHeight: number,
-  ): Promise<Response<T> | undefined> {
+  ): Promise<GraphQLClientResponse<T> | undefined> {
     const mutation = gql`
       mutation SetBlockHeight($createBlockHeightInput: CreateBlockHeightInput!) {
         setBlockHeight(createBlockHeightInput: $createBlockHeightInput) {
@@ -303,8 +302,7 @@ class ApiService {
       },
     }
 
-    const result = await this.client.rawRequest(mutation, updateBlockHeightInput)
-    return result
+    return this.client.rawRequest(mutation, updateBlockHeightInput)
   }
 }
 
