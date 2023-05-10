@@ -61,11 +61,11 @@ import {
 import {BlockHeightOptions} from '../flags/update-block-height.flag'
 
 export const replayFlag = {
-  replay: Flags.integer({
-    description: 'Start from block number specified',
+  replay: Flags.string({
+    description: 'Replay block processing. Run between the closed range defined. E.g. 30909:30999',
     aliases: ['repair'],
     deprecateAliases: true,
-    default: 0,
+    default: '0',
     char: 'r',
   }),
 }
@@ -309,7 +309,7 @@ type NetworkMonitorOptions = {
   filters?: TransactionFilter[]
   userWallet?: Wallet
   lastBlockFilename?: string
-  replay?: number
+  replay?: string
   verbose?: boolean
   apiService?: ApiService
   BlockHeightOptions?: BlockHeightOptions
@@ -390,7 +390,8 @@ export class NetworkMonitor {
   }
 
   needToSubscribe = false
-  replay = 0
+  replayBlockStart = 0
+  replayBlockEnd: number | undefined
 
   getProviderStatus(): {[key: string]: ProviderStatus} {
     const output: {[key: string]: ProviderStatus} = {}
@@ -427,6 +428,20 @@ export class NetworkMonitor {
     }
   }
 
+  validateReplayFlagInput(input: string) {
+    if (/([1-9]\d*|0):([1-9]\d*)/.test(input)) {
+      // expected type: 8987:8988
+      const startAndEndBlock = input.split(':').map(int => Number(int))
+      if (startAndEndBlock[0] >= startAndEndBlock[1]) {
+        throw new Error('End block must be greater than start block number.')
+      }
+
+      return true
+    }
+
+    return /[1-9]\d*/.test(input)
+  }
+
   constructor(options: NetworkMonitorOptions) {
     this.environment = getEnvironment()
     this.parent = options.parent
@@ -459,8 +474,14 @@ export class NetworkMonitor {
       this.userWallet = options.userWallet
     }
 
-    if (options.replay !== undefined && options.replay > 0) {
-      this.replay = options.replay
+    if (options.replay !== undefined && options.replay !== '0') {
+      if (!this.validateReplayFlagInput(options.replay)) {
+        throw new Error('Replay flag input format is not valid')
+      }
+
+      const replayRangeBlock = options.replay.split(':').map(int => Number(int))
+      this.replayBlockStart = replayRangeBlock[0]
+      this.replayBlockEnd = replayRangeBlock.length === 2 ? replayRangeBlock[1] : undefined
     }
 
     if (options.networks === undefined || '') {
@@ -505,7 +526,7 @@ export class NetworkMonitor {
 
     // Replay can only be used with a single network at a time since the block number provided to the replay flag is global
     // This can be updated in the future to support multiple networks with different block numbers simple logic is preferred for now
-    if (this.replay > 0 && this.networks.length > 1) {
+    if (this.replayBlockStart > 0 && this.networks.length > 1) {
       this.log(
         'Replay mode is not supported for multiple networks. Please use a single network with desired replay block height',
       )
@@ -560,8 +581,10 @@ export class NetworkMonitor {
         this.needToSubscribe = true
       }
 
-      // Subscribe to events 🎧
-      this.networkSubscribe(network)
+      if (this.replayBlockEnd === undefined) {
+        // Subscribe to events 🎧
+        this.networkSubscribe(network)
+      }
 
       // Process blocks 🧱
       this.blockJobHandler(network)
@@ -680,22 +703,25 @@ export class NetworkMonitor {
         })
       }
 
-      if (this.replay > 0) {
+      if (this.replayBlockStart > 0) {
         this.structuredLog(network, color.red(`🚧 REPLAY MODE ACTIVATED 🚧`))
-        const currentBlock = await this.providers[network].getBlockNumber()
+
+        const endBlockNumber =
+          this.replayBlockEnd === undefined ? await this.providers[network].getBlockNumber() : this.replayBlockEnd
+
         if (this.verbose) {
-          this.structuredLog(network, `Current block height [${color.green(currentBlock)}]`)
+          this.structuredLog(network, `Last block height [${color.green(endBlockNumber)}]`)
           this.structuredLog(
             network,
             `Starting Network Monitor in replay mode from ${color.yellow(
-              currentBlock - this.replay,
-            )} blocks back at block [${color.red(this.replay)}]`,
+              endBlockNumber - this.replayBlockStart,
+            )} blocks back at block [${color.red(this.replayBlockStart)}]`,
           )
         }
 
-        this.latestBlockHeight[network] = this.replay
+        this.latestBlockHeight[network] = this.replayBlockStart
         this.blockJobs[network] = []
-        for (let n = this.replay; n <= currentBlock; n++) {
+        for (let n = this.replayBlockStart; n <= endBlockNumber; n++) {
           this.blockJobs[network].push({
             network,
             block: n,
