@@ -48,6 +48,22 @@ export const CXIP_ERC721_ADDRESSES: {[key in Environment]: string} = {
   [Environment.mainnet]: '0x690f4b7e0a102047d442CA3FEcDbB024Cb6b1FC5',
 }
 
+export const METADATA_RENDERER_ADDRESS: {[key in Environment]: string} = {
+  [Environment.localhost]: '0x0000000000000000000000000000000000000000',
+  [Environment.experimental]: '0x0000000000000000000000000000000000000000',
+  [Environment.develop]: '0x6420ffC8390506BBC9d894f54b948Be2BE40128d',
+  [Environment.testnet]: '0x0000000000000000000000000000000000000000',
+  [Environment.mainnet]: '0x0000000000000000000000000000000000000000',
+}
+
+export const HOLOGRAPH_FACTORY_PROXY_ADDRESS: {[key in Environment]: string} = {
+  [Environment.localhost]: '0x0000000000000000000000000000000000000000',
+  [Environment.experimental]: '0x0000000000000000000000000000000000000000',
+  [Environment.develop]: '0x90425798cc0e33932f11edc3EeDBD4f3f88DFF64',
+  [Environment.testnet]: '0x0000000000000000000000000000000000000000',
+  [Environment.mainnet]: '0x0000000000000000000000000000000000000000',
+}
+
 export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
   ethereum: '0x66A71Dcef29A0fFBDBE3c6a460a3B5BC225Cd675',
   ethereumTestnetGoerli: '0xbfD2135BFfbb0B5378b56643c2Df8a87552Bfa23',

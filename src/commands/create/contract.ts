@@ -41,6 +41,8 @@ import {
 
 import {SalesConfiguration} from '../../types/drops'
 import {decodeBridgeableContractDeployedEvent} from '../../events/events'
+import {getEnvironment} from '@holographxyz/environment'
+import {METADATA_RENDERER_ADDRESS} from '../../utils/contracts'
 
 async function getCodeFromFile(prompt: string): Promise<string> {
   const codeFile: string = await checkStringFlag(undefined, prompt)
@@ -151,7 +153,8 @@ export default class Contract extends Command {
     let signature: Signature
     let needToSign = false
 
-    const METADATA_RENDERER_ADDRESS = '0x03714aCb8E3325E43d967A2549541295a672d999'
+    // Get the ENVIRONMENT
+    const ENVIRONMENT = getEnvironment()
 
     const deploymentType: DeploymentType = await checkDeploymentTypeFlag(
       flags.deploymentType,
@@ -446,7 +449,7 @@ export default class Contract extends Command {
               royaltyBps, // percentage of royalties in bps
               false, // enableOpenSeaRoyaltyRegistry
               salesConfig,
-              METADATA_RENDERER_ADDRESS,
+              METADATA_RENDERER_ADDRESS[ENVIRONMENT],
               metadataRendererInitCode, // metadataRendererInit
             )
 

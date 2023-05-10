@@ -219,3 +219,19 @@ export function generateHashedName(name: string): string {
   const paddedHex = asciiHex.padStart(64, '0')
   return `0x${paddedHex}`
 }
+
+export function safeStringify(obj: any, indent = 2) {
+  let cache: any[] = []
+  const retVal = JSON.stringify(
+    obj,
+    (key, value) =>
+      typeof value === 'object' && value !== null
+        ? cache.includes(value)
+          ? undefined // Duplicate reference found, discard key
+          : cache.push(value) && value // Store value in our collection
+        : value,
+    indent,
+  )
+  cache = null!
+  return retVal
+}

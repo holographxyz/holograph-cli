@@ -22,6 +22,7 @@ import {UriTypeIndex} from '../../utils/asset-deployment'
 import {BigNumber, ethers} from 'ethers'
 import {decodeErc721TransferEvent} from '../../events/events'
 import {getABIs} from '../../utils/contracts'
+import {safeStringify} from '../../utils/utils'
 
 export default class NFT extends Command {
   static description = 'Mint a Holographable NFT.'
@@ -200,7 +201,7 @@ export default class NFT extends Command {
       const mintPrompt: any = await inquirer.prompt([
         {
           name: 'shouldContinue',
-          message: `\nMinting ${numToMint} NFTs from the following collection: ${await JSON.stringify(drop)} at ${
+          message: `\nMinting ${numToMint} NFTs from the following collection: ${safeStringify(drop)} at ${
             drop.address
           } for ${ethers.utils.formatEther(nativePrice)} ${networks[network].tokenSymbol} on ${network}.\n`,
           type: 'confirm',
