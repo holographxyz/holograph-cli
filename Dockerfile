@@ -28,12 +28,13 @@ ENV HOLO_CLI_CMD=TeRmInAtOr
 ENV HOLO_INDEXER_HOST=ThE_FuTuRe
 ENV HOLO_OPERATOR_HOST=ThE_FuTuRe
 #
-ENV ENABLE_DEBUG=defaul-value
-ENV ENABLE_SYNC=defaul-value
-ENV HEALTHCHECK=defaul-value
-ENV MODE=defaul-value
+ENV ENABLE_DEBUG=default-value
+ENV ENABLE_SYNC=default-value
+ENV HEALTHCHECK=default-value
+ENV MODE=default-value
 #
-ENV ENABLE_UNSAFE=defaul-value
+ENV ENABLE_UNSAFE=default-value
+ENV ENABLE_REPLAY=default-value
 # api[default] / file / disable
 ENV UPDATE_BLOCK_HEIGHT=api
 

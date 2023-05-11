@@ -29,6 +29,15 @@ else
   echo "HEALTHCHECK=${HEALTHCHECK}"
 fi
 
+if [[ $ENABLE_REPLAY != "default-value" ]]
+then
+  export ENABLE_REPLAY="--replay ${ENABLE_REPLAY}"
+  echo "ENABLE_REPLAY=${ENABLE_REPLAY}"
+else
+  export ENABLE_REPLAY=""
+  echo "ENABLE_REPLAY=${ENABLE_REPLAY}"
+fi
+
 if [[ $ENABLE_UNSAFE == 'true' ]] && [[ $HOLOGRAPH_ENVIRONMENT == "mainnet" ]]
 then
   export ENABLE_UNSAFE='--unsafe'
@@ -48,7 +57,7 @@ then
 
 elif [[ $HOLO_CLI_CMD == "indexer" ]]
 then
-  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_INDEXER_HOST $HEALTHCHECK $ENABLE_UNSAFE $ENABLE_SYNC --update-block-height $UPDATE_BLOCK_HEIGHT
+  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_INDEXER_HOST $HEALTHCHECK $ENABLE_UNSAFE $ENABLE_SYNC --update-block-height $UPDATE_BLOCK_HEIGHT $ENABLE_REPLAY
 
 else
   echo
