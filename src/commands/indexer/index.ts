@@ -93,7 +93,7 @@ export default class Indexer extends HealthCheck {
 
     this.environment = environment
 
-    if (flags.replay > 0) {
+    if (flags.replay !== '0') {
       this.log('Replay flag enabled, will not load or save block heights.')
       updateBlockHeight = BlockHeightOptions.DISABLE
     }
@@ -184,7 +184,7 @@ export default class Indexer extends HealthCheck {
     }
 
     CliUx.ux.action.start(`Starting indexer`)
-    const continuous = !flags.replay // If replay is set, run network monitor stops after catching up to the latest block
+    const continuous = flags.replay === '0' // If replay is set, run network monitor stops after catching up to the latest block
     await this.networkMonitor.run(continuous, undefined, this.filterBuilder2)
     CliUx.ux.action.stop('🚀')
 
