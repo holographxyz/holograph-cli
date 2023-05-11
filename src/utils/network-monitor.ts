@@ -432,7 +432,7 @@ export class NetworkMonitor {
     if (/([1-9]\d*|0):([1-9]\d*)/.test(input)) {
       // expected type: 8987:8988
       const startAndEndBlock = input.split(':').map(int => Number(int))
-      if (startAndEndBlock[0] >= startAndEndBlock[1]) {
+      if (startAndEndBlock[0] > startAndEndBlock[1]) {
         throw new Error('End block must be greater than start block number.')
       }
 
@@ -1138,7 +1138,6 @@ export class NetworkMonitor {
           } as InterestingTransaction)
         }
       }
-      // }
     }
   }
 
