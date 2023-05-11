@@ -135,6 +135,26 @@ export function decodeErc20TransferEvent(receipt: TransactionReceipt, target?: s
   return undefined
 }
 
+export function getLogIndexFromErc721TransferEvent(receipt: TransactionReceipt, target?: string): number | undefined {
+  if (target !== undefined) {
+    target = target.toLowerCase().trim()
+  }
+
+  if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+    for (let i = 0, l = receipt.logs.length; i < l; i++) {
+      const log = receipt.logs[i]
+      if (
+        log.topics[0] === targetEvents.Transfer &&
+        (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
+      ) {
+        return log.logIndex
+      }
+    }
+  }
+
+  return undefined
+}
+
 export function decodeErc721TransferEvent(receipt: TransactionReceipt, target?: string): string[] | undefined {
   if (target !== undefined) {
     target = target.toLowerCase().trim()
