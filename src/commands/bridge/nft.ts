@@ -183,13 +183,12 @@ export default class BridgeNFT extends Command {
     this.log(`tokenId is ${tokenId}`)
     CliUx.ux.action.start('Checking if token ID exists on ' + sourceNetwork + ' network.')
 
-    // TODO: This only works for legacy collections and not drops
-    // const tokenExists: boolean = await collection.exists(tokenId)
-    // CliUx.ux.action.stop()
-    // if (!tokenExists) {
-    //   this.log('Token does not exist.')
-    //   this.exit()
-    // }
+    const tokenExists: boolean = await collection.exists(tokenId)
+    CliUx.ux.action.stop()
+    if (!tokenExists) {
+      this.log('Token does not exist.')
+      this.exit()
+    }
 
     const data: BytesLike = generateInitCode(
       ['address', 'address', 'uint256'],
