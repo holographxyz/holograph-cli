@@ -1109,7 +1109,7 @@ export class NetworkMonitor {
           log.topics[0] !== event.sigHash ||
           this.isInterestingTransactionLogAlreadyIncluded(log, interestingTransactions)
         ) {
-          break
+          continue
         }
 
         if (filter.eventValidator) {
@@ -1138,6 +1138,7 @@ export class NetworkMonitor {
           } as InterestingTransaction)
         }
       }
+      // }
     }
   }
 
