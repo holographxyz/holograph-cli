@@ -1,3 +1,5 @@
+import * as fs from 'fs-extra'
+import * as path from 'node:path'
 import {Contract, ethers} from 'ethers'
 import {SalesConfiguration} from '../types/drops'
 import {bytecodes} from '../utils/bytecodes'
@@ -10,7 +12,7 @@ import {dropEventsEnabled, sha3, web3} from '../utils/utils'
 import {networks} from '@holographxyz/networks'
 import {strictECDSA, Signature} from '../utils/signature'
 import {DeploymentConfig} from '../utils/contract-deployment'
-import {HOLOGRAPH_FACTORY_PROXY_ADDRESS, METADATA_RENDERER_ADDRESS, getABIs} from '../utils/contracts'
+import {HOLOGRAPH_ADDRESSES, METADATA_RENDERER_ADDRESS, getABIs} from '../utils/contracts'
 import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
 import {decodeBridgeableContractDeployedEvent} from '../events/events'
 import {getEnvironment} from '@holographxyz/environment'
@@ -34,8 +36,9 @@ require('dotenv').config()
   // Get the ABI
   const abis = await getABIs(ENVIRONMENT)
 
-  // Set the contract address
-  const factoryProxyAddress = HOLOGRAPH_FACTORY_PROXY_ADDRESS[ENVIRONMENT] // HolographFactoryProxy
+  const holographABI = await fs.readJson(path.join(__dirname, `../abi/${ENVIRONMENT}/Holograph.json`))
+  const holograph = new Contract(HOLOGRAPH_ADDRESSES[ENVIRONMENT], holographABI, provider)
+  const factoryProxyAddress = (await holograph.getFactory()).toLowerCase()
 
   // NOTE: Since the Drop contract is an extension of the HolographERC721 enforcer, the contract type must be updated accordingly
   const contractType = 'HolographERC721'
@@ -66,16 +69,6 @@ require('dotenv').config()
 
   // The sales config must be serialized to an array of it's values to be passed as a tuple when abi encoded
   const salesConfig = Object.values(saleConfig)
-
-  // NOTE: Disabled to save gas by using previously deployed metadata renderer contract
-  // console.log('Deploying metadata renderer contract...')
-  // Deploy a metadata renderer contract
-  // TODO: this needs to be removed in the future and a reference to the deployed EditionsMetadataRendererProxy needs to be made here
-  // const renderAbi = JSON.parse(fs.readFileSync(`./src/abi/develop/EditionsMetadataRenderer.json`).toString())
-  // const rendererFactory = new ContractFactory(renderAbi, EditionsMetadataRenderer.bytecode, signer)
-  // const metadataRenderer = await rendererFactory.deploy()
-  // console.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
-
   const metadataRendererInitCode = generateMetadataRendererInitCode(description, imageURI, animationURI)
   const holographDropERC721InitCode = generateHolographDropERC721InitCode(
     // eslint-disable-next-line unicorn/prefer-string-slice
@@ -161,10 +154,7 @@ require('dotenv').config()
     if (receipt === null) {
       throw new Error('Failed to confirm that the transaction was mined')
     } else {
-      const logs: any[] | undefined = decodeBridgeableContractDeployedEvent(
-        receipt,
-        HOLOGRAPH_FACTORY_PROXY_ADDRESS[ENVIRONMENT],
-      )
+      const logs: any[] | undefined = decodeBridgeableContractDeployedEvent(receipt, factoryProxyAddress)
       if (logs === undefined) {
         throw new Error('Failed to extract transfer event from transaction receipt')
       } else {
