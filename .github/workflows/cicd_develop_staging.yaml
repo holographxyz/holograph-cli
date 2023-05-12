@@ -391,7 +391,7 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
-          ENABLE_REPLAY: 'default-value' # add a string like 123:1234 if you wanna use it
+          ENABLE_REPLAY: 'deactivated' # add a string like 123:345 if you wanna use it
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           AVALANCHE_NETWORK: 'fuji'
           ETHEREUM_NETWORK: 'goerli'
