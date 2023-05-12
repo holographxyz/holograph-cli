@@ -11,13 +11,25 @@ import {formatUnits} from '@ethersproject/units'
 import {keccak256} from '@ethersproject/keccak256'
 import {defaultAbiCoder} from '@ethersproject/abi'
 import {WebSocketProvider, JsonRpcProvider} from '@ethersproject/providers'
+import {isInBloom} from './bloom-filters'
+import {
+  ExtendedBlock,
+  ExtendedBlockWithTransactions,
+  getExtendedBlock,
+  getExtendedBlockWithTransactions,
+} from './extended-block'
+import {EventType, Event, eventMap, BloomFilter, BridgeableContractDeployedEvent} from './event'
+import './numbers'
+import './strings'
 import {
   Block,
   BlockWithTransactions,
+  Filter,
+  Log,
   TransactionReceipt,
   TransactionResponse,
-  TransactionRequest,
 } from '@ethersproject/abstract-provider'
+
 import {Environment, getEnvironment} from '@holographxyz/environment'
 import {
   supportedNetworks,
@@ -30,12 +42,13 @@ import {
 
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {GasPricing, initializeGasPricing, updateGasPricing} from './gas'
-import {capitalize, NETWORK_COLORS, zeroAddress} from './utils'
+import {capitalize, NETWORK_COLORS, sleep, zeroAddress} from './utils'
 import {CXIP_ERC721_ADDRESSES, HOLOGRAPH_ADDRESSES} from './contracts'
 import {BlockHeight, BlockHeightProcessType} from '../types/api'
 import ApiService from '../services/api-service'
 import {iface, packetEventFragment, targetEvents} from '../events/events'
 import {
+  LogsParams,
   BlockParams,
   ExecuteTransactionParams,
   GasLimitParams,
@@ -43,12 +56,16 @@ import {
   SendTransactionParams,
   TransactionParams,
   WalletParams,
+  InterestingTransaction,
 } from '../types/network-monitor'
+import {BlockHeightOptions} from '../flags/update-block-height.flag'
 
-export const repairFlag = {
-  repair: Flags.integer({
-    description: 'Start from block number specified',
-    default: 0,
+export const replayFlag = {
+  replay: Flags.string({
+    description: 'Replay block processing. Run between the closed range defined. E.g. 30909:30999',
+    aliases: ['repair'],
+    deprecateAliases: true,
+    default: '0',
     char: 'r',
   }),
 }
@@ -100,6 +117,7 @@ export enum FilterType {
   to,
   from,
   functionSig,
+  eventHash,
 }
 
 export enum TransactionType {
@@ -164,7 +182,7 @@ export const keepAlive = ({
   let counter = 0
   let errorCounter = 0
   let terminator: NodeJS.Timeout | null = null
-  const errHandler: (err: ExtendedError) => void = (err: ExtendedError) => {
+  const errorHandler: (err: ExtendedError) => void = (err: ExtendedError) => {
     if (errorCounter === 0) {
       errorCounter++
       debug(`websocket error event triggered ${err.code} ${JSON.stringify(err.reason)}`)
@@ -216,7 +234,7 @@ export const keepAlive = ({
 
   websocket.on('open', () => {
     debug(`websocket open event triggered`)
-    websocket.off('error', errHandler)
+    websocket.off('error', errorHandler)
     if (terminator) {
       clearTimeout(terminator)
     }
@@ -248,7 +266,7 @@ export const keepAlive = ({
     }
   })
 
-  websocket.on('error', errHandler)
+  websocket.on('error', errorHandler)
 
   websocket.on('pong', () => {
     if (pingTimeout) {
@@ -285,24 +303,31 @@ type NetworkMonitorOptions = {
   configFile: ConfigFile
   networks?: string[]
   debug: (...args: string[]) => void
+  enableV2?: boolean
   processTransactions?: (job: BlockJob, transactions: TransactionResponse[]) => Promise<void>
+  processTransactions2?: (job: BlockJob, transactions: InterestingTransaction[]) => Promise<void>
   filters?: TransactionFilter[]
   userWallet?: Wallet
   lastBlockFilename?: string
-  repair?: number
+  replay?: string
   verbose?: boolean
   apiService?: ApiService
+  BlockHeightOptions?: BlockHeightOptions
 }
 
 export class NetworkMonitor {
+  enableV2 = false
   verbose = true
   environment: Environment
   parent: ImplementsCommand
   configFile: ConfigFile
+  bloomFilters: BloomFilter[] = []
+  tbdCachedContracts: string[] = []
   userWallet?: Wallet
   LAST_BLOCKS_FILE_NAME: string
   filters: TransactionFilter[] = []
   processTransactions: ((job: BlockJob, transactions: TransactionResponse[]) => Promise<void>) | undefined
+  processTransactions2: ((job: BlockJob, transactions: InterestingTransaction[]) => Promise<void>) | undefined
   log: (message: string, ...args: any[]) => void
   warn: (message: string, ...args: any[]) => void
   debug: (...args: any[]) => void
@@ -342,6 +367,7 @@ export class NetworkMonitor {
   messagingModuleContract!: Contract
   HOLOGRAPH_ADDRESSES = HOLOGRAPH_ADDRESSES
   apiService!: ApiService
+  blockHeightOptions?: BlockHeightOptions
 
   // this is specifically for handling localhost-based CLI usage with holograph-protocol package
   localhostWallets: {[key: string]: Wallet} = {}
@@ -355,14 +381,17 @@ export class NetworkMonitor {
     ethereumTestnetGoerli: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     polygonTestnet: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     avalancheTestnet: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
+    binanceSmartChainTestnet: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
 
     ethereum: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
     polygon: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
     avalanche: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
+    binanceSmartChain: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
   }
 
   needToSubscribe = false
-  repair = 0
+  replayBlockStart = 0
+  replayBlockEnd: number | undefined
 
   getProviderStatus(): {[key: string]: ProviderStatus} {
     const output: {[key: string]: ProviderStatus} = {}
@@ -399,6 +428,20 @@ export class NetworkMonitor {
     }
   }
 
+  validateReplayFlagInput(input: string) {
+    if (/([1-9]\d*|0):([1-9]\d*)/.test(input)) {
+      // expected type: 8987:8988
+      const startAndEndBlock = input.split(':').map(int => Number(int))
+      if (startAndEndBlock[0] > startAndEndBlock[1]) {
+        throw new Error('End block must be greater than start block number.')
+      }
+
+      return true
+    }
+
+    return /[1-9]\d*/.test(input)
+  }
+
   constructor(options: NetworkMonitorOptions) {
     this.environment = getEnvironment()
     this.parent = options.parent
@@ -411,6 +454,10 @@ export class NetworkMonitor {
       this.filters = options.filters
     }
 
+    if (options.enableV2) {
+      this.enableV2 = options.enableV2
+    }
+
     if (options.verbose !== undefined) {
       this.verbose = options.verbose
     }
@@ -419,12 +466,22 @@ export class NetworkMonitor {
       this.processTransactions = options.processTransactions.bind(this.parent)
     }
 
+    if (options.processTransactions2 !== undefined) {
+      this.processTransactions2 = options.processTransactions2.bind(this.parent)
+    }
+
     if (options.userWallet !== undefined) {
       this.userWallet = options.userWallet
     }
 
-    if (options.repair !== undefined && options.repair > 0) {
-      this.repair = options.repair
+    if (options.replay !== undefined && options.replay !== '0') {
+      if (!this.validateReplayFlagInput(options.replay)) {
+        throw new Error('Replay flag input format is not valid')
+      }
+
+      const replayRangeBlock = options.replay.split(':').map(int => Number(int))
+      this.replayBlockStart = replayRangeBlock[0]
+      this.replayBlockEnd = replayRangeBlock.length === 2 ? replayRangeBlock[1] : undefined
     }
 
     if (options.networks === undefined || '') {
@@ -433,6 +490,10 @@ export class NetworkMonitor {
 
     if (options.apiService !== undefined) {
       this.apiService = options.apiService
+    }
+
+    if (options.BlockHeightOptions !== undefined) {
+      this.blockHeightOptions = options.BlockHeightOptions
     }
 
     options.networks = options.networks.filter((network: string) => {
@@ -463,11 +524,11 @@ export class NetworkMonitor {
 
     this.networks = [...new Set(options.networks)]
 
-    // Repair can only be used with a single network at a time since the block number provided to the repair flag is global
+    // Replay can only be used with a single network at a time since the block number provided to the replay flag is global
     // This can be updated in the future to support multiple networks with different block numbers simple logic is preferred for now
-    if (this.repair > 0 && this.networks.length > 1) {
+    if (this.replayBlockStart > 0 && this.networks.length > 1) {
       this.log(
-        'Repair mode is not supported for multiple networks. Please use a single network with desired repair block height',
+        'Replay mode is not supported for multiple networks. Please use a single network with desired replay block height',
       )
       this.exitRouter({exit: true}, 'SIGINT')
     }
@@ -520,8 +581,10 @@ export class NetworkMonitor {
         this.needToSubscribe = true
       }
 
-      // Subscribe to events 🎧
-      this.networkSubscribe(network)
+      if (this.replayBlockEnd === undefined) {
+        // Subscribe to events 🎧
+        this.networkSubscribe(network)
+      }
 
       // Process blocks 🧱
       this.blockJobHandler(network)
@@ -550,7 +613,9 @@ export class NetworkMonitor {
     return lastBlocks
   }
 
-  async loadLastBlocksHeights(processType: BlockHeightProcessType) {
+  async loadLastBlocksHeights(processType: BlockHeightProcessType): Promise<{
+    [key: string]: number
+  }> {
     if (this.apiService === undefined) {
       throw new Error('API service is undefined')
     }
@@ -640,22 +705,25 @@ export class NetworkMonitor {
         })
       }
 
-      if (this.repair > 0) {
-        this.structuredLog(network, color.red(`🚧 REPAIR MODE ACTIVATED 🚧`))
-        const currentBlock = await this.providers[network].getBlockNumber()
+      if (this.replayBlockStart > 0) {
+        this.structuredLog(network, color.red(`🚧 REPLAY MODE ACTIVATED 🚧`))
+
+        const endBlockNumber =
+          this.replayBlockEnd === undefined ? await this.providers[network].getBlockNumber() : this.replayBlockEnd
+
         if (this.verbose) {
-          this.structuredLog(network, `Current block height [${color.green(currentBlock)}]`)
+          this.structuredLog(network, `Last block height [${color.green(endBlockNumber)}]`)
           this.structuredLog(
             network,
-            `Starting Network Monitor in repair mode from ${color.yellow(
-              currentBlock - this.repair,
-            )} blocks back at block [${color.red(this.repair)}]`,
+            `Starting Network Monitor in replay mode from ${color.yellow(
+              endBlockNumber - this.replayBlockStart,
+            )} blocks back at block [${color.red(this.replayBlockStart)}]`,
           )
         }
 
-        this.latestBlockHeight[network] = this.repair
+        this.latestBlockHeight[network] = this.replayBlockStart
         this.blockJobs[network] = []
-        for (let n = this.repair; n <= currentBlock; n++) {
+        for (let n = this.replayBlockStart; n <= endBlockNumber; n++) {
           this.blockJobs[network].push({
             network,
             block: n,
@@ -761,13 +829,28 @@ export class NetworkMonitor {
 
   exitCallback?: () => void
 
+  isUpdateBlockHeightUsingApiEnabled = (): boolean => {
+    return Boolean(
+      this.apiService !== undefined &&
+        this.blockHeightOptions !== undefined &&
+        this.blockHeightOptions === BlockHeightOptions.API,
+    )
+  }
+
+  isSaveBlockHeightEnabled = (): boolean => {
+    return Boolean(
+      this.blockHeightOptions &&
+        (this.blockHeightOptions === BlockHeightOptions.FILE || this.blockHeightOptions === BlockHeightOptions.API),
+    )
+  }
+
   exitHandler = async (exitCode: number): Promise<void> => {
     /**
      * Before exit, save the block heights to the local db
      */
     if (this.exited === false) {
       this.log('')
-      if (this.needToSubscribe) {
+      if (this.needToSubscribe && this.isSaveBlockHeightEnabled()) {
         this.log(`\n💾 Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}\n`)
         this.saveLastBlocks(this.parent.config.configDir, this.latestBlockHeight)
       }
@@ -785,7 +868,7 @@ export class NetworkMonitor {
     if ((exitCode && exitCode === 0) || exitCode === 'SIGINT' || exitCode === 'SIGTERM') {
       if (this.exited === false) {
         this.log('')
-        if (this.needToSubscribe) {
+        if (this.needToSubscribe && this.isSaveBlockHeightEnabled()) {
           this.log(`\n💾 Saving current block heights:\n${JSON.stringify(this.latestBlockHeight, undefined, 2)}\n`)
           this.saveLastBlocks(this.parent.config.configDir, this.latestBlockHeight)
         }
@@ -879,7 +962,10 @@ export class NetworkMonitor {
         this.structuredLog(job.network, `Block processing complete ✅`, job.block)
       }
 
-      if (this.parent.id === 'indexer' || this.parent.id === 'operator') {
+      if (
+        (this.parent.id === 'indexer' || this.parent.id === 'operator') &&
+        this.isUpdateBlockHeightUsingApiEnabled()
+      ) {
         this.updateLastProcessedBlock(job)
       }
 
@@ -890,7 +976,11 @@ export class NetworkMonitor {
     this.lastProcessBlockDone[network] = Date.now()
     if (this.blockJobs[network].length > 0) {
       const blockJob: BlockJob = this.blockJobs[network][0] as BlockJob
-      this.processBlock(blockJob)
+      if (this.enableV2) {
+        this.processBlock2(blockJob)
+      } else {
+        this.processBlock(blockJob)
+      }
     } else if (this.needToSubscribe) {
       setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
     } else {
@@ -908,7 +998,37 @@ export class NetworkMonitor {
     }
   }
 
-  filterTransaction(
+  /* eslint-disable-next-line max-params */
+  async applyFilter(
+    filter: BloomFilter,
+    log: Log,
+    tx: TransactionResponse,
+    parent: ImplementsCommand,
+    network: string,
+  ): Promise<InterestingTransaction | undefined> {
+    const event: Event = filter.bloomEvent
+    if (log.topics.length > 0 && log.topics[0] === event.sigHash) {
+      if (filter.eventValidator) {
+        if (filter.eventValidator.bind(parent)(network, tx, log)) {
+          return {
+            bloomId: filter.bloomId,
+            transaction: tx,
+            log,
+          } as InterestingTransaction
+        }
+      } else {
+        return {
+          bloomId: filter.bloomId,
+          transaction: tx,
+          log,
+        } as InterestingTransaction
+      }
+    }
+
+    return undefined
+  }
+
+  filterTransactions(
     job: BlockJob,
     transaction: TransactionResponse,
     interestingTransactions: TransactionResponse[],
@@ -946,6 +1066,119 @@ export class NetworkMonitor {
     }
   }
 
+  isInterestingTransactionLogAlreadyIncluded(log: Log, interestingTransactions: InterestingTransaction[]): boolean {
+    const interestingTx = interestingTransactions.find(
+      tx => tx.log?.transactionHash === log.transactionHash && tx.log.logIndex === log.logIndex,
+    )
+    return interestingTx !== undefined
+  }
+
+  filterLogsByTx(tx: string, logs: Log[]): Log[] {
+    const output: Log[] = []
+    for (const log of logs) {
+      if (log.transactionHash === tx) {
+        output.push(log)
+      }
+    }
+
+    return output
+  }
+
+  async filterTransactions2(
+    job: BlockJob,
+    transactions: TransactionResponse[],
+    logs: Log[],
+    interestingTransactions: InterestingTransaction[],
+  ): Promise<void> {
+    const allLogs: {[key: string]: Log[]} = {}
+    const tbdLogs: number[] = []
+    const txMap: {[key: string]: TransactionResponse} = {}
+    for (const tx of transactions) {
+      txMap[tx.hash] = tx
+    }
+
+    for (const filter of this.bloomFilters) {
+      const event: Event = filter.bloomEvent
+      for (const log of logs) {
+        if (!(log.transactionHash in allLogs)) {
+          allLogs[log.transactionHash] = this.filterLogsByTx(log.transactionHash, logs)
+        }
+
+        if (
+          log.topics.length === 0 ||
+          log.topics[0] !== event.sigHash ||
+          this.isInterestingTransactionLogAlreadyIncluded(log, interestingTransactions)
+        ) {
+          continue
+        }
+
+        if (filter.eventValidator) {
+          if (filter.eventValidator.bind(this.parent)(job.network, txMap[log.transactionHash], log)) {
+            interestingTransactions.push({
+              bloomId: filter.bloomId,
+              transaction: txMap[log.transactionHash],
+              log,
+              allLogs: allLogs[log.transactionHash]!,
+            } as InterestingTransaction)
+          } else if (this.tbdCachedContracts.includes(log.address.toLowerCase()) && !tbdLogs.includes(log.logIndex)) {
+            interestingTransactions.push({
+              bloomId: 'TBD',
+              transaction: txMap[log.transactionHash],
+              log,
+              allLogs: allLogs[log.transactionHash]!,
+            } as InterestingTransaction)
+            tbdLogs.push(log.logIndex)
+          }
+        } else {
+          interestingTransactions.push({
+            bloomId: filter.bloomId,
+            transaction: txMap[log.transactionHash],
+            log,
+            allLogs: allLogs[log.transactionHash]!,
+          } as InterestingTransaction)
+        }
+      }
+    }
+  }
+
+  adjustBridgeableContractDeployedLogs(logs: Log[], index: number, address: string): Log[] {
+    let firstIndex: number = index
+    for (let i = 0, l: number = logs.length; i < l; i++) {
+      if (logs[i].address.toLowerCase() === address && firstIndex > i) {
+        firstIndex = i
+      }
+    }
+
+    if (firstIndex !== index) {
+      const targetLog: Log = logs[index]
+      logs.splice(index, 1)
+      logs.splice(firstIndex, 0, targetLog)
+    }
+
+    return logs
+  }
+
+  sortLogs(logs: Log[]): Log[] {
+    const event: Event = eventMap[EventType.BridgeableContractDeployed]
+    let log: Log
+    let bridgeableContractDeployedEvent: BridgeableContractDeployedEvent | null
+    for (let i = 0, l: number = logs.length; i < l; i++) {
+      log = logs[i]
+      if (log.topics.length > 0 && log.topics[0] === event.sigHash) {
+        bridgeableContractDeployedEvent = event.decode<BridgeableContractDeployedEvent>(event.type, log)
+        if (bridgeableContractDeployedEvent !== null) {
+          if (!this.tbdCachedContracts.includes(bridgeableContractDeployedEvent.contractAddress)) {
+            this.tbdCachedContracts.push(bridgeableContractDeployedEvent.contractAddress)
+          }
+
+          logs = this.adjustBridgeableContractDeployedLogs(logs, i, bridgeableContractDeployedEvent.contractAddress)
+        }
+      }
+    }
+
+    return logs
+  }
+
   extractGasData(network: string, block: Block | BlockWithTransactions, tx: TransactionResponse): void {
     if (this.gasPrices[network].isEip1559) {
       // set current tx priority fee
@@ -967,20 +1200,22 @@ export class NetworkMonitor {
         this.gasPrices[network].nextPriorityFee = this.gasPrices[network].nextPriorityFee!.add(priorityFee).div(TWO)
       }
     }
-    // for legacy networks, get average gasPrice
-    else if (this.gasPrices[network].gasPrice === null) {
-      this.gasPrices[network].gasPrice = tx.gasPrice!
-    } else {
-      this.gasPrices[network].gasPrice = this.gasPrices[network].gasPrice!.add(tx.gasPrice!).div(TWO)
+    // for legacy networks (non EIP-1559), get average rolling gasPrice
+    // it's important to skip this calculation if gas price is 0, which happens in some instances like on BSC
+    // we check first that gasPrice variable is actually set, and we check that it is greater than zero
+    else if (tx.gasPrice !== undefined && tx.gasPrice !== null && tx.gasPrice!.gt(ZERO)) {
+      // if current network gas pricing is null, then this means it's the first time that gas price data is being set
+      if (this.gasPrices[network].gasPrice === null) {
+        this.gasPrices[network].gasPrice = tx.gasPrice!
+      }
+      // otherwise we already have gas price data set, we just add new value to it and divide by two to get the floating average
+      else {
+        this.gasPrices[network].gasPrice = this.gasPrices[network].gasPrice!.add(tx.gasPrice!).div(TWO)
+      }
     }
   }
 
   async updateLastProcessedBlock(job: BlockJob): Promise<void> {
-    if (this.apiService === undefined) {
-      this.structuredLog(job.network, `updateLastProcessedBlock: API is undefined`)
-      return
-    }
-
     let processType: BlockHeightProcessType | undefined
 
     if (this.parent.constructor.name === 'Indexer') {
@@ -1010,13 +1245,36 @@ export class NetworkMonitor {
     }
   }
 
+  checkBloomLogs(block: ExtendedBlockWithTransactions): boolean {
+    for (const filter of this.bloomFilters) {
+      if (!isInBloom(block.logsBloom, filter.bloomValueHashed)) {
+        continue
+      }
+
+      // check if there is additional validation required
+      if (filter.bloomFilterValidators) {
+        // iterate over each validator
+        for (const validator of filter.bloomFilterValidators) {
+          // if a match is found, then pass the transaction through
+          if (isInBloom(block.logsBloom, validator.bloomValueHashed)) {
+            return true
+          }
+        }
+      } else {
+        return true
+      }
+    }
+
+    return false
+  }
+
   async processBlock(job: BlockJob): Promise<void> {
     this.activated[job.network] = true
     if (this.verbose) {
       this.structuredLog(job.network, `Getting block 🔍`, job.block)
     }
 
-    const block: BlockWithTransactions | null = await this.getBlockWithTransactions({
+    const block: ExtendedBlockWithTransactions | null = await this.getBlockWithTransactions({
       network: job.network,
       blockNumber: job.block,
       attempts: 10,
@@ -1057,14 +1315,15 @@ export class NetworkMonitor {
           this.extractGasData(job.network, block, block.transactions[i])
         }
 
-        this.filterTransaction(job, block.transactions[i], interestingTransactions)
+        this.filterTransactions(job, block.transactions[i], interestingTransactions)
       }
 
       if (recentBlock) {
         this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
       }
 
-      /* Temporarily disabled
+      /*
+      Temporarily disabled
       if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
         this.structuredLog(
           job.network,
@@ -1102,6 +1361,106 @@ export class NetworkMonitor {
     }
   }
 
+  async processBlock2(job: BlockJob): Promise<void> {
+    this.activated[job.network] = true
+    if (this.verbose) {
+      this.structuredLog(job.network, `Getting block 🔍`, job.block)
+    }
+
+    const block: ExtendedBlockWithTransactions | null = await this.getBlockWithTransactions({
+      network: job.network,
+      blockNumber: job.block,
+      attempts: 10,
+      canFail: true,
+    })
+    if (block !== undefined && block !== null && 'transactions' in block) {
+      const recentBlock = this.currentBlockHeight[job.network] - job.block < 5
+      if (this.verbose) {
+        this.structuredLog(job.network, `Block retrieved 📥`, job.block)
+        /*
+        Temporarily disabled
+        this.structuredLog(job.network, `Calculating block gas`, job.block)
+        if (this.gasPrices[job.network].isEip1559) {
+          this.structuredLog(
+            job.network,
+            `Calculated block gas price was ${formatUnits(
+              this.gasPrices[job.network].nextBlockFee!,
+              'gwei',
+            )} GWEI, and actual block gas price is ${formatUnits(block.baseFeePerGas!, 'gwei')} GWEI`,
+            job.block,
+          )
+        }
+        */
+      }
+
+      if (recentBlock) {
+        this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
+      }
+
+      // const priorityFees: BigNumber = this.gasPrices[job.network].nextPriorityFee!
+      if (this.verbose && block.transactions.length === 0) {
+        this.structuredLog(job.network, `Zero transactions in block`, job.block)
+      }
+
+      const interestingTransactions: InterestingTransaction[] = []
+      if (this.checkBloomLogs(block)) {
+        let logs: Log[] | null = await this.getLogs({
+          network: job.network,
+          blockNumber: job.block,
+          attempts: 10,
+          canFail: true,
+        })
+        if (logs === null) {
+          this.structuredLog(job.network, `${color.red('Could not get logs for block')}`, job.block)
+        } else {
+          logs = this.sortLogs(logs as Log[])
+          await this.filterTransactions2(job, block.transactions, logs as Log[], interestingTransactions)
+        }
+      }
+
+      if (recentBlock) {
+        this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
+      }
+
+      /*
+      Temporarily disabled
+      if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
+        this.structuredLog(
+          job.network,
+          `Calculated block priority fees was ${formatUnits(
+            priorityFees,
+            'gwei',
+          )} GWEI, and actual block priority fees is ${formatUnits(
+            this.gasPrices[job.network].nextPriorityFee!,
+            'gwei',
+          )} GWEI`,
+          job.block,
+        )
+      }
+      */
+
+      if (interestingTransactions.length > 0) {
+        if (this.verbose) {
+          this.structuredLog(job.network, `Found ${interestingTransactions.length} interesting transactions`, job.block)
+        }
+
+        if (this.processTransactions2 !== undefined) {
+          await this.processTransactions2?.bind(this.parent)(job, interestingTransactions)
+        }
+
+        this.blockJobHandler(job.network, job)
+      } else {
+        this.blockJobHandler(job.network, job)
+      }
+    } else {
+      if (this.verbose) {
+        this.structuredLog(job.network, `${color.red('Dropped block')}`, job.block)
+      }
+
+      this.blockJobHandler(job.network)
+    }
+  }
+
   networkSubscribe(network: string): void {
     this.providers[network].on('block', (blockNumber: string) => {
       const block = Number.parseInt(blockNumber, 10)
@@ -1113,9 +1472,9 @@ export class NetworkMonitor {
         let latest = this.currentBlockHeight[network]
         // If the current network's block number is ahead of the network monitor's latest block, add the blocks to the queue
         while (block - latest > 0) {
-          if (this.verbose) {
-            this.structuredLog(network, `Block (Syncing)`, latest)
-          }
+          // if (this.verbose) {
+          //   this.structuredLog(network, `Block (Syncing)`, latest)
+          // }
 
           this.blockJobs[network].push({
             network: network,
@@ -1206,6 +1565,62 @@ export class NetworkMonitor {
     return Math.floor(Math.random() * 4_294_967_295).toString(16)
   }
 
+  async getLogs({
+    blockNumber,
+    network,
+    tags = [] as (string | number)[],
+    attempts = 10,
+    canFail = false,
+    interval = 10_000,
+  }: LogsParams): Promise<Log[] | null> {
+    let counter = 0
+    let sent = false
+    const targetBlock: string = BigNumber.from(blockNumber).toHexString()
+
+    // eslint-disable-next-line no-unmodified-loop-condition
+    for (let i = 0; i < attempts || !canFail; i++) {
+      try {
+        const filter: Filter = {fromBlock: targetBlock, toBlock: targetBlock}
+        const logs: Log[] | null = await this.providers[network].getLogs(filter)
+        if (logs === null) {
+          counter++
+          if (canFail && counter > attempts) {
+            if (!sent) {
+              sent = true
+            }
+
+            return null
+          }
+        } else {
+          if (!sent) {
+            sent = true
+          }
+
+          return logs as Log[]
+        }
+      } catch (error: any) {
+        if (error.message !== 'cannot query unfinalized data') {
+          counter++
+          if (canFail && counter > attempts) {
+            this.structuredLog(network, `Failed retrieving logs for block ${blockNumber}`, tags)
+            if (!sent) {
+              sent = true
+              throw error
+            }
+          }
+        }
+      }
+
+      if (sent) {
+        break
+      }
+
+      await sleep(interval)
+    }
+
+    return null
+  }
+
   async getBlock({
     blockNumber,
     network,
@@ -1213,48 +1628,23 @@ export class NetworkMonitor {
     attempts = 10,
     canFail = false,
     interval = 5000,
-  }: BlockParams): Promise<Block | null> {
-    return new Promise<Block | null>((topResolve, _topReject) => {
-      let counter = 0
-      let sent = false
-      let blockInterval: NodeJS.Timeout | null = null
-      const getBlock = async (): Promise<void> => {
-        try {
-          const block: Block | null = await this.providers[network].getBlock(blockNumber)
-          if (block === null) {
-            counter++
-            if (canFail && counter > attempts) {
-              if (blockInterval) clearInterval(blockInterval)
-              if (!sent) {
-                sent = true
-                topResolve(null)
-              }
-            }
-          } else {
-            if (blockInterval) clearInterval(blockInterval)
-            if (!sent) {
-              sent = true
-              topResolve(block as Block)
-            }
-          }
-        } catch (error: any) {
-          if (error.message !== 'cannot query unfinalized data') {
-            counter++
-            if (canFail && counter > attempts) {
-              this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
-              if (blockInterval) clearInterval(blockInterval)
-              if (!sent) {
-                sent = true
-                _topReject(error)
-              }
-            }
-          }
-        }
+  }: BlockParams): Promise<ExtendedBlock | null> {
+    const getBlockAttempt = async () => {
+      const block: ExtendedBlock | null = await getExtendedBlock(this.providers[network], blockNumber)
+
+      if (block === null && canFail) {
+        throw new Error('Failed retrieving block')
       }
 
-      blockInterval = setInterval(getBlock, interval)
-      getBlock()
-    })
+      return block
+    }
+
+    try {
+      return await retry(getBlockAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
+      throw error
+    }
   }
 
   async getBlockWithTransactions({
@@ -1264,50 +1654,17 @@ export class NetworkMonitor {
     attempts = 10,
     canFail = false,
     interval = 5000,
-  }: BlockParams): Promise<BlockWithTransactions | null> {
-    return new Promise<BlockWithTransactions | null>((topResolve, _topReject) => {
-      let counter = 0
-      let sent = false
-      let blockInterval: NodeJS.Timeout | null = null
-      const getBlock = async (): Promise<void> => {
-        try {
-          const block: BlockWithTransactions | null = await this.providers[network].getBlockWithTransactions(
-            blockNumber,
-          )
-          if (block === null) {
-            counter++
-            if (canFail && counter > attempts) {
-              if (blockInterval) clearInterval(blockInterval)
-              if (!sent) {
-                sent = true
-                topResolve(null)
-              }
-            }
-          } else {
-            if (blockInterval) clearInterval(blockInterval)
-            if (!sent) {
-              sent = true
-              topResolve(block as BlockWithTransactions)
-            }
-          }
-        } catch (error: any) {
-          if (error.message !== 'cannot query unfinalized data') {
-            counter++
-            if (canFail && counter > attempts) {
-              this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
-              if (blockInterval) clearInterval(blockInterval)
-              if (!sent) {
-                sent = true
-                _topReject(error)
-              }
-            }
-          }
-        }
-      }
+  }: BlockParams): Promise<ExtendedBlockWithTransactions | null> {
+    const getBlock = async () => {
+      return getExtendedBlockWithTransactions(this.providers[network], blockNumber)
+    }
 
-      blockInterval = setInterval(getBlock, interval)
-      getBlock()
-    })
+    try {
+      return retry(getBlock, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, `Failed getting block ${blockNumber} with transactions`, tags)
+      throw error
+    }
   }
 
   async getTransaction({
@@ -1318,34 +1675,16 @@ export class NetworkMonitor {
     canFail = false,
     interval = 2000,
   }: TransactionParams): Promise<TransactionResponse | null> {
-    return new Promise<TransactionResponse | null>((topResolve, _topReject) => {
-      let counter = 0
-      let sent = false
-      let txInterval: NodeJS.Timeout | null = null
-      const getTx = async (): Promise<void> => {
-        const tx: TransactionResponse | null = await this.providers[network].getTransaction(transactionHash)
-        if (tx === null) {
-          counter++
-          if (canFail && counter > attempts) {
-            if (txInterval) clearInterval(txInterval)
-            if (!sent) {
-              sent = true
-              this.structuredLog(network, `Failed getting transaction ${transactionHash}`, tags)
-              topResolve(null)
-            }
-          }
-        } else {
-          if (txInterval) clearInterval(txInterval)
-          if (!sent) {
-            sent = true
-            topResolve(tx as TransactionResponse)
-          }
-        }
-      }
+    const getTransactionAttempt = async () => {
+      return this.providers[network].getTransaction(transactionHash)
+    }
 
-      txInterval = setInterval(getTx, interval)
-      getTx()
-    })
+    try {
+      return retry(getTransactionAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, `Failed getting transaction ${transactionHash}`, tags)
+      throw error
+    }
   }
 
   async getTransactionReceipt({
@@ -1356,34 +1695,16 @@ export class NetworkMonitor {
     canFail = false,
     interval = 2000,
   }: TransactionParams): Promise<TransactionReceipt | null> {
-    return new Promise<TransactionReceipt | null>((topResolve, _topReject) => {
-      let counter = 0
-      let sent = false
-      let txReceiptInterval: NodeJS.Timeout | null = null
-      const getTxReceipt = async (): Promise<void> => {
-        const receipt: TransactionReceipt | null = await this.providers[network].getTransactionReceipt(transactionHash)
-        if (receipt === null) {
-          counter++
-          if (canFail && counter > attempts) {
-            if (txReceiptInterval) clearInterval(txReceiptInterval)
-            if (!sent) {
-              sent = true
-              this.structuredLog(network, `Failed getting transaction ${transactionHash} receipt`, tags)
-              topResolve(null)
-            }
-          }
-        } else {
-          if (txReceiptInterval) clearInterval(txReceiptInterval)
-          if (!sent) {
-            sent = true
-            topResolve(receipt as TransactionReceipt)
-          }
-        }
-      }
+    const getTransactionReceiptAttempt = async () => {
+      return this.providers[network].getTransactionReceipt(transactionHash)
+    }
 
-      txReceiptInterval = setInterval(getTxReceipt, interval)
-      getTxReceipt()
-    })
+    try {
+      return retry(getTransactionReceiptAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, `Failed getting transaction ${transactionHash} receipt`, tags)
+      throw error
+    }
   }
 
   async getBalance({
@@ -1394,34 +1715,17 @@ export class NetworkMonitor {
     canFail = false,
     interval = 1000,
   }: WalletParams): Promise<BigNumber> {
-    return new Promise<BigNumber>((topResolve, _topReject) => {
-      let counter = 0
-      let sent = false
-      let balanceInterval: NodeJS.Timeout | null = null
-      const getBalance = async (): Promise<void> => {
-        try {
-          const balance: BigNumber = await this.providers[network].getBalance(walletAddress, 'latest')
-          if (balanceInterval) clearInterval(balanceInterval)
-          if (!sent) {
-            sent = true
-            topResolve(balance)
-          }
-        } catch (error: any) {
-          counter++
-          if (canFail && counter > attempts) {
-            if (balanceInterval) clearInterval(balanceInterval)
-            if (!sent) {
-              sent = true
-              this.structuredLog(network, `Failed getting ${walletAddress} balance`, tags)
-              _topReject(error)
-            }
-          }
-        }
-      }
+    const getBalanceAttempt = async () => {
+      return this.providers[network].getBalance(walletAddress, 'latest')
+    }
 
-      balanceInterval = setInterval(getBalance, interval)
-      getBalance()
-    })
+    try {
+      const result = await retry(getBalanceAttempt, attempts, canFail, interval)
+      return result as BigNumber
+    } catch (error: any) {
+      this.structuredLog(network, `Failed getting ${walletAddress} balance`, tags)
+      throw error
+    }
   }
 
   async getNonce({
@@ -1432,34 +1736,17 @@ export class NetworkMonitor {
     canFail = false,
     interval = 1000,
   }: WalletParams): Promise<number> {
-    return new Promise<number>((topResolve, _topReject) => {
-      let counter = 0
-      let sent = false
-      let nonceInterval: NodeJS.Timeout | null = null
-      const getNonce = async (): Promise<void> => {
-        try {
-          const nonce: number = await this.providers[network].getTransactionCount(walletAddress, 'latest')
-          if (nonceInterval) clearInterval(nonceInterval)
-          if (!sent) {
-            sent = true
-            topResolve(nonce)
-          }
-        } catch (error: any) {
-          counter++
-          if (canFail && counter > attempts) {
-            if (nonceInterval) clearInterval(nonceInterval)
-            if (!sent) {
-              sent = true
-              this.structuredLog(network, `Failed getting ${walletAddress} nonce`, tags)
-              _topReject(error)
-            }
-          }
-        }
-      }
+    const getNonceAttempt = async () => {
+      return this.providers[network].getTransactionCount(walletAddress, 'latest')
+    }
 
-      nonceInterval = setInterval(getNonce, interval)
-      getNonce()
-    })
+    try {
+      const result = await retry(getNonceAttempt, attempts, canFail, interval)
+      return result as number
+    } catch (error: any) {
+      this.structuredLog(network, `Failed getting ${walletAddress} nonce`, tags)
+      throw error
+    }
   }
 
   async getGasLimit({
@@ -1474,83 +1761,60 @@ export class NetworkMonitor {
     canFail = false,
     interval = 5000,
   }: GasLimitParams): Promise<BigNumber | null> {
-    return new Promise<BigNumber | null>((topResolve, _topReject) => {
-      let counter = 0
-      let sent = false
-      let calculateGasInterval: NodeJS.Timeout | null = null
-      const calculateGas = async (): Promise<void> => {
-        try {
-          const gasLimit: BigNumber | null = await contract
-            .connect(this.wallets[network])
-            .estimateGas[methodName](...args, {
-              gasPrice: gasPrice!.mul(TWO),
-              value,
-              from: this.wallets[network].address,
-            })
-          if (gasLimit === null) {
-            counter++
-            if (canFail && counter > attempts) {
-              if (calculateGasInterval) clearInterval(calculateGasInterval)
-              if (!sent) {
-                sent = true
-                this.structuredLog(network, `Failed calculating gas limit`, tags)
-                topResolve(null)
-              }
-            }
-          } else {
-            if (calculateGasInterval) clearInterval(calculateGasInterval)
-            if (!sent) {
-              sent = true
-              topResolve(gasLimit)
-            }
-          }
-        } catch (error: any) {
-          let revertReason = 'unknown revert reason'
-          let revertExplanation = 'unknown'
-          let knownReason = false
-          if ('reason' in error && error.reason.startsWith('execution reverted:')) {
-            // transaction reverted, we got a `revert` error from web3 call
-            revertReason = error.reason.split('execution reverted: ')[1]
-            switch (revertReason) {
-              case 'HOLOGRAPH: already deployed': {
-                revertExplanation = 'The deploy request is invalid, since requested contract is already deployed.'
-                knownReason = true
-                break
-              }
+    const getGasLimitAttempt = async () => {
+      const gasLimit: BigNumber | null = await contract
+        .connect(this.wallets[network])
+        .estimateGas[methodName](...args, {
+          gasPrice: gasPrice!.mul(TWO),
+          value,
+          from: this.wallets[network].address,
+        })
 
-              case 'HOLOGRAPH: invalid job': {
-                revertExplanation =
-                  'Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.'
-                knownReason = true
-                break
-              }
+      return gasLimit
+    }
 
-              case 'HOLOGRAPH: not holographed': {
-                revertExplanation = 'Need to first deploy a holographable contract on destination chain.'
-                knownReason = true
-                break
-              }
-            }
+    try {
+      return retry(getGasLimitAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, `Failed calculating gas limit`, tags)
+      // Error handling logic for known reasons
+      let revertReason = 'unknown revert reason'
+      let revertExplanation = 'unknown'
+      let knownReason = false
+      if ('reason' in error && error.reason.startsWith('execution reverted:')) {
+        // transaction reverted, we got a `revert` error from web3 call
+        revertReason = error.reason.split('execution reverted: ')[1]
+        switch (revertReason) {
+          case 'HOLOGRAPH: already deployed': {
+            revertExplanation = 'The deploy request is invalid, since requested contract is already deployed.'
+            knownReason = true
+            break
           }
 
-          if (knownReason) {
-            this.structuredLog(network, `[web3] ${revertReason} (${revertExplanation})`, tags)
-          } else {
-            this.structuredLog(network, JSON.stringify(error), tags)
+          case 'HOLOGRAPH: invalid job': {
+            revertExplanation =
+              'Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.'
+            knownReason = true
+            break
           }
 
-          if (calculateGasInterval) clearInterval(calculateGasInterval)
-          if (!sent) {
-            sent = true
-            this.structuredLog(network, `Transaction is expected to revert`, tags)
-            topResolve(null)
+          case 'HOLOGRAPH: not holographed': {
+            revertExplanation = 'Need to first deploy a holographable contract on destination chain.'
+            knownReason = true
+            break
           }
+        }
+
+        if (knownReason) {
+          this.structuredLog(network, `[web3] ${revertReason} (${revertExplanation})`, tags)
+        } else {
+          this.structuredLog(network, JSON.stringify(error), tags)
         }
       }
 
-      calculateGasInterval = setInterval(calculateGas, interval)
-      calculateGas()
-    })
+      this.structuredLog(network, `Transaction is expected to revert`, tags)
+      return null
+    }
   }
 
   async sendTransaction({
@@ -1561,120 +1825,78 @@ export class NetworkMonitor {
     canFail = false,
     interval = 3000,
   }: SendTransactionParams): Promise<TransactionResponse | null> {
-    return new Promise<TransactionResponse | null>((topResolve, _topReject) => {
-      let txHash: string | null
-      let counter = 0
-      let sent = false
-      let sendTxInterval: NodeJS.Timeout | null = null
-      const handleError = (error: any) => {
-        process.stdout.write('sendTransaction' + JSON.stringify(error, undefined, 2))
-        counter++
-        if (canFail && counter > attempts) {
-          this.structuredLogError(network, error, tags)
-          if (sendTxInterval) clearInterval(sendTxInterval)
-          if (!sent) {
-            sent = true
-            topResolve(null)
+    const sendTransactionAttempt = async (): Promise<TransactionResponse> => {
+      let txHash: string | null = null
+      const gasPricing: GasPricing = this.gasPrices[network]
+      let gasPrice: BigNumber | undefined
+      const rawTxGasPrice: BigNumber = BigNumber.from(rawTx.gasPrice ?? 0)
+
+      // Remove the gasPrice from rawTx to avoid EIP1559 error that type2 tx does not allow for use of gasPrice
+      delete rawTx.gasPrice
+
+      try {
+        // move gas price info around to support EIP-1559
+        if (gasPricing.isEip1559) {
+          if (gasPrice === undefined) {
+            gasPrice = BigNumber.from(rawTxGasPrice)
           }
+
+          rawTx.type = 2
+          rawTx.maxPriorityFeePerGas = gasPrice!
+          rawTx.maxFeePerGas = gasPrice!
         }
-      }
 
-      const sendTx = async (): Promise<void> => {
-        let populatedTx: TransactionRequest | null
-        let signedTx: string | null
-        let tx: TransactionResponse | null
-        const gasPricing: GasPricing = this.gasPrices[network]
-        let gasPrice: BigNumber | undefined
-        const rawTxGasPrice: BigNumber = BigNumber.from(rawTx.gasPrice ?? 0)
+        if ('value' in rawTx && rawTx.value!.eq(ZERO)) {
+          delete rawTx.value
+        }
 
-        // Remove the gasPrice from rawTx to avoid EIP1559 error that type2 tx does not allow for use of gasPrice
-        delete rawTx.gasPrice
+        const populatedTx = await this.wallets[network].populateTransaction(rawTx)
+        const signedTx = await this.wallets[network].signTransaction(populatedTx)
+        if (txHash === null) {
+          txHash = keccak256(signedTx)
+        }
 
-        try {
-          // move gas price info around to support EIP-1559
-          if (gasPricing.isEip1559) {
-            if (gasPrice === undefined) {
-              gasPrice = BigNumber.from(rawTxGasPrice)
-            }
+        this.structuredLog(network, 'Attempting to send transaction -> ' + JSON.stringify(populatedTx), tags)
+        const tx = await this.providers[network].sendTransaction(signedTx)
 
-            rawTx.type = 2
-            rawTx.maxPriorityFeePerGas = gasPrice!
-            rawTx.maxFeePerGas = gasPrice!
-          }
-
-          if ('value' in rawTx && rawTx.value!.eq(ZERO)) {
-            delete rawTx.value
-          }
-
-          populatedTx = await this.wallets[network].populateTransaction(rawTx)
-          signedTx = await this.wallets[network].signTransaction(populatedTx)
-          if (txHash === null) {
-            txHash = keccak256(signedTx)
-          }
-
-          this.structuredLog(network, 'Attempting to send transaction -> ' + JSON.stringify(populatedTx), tags)
-          tx = await this.providers[network].sendTransaction(signedTx)
+        if (tx === null) {
+          throw new Error('Failed submitting transaction')
+        } else {
+          this.structuredLog(network, `Transaction sent to mempool ${tx.hash}`, tags)
+          return tx
+        }
+      } catch (error: any) {
+        if (error.message === 'already known' || error.message === 'nonce has already been used') {
+          const tx = await this.getTransaction({
+            transactionHash: txHash!,
+            network,
+            tags,
+            attempts,
+            canFail,
+            interval,
+          })
           if (tx === null) {
-            counter++
-            if (canFail && counter > attempts) {
-              this.structuredLog(network, 'Failed submitting transaction', tags)
-              if (sendTxInterval) clearInterval(sendTxInterval)
-              if (!sent) {
-                sent = true
-                topResolve(null)
-              }
-            }
+            throw error
           } else {
-            this.structuredLog(network, `Transaction sent to mempool ${tx.hash}`, tags)
-            if (sendTxInterval) clearInterval(sendTxInterval)
-            if (!sent) {
-              sent = true
-              topResolve(tx)
-            }
+            this.structuredLog(
+              network,
+              error.message === 'already known' ? 'Transaction already submitted' : 'Transaction already mined',
+              tags,
+            )
+            return tx
           }
-        } catch (error: any) {
-          switch (error.message) {
-            case 'already known': {
-              // we are aware that more than one message has been sent, so avoid all errors echoed
-              tx = await this.getTransaction({transactionHash: txHash!, network, tags, attempts, canFail, interval})
-              if (tx !== null) {
-                if (sendTxInterval) clearInterval(sendTxInterval)
-                if (!sent) {
-                  this.structuredLog(network, 'Transaction already submitted', tags)
-                  sent = true
-                  topResolve(tx)
-                }
-              }
-
-              break
-            }
-
-            case 'nonce has already been used': {
-              // we will see this when a transaction has already been submitted and is no longer in tx pool
-              tx = await this.getTransaction({transactionHash: txHash!, network, tags, attempts, canFail, interval})
-              if (tx !== null) {
-                if (sendTxInterval) clearInterval(sendTxInterval)
-                if (!sent) {
-                  this.structuredLog(network, 'Transaction already mined', tags)
-                  sent = true
-                  topResolve(tx)
-                }
-              }
-
-              break
-            }
-
-            default: {
-              handleError(error)
-              break
-            }
-          }
+        } else {
+          throw error
         }
       }
+    }
 
-      sendTxInterval = setInterval(sendTx, interval)
-      sendTx()
-    })
+    try {
+      return retry(sendTransactionAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLogError(network, 'Failed submitting transaction', tags)
+      throw error
+    }
   }
 
   async populateTransaction({
@@ -1685,64 +1907,32 @@ export class NetworkMonitor {
     gasPrice,
     gasLimit,
     value = ZERO,
-    // nonce, disabled to let ethers.js handle it
     tags = [] as (string | number)[],
     attempts = 10,
     canFail = false,
     interval = 1000,
   }: PopulateTransactionParams): Promise<PopulatedTransaction | null> {
-    return new Promise<PopulatedTransaction | null>((topResolve, _topReject) => {
-      let counter = 0
-      let sent = false
-      let populateTxInterval: NodeJS.Timeout | null = null
-      const handleError = (error: any) => {
-        process.stdout.write('populateTransaction' + JSON.stringify(error, undefined, 2))
-        counter++
-        if (canFail && counter > attempts) {
-          this.structuredLogError(network, error, tags)
-          if (populateTxInterval) clearInterval(populateTxInterval)
-          if (!sent) {
-            sent = true
-            topResolve(null)
-          }
-        }
+    const populateTransactionAttempt = async (): Promise<PopulatedTransaction> => {
+      const rawTx = await contract.populateTransaction[methodName](...args, {
+        gasPrice,
+        gasLimit,
+        value,
+        from: this.wallets[network].address,
+      })
+
+      if (rawTx) {
+        return rawTx
       }
 
-      const populateTx = async (): Promise<void> => {
-        let rawTx: PopulatedTransaction | null
-        try {
-          rawTx = await contract.populateTransaction[methodName](...args, {
-            gasPrice,
-            gasLimit,
-            // nonce disabled to let ethers.js handle it,
-            value,
-            from: this.wallets[network].address,
-          })
-          if (rawTx === null) {
-            counter++
-            if (canFail && counter > attempts) {
-              this.structuredLog(network, 'Failed populating transaction', tags)
-              if (populateTxInterval) clearInterval(populateTxInterval)
-              if (!sent) {
-                sent = true
-                topResolve(null)
-              }
-            }
-          } else {
-            if (populateTxInterval) clearInterval(populateTxInterval)
-            if (!sent) {
-              sent = true
-              topResolve(rawTx)
-            }
-          }
-        } catch (error: any) {
-          handleError(error)
-        }
-      }
+      throw new Error('Failed populating transaction')
+    }
 
-      populateTxInterval = setInterval(populateTx, interval)
-      populateTx()
-    })
+    try {
+      return retry(populateTransactionAttempt, attempts, canFail, interval)
+    } catch (error: any) {
+      this.structuredLog(network, 'Failed populating transaction', tags)
+      throw error
+    }
   }
 
   async executeTransaction({
@@ -1762,142 +1952,192 @@ export class NetworkMonitor {
     const tag: string = this.randomTag()
     tags.push(tag)
     this.structuredLog(network, `Executing contract function ${methodName}`, tags)
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise<TransactionReceipt | null>(async (topResolve, _topReject) => {
-      if (this.walletNonces[network] < 0) {
-        this.walletNonces[network] = await this.getNonce({
-          network,
-          walletAddress: await this.wallets[network].getAddress(),
-          canFail: false,
-        })
-      }
 
-      contract = contract.connect(this.wallets[network])
-      if (gasPrice === undefined) {
-        gasPrice = this.gasPrices[network].gasPrice!
-        gasPrice = gasPrice.add(gasPrice.div(TWO))
-      }
-
-      this.structuredLog(network, `Gas price is ${formatUnits(gasPrice, 'gwei')} GWEI`, tags)
-      if (gasLimit === undefined) {
-        gasLimit = await this.getGasLimit({
-          network,
-          tags,
-          contract,
-          methodName,
-          args,
-          gasPrice,
-          value,
-          attempts,
-          canFail,
-          interval,
-        })
-      }
-
-      if (gasLimit === null) {
-        topResolve(null)
-        return
-      }
-
-      this.structuredLog(network, `Gas limit is ${gasLimit.toNumber()}`, tags)
-      this.structuredLog(
+    if (this.walletNonces[network] < 0) {
+      this.walletNonces[network] = await this.getNonce({
         network,
-        `Transaction is estimated to cost a total of ${formatUnits(gasLimit.mul(gasPrice), 'ether')} ${
-          networks[network].tokenSymbol
-        }`,
+        walletAddress: await this.wallets[network].getAddress(),
+        canFail: false,
+      })
+    }
+
+    contract = contract.connect(this.wallets[network])
+    if (gasPrice === undefined) {
+      this.structuredLog(network, `About to get gas price from internal gas price functions`, tags)
+      gasPrice = this.gasPrices[network].gasPrice!
+      gasPrice = gasPrice.add(gasPrice.div(TWO))
+    }
+
+    if (network === 'polygon') {
+      this.structuredLog(network, `Gas Price before = ${formatUnits(gasPrice, 'gwei')}`, tags)
+      const staticGasPrice = BigNumber.from('400017425011')
+      gasPrice = gasPrice.gt(staticGasPrice) ? gasPrice : staticGasPrice
+    }
+
+    this.structuredLog(network, `Gas price is ${formatUnits(gasPrice, 'gwei')} GWEI`, tags)
+    if (gasLimit === undefined) {
+      gasLimit = await this.getGasLimit({
+        network,
         tags,
-      )
-      const walletAddress: string = await this.wallets[network].getAddress()
-      const balance: BigNumber | null = await this.getBalance({network, walletAddress, attempts, canFail, interval})
-      if (balance === null) {
-        this.structuredLog(network, `Could not get wallet ${walletAddress} balance`, tags)
-        topResolve(null)
-        return
-      }
-
-      this.structuredLog(network, `Wallet balance is ${formatUnits(balance!, 'ether')}`, tags)
-      if (balance.lt(gasLimit.mul(gasPrice).add(value))) {
-        this.structuredLogError(
-          network,
-          `Wallet balance is lower than the transaction required amount. Balance is ${formatUnits(balance, 'ether')} ${
-            networks[network].tokenSymbol
-          } and required amount is ${formatUnits(gasLimit.mul(gasPrice).add(value), 'ether')} ${
-            networks[network].tokenSymbol
-          }`,
-          tags,
-        )
-        topResolve(null)
-        return
-      }
-
-      const rawTx: PopulatedTransaction | null = await this.populateTransaction({
-        network,
         contract,
         methodName,
         args,
         gasPrice,
-        gasLimit,
         value,
-        nonce: this.walletNonces[network],
-        tags,
         attempts,
         canFail,
         interval,
       })
-      if (rawTx === null) {
-        // populating tx failed
-        this.structuredLog(network, `Failed to populate transaction ${methodName} ${JSON.stringify(args)}`, tags)
-        topResolve(null)
-        return
-      }
+    }
 
-      // reset time to allow for proper transaction submission
-      this.lastBlockJobDone[network] = Date.now()
-      const tx: TransactionResponse | null = await this.sendTransaction({
+    if (gasLimit === null) {
+      return null
+    }
+
+    this.structuredLog(network, `Gas limit is ${gasLimit.toNumber()}`, tags)
+    this.structuredLog(
+      network,
+      `Transaction is estimated to cost a total of ${formatUnits(gasLimit.mul(gasPrice), 'ether')} ${
+        networks[network].tokenSymbol
+      }`,
+      tags,
+    )
+    const walletAddress: string = await this.wallets[network].getAddress()
+    const balance: BigNumber | null = await this.getBalance({network, walletAddress, attempts, canFail, interval})
+    if (balance === null) {
+      this.structuredLog(network, `Could not get wallet ${walletAddress} balance`, tags)
+      return null
+    }
+
+    this.structuredLog(network, `Wallet balance is ${formatUnits(balance!, 'ether')}`, tags)
+    if (balance.lt(gasLimit.mul(gasPrice).add(value))) {
+      this.structuredLogError(
         network,
+        `Wallet balance is lower than the transaction required amount. Balance is ${formatUnits(balance, 'ether')} ${
+          networks[network].tokenSymbol
+        } and required amount is ${formatUnits(gasLimit.mul(gasPrice).add(value), 'ether')} ${
+          networks[network].tokenSymbol
+        }`,
         tags,
-        rawTx,
-        attempts,
-        canFail,
-        interval,
-      })
-      if (tx === null) {
-        // sending tx failed
-        this.structuredLog(network, `Failed to send transaction ${methodName} ${JSON.stringify(args)}`, tags)
-        topResolve(null)
-        return
+      )
+      return null
+    }
+
+    const rawTx: PopulatedTransaction | null = await this.populateTransaction({
+      network,
+      contract,
+      methodName,
+      args,
+      gasPrice,
+      gasLimit,
+      value,
+      nonce: this.walletNonces[network],
+      tags,
+      attempts,
+      canFail,
+      interval,
+    })
+    if (rawTx === null) {
+      // populating tx failed
+      this.structuredLog(network, `Failed to populate transaction ${methodName} ${JSON.stringify(args)}`, tags)
+      return null
+    }
+
+    // reset time to allow for proper transaction submission
+    this.lastBlockJobDone[network] = Date.now()
+    const tx: TransactionResponse | null = await this.sendTransaction({
+      network,
+      tags,
+      rawTx,
+      attempts,
+      canFail,
+      interval,
+    })
+    if (tx === null) {
+      // sending tx failed
+      this.structuredLog(network, `Failed to send transaction ${methodName} ${JSON.stringify(args)}`, tags)
+      return null
+    }
+
+    // reset time to allow for proper transaction confirmation
+    this.lastBlockJobDone[network] = Date.now()
+    this.structuredLog(network, `Transaction ${tx.hash} has been submitted`, tags)
+    const receipt: TransactionReceipt | null = await this.getTransactionReceipt({
+      network,
+      transactionHash: tx.hash,
+      attempts,
+      // allow this promise to resolve as null to not hold up the confirmation process for too long
+      canFail: waitForReceipt ? false : canFail, // canFail,
+    })
+    if (receipt === null) {
+      if (!waitForReceipt) {
+        this.walletNonces[network]++
       }
 
-      // reset time to allow for proper transaction confirmation
-      this.lastBlockJobDone[network] = Date.now()
-      this.structuredLog(network, `Transaction ${tx.hash} has been submitted`, tags)
-      const receipt: TransactionReceipt | null = await this.getTransactionReceipt({
+      this.structuredLog(
         network,
-        transactionHash: tx.hash,
-        attempts,
-        // allow this promise to resolve as null to not hold up the confirmation process for too long
-        canFail: waitForReceipt ? false : canFail, // canFail,
-      })
-      if (receipt === null) {
-        if (!waitForReceipt) {
-          this.walletNonces[network]++
+        `Transaction ${networks[network].explorer}/tx/${tx.hash} could not be confirmed`,
+        tags,
+      )
+    } else {
+      this.walletNonces[network]++
+      this.structuredLog(
+        network,
+        `Transaction ${networks[network].explorer}/tx/${receipt.transactionHash} mined and confirmed`,
+        tags,
+      )
+    }
+
+    return receipt
+  }
+}
+
+// Generic retry function
+async function retry<T>(func: () => Promise<T>, attempts = 10, canFail = false, interval = 5000): Promise<T | null> {
+  let counter = 0
+  let sent = false
+
+  // canFail remains constant because it determines if the function is allowed to fail or not.
+  // the canFail parameter is determined by the function that calls retry
+  // If canFail is true, the loop will terminate after the specified number of attempts.
+  // If canFail is false, the loop will continue indefinitely until the async function succeeds.
+  // eslint-disable-next-line no-unmodified-loop-condition
+  for (let i = 0; i < attempts || !canFail; i++) {
+    try {
+      const result: T | null = await func()
+      if (result === null) {
+        counter++
+        if (canFail && counter > attempts) {
+          if (!sent) {
+            sent = true
+          }
+
+          return null
+        }
+      } else {
+        if (!sent) {
+          sent = true
         }
 
-        this.structuredLog(
-          network,
-          `Transaction ${networks[network].explorer}/tx/${tx.hash} could not be confirmed`,
-          tags,
-        )
-      } else {
-        this.walletNonces[network]++
-        this.structuredLog(
-          network,
-          `Transaction ${networks[network].explorer}/tx/${receipt.transactionHash} mined and confirmed`,
-          tags,
-        )
+        return result
       }
+    } catch (error: any) {
+      counter++
+      if (canFail && counter > attempts) {
+        if (!sent) {
+          sent = true
+        }
 
-      topResolve(receipt)
-    })
+        throw error
+      }
+    }
+
+    if (sent) {
+      break
+    }
+
+    await sleep(interval)
   }
+
+  return null
 }

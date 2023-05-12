@@ -334,6 +334,31 @@ export default class Analyze extends Command {
     ]
   }
 
+  isBeamingComplete(crossChainTx: CrossChainTransaction): boolean {
+    return Boolean(
+      crossChainTx.sourceStatus === TransactionStatus.COMPLETED &&
+        crossChainTx.messageStatus === TransactionStatus.COMPLETED &&
+        crossChainTx.operatorStatus === TransactionStatus.COMPLETED &&
+        crossChainTx.sourceAddress !== undefined &&
+        crossChainTx.messageAddress !== undefined &&
+        crossChainTx.operatorAddress !== undefined &&
+        crossChainTx.data !== undefined,
+    )
+  }
+
+  isThereAJobHashCollision(
+    crossChainTx: CrossChainTransaction,
+    sourceChainId: number,
+    messageChainId: number,
+    operatorChainId: number,
+  ): boolean {
+    return Boolean(
+      (crossChainTx.sourceChainId && crossChainTx.sourceChainId !== sourceChainId) ||
+        (crossChainTx.messageChainId && crossChainTx.messageChainId !== messageChainId) ||
+        (crossChainTx.operatorChainId && crossChainTx.operatorChainId !== operatorChainId),
+    )
+  }
+
   /**
    * Update cross chain transaction on DB
    */
@@ -356,24 +381,12 @@ export default class Analyze extends Command {
     const operatorChainId: number = networks[beam.operatorNetwork].chain
 
     if (crossChainTx) {
-      if (
-        crossChainTx.sourceStatus === TransactionStatus.COMPLETED &&
-        crossChainTx.messageStatus === TransactionStatus.COMPLETED &&
-        crossChainTx.operatorStatus === TransactionStatus.COMPLETED &&
-        crossChainTx.sourceAddress !== undefined &&
-        crossChainTx.messageAddress !== undefined &&
-        crossChainTx.operatorAddress !== undefined &&
-        crossChainTx.data !== undefined
-      ) {
+      if (this.isBeamingComplete(crossChainTx)) {
         this.log('Beaming is completed')
         return
       }
 
-      if (
-        (crossChainTx.sourceChainId && crossChainTx.sourceChainId !== sourceChainId) ||
-        (crossChainTx.messageChainId && crossChainTx.messageChainId !== messageChainId) ||
-        (crossChainTx.operatorChainId && crossChainTx.operatorChainId !== operatorChainId)
-      ) {
+      if (this.isThereAJobHashCollision(crossChainTx, sourceChainId, messageChainId, operatorChainId)) {
         this.log('Job hash collision')
         return
       }
@@ -481,6 +494,34 @@ export default class Analyze extends Command {
     }
   }
 
+  getJobHashAndPayload(receipt: TransactionReceipt, network: string): (string | undefined)[] {
+    let operatorJobHash: string | undefined
+    let operatorJobPayload: string | undefined
+    let args: any[] | undefined
+
+    switch (this.environment) {
+      case Environment.localhost:
+        operatorJobHash = decodeCrossChainMessageSentEvent(receipt, this.networkMonitor.operatorAddress)
+        if (operatorJobHash !== undefined) {
+          args = decodeLzEvent(receipt, this.networkMonitor.lzEndpointAddress[network])
+          if (args !== undefined) {
+            operatorJobPayload = args[2] as string
+          }
+        }
+
+        break
+      default:
+        operatorJobHash = decodeCrossChainMessageSentEvent(receipt, this.networkMonitor.operatorAddress)
+        if (operatorJobHash !== undefined) {
+          operatorJobPayload = decodeLzPacketEvent(receipt, this.networkMonitor.messagingModuleAddress)
+        }
+
+        break
+    }
+
+    return [operatorJobHash, operatorJobPayload]
+  }
+
   /**
    * Finds bridge out events and keeps track of them
    */
@@ -499,104 +540,85 @@ export default class Analyze extends Command {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
 
-    if (receipt.status === 1) {
-      let operatorJobHash: string | undefined
-      let operatorJobPayload: string | undefined
-      let args: any[] | undefined
-      let rawData: RawData | undefined
+    if (receipt.status !== 1) {
+      throw new Error(`Transaction reverted ${transaction.hash}`)
+    }
 
-      switch (this.environment) {
-        case Environment.localhost:
-          operatorJobHash = decodeCrossChainMessageSentEvent(receipt, this.networkMonitor.operatorAddress)
-          if (operatorJobHash !== undefined) {
-            args = decodeLzEvent(receipt, this.networkMonitor.lzEndpointAddress[network])
-            if (args !== undefined) {
-              operatorJobPayload = args[2] as string
-            }
-          }
+    let rawData: RawData | undefined
 
-          break
-        default:
-          operatorJobHash = decodeCrossChainMessageSentEvent(receipt, this.networkMonitor.operatorAddress)
-          if (operatorJobHash !== undefined) {
-            operatorJobPayload = decodeLzPacketEvent(receipt, this.networkMonitor.messagingModuleAddress)
-          }
+    const [operatorJobHash, operatorJobPayload] = this.getJobHashAndPayload(receipt, network)
 
-          break
-      }
+    if (operatorJobHash === undefined) {
+      this.networkMonitor.structuredLog(network, `Could not find a bridgeOutRequest for ${transaction.hash}`, tags)
+      return
+    }
 
-      if (operatorJobHash === undefined) {
-        this.networkMonitor.structuredLog(network, `Could not find a bridgeOutRequest for ${transaction.hash}`, tags)
+    // check that operatorJobPayload and operatorJobHash are the same
+    if (sha3(operatorJobPayload) !== operatorJobHash) {
+      throw new Error('The hashed operatorJobPayload does not equal operatorJobHash!')
+    }
+
+    const index: number = operatorJobHash in this.operatorJobIndexMap ? this.operatorJobIndexMap[operatorJobHash] : -1
+    const beam: AvailableJob =
+      index >= 0 ? (this.transactionLogs[index] as AvailableJob) : ({completed: false} as AvailableJob)
+    beam.logType = LogType.AvailableJob
+    beam.jobHash = operatorJobHash
+    beam.bridgeTx = transaction.hash
+    beam.bridgeNetwork = network
+    beam.bridgeBlock = transaction.blockNumber!
+    beam.bridgeAddress = transaction.from
+    const parsedTransaction: TransactionDescription | null =
+      this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
+    if (parsedTransaction === null) {
+      beam.jobType = TransactionType.unknown
+    } else {
+      const toNetwork: string = getNetworkByHolographId(parsedTransaction.args[0]).key
+      beam.messageNetwork = toNetwork
+      beam.operatorNetwork = toNetwork
+      const holographableContractAddress: string = (parsedTransaction.args[1] as string).toLowerCase()
+      if (holographableContractAddress === this.networkMonitor.factoryAddress) {
+        beam.jobType = TransactionType.deploy
       } else {
-        // check that operatorJobPayload and operatorJobHash are the same
-        if (sha3(operatorJobPayload) !== operatorJobHash) {
-          throw new Error('The hashed operatorJobPayload does not equal operatorJobHash!')
-        }
+        const slot: string = await this.networkMonitor.providers[network].getStorageAt(
+          holographableContractAddress,
+          storageSlot('eip1967.Holograph.contractType'),
+        )
+        const contractType: string = toAscii(slot)
+        if (contractType === 'HolographERC20') {
+          beam.jobType = TransactionType.erc20
+        } else if (contractType === 'HolographERC721') {
+          beam.jobType = TransactionType.erc721
 
-        const index: number =
-          operatorJobHash in this.operatorJobIndexMap ? this.operatorJobIndexMap[operatorJobHash] : -1
-        const beam: AvailableJob =
-          index >= 0 ? (this.transactionLogs[index] as AvailableJob) : ({completed: false} as AvailableJob)
-        beam.logType = LogType.AvailableJob
-        beam.jobHash = operatorJobHash
-        beam.bridgeTx = transaction.hash
-        beam.bridgeNetwork = network
-        beam.bridgeBlock = transaction.blockNumber!
-        beam.bridgeAddress = transaction.from
-        const parsedTransaction: TransactionDescription | null =
-          this.networkMonitor.bridgeContract.interface.parseTransaction(transaction)
-        if (parsedTransaction === null) {
-          beam.jobType = TransactionType.unknown
-        } else {
-          const toNetwork: string = getNetworkByHolographId(parsedTransaction.args[0]).key
-          beam.messageNetwork = toNetwork
-          beam.operatorNetwork = toNetwork
-          const holographableContractAddress: string = (parsedTransaction.args[1] as string).toLowerCase()
-          if (holographableContractAddress === this.networkMonitor.factoryAddress) {
-            beam.jobType = TransactionType.deploy
-          } else {
-            const slot: string = await this.networkMonitor.providers[network].getStorageAt(
-              holographableContractAddress,
-              storageSlot('eip1967.Holograph.contractType'),
-            )
-            const contractType: string = toAscii(slot)
-            if (contractType === 'HolographERC20') {
-              beam.jobType = TransactionType.erc20
-            } else if (contractType === 'HolographERC721') {
-              beam.jobType = TransactionType.erc721
+          // creating json data field
+          const erc721TransferEvent: string[] | undefined = decodeErc721TransferEvent(
+            receipt,
+            holographableContractAddress,
+          )
 
-              // creating json data field
-              const erc721TransferEvent: string[] | undefined = decodeErc721TransferEvent(
-                receipt,
-                holographableContractAddress,
-              )
+          if (erc721TransferEvent === undefined) {
+            this.warn("Couldn't create raw json data, since the tokenId is undefined")
+            this.exit()
+          }
 
-              if (erc721TransferEvent === undefined) {
-                this.warn("Couldn't create raw json data, since the tokenId is undefined")
-                this.exit()
-              }
+          const from: string = erc721TransferEvent![0]
+          const to: string = erc721TransferEvent![1]
+          const tokenId: string = erc721TransferEvent![2]
 
-              const from: string = erc721TransferEvent![0]
-              const to: string = erc721TransferEvent![1]
-              const tokenId: string = erc721TransferEvent![2]
-
-              rawData = {
-                operatorJobPayload,
-                from,
-                to,
-                tokenId,
-                holographId: networks[beam.bridgeNetwork].holographId,
-                collection: holographableContractAddress,
-              }
-            }
+          rawData = {
+            operatorJobPayload,
+            from,
+            to,
+            tokenId,
+            holographId: networks[beam.bridgeNetwork].holographId,
+            collection: holographableContractAddress,
           }
         }
-
-        this.networkMonitor.structuredLog(network, `Found a valid bridgeOutRequest for ${transaction.hash}`, tags)
-        this.manageOperatorJobMaps(index, operatorJobHash, beam)
-        await this.updateBeamStatusDB(beam, rawData)
       }
     }
+
+    this.networkMonitor.structuredLog(network, `Found a valid bridgeOutRequest for ${transaction.hash}`, tags)
+    this.manageOperatorJobMaps(index, operatorJobHash, beam)
+    await this.updateBeamStatusDB(beam, rawData)
   }
 
   /**
@@ -671,58 +693,61 @@ export default class Analyze extends Command {
       throw new Error(`Could not get receipt for ${transaction.hash}`)
     }
 
-    if (receipt.status === 1) {
-      const parsedTransaction: TransactionDescription =
-        this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
-      if (parsedTransaction.name === 'executeJob') {
-        const args: any[] | undefined = Object.values(parsedTransaction.args)
-        const operatorJobPayload: string | undefined = args === undefined ? undefined : args[0]
-        const operatorJobHash: string | undefined =
-          operatorJobPayload === undefined ? undefined : sha3(operatorJobPayload)
-        if (operatorJobHash === undefined) {
-          this.networkMonitor.structuredLog(network, `Could not find a bridgeInRequest for ${transaction.hash}`, tags)
-        } else {
-          const index: number =
-            operatorJobHash in this.operatorJobIndexMap ? this.operatorJobIndexMap[operatorJobHash] : -1
-          const beam: AvailableJob =
-            index >= 0 ? (this.transactionLogs[index] as AvailableJob) : ({completed: false} as AvailableJob)
-          beam.logType = LogType.AvailableJob
-          beam.operatorTx = transaction.hash
-          beam.operatorBlock = transaction.blockNumber!
-          beam.operatorAddress = transaction.from
-          beam.completed = true
+    if (receipt.status !== 1) {
+      throw new Error(`Transaction reverted ${transaction.hash}`)
+    }
 
-          const bridgeTransaction: TransactionDescription | null =
-            this.networkMonitor.bridgeContract.interface.parseTransaction({data: operatorJobPayload!})
-          if (parsedTransaction === null) {
-            beam.jobType = TransactionType.unknown
-          } else {
-            const fromNetwork: string = getNetworkByHolographId(bridgeTransaction.args[1]).key
-            beam.bridgeNetwork = fromNetwork
-            const holographableContractAddress: string = (bridgeTransaction.args[2] as string).toLowerCase()
-            if (holographableContractAddress === this.networkMonitor.factoryAddress) {
-              beam.jobType = TransactionType.deploy
-            } else {
-              const slot: string = await this.networkMonitor.providers[network].getStorageAt(
-                holographableContractAddress,
-                storageSlot('eip1967.Holograph.contractType'),
-              )
-              const contractType: string = toAscii(slot)
-              if (contractType === 'HolographERC20') {
-                beam.jobType = TransactionType.erc20
-              } else if (contractType === 'HolographERC721') {
-                beam.jobType = TransactionType.erc721
-              }
-            }
-          }
-
-          this.networkMonitor.structuredLog(network, `Found a valid bridgeOutRequest for ${transaction.hash}`, tags)
-          this.manageOperatorJobMaps(index, operatorJobHash, beam)
-          await this.updateBeamStatusDB(beam)
-        }
+    const parsedTransaction: TransactionDescription =
+      this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
+    if (parsedTransaction.name === 'executeJob') {
+      const args: any[] | undefined = Object.values(parsedTransaction.args)
+      const operatorJobPayload: string | undefined = args === undefined ? undefined : args[0]
+      const operatorJobHash: string | undefined =
+        operatorJobPayload === undefined ? undefined : sha3(operatorJobPayload)
+      if (operatorJobHash === undefined) {
+        this.networkMonitor.structuredLog(network, `Could not find a bridgeInRequest for ${transaction.hash}`, tags)
       } else {
-        this.networkMonitor.structuredLog(network, `Unknown bridge function executed for ${transaction.hash}`, tags)
+        const index: number =
+          operatorJobHash in this.operatorJobIndexMap ? this.operatorJobIndexMap[operatorJobHash] : -1
+        const beam: AvailableJob =
+          index >= 0 ? (this.transactionLogs[index] as AvailableJob) : ({completed: false} as AvailableJob)
+        beam.logType = LogType.AvailableJob
+        beam.operatorTx = transaction.hash
+        beam.operatorBlock = transaction.blockNumber!
+        beam.operatorAddress = transaction.from
+        beam.completed = true
+
+        const bridgeTransaction: TransactionDescription | null =
+          this.networkMonitor.bridgeContract.interface.parseTransaction({data: operatorJobPayload!})
+        if (parsedTransaction === null) {
+          beam.jobType = TransactionType.unknown
+        } else {
+          const fromNetwork: string = getNetworkByHolographId(bridgeTransaction.args[1]).key
+          beam.bridgeNetwork = fromNetwork
+
+          const holographableContractAddress: string = (bridgeTransaction.args[2] as string).toLowerCase()
+
+          const slot: string = await this.networkMonitor.providers[network].getStorageAt(
+            holographableContractAddress,
+            storageSlot('eip1967.Holograph.contractType'),
+          )
+          const contractType: string = toAscii(slot)
+
+          if (holographableContractAddress === this.networkMonitor.factoryAddress) {
+            beam.jobType = TransactionType.deploy
+          } else if (contractType === 'HolographERC20') {
+            beam.jobType = TransactionType.erc20
+          } else if (contractType === 'HolographERC721') {
+            beam.jobType = TransactionType.erc721
+          }
+        }
+
+        this.networkMonitor.structuredLog(network, `Found a valid bridgeOutRequest for ${transaction.hash}`, tags)
+        this.manageOperatorJobMaps(index, operatorJobHash, beam)
+        await this.updateBeamStatusDB(beam)
       }
+    } else {
+      this.networkMonitor.structuredLog(network, `Unknown bridge function executed for ${transaction.hash}`, tags)
     }
   }
 

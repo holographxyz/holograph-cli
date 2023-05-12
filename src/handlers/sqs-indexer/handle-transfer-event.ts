@@ -2,19 +2,18 @@ import {TransactionResponse} from '@ethersproject/abstract-provider'
 
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {EventName, PayloadType, SqsMessageBody} from '../../types/sqs'
-import {networkToChainId} from '../../utils/utils'
+import {networkToChainId, remove0x} from '../../utils/utils'
 import SqsService from '../../services/sqs-service'
-import {hexZeroPad} from '@ethersproject/bytes'
-import {BigNumber} from 'ethers'
+import {TransferERC721Event} from '../../utils/event'
 
 async function handleTransferEvent(
   networkMonitor: NetworkMonitor,
   transaction: TransactionResponse,
   network: string,
-  event: string[],
+  event: TransferERC721Event,
   tags: (string | number)[],
 ): Promise<void> {
-  const [from, to, tokenId, contractAddress] = event
+  const {from, to, tokenId, contract: contractAddress, logIndex} = event
   networkMonitor.structuredLog(
     network,
     `Successfully decoded ERC721 Transfer Event: from ${from}, to ${to}, tokenId ${tokenId} at contract ${contractAddress}`,
@@ -38,8 +37,6 @@ async function handleTransferEvent(
     tags,
   )
 
-  const hexEncodedTokenId = hexZeroPad(BigNumber.from(tokenId).toHexString(), 32)
-
   const messageBody: SqsMessageBody = {
     type: PayloadType.HolographProtocol,
     eventName: EventName.TransferERC721,
@@ -49,11 +46,12 @@ async function handleTransferEvent(
     environment: networkMonitor.environment,
     payload: {
       tx: transaction.hash,
+      logIndex,
       blockNum: Number(transaction.blockNumber),
       from,
       to,
       contractAddress,
-      tokenId: hexEncodedTokenId,
+      tokenId: '0x' + remove0x(tokenId.toHexString()).padStart(64, '0'),
     },
   }
 

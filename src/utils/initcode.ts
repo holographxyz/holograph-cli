@@ -8,6 +8,7 @@ export function generateMetadataRendererInitCode(description: string, imageURI: 
   return generateInitCode(['string', 'string', 'string'], [description, imageURI, animationURI])
 }
 
+/* eslint-disable-next-line max-params */
 export function generateHolographDropERC721InitCode(
   contractType: string, // HolographDropERC721
   registryAddress: string,
