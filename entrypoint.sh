@@ -29,7 +29,7 @@ else
   echo "HEALTHCHECK=${HEALTHCHECK}"
 fi
 
-if [[ $ENABLE_REPLAY != "default-value" ]]
+if [[ $ENABLE_REPLAY != "" ]]
 then
   export ENABLE_REPLAY="--replay ${ENABLE_REPLAY}"
   echo "ENABLE_REPLAY=${ENABLE_REPLAY}"

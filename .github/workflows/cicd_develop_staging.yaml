@@ -37,7 +37,7 @@ env:
   STG_COMMON_NAMESPACE: develop
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.88
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.90
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
   STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.64
@@ -387,7 +387,7 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
-          ENABLE_REPLAY: 'default-value' # add a string like 123:1234 if you wanna use it
+          ENABLE_REPLAY: 'deactivated' # add a string like 123:345 if you wanna use it
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           AVALANCHE_NETWORK: 'fuji'
           ETHEREUM_NETWORK: 'goerli'
