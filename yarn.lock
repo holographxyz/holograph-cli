@@ -1394,7 +1394,7 @@
     dotenv "^10.0.0"
     path "^0.12.7"
 
-"@holographxyz/networks@0.1.21":
+"@holographxyz/networks@^0.1.21":
   version "0.1.21"
   resolved "https://registry.yarnpkg.com/@holographxyz/networks/-/networks-0.1.21.tgz#1f654227591ac3a73f4a159782df4c861144dd8c"
   integrity sha512-+QNdmdwyfSeKUI1toyOCSFQ50BJg4b4Ixzf5ElfQBXqnrKqFByxDPH4ryETrmh1zXM1SISmgYPmH63hWnt/P2w==
