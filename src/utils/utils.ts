@@ -47,6 +47,10 @@ export const networkToChainId: Record<string, number> = {
   avalancheTestnet: 43_113,
   binanceSmartChain: 56,
   binanceSmartChainTestnet: 97,
+  optimismTestnetGoerli: 420,
+  optimism: 10,
+  arbitrumTestnetGoerli: 421_613,
+  arbitrum: 42_161,
 }
 
 export const NETWORK_COLORS: Record<string, string> = {
