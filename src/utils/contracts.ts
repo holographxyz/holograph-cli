@@ -52,8 +52,8 @@ export const METADATA_RENDERER_ADDRESS: {[key in Environment]: string} = {
   [Environment.localhost]: '0x0000000000000000000000000000000000000000',
   [Environment.experimental]: '0x0000000000000000000000000000000000000000',
   [Environment.develop]: '0x6420ffC8390506BBC9d894f54b948Be2BE40128d',
-  [Environment.testnet]: '0x0000000000000000000000000000000000000000',
-  [Environment.mainnet]: '0x0000000000000000000000000000000000000000',
+  [Environment.testnet]: '0x4d393Bd460B6Ba0957818e947364eA358600396b',
+  [Environment.mainnet]: '0x4d393Bd460B6Ba0957818e947364eA358600396b',
 }
 
 export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
