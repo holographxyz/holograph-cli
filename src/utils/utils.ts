@@ -77,6 +77,10 @@ export function allEventsEnabled(): string {
   return '0x' + 'ff'.repeat(32)
 }
 
+export function dropEventsEnabled(): string {
+  return '0x0000000000000000000000000000000000000000000000000000000000065000'
+}
+
 export function remove0x(input: string): string {
   if (input.startsWith('0x')) {
     return input.slice(2)
@@ -214,4 +218,20 @@ export function generateHashedName(name: string): string {
   const asciiHex = web3.utils.asciiToHex(name).substring(2) // remove '0x' prefix
   const paddedHex = asciiHex.padStart(64, '0')
   return `0x${paddedHex}`
+}
+
+export function safeStringify(obj: any, indent = 2) {
+  let cache: any[] = []
+  const retVal = JSON.stringify(
+    obj,
+    (key, value) =>
+      typeof value === 'object' && value !== null
+        ? cache.includes(value)
+          ? undefined // Duplicate reference found, discard key
+          : cache.push(value) && value // Store value in our collection
+        : value,
+    indent,
+  )
+  cache = null!
+  return retVal
 }

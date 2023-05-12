@@ -37,10 +37,10 @@ env:
   STG_COMMON_NAMESPACE: develop
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.90
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.91
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.64
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.65
   OPERATOR_RELEASE_NAME: operator-dev # format -> [release_name]-operator-[env]
   #######################################
   #
@@ -48,6 +48,7 @@ env:
   indexer_dev_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
   indexer_dev_polygonTestnet_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }}
   indexer_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }}
+  indexer_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_OPTIMISM_GOERLI_RPC_URL }}
   indexer_dev_binanceTestnet_rpc_url: ${{ secrets.INDEXER_DEV_BSC_TESTNET_RPC_URL }}
   #
   indexer_dev_private_key: ${{ secrets.INDEXER_DEV_PRIVATE_KEY }}
@@ -56,6 +57,7 @@ env:
   operator_dev_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_FUJI_RPC_URL }}
   operator_dev_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }}
   operator_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_GOERLI_RPC_URL }}
+  operator_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_OPTIMISM_GOERLI_RPC_URL }}
   operator_dev_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_BSC_TESTNET_RPC_URL }}
   #
   operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
@@ -205,6 +207,7 @@ jobs:
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_dev_avalancheTestnet_rpc_url }} \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_dev_polygonTestnet_rpc_url }} \
             --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.indexer_dev_ethereumTestnetGoerli_rpc_url }} \
+            --set dev_rpc_config_values.optimismTestnetGoerli_rpc_url=${{ env.indexer_dev_optimismTestnetGoerli_rpc_url }} \
             --set dev_rpc_config_values.binanceTestnet_rpc_url=${{ env.indexer_dev_binanceTestnet_rpc_url }} \
             \
             --set dev_rpc_config_values.private_key=${{ env.indexer_dev_private_key }} \
@@ -311,6 +314,7 @@ jobs:
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_dev_avalancheTestnet_rpc_url }} \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_dev_polygonTestnet_rpc_url }} \
             --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.operator_dev_ethereumTestnetGoerli_rpc_url }} \
+            --set dev_rpc_config_values.optimismTestnetGoerli_rpc_url=${{ env.operator_dev_optimismTestnetGoerli_rpc_url }} \
             --set dev_rpc_config_values.binanceTestnet_rpc_url=${{ env.operator_dev_binanceTestnet_rpc_url }} \
             \
             --set dev_rpc_config_values.private_key=${{ env.operator_dev_private_key }} \
@@ -425,6 +429,7 @@ jobs:
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_dev_avalancheTestnet_rpc_url }} \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_dev_polygonTestnet_rpc_url }} \
             --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.indexer_dev_ethereumTestnetGoerli_rpc_url }} \
+            --set dev_rpc_config_values.optimismTestnetGoerli_rpc_url=${{ env.indexer_dev_optimismTestnetGoerli_rpc_url }} \
             --set dev_rpc_config_values.binanceTestnet_rpc_url=${{ env.indexer_dev_binanceTestnet_rpc_url }} \
             \
             --set dev_rpc_config_values.private_key=${{ env.indexer_dev_private_key }} \
