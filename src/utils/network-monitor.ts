@@ -432,7 +432,7 @@ export class NetworkMonitor {
     if (/([1-9]\d*|0):([1-9]\d*)/.test(input)) {
       // expected type: 8987:8988
       const startAndEndBlock = input.split(':').map(int => Number(int))
-      if (startAndEndBlock[0] >= startAndEndBlock[1]) {
+      if (startAndEndBlock[0] > startAndEndBlock[1]) {
         throw new Error('End block must be greater than start block number.')
       }
 
@@ -613,7 +613,9 @@ export class NetworkMonitor {
     return lastBlocks
   }
 
-  async loadLastBlocksHeights(processType: BlockHeightProcessType) {
+  async loadLastBlocksHeights(processType: BlockHeightProcessType): Promise<{
+    [key: string]: number
+  }> {
     if (this.apiService === undefined) {
       throw new Error('API service is undefined')
     }
@@ -827,7 +829,7 @@ export class NetworkMonitor {
 
   exitCallback?: () => void
 
-  isUpdateBlockHeightUsingApiEnabled = () => {
+  isUpdateBlockHeightUsingApiEnabled = (): boolean => {
     return Boolean(
       this.apiService !== undefined &&
         this.blockHeightOptions !== undefined &&
@@ -835,7 +837,7 @@ export class NetworkMonitor {
     )
   }
 
-  isSaveBlockHeightEnabled = () => {
+  isSaveBlockHeightEnabled = (): boolean => {
     return Boolean(
       this.blockHeightOptions &&
         (this.blockHeightOptions === BlockHeightOptions.FILE || this.blockHeightOptions === BlockHeightOptions.API),
@@ -996,6 +998,7 @@ export class NetworkMonitor {
     }
   }
 
+  /* eslint-disable-next-line max-params */
   async applyFilter(
     filter: BloomFilter,
     log: Log,
@@ -1102,35 +1105,37 @@ export class NetworkMonitor {
         }
 
         if (
-          log.topics.length > 0 &&
-          log.topics[0] === event.sigHash &&
-          !this.isInterestingTransactionLogAlreadyIncluded(log, interestingTransactions)
+          log.topics.length === 0 ||
+          log.topics[0] !== event.sigHash ||
+          this.isInterestingTransactionLogAlreadyIncluded(log, interestingTransactions)
         ) {
-          if (filter.eventValidator) {
-            if (filter.eventValidator.bind(this.parent)(job.network, txMap[log.transactionHash], log)) {
-              interestingTransactions.push({
-                bloomId: filter.bloomId,
-                transaction: txMap[log.transactionHash],
-                log,
-                allLogs: allLogs[log.transactionHash]!,
-              } as InterestingTransaction)
-            } else if (this.tbdCachedContracts.includes(log.address.toLowerCase()) && !tbdLogs.includes(log.logIndex)) {
-              interestingTransactions.push({
-                bloomId: 'TBD',
-                transaction: txMap[log.transactionHash],
-                log,
-                allLogs: allLogs[log.transactionHash]!,
-              } as InterestingTransaction)
-              tbdLogs.push(log.logIndex)
-            }
-          } else {
+          continue
+        }
+
+        if (filter.eventValidator) {
+          if (filter.eventValidator.bind(this.parent)(job.network, txMap[log.transactionHash], log)) {
             interestingTransactions.push({
               bloomId: filter.bloomId,
               transaction: txMap[log.transactionHash],
               log,
               allLogs: allLogs[log.transactionHash]!,
             } as InterestingTransaction)
+          } else if (this.tbdCachedContracts.includes(log.address.toLowerCase()) && !tbdLogs.includes(log.logIndex)) {
+            interestingTransactions.push({
+              bloomId: 'TBD',
+              transaction: txMap[log.transactionHash],
+              log,
+              allLogs: allLogs[log.transactionHash]!,
+            } as InterestingTransaction)
+            tbdLogs.push(log.logIndex)
           }
+        } else {
+          interestingTransactions.push({
+            bloomId: filter.bloomId,
+            transaction: txMap[log.transactionHash],
+            log,
+            allLogs: allLogs[log.transactionHash]!,
+          } as InterestingTransaction)
         }
       }
     }
@@ -1242,19 +1247,21 @@ export class NetworkMonitor {
 
   checkBloomLogs(block: ExtendedBlockWithTransactions): boolean {
     for (const filter of this.bloomFilters) {
-      if (isInBloom(block.logsBloom, filter.bloomValueHashed)) {
-        // check if there is additional validation required
-        if (filter.bloomFilterValidators) {
-          // iterate over each validator
-          for (const validator of filter.bloomFilterValidators) {
-            // if a match is found, then pass the transaction through
-            if (isInBloom(block.logsBloom, validator.bloomValueHashed)) {
-              return true
-            }
+      if (!isInBloom(block.logsBloom, filter.bloomValueHashed)) {
+        continue
+      }
+
+      // check if there is additional validation required
+      if (filter.bloomFilterValidators) {
+        // iterate over each validator
+        for (const validator of filter.bloomFilterValidators) {
+          // if a match is found, then pass the transaction through
+          if (isInBloom(block.logsBloom, validator.bloomValueHashed)) {
+            return true
           }
-        } else {
-          return true
         }
+      } else {
+        return true
       }
     }
 
@@ -1945,7 +1952,7 @@ export class NetworkMonitor {
     const tag: string = this.randomTag()
     tags.push(tag)
     this.structuredLog(network, `Executing contract function ${methodName}`, tags)
-    // eslint-disable-next-line no-async-promise-executor
+
     if (this.walletNonces[network] < 0) {
       this.walletNonces[network] = await this.getNonce({
         network,

@@ -283,220 +283,217 @@ export default class Indexer extends HealthCheck {
     this.log('SQS service is reachable')
   }
 
-  /* eslint-disable no-case-declarations */
+  /* eslint-disable no-case-declarations, complexity */
   async processTransactions2(job: BlockJob, interestingTransactions: InterestingTransaction[]): Promise<void> {
-    if (interestingTransactions.length > 0) {
-      for (let i = 0, l: number = interestingTransactions.length; i < l; i++) {
-        const interestingTransaction: InterestingTransaction = interestingTransactions[i]
-        const transaction: TransactionResponse = interestingTransaction.transaction
-        const tags: (string | number)[] = []
-        tags.push(transaction.blockNumber as number, this.networkMonitor.randomTag())
-        this.networkMonitor.structuredLog(
-          job.network,
-          `Processing transaction ${transaction.hash} at block ${transaction.blockNumber}`,
-          tags,
-        )
-        let type: EventType = EventType[interestingTransaction.bloomId as keyof typeof EventType]
-        this.networkMonitor.structuredLog(
-          job.network,
-          `Identified this as a ${interestingTransaction.bloomId} event`,
-          tags,
-        )
-        switch (type) {
-          case EventType.BridgeableContractDeployed:
-            try {
-              const bridgeableContractDeployedEvent: BridgeableContractDeployedEvent | null = this.bloomFilters[
-                type
-              ]!.bloomEvent.decode<BridgeableContractDeployedEvent>(type, interestingTransaction.log!)
+    if (interestingTransactions.length <= 0) {
+      return
+    }
 
-              if (bridgeableContractDeployedEvent !== null) {
-                await this.handleBridgeableContractDeployedEvent(
-                  job,
-                  interestingTransaction,
-                  bridgeableContractDeployedEvent,
-                  tags,
-                )
-              }
-            } catch (error: any) {
-              this.networkMonitor.structuredLogError(
-                job.network,
-                this.errorColor(`Decoding BridgeableContractDeployedEvent error: `, error),
-                tags,
-              )
-            }
-
-            break
-          case EventType.TransferERC20:
-          case EventType.TransferERC721:
-            const testLog = interestingTransaction.log!
-            if (testLog.data === undefined || testLog.data === null || testLog.data === '' || testLog.data === '0x') {
-              type = EventType.TransferERC721
-              // this is ERC721
-              // *** START OF TEMP CODE ***
-              // we are adding a temporary filter that skips transfer events inside of bridge-in and bridge-out transactions
-              let isPartOfBridgeTx = false
-              for (const log of interestingTransaction.allLogs!) {
-                if (
-                  log.topics[0] === this.bloomFilters[EventType.CrossChainMessageSent]!.bloomValueHashed ||
-                  log.topics[0] === this.bloomFilters[EventType.FinishedOperatorJob]!.bloomValueHashed
-                ) {
-                  isPartOfBridgeTx = true
-                  break
-                }
-              }
-
-              if (isPartOfBridgeTx) {
-                break
-              }
-
-              // *** END OF TEMP CODE ***
-              try {
-                const transferERC721Event: TransferERC721Event | null = this.bloomFilters[
-                  type
-                ]!.bloomEvent.decode<TransferERC721Event>(type, interestingTransaction.log!)
-                //            log('transferERC721Event', transferERC721Event);
-                if (transferERC721Event !== null) {
-                  await this.handleTransferERC721Event(job, interestingTransaction, transferERC721Event, tags)
-                }
-              } catch (error: any) {
-                this.networkMonitor.structuredLogError(
-                  job.network,
-                  this.errorColor(`Decoding TransferERC721Event error: `, error),
-                  tags,
-                )
-              }
-            } else {
-              // this is ERC20
-              try {
-                const transferERC20Event: TransferERC20Event | null = this.bloomFilters[
-                  type
-                ]!.bloomEvent.decode<TransferERC20Event>(type, interestingTransaction.log!)
-                if (transferERC20Event !== null) {
-                  await this.handleTransferERC20Event(job, interestingTransaction, transferERC20Event, tags)
-                }
-              } catch (error: any) {
-                this.networkMonitor.structuredLogError(
-                  job.network,
-                  this.errorColor(`Decoding TransferERC20Event error: `, error),
-                  tags,
-                )
-              }
-            }
-
-            break
-          case EventType.TransferSingleERC1155:
-            const transferSingleERC1155Event: TransferSingleERC1155Event | null = this.bloomFilters[
+    for (let i = 0, l: number = interestingTransactions.length; i < l; i++) {
+      const interestingTransaction: InterestingTransaction = interestingTransactions[i]
+      const transaction: TransactionResponse = interestingTransaction.transaction
+      const tags: (string | number)[] = []
+      tags.push(transaction.blockNumber as number, this.networkMonitor.randomTag())
+      this.networkMonitor.structuredLog(
+        job.network,
+        `Processing transaction ${transaction.hash} at block ${transaction.blockNumber}`,
+        tags,
+      )
+      let type: EventType = EventType[interestingTransaction.bloomId as keyof typeof EventType]
+      this.networkMonitor.structuredLog(
+        job.network,
+        `Identified this as a ${interestingTransaction.bloomId} event`,
+        tags,
+      )
+      switch (type) {
+        case EventType.BridgeableContractDeployed:
+          try {
+            const bridgeableContractDeployedEvent: BridgeableContractDeployedEvent | null = this.bloomFilters[
               type
-            ]!.bloomEvent.decode<TransferSingleERC1155Event>(type, interestingTransaction.log!)
-            if (transferSingleERC1155Event !== null) {
-              await this.handleTransferSingleERC1155Event(job, interestingTransaction, transferSingleERC1155Event, tags)
-            }
+            ]!.bloomEvent.decode<BridgeableContractDeployedEvent>(type, interestingTransaction.log!)
 
-            break
-          case EventType.TransferBatchERC1155:
-            const transferBatchERC1155Event: TransferBatchERC1155Event | null = this.bloomFilters[
-              type
-            ]!.bloomEvent.decode<TransferBatchERC1155Event>(type, interestingTransaction.log!)
-            if (transferBatchERC1155Event !== null) {
-              await this.handleTransferBatchERC1155Event(job, interestingTransaction, transferBatchERC1155Event, tags)
-            }
-
-            break
-          case EventType.CrossChainMessageSent:
-            try {
-              const crossChainMessageSentEvent: CrossChainMessageSentEvent | null = this.bloomFilters[
-                type
-              ]!.bloomEvent.decode<CrossChainMessageSentEvent>(type, interestingTransaction.log!)
-              if (crossChainMessageSentEvent !== null) {
-                await this.handleCrossChainMessageSentEvent(
-                  job,
-                  interestingTransaction,
-                  crossChainMessageSentEvent,
-                  tags,
-                )
-              }
-            } catch (error: any) {
-              this.networkMonitor.structuredLogError(
-                job.network,
-                this.errorColor(`Decoding CrossChainMessageSentEvent error: `, error),
+            if (bridgeableContractDeployedEvent !== null) {
+              await this.handleBridgeableContractDeployedEvent(
+                job,
+                interestingTransaction,
+                bridgeableContractDeployedEvent,
                 tags,
               )
             }
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(
+              job.network,
+              this.errorColor(`Decoding BridgeableContractDeployedEvent error: `, error),
+              tags,
+            )
+          }
 
-            break
-          case EventType.AvailableOperatorJob:
-            try {
-              const availableOperatorJobEvent: AvailableOperatorJobEvent | null = this.bloomFilters[
-                type
-              ]!.bloomEvent.decode<AvailableOperatorJobEvent>(type, interestingTransaction.log!)
-              if (availableOperatorJobEvent !== null) {
-                await this.handleAvailableOperatorJobEvent(job, interestingTransaction, availableOperatorJobEvent, tags)
-              }
-            } catch (error: any) {
-              this.networkMonitor.structuredLogError(
-                job.network,
-                this.errorColor(`Decoding AvailableOperatorJobEvent error: `, error),
-                tags,
-              )
-            }
-
-            break
-          case EventType.FinishedOperatorJob:
-            try {
-              const finishedOperatorJobEvent: FinishedOperatorJobEvent | null = this.bloomFilters[
-                type
-              ]!.bloomEvent.decode<FinishedOperatorJobEvent>(type, interestingTransaction.log!)
-              if (finishedOperatorJobEvent !== null) {
-                await this.handleFinishedOperatorJobEvent(job, interestingTransaction, finishedOperatorJobEvent, tags)
-              }
-            } catch (error: any) {
-              this.networkMonitor.structuredLogError(
-                job.network,
-                this.errorColor(`Decoding FinishedOperatorJobEvent error: `, error),
-                tags,
-              )
-            }
-
-            break
-          case EventType.FailedOperatorJob:
-            try {
-              const failedOperatorJobEvent: FailedOperatorJobEvent | null = this.bloomFilters[
-                type
-              ]!.bloomEvent.decode<FailedOperatorJobEvent>(type, interestingTransaction.log!)
-              if (failedOperatorJobEvent !== null) {
-                await this.handleFailedOperatorJobEvent(job, interestingTransaction, failedOperatorJobEvent, tags)
-              }
-            } catch (error: any) {
-              this.networkMonitor.structuredLogError(
-                job.network,
-                this.errorColor(`Decoding FailedOperatorJobEvent error: `, error),
-                tags,
-              )
-            }
-
-            break
-          case EventType.TBD:
-            let filterResult: InterestingTransaction | undefined
-            for (const filter of this.networkMonitor.bloomFilters) {
-              filterResult = await this.networkMonitor.applyFilter(
-                filter,
-                interestingTransaction.log!,
-                interestingTransaction.transaction,
-                this,
-                job.network,
-              )
-              if (filterResult !== undefined) {
-                interestingTransactions[i] = filterResult as InterestingTransaction
-                i -= 1
+          break
+        case EventType.TransferERC20:
+        case EventType.TransferERC721:
+          const testLog = interestingTransaction.log!
+          if (testLog.data === undefined || testLog.data === null || testLog.data === '' || testLog.data === '0x') {
+            type = EventType.TransferERC721
+            // this is ERC721
+            // *** START OF TEMP CODE ***
+            // we are adding a temporary filter that skips transfer events inside of bridge-in and bridge-out transactions
+            let isPartOfBridgeTx = false
+            for (const log of interestingTransaction.allLogs!) {
+              if (
+                log.topics[0] === this.bloomFilters[EventType.CrossChainMessageSent]!.bloomValueHashed ||
+                log.topics[0] === this.bloomFilters[EventType.FinishedOperatorJob]!.bloomValueHashed
+              ) {
+                isPartOfBridgeTx = true
                 break
               }
             }
 
-            break
-          default:
-            this.networkMonitor.structuredLogError(job.network, `UNKNOWN EVENT`, tags)
-            break
-        }
+            if (isPartOfBridgeTx) {
+              break
+            }
+
+            // *** END OF TEMP CODE ***
+            try {
+              const transferERC721Event: TransferERC721Event | null = this.bloomFilters[
+                type
+              ]!.bloomEvent.decode<TransferERC721Event>(type, interestingTransaction.log!)
+              //            log('transferERC721Event', transferERC721Event);
+              if (transferERC721Event !== null) {
+                await this.handleTransferERC721Event(job, interestingTransaction, transferERC721Event, tags)
+              }
+            } catch (error: any) {
+              this.networkMonitor.structuredLogError(
+                job.network,
+                this.errorColor(`Decoding TransferERC721Event error: `, error),
+                tags,
+              )
+            }
+          } else {
+            // this is ERC20
+            try {
+              const transferERC20Event: TransferERC20Event | null = this.bloomFilters[
+                type
+              ]!.bloomEvent.decode<TransferERC20Event>(type, interestingTransaction.log!)
+              if (transferERC20Event !== null) {
+                await this.handleTransferERC20Event(job, interestingTransaction, transferERC20Event, tags)
+              }
+            } catch (error: any) {
+              this.networkMonitor.structuredLogError(
+                job.network,
+                this.errorColor(`Decoding TransferERC20Event error: `, error),
+                tags,
+              )
+            }
+          }
+
+          break
+        case EventType.TransferSingleERC1155:
+          const transferSingleERC1155Event: TransferSingleERC1155Event | null = this.bloomFilters[
+            type
+          ]!.bloomEvent.decode<TransferSingleERC1155Event>(type, interestingTransaction.log!)
+          if (transferSingleERC1155Event !== null) {
+            await this.handleTransferSingleERC1155Event(job, interestingTransaction, transferSingleERC1155Event, tags)
+          }
+
+          break
+        case EventType.TransferBatchERC1155:
+          const transferBatchERC1155Event: TransferBatchERC1155Event | null = this.bloomFilters[
+            type
+          ]!.bloomEvent.decode<TransferBatchERC1155Event>(type, interestingTransaction.log!)
+          if (transferBatchERC1155Event !== null) {
+            await this.handleTransferBatchERC1155Event(job, interestingTransaction, transferBatchERC1155Event, tags)
+          }
+
+          break
+        case EventType.CrossChainMessageSent:
+          try {
+            const crossChainMessageSentEvent: CrossChainMessageSentEvent | null = this.bloomFilters[
+              type
+            ]!.bloomEvent.decode<CrossChainMessageSentEvent>(type, interestingTransaction.log!)
+            if (crossChainMessageSentEvent !== null) {
+              await this.handleCrossChainMessageSentEvent(job, interestingTransaction, crossChainMessageSentEvent, tags)
+            }
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(
+              job.network,
+              this.errorColor(`Decoding CrossChainMessageSentEvent error: `, error),
+              tags,
+            )
+          }
+
+          break
+        case EventType.AvailableOperatorJob:
+          try {
+            const availableOperatorJobEvent: AvailableOperatorJobEvent | null = this.bloomFilters[
+              type
+            ]!.bloomEvent.decode<AvailableOperatorJobEvent>(type, interestingTransaction.log!)
+            if (availableOperatorJobEvent !== null) {
+              await this.handleAvailableOperatorJobEvent(job, interestingTransaction, availableOperatorJobEvent, tags)
+            }
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(
+              job.network,
+              this.errorColor(`Decoding AvailableOperatorJobEvent error: `, error),
+              tags,
+            )
+          }
+
+          break
+        case EventType.FinishedOperatorJob:
+          try {
+            const finishedOperatorJobEvent: FinishedOperatorJobEvent | null = this.bloomFilters[
+              type
+            ]!.bloomEvent.decode<FinishedOperatorJobEvent>(type, interestingTransaction.log!)
+            if (finishedOperatorJobEvent !== null) {
+              await this.handleFinishedOperatorJobEvent(job, interestingTransaction, finishedOperatorJobEvent, tags)
+            }
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(
+              job.network,
+              this.errorColor(`Decoding FinishedOperatorJobEvent error: `, error),
+              tags,
+            )
+          }
+
+          break
+        case EventType.FailedOperatorJob:
+          try {
+            const failedOperatorJobEvent: FailedOperatorJobEvent | null = this.bloomFilters[
+              type
+            ]!.bloomEvent.decode<FailedOperatorJobEvent>(type, interestingTransaction.log!)
+            if (failedOperatorJobEvent !== null) {
+              await this.handleFailedOperatorJobEvent(job, interestingTransaction, failedOperatorJobEvent, tags)
+            }
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(
+              job.network,
+              this.errorColor(`Decoding FailedOperatorJobEvent error: `, error),
+              tags,
+            )
+          }
+
+          break
+        case EventType.TBD:
+          let filterResult: InterestingTransaction | undefined
+          for (const filter of this.networkMonitor.bloomFilters) {
+            filterResult = await this.networkMonitor.applyFilter(
+              filter,
+              interestingTransaction.log!,
+              interestingTransaction.transaction,
+              this,
+              job.network,
+            )
+            if (filterResult !== undefined) {
+              interestingTransactions[i] = filterResult as InterestingTransaction
+              i -= 1
+              break
+            }
+          }
+
+          break
+        default:
+          this.networkMonitor.structuredLogError(job.network, `UNKNOWN EVENT`, tags)
+          break
       }
     }
   }
