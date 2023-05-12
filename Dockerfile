@@ -34,7 +34,7 @@ ENV HEALTHCHECK=default-value
 ENV MODE=default-value
 #
 ENV ENABLE_UNSAFE=default-value
-ENV ENABLE_REPLAY=default-value
+ENV ENABLE_REPLAY=""
 # api[default] / file / disable
 ENV UPDATE_BLOCK_HEIGHT=api
 
