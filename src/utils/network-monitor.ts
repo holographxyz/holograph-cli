@@ -133,7 +133,7 @@ export type TransactionFilter = {
   networkDependant: boolean
 }
 
-const TIMEOUT_THRESHOLD = 20_000
+const TIMEOUT_THRESHOLD = 60_000
 
 const ZERO = BigNumber.from('0')
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -957,7 +957,7 @@ export class NetworkMonitor {
     }
   }
 
-  blockJobHandler = (network: string, job?: BlockJob): void => {
+  blockJobHandler = async (network: string, job?: BlockJob): Promise<void> => {
     if (job !== undefined) {
       this.latestBlockHeight[job.network] = job.block
       if (this.verbose) {
@@ -968,7 +968,12 @@ export class NetworkMonitor {
         (this.parent.id === 'indexer' || this.parent.id === 'operator') &&
         this.isUpdateBlockHeightUsingApiEnabled()
       ) {
-        this.updateLastProcessedBlock(job)
+        try {
+          await this.updateLastProcessedBlock(job)
+        } catch (error: any) {
+          this.structuredLogError(job.network, `Error updating last processed block: ${error.message}`, job.block)
+          return
+        }
       }
 
       this.blockJobs[job.network].shift()
@@ -979,9 +984,17 @@ export class NetworkMonitor {
     if (this.blockJobs[network].length > 0) {
       const blockJob: BlockJob = this.blockJobs[network][0] as BlockJob
       if (this.enableV2) {
-        this.processBlock2(blockJob)
+        try {
+          await this.processBlock2(blockJob)
+        } catch (error: any) {
+          this.structuredLogError(blockJob.network, `Error processing block: ${JSON.stringify(error)}`, blockJob.block)
+        }
       } else {
-        this.processBlock(blockJob)
+        try {
+          await this.processBlock(blockJob)
+        } catch (error: any) {
+          this.structuredLogError(blockJob.network, `Error processing block: ${JSON.stringify(error)}`, blockJob.block)
+        }
       }
     } else if (this.needToSubscribe) {
       setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
@@ -1369,12 +1382,19 @@ export class NetworkMonitor {
       this.structuredLog(job.network, `Getting block 🔍`, job.block)
     }
 
-    const block: ExtendedBlockWithTransactions | null = await this.getBlockWithTransactions({
-      network: job.network,
-      blockNumber: job.block,
-      attempts: 10,
-      canFail: true,
-    })
+    let block: ExtendedBlockWithTransactions | null
+    try {
+      block = await this.getBlockWithTransactions({
+        network: job.network,
+        blockNumber: job.block,
+        attempts: 10,
+        canFail: true,
+      })
+    } catch (error: any) {
+      this.structuredLogError(job.network, `Error processing block ${JSON.stringify(error)}`, job.block)
+      throw error
+    }
+
     if (block !== undefined && block !== null && 'transactions' in block) {
       const recentBlock = this.currentBlockHeight[job.network] - job.block < 5
       if (this.verbose) {
@@ -1406,12 +1426,19 @@ export class NetworkMonitor {
 
       const interestingTransactions: InterestingTransaction[] = []
       if (this.checkBloomLogs(block)) {
-        let logs: Log[] | null = await this.getLogs({
-          network: job.network,
-          blockNumber: job.block,
-          attempts: 10,
-          canFail: true,
-        })
+        let logs: Log[] | null
+        try {
+          logs = await this.getLogs({
+            network: job.network,
+            blockNumber: job.block,
+            attempts: 10,
+            canFail: true,
+          })
+        } catch (error: any) {
+          this.structuredLogError(job.network, `Error getting logs ${error}`, job.block)
+          return
+        }
+
         if (logs === null) {
           this.structuredLog(job.network, `${color.red('Could not get logs for block')}`, job.block)
         } else {
@@ -1447,19 +1474,35 @@ export class NetworkMonitor {
         }
 
         if (this.processTransactions2 !== undefined) {
-          await this.processTransactions2?.bind(this.parent)(job, interestingTransactions)
+          try {
+            await this.processTransactions2?.bind(this.parent)(job, interestingTransactions)
+          } catch (error: any) {
+            this.structuredLogError(job.network, `Error processing transactions ${error}`, job.block)
+          }
         }
 
-        this.blockJobHandler(job.network, job)
+        try {
+          return await this.blockJobHandler(job.network, job)
+        } catch (error: any) {
+          this.structuredLogError(job.network, `Error handling block ${error}`, job.block)
+        }
       } else {
-        this.blockJobHandler(job.network, job)
+        try {
+          return await this.blockJobHandler(job.network, job)
+        } catch (error: any) {
+          this.structuredLogError(job.network, `Error handling block ${error}`, job.block)
+        }
       }
     } else {
       if (this.verbose) {
         this.structuredLog(job.network, `${color.red('Dropped block')}`, job.block)
       }
 
-      this.blockJobHandler(job.network)
+      try {
+        return await this.blockJobHandler(job.network)
+      } catch (error: any) {
+        this.structuredLogError(job.network, `Error handling block ${error}`, job.block)
+      }
     }
   }
 
@@ -1575,52 +1618,37 @@ export class NetworkMonitor {
     canFail = false,
     interval = 10_000,
   }: LogsParams): Promise<Log[] | null> {
-    let counter = 0
-    let sent = false
     const targetBlock: string = BigNumber.from(blockNumber).toHexString()
+    const filter: Filter = {fromBlock: targetBlock, toBlock: targetBlock}
 
-    // eslint-disable-next-line no-unmodified-loop-condition
-    for (let i = 0; i < attempts || !canFail; i++) {
+    const getLogs = async () => {
       try {
-        const filter: Filter = {fromBlock: targetBlock, toBlock: targetBlock}
         const logs: Log[] | null = await this.providers[network].getLogs(filter)
         if (logs === null) {
-          counter++
-          if (canFail && counter > attempts) {
-            if (!sent) {
-              sent = true
-            }
-
-            return null
-          }
+          // If logs is null, we throw an error to indicate failure.
+          throw new Error('Logs is null')
         } else {
-          if (!sent) {
-            sent = true
-          }
-
           return logs as Log[]
         }
       } catch (error: any) {
         if (error.message !== 'cannot query unfinalized data') {
-          counter++
-          if (canFail && counter > attempts) {
-            this.structuredLog(network, `Failed retrieving logs for block ${blockNumber}`, tags)
-            if (!sent) {
-              sent = true
-              throw error
-            }
-          }
+          this.structuredLog(network, `Failed retrieving logs for block ${blockNumber}`, tags)
+          // In case of any other error, we throw it to be caught by the retry function.
+          throw error
         }
-      }
 
-      if (sent) {
-        break
+        // If we can't query unfinalized data, we return null.
+        return null
       }
-
-      await sleep(interval)
     }
 
-    return null
+    try {
+      return await this.retry(network, getLogs, attempts, canFail, interval)
+    } catch (error) {
+      // If retry was not successful, handle it accordingly.
+      console.error(`Error retrieving logs after ${attempts} attempts:`, error)
+      return null
+    }
   }
 
   async getBlock({
@@ -1642,7 +1670,7 @@ export class NetworkMonitor {
     }
 
     try {
-      return await retry(getBlockAttempt, attempts, canFail, interval)
+      return await this.retry(network, getBlockAttempt, attempts, canFail, interval)
     } catch (error: any) {
       this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
       throw error
@@ -1662,10 +1690,10 @@ export class NetworkMonitor {
     }
 
     try {
-      return retry(getBlock, attempts, canFail, interval)
+      return await this.retry(network, getBlock, attempts, canFail, interval)
     } catch (error: any) {
-      this.structuredLog(network, `Failed getting block ${blockNumber} with transactions`, tags)
-      throw error
+      this.structuredLog(network, `Failed getting block ${blockNumber} with transactions ${error}`, tags)
+      return null
     }
   }
 
@@ -1682,10 +1710,10 @@ export class NetworkMonitor {
     }
 
     try {
-      return retry(getTransactionAttempt, attempts, canFail, interval)
+      return await this.retry(network, getTransactionAttempt, attempts, canFail, interval)
     } catch (error: any) {
-      this.structuredLog(network, `Failed getting transaction ${transactionHash}`, tags)
-      throw error
+      this.structuredLog(network, `Failed getting transaction ${transactionHash} ${error}`, tags)
+      return null
     }
   }
 
@@ -1702,7 +1730,7 @@ export class NetworkMonitor {
     }
 
     try {
-      return retry(getTransactionReceiptAttempt, attempts, canFail, interval)
+      return await this.retry(network, getTransactionReceiptAttempt, attempts, canFail, interval)
     } catch (error: any) {
       this.structuredLog(network, `Failed getting transaction ${transactionHash} receipt`, tags)
       throw error
@@ -1722,7 +1750,7 @@ export class NetworkMonitor {
     }
 
     try {
-      const result = await retry(getBalanceAttempt, attempts, canFail, interval)
+      const result = await this.retry(network, getBalanceAttempt, attempts, canFail, interval)
       return result as BigNumber
     } catch (error: any) {
       this.structuredLog(network, `Failed getting ${walletAddress} balance`, tags)
@@ -1743,7 +1771,7 @@ export class NetworkMonitor {
     }
 
     try {
-      const result = await retry(getNonceAttempt, attempts, canFail, interval)
+      const result = await this.retry(network, getNonceAttempt, attempts, canFail, interval)
       return result as number
     } catch (error: any) {
       this.structuredLog(network, `Failed getting ${walletAddress} nonce`, tags)
@@ -1776,7 +1804,7 @@ export class NetworkMonitor {
     }
 
     try {
-      return retry(getGasLimitAttempt, attempts, canFail, interval)
+      return await this.retry(network, getGasLimitAttempt, attempts, canFail, interval)
     } catch (error: any) {
       this.structuredLog(network, `Failed calculating gas limit`, tags)
       // Error handling logic for known reasons
@@ -1894,7 +1922,7 @@ export class NetworkMonitor {
     }
 
     try {
-      return retry(sendTransactionAttempt, attempts, canFail, interval)
+      return await this.retry(network, sendTransactionAttempt, attempts, canFail, interval)
     } catch (error: any) {
       this.structuredLogError(network, 'Failed submitting transaction', tags)
       throw error
@@ -1930,7 +1958,7 @@ export class NetworkMonitor {
     }
 
     try {
-      return retry(populateTransactionAttempt, attempts, canFail, interval)
+      return await this.retry(network, populateTransactionAttempt, attempts, canFail, interval)
     } catch (error: any) {
       this.structuredLog(network, 'Failed populating transaction', tags)
       throw error
@@ -2092,54 +2120,45 @@ export class NetworkMonitor {
 
     return receipt
   }
-}
 
-// Generic retry function
-async function retry<T>(func: () => Promise<T>, attempts = 10, canFail = false, interval = 5000): Promise<T | null> {
-  let counter = 0
-  let sent = false
+  // Generic retry function
+  async retry<T>(
+    network: string,
+    func: () => Promise<T>,
+    attempts = 10,
+    canFail = false,
+    interval = 5000,
+  ): Promise<T | null> {
+    // canFail remains constant because it determines if the function is allowed to fail or not.
+    // the canFail parameter is determined by the function that calls retry
+    // If canFail is true, the loop will terminate after the specified number of attempts.
+    // If canFail is false, the loop will continue until maximum attempts has been hit and then throw an error.
+    let counter = 0
 
-  // canFail remains constant because it determines if the function is allowed to fail or not.
-  // the canFail parameter is determined by the function that calls retry
-  // If canFail is true, the loop will terminate after the specified number of attempts.
-  // If canFail is false, the loop will continue indefinitely until the async function succeeds.
-  // eslint-disable-next-line no-unmodified-loop-condition
-  for (let i = 0; i < attempts || !canFail; i++) {
-    try {
-      const result: T | null = await func()
-      if (result === null) {
-        counter++
-        if (canFail && counter > attempts) {
-          if (!sent) {
-            sent = true
-          }
-
-          return null
+    while (counter < attempts) {
+      this.structuredLog(network, `Calling ${func.name} attempt ${counter + 1} of ${attempts}`, [])
+      try {
+        const result: T | null = await func()
+        if (result !== null) {
+          return result
         }
-      } else {
-        if (!sent) {
-          sent = true
-        }
-
-        return result
+      } catch (error: any) {
+        this.structuredLogError(network, error.message)
       }
-    } catch (error: any) {
+
       counter++
-      if (canFail && counter > attempts) {
-        if (!sent) {
-          sent = true
-        }
 
-        throw error
+      if (counter >= attempts && canFail) {
+        return null
       }
+
+      await sleep(interval)
     }
 
-    if (sent) {
-      break
+    if (!canFail) {
+      throw new Error('Maximum attempts reached, function did not succeed.')
     }
 
-    await sleep(interval)
+    return null
   }
-
-  return null
 }
