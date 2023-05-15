@@ -65,4 +65,6 @@ export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
   avalanche: '0x3c2269811836af69497E5F486A85D7316753cf62',
   avalancheTestnet: '0x93f54D755A063cE7bB9e6Ac47Eccc8e33411d706',
   fantom: '0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7',
+  optimism: '0x3c2269811836af69497E5F486A85D7316753cf62',
+  optimismTestnetGoerli: '0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1',
 } as const
