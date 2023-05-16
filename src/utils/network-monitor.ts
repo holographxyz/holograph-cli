@@ -703,7 +703,6 @@ export class NetworkMonitor {
         this.walletNonces[network] = await this.getNonce({
           network,
           walletAddress: await this.wallets[network].getAddress(),
-          canFail: false,
         })
       }
 
@@ -926,7 +925,6 @@ export class NetworkMonitor {
       this.walletNonces[network] = await this.getNonce({
         network,
         walletAddress: await this.wallets[network].getAddress(),
-        canFail: false,
       })
     }
 
@@ -987,13 +985,13 @@ export class NetworkMonitor {
         try {
           await this.processBlock2(blockJob)
         } catch (error: any) {
-          this.structuredLogError(blockJob.network, `Error processing block: ${JSON.stringify(error)}`, blockJob.block)
+          this.structuredLogError(blockJob.network, `Error processing block: ${error}`, blockJob.block)
         }
       } else {
         try {
           await this.processBlock(blockJob)
         } catch (error: any) {
-          this.structuredLogError(blockJob.network, `Error processing block: ${JSON.stringify(error)}`, blockJob.block)
+          this.structuredLogError(blockJob.network, `Error processing block: ${error}`, blockJob.block)
         }
       }
     } else if (this.needToSubscribe) {
@@ -1293,7 +1291,6 @@ export class NetworkMonitor {
       network: job.network,
       blockNumber: job.block,
       attempts: 10,
-      canFail: true,
     })
     if (block !== undefined && block !== null && 'transactions' in block) {
       const recentBlock = this.currentBlockHeight[job.network] - job.block < 5
@@ -1388,10 +1385,9 @@ export class NetworkMonitor {
         network: job.network,
         blockNumber: job.block,
         attempts: 10,
-        canFail: true,
       })
     } catch (error: any) {
-      this.structuredLogError(job.network, `Error processing block ${JSON.stringify(error)}`, job.block)
+      this.structuredLogError(job.network, `Error processing block ${error}`, job.block)
       throw error
     }
 
@@ -1432,7 +1428,6 @@ export class NetworkMonitor {
             network: job.network,
             blockNumber: job.block,
             attempts: 10,
-            canFail: true,
           })
         } catch (error: any) {
           this.structuredLogError(job.network, `Error getting logs ${error}`, job.block)
@@ -1473,12 +1468,14 @@ export class NetworkMonitor {
           this.structuredLog(job.network, `Found ${interestingTransactions.length} interesting transactions`, job.block)
         }
 
-        if (this.processTransactions2 !== undefined) {
-          try {
-            await this.processTransactions2?.bind(this.parent)(job, interestingTransactions)
-          } catch (error: any) {
-            this.structuredLogError(job.network, `Error processing transactions ${error}`, job.block)
-          }
+        if (this.processTransactions2 === undefined) {
+          throw new Error('processTransactions2 is undefined')
+        }
+
+        try {
+          await this.processTransactions2?.bind(this.parent)(job, interestingTransactions)
+        } catch (error: any) {
+          this.structuredLogError(job.network, `Error processing transactions ${error}`, job.block)
         }
 
         try {
@@ -1487,6 +1484,7 @@ export class NetworkMonitor {
           this.structuredLogError(job.network, `Error handling block ${error}`, job.block)
         }
       } else {
+        this.structuredLog(job.network, `No interesting transactions found. Retrying`, job.block)
         try {
           return await this.blockJobHandler(job.network, job)
         } catch (error: any) {
@@ -1615,7 +1613,6 @@ export class NetworkMonitor {
     network,
     tags = [] as (string | number)[],
     attempts = 10,
-    canFail = false,
     interval = 10_000,
   }: LogsParams): Promise<Log[] | null> {
     const targetBlock: string = BigNumber.from(blockNumber).toHexString()
@@ -1643,7 +1640,7 @@ export class NetworkMonitor {
     }
 
     try {
-      return await this.retry(network, getLogs, attempts, canFail, interval)
+      return await this.retry(network, getLogs, attempts, interval)
     } catch (error) {
       // If retry was not successful, handle it accordingly.
       console.error(`Error retrieving logs after ${attempts} attempts:`, error)
@@ -1656,13 +1653,12 @@ export class NetworkMonitor {
     network,
     tags = [] as (string | number)[],
     attempts = 10,
-    canFail = false,
     interval = 5000,
   }: BlockParams): Promise<ExtendedBlock | null> {
     const getBlockAttempt = async () => {
       const block: ExtendedBlock | null = await getExtendedBlock(this.providers[network], blockNumber)
 
-      if (block === null && canFail) {
+      if (block === null) {
         throw new Error('Failed retrieving block')
       }
 
@@ -1670,7 +1666,7 @@ export class NetworkMonitor {
     }
 
     try {
-      return await this.retry(network, getBlockAttempt, attempts, canFail, interval)
+      return await this.retry(network, getBlockAttempt, attempts, interval)
     } catch (error: any) {
       this.structuredLog(network, `Failed retrieving block ${blockNumber}`, tags)
       throw error
@@ -1682,7 +1678,6 @@ export class NetworkMonitor {
     network,
     tags = [] as (string | number)[],
     attempts = 10,
-    canFail = false,
     interval = 5000,
   }: BlockParams): Promise<ExtendedBlockWithTransactions | null> {
     const getBlock = async () => {
@@ -1690,7 +1685,7 @@ export class NetworkMonitor {
     }
 
     try {
-      return await this.retry(network, getBlock, attempts, canFail, interval)
+      return await this.retry(network, getBlock, attempts, interval)
     } catch (error: any) {
       this.structuredLog(network, `Failed getting block ${blockNumber} with transactions ${error}`, tags)
       return null
@@ -1702,7 +1697,6 @@ export class NetworkMonitor {
     network,
     tags = [] as (string | number)[],
     attempts = 10,
-    canFail = false,
     interval = 2000,
   }: TransactionParams): Promise<TransactionResponse | null> {
     const getTransactionAttempt = async () => {
@@ -1710,7 +1704,7 @@ export class NetworkMonitor {
     }
 
     try {
-      return await this.retry(network, getTransactionAttempt, attempts, canFail, interval)
+      return await this.retry(network, getTransactionAttempt, attempts, interval)
     } catch (error: any) {
       this.structuredLog(network, `Failed getting transaction ${transactionHash} ${error}`, tags)
       return null
@@ -1722,7 +1716,6 @@ export class NetworkMonitor {
     network,
     tags = [] as (string | number)[],
     attempts = 10,
-    canFail = false,
     interval = 2000,
   }: TransactionParams): Promise<TransactionReceipt | null> {
     const getTransactionReceiptAttempt = async () => {
@@ -1730,7 +1723,7 @@ export class NetworkMonitor {
     }
 
     try {
-      return await this.retry(network, getTransactionReceiptAttempt, attempts, canFail, interval)
+      return await this.retry(network, getTransactionReceiptAttempt, attempts, interval)
     } catch (error: any) {
       this.structuredLog(network, `Failed getting transaction ${transactionHash} receipt`, tags)
       throw error
@@ -1742,7 +1735,6 @@ export class NetworkMonitor {
     network,
     tags = [] as (string | number)[],
     attempts = 10,
-    canFail = false,
     interval = 1000,
   }: WalletParams): Promise<BigNumber> {
     const getBalanceAttempt = async () => {
@@ -1750,7 +1742,7 @@ export class NetworkMonitor {
     }
 
     try {
-      const result = await this.retry(network, getBalanceAttempt, attempts, canFail, interval)
+      const result = await this.retry(network, getBalanceAttempt, attempts, interval)
       return result as BigNumber
     } catch (error: any) {
       this.structuredLog(network, `Failed getting ${walletAddress} balance`, tags)
@@ -1763,7 +1755,6 @@ export class NetworkMonitor {
     network,
     tags = [] as (string | number)[],
     attempts = 10,
-    canFail = false,
     interval = 1000,
   }: WalletParams): Promise<number> {
     const getNonceAttempt = async () => {
@@ -1771,7 +1762,7 @@ export class NetworkMonitor {
     }
 
     try {
-      const result = await this.retry(network, getNonceAttempt, attempts, canFail, interval)
+      const result = await this.retry(network, getNonceAttempt, attempts, interval)
       return result as number
     } catch (error: any) {
       this.structuredLog(network, `Failed getting ${walletAddress} nonce`, tags)
@@ -1788,7 +1779,6 @@ export class NetworkMonitor {
     gasPrice,
     value = ZERO,
     attempts = 10,
-    canFail = false,
     interval = 5000,
   }: GasLimitParams): Promise<BigNumber | null> {
     const getGasLimitAttempt = async () => {
@@ -1804,7 +1794,7 @@ export class NetworkMonitor {
     }
 
     try {
-      return await this.retry(network, getGasLimitAttempt, attempts, canFail, interval)
+      return await this.retry(network, getGasLimitAttempt, attempts, interval)
     } catch (error: any) {
       this.structuredLog(network, `Failed calculating gas limit`, tags)
       // Error handling logic for known reasons
@@ -1838,7 +1828,7 @@ export class NetworkMonitor {
         if (knownReason) {
           this.structuredLog(network, `[web3] ${revertReason} (${revertExplanation})`, tags)
         } else {
-          this.structuredLog(network, JSON.stringify(error), tags)
+          this.structuredLog(network, error, tags)
         }
       }
 
@@ -1852,7 +1842,6 @@ export class NetworkMonitor {
     network,
     tags = [] as (string | number)[],
     attempts = 10,
-    canFail = false,
     interval = 3000,
   }: SendTransactionParams): Promise<TransactionResponse | null> {
     const sendTransactionAttempt = async (): Promise<TransactionResponse> => {
@@ -1902,7 +1891,6 @@ export class NetworkMonitor {
             network,
             tags,
             attempts,
-            canFail,
             interval,
           })
           if (tx === null) {
@@ -1922,7 +1910,7 @@ export class NetworkMonitor {
     }
 
     try {
-      return await this.retry(network, sendTransactionAttempt, attempts, canFail, interval)
+      return await this.retry(network, sendTransactionAttempt, attempts, interval)
     } catch (error: any) {
       this.structuredLogError(network, 'Failed submitting transaction', tags)
       throw error
@@ -1939,7 +1927,6 @@ export class NetworkMonitor {
     value = ZERO,
     tags = [] as (string | number)[],
     attempts = 10,
-    canFail = false,
     interval = 1000,
   }: PopulateTransactionParams): Promise<PopulatedTransaction | null> {
     const populateTransactionAttempt = async (): Promise<PopulatedTransaction> => {
@@ -1958,7 +1945,7 @@ export class NetworkMonitor {
     }
 
     try {
-      return await this.retry(network, populateTransactionAttempt, attempts, canFail, interval)
+      return await this.retry(network, populateTransactionAttempt, attempts, interval)
     } catch (error: any) {
       this.structuredLog(network, 'Failed populating transaction', tags)
       throw error
@@ -1975,7 +1962,6 @@ export class NetworkMonitor {
     gasLimit,
     value = ZERO,
     attempts = 10,
-    canFail = false,
     interval = 500,
     waitForReceipt = false,
   }: ExecuteTransactionParams): Promise<TransactionReceipt | null> {
@@ -1987,7 +1973,6 @@ export class NetworkMonitor {
       this.walletNonces[network] = await this.getNonce({
         network,
         walletAddress: await this.wallets[network].getAddress(),
-        canFail: false,
       })
     }
 
@@ -2015,7 +2000,7 @@ export class NetworkMonitor {
         gasPrice,
         value,
         attempts,
-        canFail,
+
         interval,
       })
     }
@@ -2033,7 +2018,7 @@ export class NetworkMonitor {
       tags,
     )
     const walletAddress: string = await this.wallets[network].getAddress()
-    const balance: BigNumber | null = await this.getBalance({network, walletAddress, attempts, canFail, interval})
+    const balance: BigNumber | null = await this.getBalance({network, walletAddress, attempts, interval})
     if (balance === null) {
       this.structuredLog(network, `Could not get wallet ${walletAddress} balance`, tags)
       return null
@@ -2064,7 +2049,7 @@ export class NetworkMonitor {
       nonce: this.walletNonces[network],
       tags,
       attempts,
-      canFail,
+
       interval,
     })
     if (rawTx === null) {
@@ -2080,7 +2065,7 @@ export class NetworkMonitor {
       tags,
       rawTx,
       attempts,
-      canFail,
+
       interval,
     })
     if (tx === null) {
@@ -2096,8 +2081,6 @@ export class NetworkMonitor {
       network,
       transactionHash: tx.hash,
       attempts,
-      // allow this promise to resolve as null to not hold up the confirmation process for too long
-      canFail: waitForReceipt ? false : canFail, // canFail,
     })
     if (receipt === null) {
       if (!waitForReceipt) {
@@ -2122,23 +2105,14 @@ export class NetworkMonitor {
   }
 
   // Generic retry function
-  async retry<T>(
-    network: string,
-    func: () => Promise<T>,
-    attempts = 10,
-    canFail = false,
-    interval = 5000,
-  ): Promise<T | null> {
-    // canFail remains constant because it determines if the function is allowed to fail or not.
-    // the canFail parameter is determined by the function that calls retry
-    // If canFail is true, the loop will terminate after the specified number of attempts.
-    // If canFail is false, the loop will continue until maximum attempts has been hit and then throw an error.
-    let counter = 0
+  async retry<T>(network: string, func: () => Promise<T>, attempts = 10, interval = 5000): Promise<T | null> {
+    let result: T | null = null
 
-    while (counter < attempts) {
-      this.structuredLog(network, `Calling ${func.name} attempt ${counter + 1} of ${attempts}`, [])
+    for (let i = 0; i < attempts; i++) {
+      this.structuredLog(network, `Calling ${func.name} attempt ${i + 1} of ${attempts}`, [])
+
       try {
-        const result: T | null = await func()
+        result = await func()
         if (result !== null) {
           return result
         }
@@ -2146,19 +2120,12 @@ export class NetworkMonitor {
         this.structuredLogError(network, error.message)
       }
 
-      counter++
-
-      if (counter >= attempts && canFail) {
-        return null
-      }
-
+      // If we haven't returned by now, it means the function call was unsuccessful.
+      // We sleep for the specified interval before the next attempt.
       await sleep(interval)
     }
 
-    if (!canFail) {
-      throw new Error('Maximum attempts reached, function did not succeed.')
-    }
-
-    return null
+    // If we've exited the loop without returning, it means all attempts were unsuccessful.
+    throw new Error('Maximum attempts reached, function did not succeed.')
   }
 }
