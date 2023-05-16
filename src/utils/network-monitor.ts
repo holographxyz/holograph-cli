@@ -1568,8 +1568,7 @@ export class NetworkMonitor {
     try {
       return await this.retry(network, getLogs, attempts, interval)
     } catch (error) {
-      // If retry was not successful, handle it accordingly.
-      console.error(`Error retrieving logs after ${attempts} attempts:`, error)
+      this.structuredLogError(network, `Error retrieving logs after ${attempts} attempts: ${error}`, tags)
       return null
     }
   }
