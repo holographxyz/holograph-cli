@@ -1542,7 +1542,13 @@ export class NetworkMonitor {
     interval = 10_000,
   }: LogsParams): Promise<Log[] | null> {
     const targetBlock: string = BigNumber.from(blockNumber).toHexString()
-    const filter: Filter = {fromBlock: targetBlock, toBlock: targetBlock}
+    const topicsArray = this.bloomFilters.map(bloomFilter => bloomFilter.bloomValueHashed)
+
+    const filter: Filter = {
+      fromBlock: targetBlock,
+      toBlock: targetBlock,
+      topics: [topicsArray], // topics array needs to be wrapped in a nested array
+    }
 
     const getLogs = async () => {
       try {
