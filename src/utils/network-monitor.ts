@@ -1374,130 +1374,56 @@ export class NetworkMonitor {
   }
 
   async processBlock2(job: BlockJob): Promise<void> {
+    let interestingTransactions: InterestingTransaction[] = []
     this.activated[job.network] = true
     if (this.verbose) {
       this.structuredLog(job.network, `Getting block 🔍`, job.block)
     }
 
-    let block: ExtendedBlockWithTransactions | null
     try {
-      block = await this.getBlockWithTransactions({
+      let block = await this.getBlockWithTransactions({
         network: job.network,
         blockNumber: job.block,
         attempts: 10,
       })
-    } catch (error: any) {
-      this.structuredLogError(job.network, `Error processing block ${error}`, job.block)
-      throw error
-    }
 
-    if (block !== undefined && block !== null && 'transactions' in block) {
-      const recentBlock = this.currentBlockHeight[job.network] - job.block < 5
-      if (this.verbose) {
-        this.structuredLog(job.network, `Block retrieved 📥`, job.block)
-        /*
-        Temporarily disabled
-        this.structuredLog(job.network, `Calculating block gas`, job.block)
-        if (this.gasPrices[job.network].isEip1559) {
-          this.structuredLog(
-            job.network,
-            `Calculated block gas price was ${formatUnits(
-              this.gasPrices[job.network].nextBlockFee!,
-              'gwei',
-            )} GWEI, and actual block gas price is ${formatUnits(block.baseFeePerGas!, 'gwei')} GWEI`,
-            job.block,
-          )
+      if (block !== undefined && block !== null && 'transactions' in block) {
+        const recentBlock = this.currentBlockHeight[job.network] - job.block < 5
+
+        if (recentBlock) {
+          this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
         }
-        */
-      }
 
-      if (recentBlock) {
-        this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
-      }
-
-      // const priorityFees: BigNumber = this.gasPrices[job.network].nextPriorityFee!
-      if (this.verbose && block.transactions.length === 0) {
-        this.structuredLog(job.network, `Zero transactions in block`, job.block)
-      }
-
-      const interestingTransactions: InterestingTransaction[] = []
-      if (this.checkBloomLogs(block)) {
-        let logs: Log[] | null
-        try {
-          logs = await this.getLogs({
+        if (this.checkBloomLogs(block)) {
+          let logs = await this.getLogs({
             network: job.network,
             blockNumber: job.block,
             attempts: 10,
           })
-        } catch (error: any) {
-          this.structuredLogError(job.network, `Error getting logs ${error}`, job.block)
-          return
+
+          if (logs !== null) {
+            logs = this.sortLogs(logs as Log[])
+            await this.filterTransactions2(job, block.transactions, logs as Log[], interestingTransactions)
+          }
         }
 
-        if (logs === null) {
-          this.structuredLog(job.network, `${color.red('Could not get logs for block')}`, job.block)
-        } else {
-          logs = this.sortLogs(logs as Log[])
-          await this.filterTransactions2(job, block.transactions, logs as Log[], interestingTransactions)
-        }
-      }
-
-      if (recentBlock) {
-        this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
-      }
-
-      /*
-      Temporarily disabled
-      if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
-        this.structuredLog(
-          job.network,
-          `Calculated block priority fees was ${formatUnits(
-            priorityFees,
-            'gwei',
-          )} GWEI, and actual block priority fees is ${formatUnits(
-            this.gasPrices[job.network].nextPriorityFee!,
-            'gwei',
-          )} GWEI`,
-          job.block,
-        )
-      }
-      */
-
-      if (interestingTransactions.length > 0) {
-        if (this.verbose) {
-          this.structuredLog(job.network, `Found ${interestingTransactions.length} interesting transactions`, job.block)
+        if (recentBlock) {
+          this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
         }
 
-        if (this.processTransactions2 === undefined) {
-          throw new Error('processTransactions2 is undefined')
-        }
+        if (interestingTransactions.length > 0) {
+          if (this.processTransactions2 === undefined) {
+            throw new Error('processTransactions2 is undefined')
+          }
 
-        try {
           await this.processTransactions2?.bind(this.parent)(job, interestingTransactions)
-        } catch (error: any) {
-          this.structuredLogError(job.network, `Error processing transactions ${error}`, job.block)
-        }
-
-        try {
-          return await this.blockJobHandler(job.network, job)
-        } catch (error: any) {
-          this.structuredLogError(job.network, `Error handling block ${error}`, job.block)
-        }
-      } else {
-        this.structuredLog(job.network, `No interesting transactions found. Retrying`, job.block)
-        try {
-          return await this.blockJobHandler(job.network, job)
-        } catch (error: any) {
-          this.structuredLogError(job.network, `Error handling block ${error}`, job.block)
         }
       }
-    } else {
-      if (this.verbose) {
-        this.structuredLog(job.network, `${color.red('Dropped block')}`, job.block)
-      }
-
+    } catch (error: any) {
+      this.structuredLogError(job.network, `Error processing block ${error}`, job.block)
+    } finally {
       try {
-        return await this.blockJobHandler(job.network)
+        return await this.blockJobHandler(job.network, job)
       } catch (error: any) {
         this.structuredLogError(job.network, `Error handling block ${error}`, job.block)
       }
