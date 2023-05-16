@@ -1374,14 +1374,14 @@ export class NetworkMonitor {
   }
 
   async processBlock2(job: BlockJob): Promise<void> {
-    let interestingTransactions: InterestingTransaction[] = []
+    const interestingTransactions: InterestingTransaction[] = []
     this.activated[job.network] = true
     if (this.verbose) {
       this.structuredLog(job.network, `Getting block 🔍`, job.block)
     }
 
     try {
-      let block = await this.getBlockWithTransactions({
+      const block = await this.getBlockWithTransactions({
         network: job.network,
         blockNumber: job.block,
         attempts: 10,
@@ -1423,7 +1423,7 @@ export class NetworkMonitor {
       this.structuredLogError(job.network, `Error processing block ${error}`, job.block)
     } finally {
       try {
-        return await this.blockJobHandler(job.network, job)
+        await this.blockJobHandler(job.network, job)
       } catch (error: any) {
         this.structuredLogError(job.network, `Error handling block ${error}`, job.block)
       }
