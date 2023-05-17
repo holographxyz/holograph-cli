@@ -61,9 +61,15 @@ const environmentSelectorHook: Hook<'init'> = async function ({id, argv}) {
     } else if (indexOfEnv !== -1) {
       environment = argv[indexOfEnv + 1]
       argv.splice(indexOfEnv, 2)
+
+      if (environment === 'mainnet') {
+        this.log(color.yellow('WARNING: Mainnet is not yet supported.'))
+        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+        return process.exit(0)
+      }
     }
 
-    if (environment === undefined || environment === '') {
+    if (environment === undefined) {
       this.log(
         color.yellow(
           'WARNING: Environment not identified. Set HOLOGRAPH_ENVIRONMENT to develop, testnet, or mainnet in your .env file or set it via the --env flag',
