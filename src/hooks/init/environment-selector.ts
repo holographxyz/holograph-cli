@@ -56,13 +56,15 @@ const environmentSelectorHook: Hook<'init'> = async function ({id, argv}) {
     const indexOfEnv = argv.indexOf('--env')
 
     let environment
+    if (indexOfEnv !== -1) {
+      environment = argv[indexOfEnv + 1]
+      argv.splice(indexOfEnv, 2) // remove --env and the value from args
+      validateDisabledCommandsOnMainnet(environment, id, argv)
+    }
+
+    // If HOLOGRAPH_ENVIRONMENT is set, use or prefer it
     if (env !== undefined) {
       environment = env
-    } else if (indexOfEnv !== -1) {
-      environment = argv[indexOfEnv + 1]
-      argv.splice(indexOfEnv, 2)
-
-      validateDisabledCommandsOnMainnet(environment, id, argv)
     }
 
     // If environment is not set, warn the user and exit
