@@ -177,8 +177,11 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
+          ENABLE_SYNC: 'true'
+          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           AVALANCHE_NETWORK: 'fuji'
           ETHEREUM_NETWORK: 'goerli'
+          OPTIMISM_NETWORK: 'optimismTestnetGoerli'
           POLYGON_NETWORK: 'mumbai'
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
         with:
@@ -197,15 +200,18 @@ jobs:
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
             \
             --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
             --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
+            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
             --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
             --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
             \
             --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_testnet_avalancheTestnet_rpc_url }} \
             --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_testnet_polygonTestnet_rpc_url }} \
@@ -226,25 +232,30 @@ jobs:
             --set autoscaling.polygon.maxReplicas=1 \
             --set autoscaling.binance.maxReplicas=1 \
             \
-            --set resources.ethereum.limits.cpu=350m \
+            --set resources.ethereum.limits.cpu=100m \
             --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=250m \
-            --set resources.ethereum.requests.memory=300Mi \
+            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.requests.memory=500Mi \
             \
-            --set resources.polygon.limits.cpu=350m \
+            --set resources.optimism.limits.cpu=100m \
+            --set resources.optimism.limits.memory=520Mi \
+            --set resources.optimism.requests.cpu=100m \
+            --set resources.optimism.requests.memory=500Mi \
+            \
+            --set resources.polygon.limits.cpu=100m \
             --set resources.polygon.limits.memory=520Mi \
-            --set resources.polygon.requests.cpu=250m \
-            --set resources.polygon.requests.memory=300Mi \
+            --set resources.polygon.requests.cpu=100m \
+            --set resources.polygon.requests.memory=500Mi \
             \
-            --set resources.avalanche.limits.cpu=350m \
+            --set resources.avalanche.limits.cpu=100m \
             --set resources.avalanche.limits.memory=520Mi \
-            --set resources.avalanche.requests.cpu=250m \
-            --set resources.avalanche.requests.memory=300Mi \
+            --set resources.avalanche.requests.cpu=100m \
+            --set resources.avalanche.requests.memory=500Mi \
             \
-            --set resources.binance.limits.cpu=350m \
+            --set resources.binance.limits.cpu=100m \
             --set resources.binance.limits.memory=520Mi \
-            --set resources.binance.requests.cpu=250m \
-            --set resources.binance.requests.memory=300Mi \
+            --set resources.binance.requests.cpu=100m \
+            --set resources.binance.requests.memory=500Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -282,9 +293,11 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
+          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           AVALANCHE_NETWORK: 'fuji'
           POLYGON_NETWORK: 'mumbai'
           ETHEREUM_NETWORK: 'goerli'
+          OPTIMISM_NETWORK: 'optimismTestnetGoerli'
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
@@ -306,10 +319,12 @@ jobs:
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
             \
             --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
             --set POLYGON_NETWORK=$POLYGON_NETWORK \
             --set ETHEREUM_NETWORK=$ETHEREUM_NETWORK \
+            --set OPTIMISM_NETWORK=$OPTIMISM_NETWORK \
             --set BINANCE_NETWORK=$BINANCE_NETWORK \
             \
             --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_testnet_avalancheTestnet_rpc_url }} \
@@ -321,25 +336,30 @@ jobs:
             --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
             \
-            --set resources.ethereum.limits.cpu=350m \
+            --set resources.ethereum.limits.cpu=100m \
             --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=200m \
-            --set resources.ethereum.requests.memory=450Mi \
+            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.requests.memory=500Mi \
             \
-            --set resources.polygon.limits.cpu=150m \
-            --set resources.polygon.limits.memory=300Mi \
+            --set resources.optimism.limits.cpu=100m \
+            --set resources.optimism.limits.memory=520Mi \
+            --set resources.optimism.requests.cpu=100m \
+            --set resources.optimism.requests.memory=500Mi \
+            \
+            --set resources.polygon.limits.cpu=100m \
+            --set resources.polygon.limits.memory=520Mi \
             --set resources.polygon.requests.cpu=100m \
-            --set resources.polygon.requests.memory=200Mi \
+            --set resources.polygon.requests.memory=500Mi \
             \
-            --set resources.avalanche.limits.cpu=150m \
-            --set resources.avalanche.limits.memory=300Mi \
+            --set resources.avalanche.limits.cpu=100m \
+            --set resources.avalanche.limits.memory=520Mi \
             --set resources.avalanche.requests.cpu=100m \
-            --set resources.avalanche.requests.memory=200Mi \
+            --set resources.avalanche.requests.memory=500Mi \
             \
-            --set resources.binance.limits.cpu=150m \
-            --set resources.binance.limits.memory=320Mi \
+            --set resources.binance.limits.cpu=100m \
+            --set resources.binance.limits.memory=520Mi \
             --set resources.binance.requests.cpu=100m \
-            --set resources.binance.requests.memory=300Mi \
+            --set resources.binance.requests.memory=500Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
