@@ -67,11 +67,7 @@ const environmentSelectorHook: Hook<'init'> = async function ({id, argv}) {
 
     // If environment is not set, warn the user and exit
     if (environment === undefined) {
-      this.log(
-        color.yellow(
-          'WARNING: Environment not identified. Set HOLOGRAPH_ENVIRONMENT to develop, testnet, or mainnet in your .env file or set it via the --env flag',
-        ),
-      )
+      this.log(color.yellow('WARNING: Environment not identified. Set it via the --env flag'))
       // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
       return process.exit(0)
     }
