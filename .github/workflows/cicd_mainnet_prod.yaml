@@ -20,8 +20,8 @@ env:
   MAINNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_MAINNET_OPERATOR_API_KEY }}
   MAINNET_HOLO_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_OPERATOR_MAINNET_OPERATOR_API_KEY}}
   #
-  MAINNET_HOLOGRAPH_INDEXER_HOST: 'http://uranus-holo-api.mainnet.svc.cluster.local:443'
-  MAINNET_HOLOGRAPH_OPERATOR_HOST: 'http://uranus-holo-api.mainnet.svc.cluster.local:443'
+  MAINNET_HOLOGRAPH_INDEXER_HOST: 'http://xanthos-holo-api.mainnet.svc.cluster.local:443'
+  MAINNET_HOLOGRAPH_OPERATOR_HOST: 'http://xanthos-holo-api.mainnet.svc.cluster.local:443'
   #
   MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.MAINNET_HOLO_INDEXER_PASSWORD }}
   MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.MAINNET_HOLO_OPERATOR_PASSWORD }}
@@ -40,7 +40,7 @@ env:
   indexer_mainnet_avalanche_rpc_url: ${{ secrets.INDEXER_MAINNET_AVALANCHE_RPC_URL }}
   indexer_mainnet_polygon_rpc_url: ${{ secrets.INDEXER_MAINNET_POLYGON_RPC_URL }}
   indexer_mainnet_ethereum_rpc_url: ${{ secrets.INDEXER_MAINNET_ETHEREUM_RPC_URL }}
-  indexer_mainnet_binance_rpc_url: ${{ secrets.INDEXER_MAINNET_BINANCE_RPC_URL }} #TODO <---------------
+  indexer_mainnet_binance_rpc_url: ${{ secrets.INDEXER_MAINNET_BINANCE_RPC_URL }}
   #
   indexer_mainnet_private_key: ${{ secrets.INDEXER_MAINNET_PRIVATE_KEY }}
   indexer_mainnet_address: ${{ secrets.INDEXER_MAINNET_ADDRESS }}
@@ -48,7 +48,7 @@ env:
   operator_mainnet_avalanche_rpc_url: ${{ secrets.OPERATOR_MAINNET_AVALANCHE_RPC_URL }}
   operator_mainnet_polygon_rpc_url: ${{ secrets.OPERATOR_MAINNET_POLYGON_RPC_URL }}
   operator_mainnet_ethereum_rpc_url: ${{ secrets.OPERATOR_MAINNET_ETHEREUM_RPC_URL }}
-  operator_mainnet_binance_rpc_url: ${{ secrets.OPERATOR_MAINNET_BINANCE_RPC_URL }} #TODO <-----------------
+  operator_mainnet_binance_rpc_url: ${{ secrets.OPERATOR_MAINNET_BINANCE_RPC_URL }}
   #
   operator_mainnet_private_key: ${{ secrets.OPERATOR_MAINNET_PRIVATE_KEY }}
   operator_mainnet_address: ${{ secrets.OPERATOR_MAINNET_ADDRESS }}
@@ -61,10 +61,10 @@ env:
 
   #######################################
   MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.86
-  INDEXER_RELEASE_NAME: uranus-indexer-mainnet # format -> [release_name]-indexer-[env]
+  INDEXER_RELEASE_NAME: xanthos-indexer-mainnet # format -> [release_name]-indexer-[env]
   #
   MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.64
-  OPERATOR_RELEASE_NAME: uranus-operator-mainnet # format -> [release_name]-operator-[env]
+  OPERATOR_RELEASE_NAME: xanthos-operator-mainnet # format -> [release_name]-operator-[env]
   #######################################
 
 ## notice: the trigger
