@@ -4,11 +4,11 @@ import {CliUx, Flags} from '@oclif/core'
 import {BigNumber} from 'ethers'
 import {TransactionResponse, TransactionReceipt} from '@ethersproject/abstract-provider'
 import {TransactionDescription} from '@ethersproject/abi'
-import {networks, supportedNetworks, supportedShortNetworks} from '@holographxyz/networks'
+import {networks, supportedNetworks} from '@holographxyz/networks'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {NetworkMonitor} from '../../utils/network-monitor'
-import {sha3} from '../../utils/utils'
+import { NetworkMonitor, OperatorMode } from "../../utils/network-monitor";
+import { chainIdToNetwork, networkToChainId, sha3 } from "../../utils/utils";
 import {checkOptionFlag, checkTransactionHashFlag} from '../../utils/validation'
 import {OperatorJobAwareCommand} from '../../utils/operator-job'
 import {HealthCheck} from '../../base-commands/healthcheck'
@@ -17,10 +17,18 @@ import ApiService from '../../services/api-service'
 import {CrossChainTransaction, Logger, TransactionStatus} from '../../types/api'
 import color from '@oclif/color'
 import {decodeAvailableOperatorJobEvent, decodeLzPacketEvent} from '../../events/events'
+import * as fs from 'fs-extra'
 
 enum Step {
   OPERATOR,
   MESSAGE,
+}
+
+interface IncompleteJobs {
+  // eslint-disable-next-line camelcase
+  source_tx?: string
+  // eslint-disable-next-line camelcase
+  source_chain_id?: number
 }
 
 export default class Recover extends OperatorJobAwareCommand {
@@ -34,10 +42,22 @@ export default class Recover extends OperatorJobAwareCommand {
     }),
     network: Flags.string({
       description: 'The network on which the transaction was executed',
-      options: supportedShortNetworks,
+      options: supportedNetworks,
+      dependsOn: ['tx']
     }),
     tx: Flags.string({
       description: 'The hash of transaction that we want to attempt to execute',
+      dependsOn: ['network']
+    }),
+    file: Flags.string({
+     char: 'f',
+     description: 'JSON file path of incomplete jobs (ie "./incompleteJobs.json") in format [{ source_tx, source_chain_id}]',
+     exclusive: ['tx']
+    }),
+    mode: Flags.string({
+      description: 'The mode in which to run the operator',
+      options: Object.values(OperatorMode),
+      char: 'm',
     }),
     ...HealthCheck.flags,
   }
@@ -49,6 +69,7 @@ export default class Recover extends OperatorJobAwareCommand {
   environment!: Environment
   apiColor = color.keyword('orange')
   errorColor = color.keyword('red')
+  operatorMode: OperatorMode = OperatorMode.listen
 
   /**
    * Command Entry Point
@@ -56,7 +77,7 @@ export default class Recover extends OperatorJobAwareCommand {
   async run(): Promise<void> {
     this.log('Loading user configurations...')
 
-    const {userWallet, configFile, supportedNetworksOptions} = await ensureConfigFileIsValid(
+    const {userWallet, configFile} = await ensureConfigFileIsValid(
       this.config.configDir,
       undefined,
       true,
@@ -64,6 +85,17 @@ export default class Recover extends OperatorJobAwareCommand {
     this.log('User configurations loaded.')
 
     const {flags} = await this.parse(Recover)
+
+    this.operatorMode =
+      OperatorMode[
+        (await checkOptionFlag(
+          Object.values(OperatorMode),
+          flags.mode,
+          'Select the mode in which to run the operator',
+        )) as keyof typeof OperatorMode
+        ]
+
+    this.log(`Operator mode: ${this.operatorMode}`)
 
     if (flags.host !== undefined) {
       this.BASE_URL = flags.host
@@ -74,7 +106,7 @@ export default class Recover extends OperatorJobAwareCommand {
       this.environment === Environment.experimental ||
       this.BASE_URL === undefined
     ) {
-      this.log(`Skiping API authentication for ${Environment[this.environment]} environment`)
+      this.log(`Skipping API authentication for ${Environment[this.environment]} environment`)
     } else {
       // Create API Service for GraphQL requests
       try {
@@ -98,17 +130,6 @@ export default class Recover extends OperatorJobAwareCommand {
       this.log(this.apiColor(`API: Successfully authenticated as an operator`))
     }
 
-    const network: string = await checkOptionFlag(
-      supportedNetworksOptions,
-      flags.network,
-      'Select the network to extract transaction details from',
-    )
-
-    const tx: string = await checkTransactionHashFlag(
-      flags.tx,
-      'Enter the hash of transaction from which to extract recovery data from',
-    )
-
     this.networkMonitor = new NetworkMonitor({
       parent: this,
       configFile,
@@ -126,23 +147,67 @@ export default class Recover extends OperatorJobAwareCommand {
     await this.networkMonitor.run(true)
     CliUx.ux.action.stop()
 
-    CliUx.ux.action.start('Retrieving transaction details from ' + network + ' network')
-    const transaction = await this.networkMonitor.getTransaction({
-      transactionHash: tx,
-      network,
-      canFail: true,
-      attempts: 30,
-      interval: 500,
-    })
-    CliUx.ux.action.stop()
+    let txArray = []
+    // If network and tx flags are provided, construct an array of one element
+    if(!!flags.network || !!flags.tx) {
+      const flagNetwork: string = await checkOptionFlag(
+        supportedNetworks,
+        flags.network,
+        'Select the network to extract transaction details from',
+      )
 
-    if (transaction === null) {
-      this.networkMonitor.structuredLog(network, 'Could not retrieve the transaction')
-      // eslint-disable no-process-exit, unicorn/no-process-exit
-      this.exit()
+      const flagTx: string = await checkTransactionHashFlag(
+        flags.tx,
+        'Enter the hash of transaction from which to extract recovery data from',
+      )
+
+      txArray = [{ sourceChainId: networkToChainId[flagNetwork], sourceTx: flagTx }]
+
     } else {
-      await this.processTransaction(network, transaction)
+      if (!(await fs.pathExists(flags.file as string))) {
+        this.error(`Problem reading ${flags.file}`)
+      }
+
+      let incompleteJobs: IncompleteJobs[] = []
+      try {
+        incompleteJobs = (await fs.readJson(flags.file as string)) as IncompleteJobs[]
+        //TODO: add validation of the file
+      } catch {
+        this.error(`One or more lines are an invalid Incomplete jobs JSON object`)
+      }
+
+      txArray = incompleteJobs.map(item => {
+        return {
+          sourceChainId: item.source_chain_id,
+          sourceTx: item.source_tx
+        }
+      })
     }
+
+    this.log(`Number of jobs to resolve: ${txArray.length}`)
+
+    for (const element of txArray) {
+      const tx = element.sourceTx as string
+      const network = chainIdToNetwork()[element.sourceChainId as number]
+      this.log('Retrieving transaction details from ' + network + ' network for tx ' + tx)
+      const transaction = await this.networkMonitor.getTransaction({
+        transactionHash: tx,
+        network,
+        canFail: true,
+        attempts: 30,
+        interval: 500,
+      })
+
+      if (transaction === null) {
+        this.networkMonitor.structuredLog(network, 'Could not retrieve the transaction')
+        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+        this.exit()
+      } else {
+        await this.processTransaction(network, transaction)
+      }
+    }
+
+    this.exit()
   }
 
   /**
@@ -283,15 +348,18 @@ export default class Recover extends OperatorJobAwareCommand {
     // If the operator is in listen mode, payloads will not be executed
     // If the operator is in manual mode, the payload must be manually executed
     // If the operator is in auto mode, the payload will be executed automatically
-    const operatorPrompt: any = await inquirer.prompt([
-      {
-        name: 'shouldContinue',
-        message: `Transaction on ${network} is ready for execution, would you like to recover it?\n`,
-        type: 'confirm',
-        default: false,
-      },
-    ])
-    const operate: boolean = operatorPrompt.shouldContinue
+    let operate = this.operatorMode === OperatorMode.auto
+    if (this.operatorMode === OperatorMode.manual) {
+      const operatorPrompt: any = await inquirer.prompt([
+        {
+          name: 'shouldContinue',
+          message: `A transaction appeared on ${network} for execution, would you like to operate?\n`,
+          type: 'confirm',
+          default: true,
+        },
+      ])
+      operate = operatorPrompt.shouldContinue
+    }
 
     if (operate) {
       const response = await this.networkMonitor.executeTransaction({
@@ -301,13 +369,11 @@ export default class Recover extends OperatorJobAwareCommand {
         args: [payload],
       })
 
-      if (response !== null && response.status === 1) {
-        await this.updateDB(network, sha3(payload), step)
-      }
+      // Manually disabled this as its only needed if indexer is not running when this is processed
+      // if (response !== null && response.status === 1) {
+      //   await this.updateDB(network, sha3(payload), step)
+      // }
     }
-
-    // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
-    process.exit()
   }
 
   async updateDB(network: string, jobHash: string, step: Step): Promise<void> {
