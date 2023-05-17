@@ -62,13 +62,10 @@ const environmentSelectorHook: Hook<'init'> = async function ({id, argv}) {
       environment = argv[indexOfEnv + 1]
       argv.splice(indexOfEnv, 2)
 
-      if (environment === 'mainnet') {
-        this.log(color.yellow('WARNING: Mainnet is not yet supported.'))
-        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
-        return process.exit(0)
-      }
+      validateDisabledCommandsOnMainnet(environment, id, argv)
     }
 
+    // If environment is not set, warn the user and exit
     if (environment === undefined) {
       this.log(
         color.yellow(
@@ -79,8 +76,7 @@ const environmentSelectorHook: Hook<'init'> = async function ({id, argv}) {
       return process.exit(0)
     }
 
-    validateDisabledCommandsOnMainnet(environment, id, argv)
-
+    // Otherwise, set the environment
     if ((Object.values(Environment) as string[]).includes(environment)) {
       process.env.HOLOGRAPH_ENVIRONMENT = environment
     }
