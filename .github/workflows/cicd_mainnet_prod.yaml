@@ -180,6 +180,7 @@ jobs:
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           AVALANCHE_NETWORK: 'avax'
           ETHEREUM_NETWORK: 'eth'
+          OPTIMISM_NETWORK: 'optimism' # TODO <------------------
           POLYGON_NETWORK: 'matic'
           BINANCE_NETWORK: 'binanceSmartChain'
         with:
@@ -294,7 +295,7 @@ jobs:
           AVALANCHE_NETWORK: 'avax'
           POLYGON_NETWORK: 'matic'
           ETHEREUM_NETWORK: 'eth'
-          OPTIMISM_NETWORK: 'optimism'
+          OPTIMISM_NETWORK: 'optimism' # TODO <------------------
           BINANCE_NETWORK: 'binanceSmartChain'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
