@@ -52,21 +52,31 @@ const environmentSelectorHook: Hook<'init'> = async function ({id, argv}) {
   validateDisabledCommands(String(id))
 
   if (id !== 'config' && id !== undefined) {
+    const env: string | undefined = process.env.ABI_ENVIRONMENT || process.env.HOLOGRAPH_ENVIRONMENT || undefined
     const indexOfEnv = argv.indexOf('--env')
 
-    process.env.HOLOGRAPH_ENVIRONMENT = Environment.TESTNET
-
+    let environment
     if (indexOfEnv !== -1) {
-      const environment = argv[indexOfEnv + 1]
-      argv.splice(indexOfEnv, 2)
-
+      environment = argv[indexOfEnv + 1]
+      argv.splice(indexOfEnv, 2) // remove --env and the value from args
       validateDisabledCommandsOnMainnet(environment, id, argv)
+    }
 
-      if ((Object.values(Environment) as string[]).includes(environment)) {
-        process.env.HOLOGRAPH_ENVIRONMENT = environment
-      } else {
-        this.log(color.yellow('WARNING: Environment not identified. Using "testnet"...'))
-      }
+    // If HOLOGRAPH_ENVIRONMENT is set, use or prefer it
+    if (env !== undefined) {
+      environment = env
+    }
+
+    // If environment is not set, warn the user and exit
+    if (environment === undefined) {
+      this.log(color.yellow('WARNING: Environment not identified. Set it via the --env flag'))
+      // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+      return process.exit(0)
+    }
+
+    // Otherwise, set the environment
+    if ((Object.values(Environment) as string[]).includes(environment)) {
+      process.env.HOLOGRAPH_ENVIRONMENT = environment
     }
   }
 }
