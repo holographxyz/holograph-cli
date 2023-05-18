@@ -65,7 +65,7 @@ env:
   TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.91
   INDEXER_RELEASE_NAME: xanthos-indexer-testnet # format -> [release_name]-indexer-[env]
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.65
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.66
   OPERATOR_RELEASE_NAME: xanthos-operator-testnet # format -> [release_name]-operator-[env]
   #######################################
 

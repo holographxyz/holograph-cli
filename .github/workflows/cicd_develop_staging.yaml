@@ -40,7 +40,7 @@ env:
   STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.91
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.65
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.66
   OPERATOR_RELEASE_NAME: operator-dev # format -> [release_name]-operator-[env]
   #######################################
   #
