@@ -230,30 +230,30 @@ jobs:
             --set autoscaling.polygon.maxReplicas=1 \
             --set autoscaling.binance.maxReplicas=1 \
             \
-            --set resources.ethereum.limits.cpu=2096m \
-            --set resources.ethereum.limits.memory=4Gi \
-            --set resources.ethereum.requests.cpu=2048m \
-            --set resources.ethereum.requests.memory=4048Mi \
+            --set resources.ethereum.limits.cpu=1024m \
+            --set resources.ethereum.limits.memory=2048Mi \
+            --set resources.ethereum.requests.cpu=950m \
+            --set resources.ethereum.requests.memory=2000Mi \
             \
             --set resources.optimism.limits.cpu=100m \
-            --set resources.optimism.limits.memory=820Mi \
+            --set resources.optimism.limits.memory=1024Mi \
             --set resources.optimism.requests.cpu=100m \
-            --set resources.optimism.requests.memory=800Mi \
+            --set resources.optimism.requests.memory=1000Mi \
             \
-            --set resources.polygon.limits.cpu=2096m \
-            --set resources.polygon.limits.memory=4Gi \
-            --set resources.polygon.requests.cpu=2048m \
-            --set resources.polygon.requests.memory=4048Mi \
+            --set resources.polygon.limits.cpu=1024m \
+            --set resources.polygon.limits.memory=2048Mi \
+            --set resources.polygon.requests.cpu=950m \
+            --set resources.polygon.requests.memory=2000Mi \
             \
-            --set resources.avalanche.limits.cpu=2096m \
-            --set resources.avalanche.limits.memory=4Gi \
-            --set resources.avalanche.requests.cpu=2048m \
-            --set resources.avalanche.requests.memory=4048Mi \
+            --set resources.avalanche.limits.cpu=1024m \
+            --set resources.avalanche.limits.memory=2048Mi \
+            --set resources.avalanche.requests.cpu=950m \
+            --set resources.avalanche.requests.memory=2000Mi \
             \
-            --set resources.binance.limits.cpu=2096m \
-            --set resources.binance.limits.memory=4Gi \
-            --set resources.binance.requests.cpu=2048m \
-            --set resources.binance.requests.memory=4048Mi \
+            --set resources.binance.limits.cpu=1024m \
+            --set resources.binance.limits.memory=2048Mi \
+            --set resources.binance.requests.cpu=950m \
+            --set resources.binance.requests.memory=2000Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
