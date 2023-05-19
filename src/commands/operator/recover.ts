@@ -138,7 +138,7 @@ export default class Recover extends OperatorJobAwareCommand {
 
     if (transaction === null) {
       this.networkMonitor.structuredLog(network, 'Could not retrieve the transaction')
-      // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
+      // eslint-disable no-process-exit, unicorn/no-process-exit
       this.exit()
     } else {
       await this.processTransaction(network, transaction)
@@ -310,7 +310,7 @@ export default class Recover extends OperatorJobAwareCommand {
     process.exit()
   }
 
-  async updateDB(network: string, jobHash: string, step: Step) {
+  async updateDB(network: string, jobHash: string, step: Step): Promise<void> {
     if (this.apiService === undefined) {
       return
     }

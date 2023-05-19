@@ -1,11 +1,6 @@
 #!/usr/bin/env node
 
-require('dotenv').config();
-
-const env = process.env.ABI_ENVIRONMENT || process.env.HOLOGRAPH_ENVIRONMENT || '';
-if (env === '') {
-  process.env.HOLOGRAPH_ENVIRONMENT = 'experimental';
-}
+require('dotenv').config()
 
 const oclif = require('@oclif/core')
 
@@ -18,7 +13,7 @@ process.env.NODE_ENV = 'development'
 require('ts-node').register({project})
 
 // In dev mode, always show stack traces
-oclif.settings.debug = true;
+oclif.settings.debug = true
 
 // Start the CLI
 oclif.run().then(oclif.flush).catch(oclif.Errors.handle)

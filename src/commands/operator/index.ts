@@ -18,6 +18,8 @@ import {BlockHeightProcessType, Logger} from '../../types/api'
 import ApiService from '../../services/api-service'
 import color from '@oclif/color'
 import {decodeAvailableOperatorJobEvent, decodeCrossChainMessageSentEvent, decodeLzEvent} from '../../events/events'
+import {shouldSync, syncFlag} from '../../flags/sync.flag'
+import {BlockHeightOptions, blockHeightFlag} from '../../flags/update-block-height.flag'
 
 /**
  * Operator
@@ -33,10 +35,6 @@ export default class Operator extends OperatorJobAwareCommand {
       options: Object.values(OperatorMode),
       char: 'm',
     }),
-    sync: Flags.boolean({
-      description: 'Start from last saved block position instead of latest block position',
-      default: false,
-    }),
     unsafePassword: Flags.string({
       description: 'Enter the plain text password for the wallet in the holograph cli config',
     }),
@@ -45,6 +43,8 @@ export default class Operator extends OperatorJobAwareCommand {
       char: 'h',
       required: false,
     }),
+    ...blockHeightFlag,
+    ...syncFlag,
     ...networksFlag,
     ...HealthCheck.flags,
   }
@@ -71,6 +71,7 @@ export default class Operator extends OperatorJobAwareCommand {
     const healthCheckPort = flags.healthCheckPort
     const syncFlag = flags.sync
     const unsafePassword = flags.unsafePassword
+    const updateBlockHeight = flags.updateBlockHeight
 
     this.operatorMode =
       OperatorMode[
@@ -92,35 +93,35 @@ export default class Operator extends OperatorJobAwareCommand {
     this.environment = environment
     this.log('User configurations loaded.')
 
-    if (flags.host === undefined) {
-      this.log(`Using config file for block height track ...`)
-    } else if (this.environment === Environment.localhost || this.environment === Environment.experimental) {
-      this.log(`Skipping API authentication for ${Environment[this.environment]} environment`)
-    } else {
-      this.log(`Using API for block height track ...`)
-      // Create API Service for GraphQL requests
-      try {
-        const logger: Logger = {
-          log: this.log,
-          warn: this.warn,
-          debug: this.debug,
-          error: this.error,
-          jsonEnabled: () => false,
+    if (flags.host !== undefined && updateBlockHeight !== undefined && updateBlockHeight === BlockHeightOptions.API) {
+      if (this.environment === Environment.experimental || this.environment === Environment.localhost) {
+        this.log(`Skipping API authentication for ${Environment[this.environment]} environment`)
+      } else {
+        this.log(`Using API for block height track ...`)
+        // Create API Service for GraphQL requests
+        try {
+          const logger: Logger = {
+            log: this.log,
+            warn: this.warn,
+            debug: this.debug,
+            error: this.error,
+            jsonEnabled: () => false,
+          }
+          this.apiService = new ApiService(flags.host, logger)
+          await this.apiService.operatorLogin()
+        } catch (error: any) {
+          this.log('Error: Failed to get Operator Token from API')
+          // NOTE: sample of how to do logs when in production mode
+          this.log(JSON.stringify({...error, stack: error.stack}))
+          this.exit()
         }
-        this.apiService = new ApiService(flags.host, logger)
-        await this.apiService.operatorLogin()
-      } catch (error: any) {
-        this.log('Error: Failed to get Operator Token from API')
-        // NOTE: sample of how to do logs when in production mode
-        this.log(JSON.stringify({...error, stack: error.stack}))
-        this.exit()
-      }
 
-      if (this.apiService === undefined) {
-        throw new Error('API service is not defined')
-      }
+        if (this.apiService === undefined) {
+          throw new Error('API service is not defined')
+        }
 
-      this.log(this.apiColor(`Successfully authenticated into API ${flags.host}`))
+        this.log(this.apiColor(`Successfully authenticated into API ${flags.host}`))
+      }
     }
 
     this.networkMonitor = new NetworkMonitor({
@@ -132,40 +133,34 @@ export default class Operator extends OperatorJobAwareCommand {
       userWallet,
       lastBlockFilename: 'operator-blocks.json',
       apiService: this.apiService,
+      BlockHeightOptions: updateBlockHeight as BlockHeightOptions,
     })
 
     this.jobsFile = path.join(this.config.configDir, this.networkMonitor.environment + '.operator-job-details.json')
 
-    // Load the last block height from the file
+    switch (updateBlockHeight) {
+      case BlockHeightOptions.API:
+        if (flags.host === undefined) {
+          this.error(`--blockHeight flag option API requires the --host flag`)
+        }
 
-    this.networkMonitor.latestBlockHeight =
-      this.apiService === undefined
-        ? await this.networkMonitor.loadLastBlocks(this.config.configDir)
-        : await this.networkMonitor.loadLastBlocksHeights(BlockHeightProcessType.OPERATOR)
-
-    // Check if the operator has previous missed blocks
-    let canSync = false
-    const lastBlockKeys: string[] = Object.keys(this.networkMonitor.latestBlockHeight)
-    for (let i = 0, l: number = lastBlockKeys.length; i < l; i++) {
-      if (this.networkMonitor.latestBlockHeight[lastBlockKeys[i]] > 0) {
-        canSync = true
+        this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocksHeights(
+          BlockHeightProcessType.OPERATOR,
+        )
         break
-      }
-    }
-
-    if (canSync && !syncFlag) {
-      const syncPrompt: any = await inquirer.prompt([
-        {
-          name: 'shouldSync',
-          message: 'Operator has previous (missed) blocks that can be synced. Would you like to sync?',
-          type: 'confirm',
-          default: true,
-        },
-      ])
-      if (syncPrompt.shouldSync === false) {
+      case BlockHeightOptions.FILE:
+        this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocks(this.config.configDir)
+        break
+      case BlockHeightOptions.DISABLE:
+        this.log(`Block height update is disable, it'll not be saved or updated anywhere`)
         this.networkMonitor.latestBlockHeight = {}
         this.networkMonitor.currentBlockHeight = {}
-      }
+        break
+    }
+
+    if ((await shouldSync(syncFlag, this.networkMonitor.latestBlockHeight)) === false) {
+      this.networkMonitor.latestBlockHeight = {}
+      this.networkMonitor.currentBlockHeight = {}
     }
 
     this.operatorStatus.address = userWallet.address.toLowerCase()
@@ -189,6 +184,8 @@ export default class Operator extends OperatorJobAwareCommand {
           this.operatorJobs[jobHash].jobDetails.startTimestamp,
         )
         // if job is still valid, it will stay in object, otherwise it will be removed
+        // Tags not passed in because they do not exist
+        // Maybe save tags with the job hash so we can pass it back in here
         await this.checkJobStatus(jobHash)
       }
     } else {
@@ -441,19 +438,20 @@ export default class Operator extends OperatorJobAwareCommand {
     // if success then pass back payload hash to remove it from list
     if (await this.executeJob(jobHash, tags)) {
       // check job status just in case
-      await this.checkJobStatus(jobHash)
+      await this.checkJobStatus(jobHash, tags)
       // job was a success
-      this.processOperatorJobs(network, jobHash)
+      this.processOperatorJobs(network, jobHash) // here the jobHash will be deleted
     } else {
       // check job status just in case
-      await this.checkJobStatus(jobHash)
+      await this.checkJobStatus(jobHash, tags)
       // job failed, gotta try again
       this.processOperatorJobs(network)
     }
   }
 
+  // This method is call to cycle through all operator jobs that were previously detected
   processOperatorJobs = (network: string, jobHash?: string): void => {
-    const tags: (string | number)[] = [this.networkMonitor.randomTag()]
+    // IF processOperatorJobs has a jobHash, delete it from this.operatorJobs? Why do this here? why not delete it before?
     if (jobHash !== undefined && jobHash !== '' && jobHash in this.operatorJobs) {
       delete this.operatorJobs[jobHash]
     }
@@ -499,6 +497,9 @@ export default class Operator extends OperatorJobAwareCommand {
       let foundCandidate = false
       for (const candidate of candidates) {
         if (BigNumber.from(candidate.gasPrice).gte(compareGas)) {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          const tags = this.operatorJobs[candidate.hash].tags ?? [this.networkMonitor.randomTag()]
           this.networkMonitor.structuredLog(network, `Sending job ${candidate.hash} for execution`, tags)
           // have a valid job to do right away
           this.processOperatorJob(network, candidate.hash, tags)
@@ -520,7 +521,7 @@ export default class Operator extends OperatorJobAwareCommand {
    */
   async executeJob(jobHash: string, tags: (string | number)[]): Promise<boolean> {
     // quickly check that job is still valid
-    await this.checkJobStatus(jobHash)
+    await this.checkJobStatus(jobHash, tags)
     if (jobHash in this.operatorJobs) {
       const job: OperatorJob = this.operatorJobs[jobHash]
       const network: string = job.network

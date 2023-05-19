@@ -20,8 +20,8 @@ env:
   MAINNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_MAINNET_OPERATOR_API_KEY }}
   MAINNET_HOLO_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_OPERATOR_MAINNET_OPERATOR_API_KEY}}
   #
-  MAINNET_HOLOGRAPH_INDEXER_HOST: 'http://uranus-holo-api.mainnet.svc.cluster.local:443'
-  MAINNET_HOLOGRAPH_OPERATOR_HOST: 'http://uranus-holo-api.mainnet.svc.cluster.local:443'
+  MAINNET_HOLOGRAPH_INDEXER_HOST: 'http://xanthos-holo-api.mainnet.svc.cluster.local:443'
+  MAINNET_HOLOGRAPH_OPERATOR_HOST: 'http://xanthos-holo-api.mainnet.svc.cluster.local:443'
   #
   MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.MAINNET_HOLO_INDEXER_PASSWORD }}
   MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.MAINNET_HOLO_OPERATOR_PASSWORD }}
@@ -40,7 +40,8 @@ env:
   indexer_mainnet_avalanche_rpc_url: ${{ secrets.INDEXER_MAINNET_AVALANCHE_RPC_URL }}
   indexer_mainnet_polygon_rpc_url: ${{ secrets.INDEXER_MAINNET_POLYGON_RPC_URL }}
   indexer_mainnet_ethereum_rpc_url: ${{ secrets.INDEXER_MAINNET_ETHEREUM_RPC_URL }}
-  indexer_mainnet_binance_rpc_url: ${{ secrets.INDEXER_MAINNET_BINANCE_RPC_URL }} #TODO <---------------
+  indexer_mainnet_optimism_rpc_url: ${{ secrets.INDEXER_MAINNET_OPTIMISM_RPC_URL }}
+  indexer_mainnet_binance_rpc_url: ${{ secrets.INDEXER_MAINNET_BINANCE_RPC_URL }}
   #
   indexer_mainnet_private_key: ${{ secrets.INDEXER_MAINNET_PRIVATE_KEY }}
   indexer_mainnet_address: ${{ secrets.INDEXER_MAINNET_ADDRESS }}
@@ -48,7 +49,8 @@ env:
   operator_mainnet_avalanche_rpc_url: ${{ secrets.OPERATOR_MAINNET_AVALANCHE_RPC_URL }}
   operator_mainnet_polygon_rpc_url: ${{ secrets.OPERATOR_MAINNET_POLYGON_RPC_URL }}
   operator_mainnet_ethereum_rpc_url: ${{ secrets.OPERATOR_MAINNET_ETHEREUM_RPC_URL }}
-  operator_mainnet_binance_rpc_url: ${{ secrets.OPERATOR_MAINNET_BINANCE_RPC_URL }} #TODO <-----------------
+  operator_mainnet_optimism_rpc_url: ${{ secrets.OPERATOR_MAINNET_OPTIMISM_RPC_URL }}
+  operator_mainnet_binance_rpc_url: ${{ secrets.OPERATOR_MAINNET_BINANCE_RPC_URL }}
   #
   operator_mainnet_private_key: ${{ secrets.OPERATOR_MAINNET_PRIVATE_KEY }}
   operator_mainnet_address: ${{ secrets.OPERATOR_MAINNET_ADDRESS }}
@@ -60,11 +62,11 @@ env:
   MAINNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/mainnet-indexer-processor'
 
   #######################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.86
-  INDEXER_RELEASE_NAME: uranus-indexer-mainnet # format -> [release_name]-indexer-[env]
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.91
+  INDEXER_RELEASE_NAME: xanthos-indexer-mainnet # format -> [release_name]-indexer-[env]
   #
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.64
-  OPERATOR_RELEASE_NAME: uranus-operator-mainnet # format -> [release_name]-operator-[env]
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.66
+  OPERATOR_RELEASE_NAME: xanthos-operator-mainnet # format -> [release_name]-operator-[env]
   #######################################
 
 ## notice: the trigger
@@ -175,8 +177,10 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'true'
+          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           AVALANCHE_NETWORK: 'avax'
           ETHEREUM_NETWORK: 'eth'
+          OPTIMISM_NETWORK: 'optimism' # TODO <------------------
           POLYGON_NETWORK: 'matic'
           BINANCE_NETWORK: 'binanceSmartChain'
         with:
@@ -200,14 +204,17 @@ jobs:
             \
             --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
             --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
+            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
             --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
             --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
             \
             --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.indexer_mainnet_avalanche_rpc_url }} \
             --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.indexer_mainnet_polygon_rpc_url }} \
             --set mainnet_rpc_config_values.ethereum_rpc_url=${{ env.indexer_mainnet_ethereum_rpc_url }} \
+            --set mainnet_rpc_config_values.optimism_rpc_url=${{ env.indexer_mainnet_optimism_rpc_url }} \
             --set mainnet_rpc_config_values.binance_rpc_url=${{ env.indexer_mainnet_binance_rpc_url }} \
             \
             --set mainnet_rpc_config_values.private_key=${{ env.indexer_mainnet_private_key }} \
@@ -223,25 +230,30 @@ jobs:
             --set autoscaling.polygon.maxReplicas=1 \
             --set autoscaling.binance.maxReplicas=1 \
             \
-            --set resources.ethereum.limits.cpu=450m \
-            --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=300m \
-            --set resources.ethereum.requests.memory=450Mi \
+            --set resources.ethereum.limits.cpu=1024m \
+            --set resources.ethereum.limits.memory=2048Mi \
+            --set resources.ethereum.requests.cpu=950m \
+            --set resources.ethereum.requests.memory=2000Mi \
             \
-            --set resources.polygon.limits.cpu=600m \
-            --set resources.polygon.limits.memory=600Mi \
-            --set resources.polygon.requests.cpu=500m \
-            --set resources.polygon.requests.memory=500Mi \
+            --set resources.optimism.limits.cpu=100m \
+            --set resources.optimism.limits.memory=1024Mi \
+            --set resources.optimism.requests.cpu=100m \
+            --set resources.optimism.requests.memory=1000Mi \
             \
-            --set resources.avalanche.limits.cpu=450m \
-            --set resources.avalanche.limits.memory=520Mi \
-            --set resources.avalanche.requests.cpu=300m \
-            --set resources.avalanche.requests.memory=450Mi \
+            --set resources.polygon.limits.cpu=1024m \
+            --set resources.polygon.limits.memory=2048Mi \
+            --set resources.polygon.requests.cpu=950m \
+            --set resources.polygon.requests.memory=2000Mi \
             \
-            --set resources.binance.limits.cpu=600m \
-            --set resources.binance.limits.memory=600Mi \
-            --set resources.binance.requests.cpu=500m \
-            --set resources.binance.requests.memory=500Mi \
+            --set resources.avalanche.limits.cpu=1024m \
+            --set resources.avalanche.limits.memory=2048Mi \
+            --set resources.avalanche.requests.cpu=950m \
+            --set resources.avalanche.requests.memory=2000Mi \
+            \
+            --set resources.binance.limits.cpu=1024m \
+            --set resources.binance.limits.memory=2048Mi \
+            --set resources.binance.requests.cpu=950m \
+            --set resources.binance.requests.memory=2000Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -279,9 +291,11 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'true'
+          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           AVALANCHE_NETWORK: 'avax'
           POLYGON_NETWORK: 'matic'
           ETHEREUM_NETWORK: 'eth'
+          OPTIMISM_NETWORK: 'optimism' # TODO <------------------
           BINANCE_NETWORK: 'binanceSmartChain'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
@@ -303,39 +317,47 @@ jobs:
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
             \
             --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
             --set POLYGON_NETWORK=$POLYGON_NETWORK \
             --set ETHEREUM_NETWORK=$ETHEREUM_NETWORK \
+            --set OPTIMISM_NETWORK=$OPTIMISM_NETWORK \
             --set BINANCE_NETWORK=$BINANCE_NETWORK \
             \
             --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.operator_mainnet_avalanche_rpc_url }} \
             --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.operator_mainnet_polygon_rpc_url }} \
             --set mainnet_rpc_config_values.ethereum_rpc_url=${{ env.operator_mainnet_ethereum_rpc_url }} \
+            --set mainnet_rpc_config_values.optimism_rpc_url=${{ env.operator_mainnet_optimism_rpc_url }} \
             --set mainnet_rpc_config_values.binance_rpc_url=${{ env.operator_mainnet_binance_rpc_url }} \
             \
             --set mainnet_rpc_config_values.private_key=${{ env.operator_mainnet_private_key }} \
             --set mainnet_rpc_config_values.address=${{ env.operator_mainnet_address }} \
             \
-            --set resources.ethereum.limits.cpu=350m \
+            --set resources.ethereum.limits.cpu=250m \
             --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=200m \
-            --set resources.ethereum.requests.memory=450Mi \
+            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.requests.memory=500Mi \
             \
-            --set resources.polygon.limits.cpu=220m \
+            --set resources.optimism.limits.cpu=250m \
+            --set resources.optimism.limits.memory=520Mi \
+            --set resources.optimism.requests.cpu=100m \
+            --set resources.optimism.requests.memory=500Mi \
+            \
+            --set resources.polygon.limits.cpu=100m \
             --set resources.polygon.limits.memory=300Mi \
-            --set resources.polygon.requests.cpu=200m \
+            --set resources.polygon.requests.cpu=100m \
             --set resources.polygon.requests.memory=200Mi \
             \
-            --set resources.avalanche.limits.cpu=150m \
+            --set resources.avalanche.limits.cpu=100m \
             --set resources.avalanche.limits.memory=300Mi \
             --set resources.avalanche.requests.cpu=100m \
             --set resources.avalanche.requests.memory=200Mi \
             \
-            --set resources.binance.limits.cpu=150m \
-            --set resources.binance.limits.memory=320Mi \
+            --set resources.binance.limits.cpu=250m \
+            --set resources.binance.limits.memory=820Mi \
             --set resources.binance.requests.cpu=100m \
-            --set resources.binance.requests.memory=300Mi \
+            --set resources.binance.requests.memory=800Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \

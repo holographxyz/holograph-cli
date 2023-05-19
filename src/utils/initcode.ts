@@ -8,6 +8,7 @@ export function generateMetadataRendererInitCode(description: string, imageURI: 
   return generateInitCode(['string', 'string', 'string'], [description, imageURI, animationURI])
 }
 
+/* eslint-disable-next-line max-params */
 export function generateHolographDropERC721InitCode(
   contractType: string, // HolographDropERC721
   registryAddress: string,
@@ -71,7 +72,7 @@ export function generateHolographERC721InitCode(
 //     collectionName, // string memory contractName
 //     collectionSymbol, // string memory contractSymbol
 //     royaltyBps, // uint16 contractBps
-//     allEventsEnabled(), // uint256 eventConfig -  all 32 bytes of f
+//     dropEventsEnabled(), // uint256 eventConfig - dropEventsEnabled
 //     false, // bool skipInit
 //     generateInitCode(
 //       ['bytes32', 'address', 'bytes'],

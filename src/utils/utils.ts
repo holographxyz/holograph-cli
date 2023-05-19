@@ -47,6 +47,10 @@ export const networkToChainId: Record<string, number> = {
   avalancheTestnet: 43_113,
   binanceSmartChain: 56,
   binanceSmartChainTestnet: 97,
+  optimismTestnetGoerli: 420,
+  optimism: 10,
+  arbitrumTestnetGoerli: 421_613,
+  arbitrum: 42_161,
 }
 
 export const NETWORK_COLORS: Record<string, string> = {
@@ -75,6 +79,10 @@ export const zeroAddress: string = '0x' + '00'.repeat(20)
 
 export function allEventsEnabled(): string {
   return '0x' + 'ff'.repeat(32)
+}
+
+export function dropEventsEnabled(): string {
+  return '0x0000000000000000000000000000000000000000000000000000000000065000'
 }
 
 export function remove0x(input: string): string {
@@ -171,7 +179,7 @@ export const utf8ToBytes32 = (str: string): string => {
 }
 
 // turns multi-line query into single line and removes extra spaces
-export const cleanRequest = (query: any) => query.replace(/\n+ /g, '').replace(/\s+ /g, ' ')
+export const cleanRequest = (query: string): string => query.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ')
 
 export function numericSort(a: number, b: number): number {
   return a - b
@@ -214,4 +222,20 @@ export function generateHashedName(name: string): string {
   const asciiHex = web3.utils.asciiToHex(name).substring(2) // remove '0x' prefix
   const paddedHex = asciiHex.padStart(64, '0')
   return `0x${paddedHex}`
+}
+
+export function safeStringify(obj: any, indent = 2) {
+  let cache: any[] = []
+  const retVal = JSON.stringify(
+    obj,
+    (key, value) =>
+      typeof value === 'object' && value !== null
+        ? cache.includes(value)
+          ? undefined // Duplicate reference found, discard key
+          : cache.push(value) && value // Store value in our collection
+        : value,
+    indent,
+  )
+  cache = null!
+  return retVal
 }
