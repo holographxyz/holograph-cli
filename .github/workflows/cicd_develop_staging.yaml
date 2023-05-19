@@ -214,7 +214,7 @@ jobs:
             \
             --set dev_rpc_config_values.private_key=${{ env.indexer_dev_private_key }} \
             --set dev_rpc_config_values.address=${{ env.indexer_dev_address }} \
-            --set testnet_rpc_config_values.version="beta3" \
+            --set dev_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
@@ -451,7 +451,7 @@ jobs:
             \
             --set dev_rpc_config_values.private_key=${{ env.indexer_dev_private_key }} \
             --set dev_rpc_config_values.address=${{ env.indexer_dev_address }} \
-            --set testnet_rpc_config_values.version="beta3" \
+            --set dev_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
