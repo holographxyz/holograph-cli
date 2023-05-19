@@ -243,9 +243,9 @@ jobs:
             --set resources.optimism.requests.memory=800Mi \
             \
             --set resources.polygon.limits.cpu=100m \
-            --set resources.polygon.limits.memory=1324Mi \
+            --set resources.polygon.limits.memory=820Mi \
             --set resources.polygon.requests.cpu=100m \
-            --set resources.polygon.requests.memory=1300Mi \
+            --set resources.polygon.requests.memory=800Mi \
             \
             --set resources.avalanche.limits.cpu=100m \
             --set resources.avalanche.limits.memory=820Mi \
@@ -337,27 +337,27 @@ jobs:
             --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
             \
             --set resources.ethereum.limits.cpu=100m \
-            --set resources.ethereum.limits.memory=850Mi \
+            --set resources.ethereum.limits.memory=550Mi \
             --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=800Mi \
+            --set resources.ethereum.requests.memory=500Mi \
             \
             --set resources.optimism.limits.cpu=100m \
-            --set resources.optimism.limits.memory=850Mi \
+            --set resources.optimism.limits.memory=550Mi \
             --set resources.optimism.requests.cpu=100m \
-            --set resources.optimism.requests.memory=800Mi \
+            --set resources.optimism.requests.memory=500Mi \
             \
             --set resources.polygon.limits.cpu=100m \
-            --set resources.polygon.limits.memory=520Mi \
+            --set resources.polygon.limits.memory=550Mi \
             --set resources.polygon.requests.cpu=100m \
             --set resources.polygon.requests.memory=500Mi \
             \
             --set resources.avalanche.limits.cpu=100m \
-            --set resources.avalanche.limits.memory=520Mi \
+            --set resources.avalanche.limits.memory=550Mi \
             --set resources.avalanche.requests.cpu=100m \
             --set resources.avalanche.requests.memory=500Mi \
             \
             --set resources.binance.limits.cpu=100m \
-            --set resources.binance.limits.memory=520Mi \
+            --set resources.binance.limits.memory=550Mi \
             --set resources.binance.requests.cpu=100m \
             --set resources.binance.requests.memory=500Mi \
             \
