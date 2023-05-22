@@ -326,7 +326,7 @@ export default class Recover extends OperatorJobAwareCommand {
         crossChainTransaction.sourceStatus !== TransactionStatus.COMPLETED ||
         crossChainTransaction.messageStatus !== TransactionStatus.COMPLETED
       ) {
-        this.networkMonitor.structuredLog(network, `Beaming is not completed in the DB...`)
+        this.networkMonitor.structuredLog(network, `Bridging is not completed in the DB...`)
 
         updatedCrossChainTransaction = crossChainTransaction
 
@@ -346,7 +346,7 @@ export default class Recover extends OperatorJobAwareCommand {
 
     if (updatedCrossChainTransaction !== undefined) {
       try {
-        this.networkMonitor.structuredLog(network, `Updating beaming in the DB...`)
+        this.networkMonitor.structuredLog(network, `Updating bridging in the DB...`)
 
         const rawResponse = await this.apiService.updateCrossChainTransactionStatus(updatedCrossChainTransaction)
 

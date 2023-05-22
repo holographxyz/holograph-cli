@@ -30,7 +30,7 @@ export type UpdateBridgedContract = (
 export type UpdateBridgedERC20 = (
   transaction: TransactionResponse,
   network: string,
-  erc20BeamInfo: BridgeInErc20Args | BridgeOutErc20Args,
+  erc20BridgeInfo: BridgeInErc20Args | BridgeOutErc20Args,
   tags: (string | number)[],
 ) => Promise<void>
 

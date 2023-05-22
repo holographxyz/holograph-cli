@@ -39,20 +39,20 @@ export default class BridgeNFT extends Command {
       required: false,
     }),
     tokenId: Flags.string({
-      description: 'The token ID of the NFT to beam',
+      description: 'The token ID of the NFT to bridge',
       parse: validateTokenIdInput,
       multiple: false,
       required: false,
     }),
     sourceNetwork: Flags.string({
-      description: 'The source network from which to beam',
+      description: 'The source network from which to bridge',
       parse: validateNetwork,
       options: supportedShortNetworks,
       multiple: false,
       required: false,
     }),
     destinationNetwork: Flags.string({
-      description: 'The destination network which to beam to',
+      description: 'The destination network which to bridge to',
       parse: validateNetwork,
       options: supportedShortNetworks,
       multiple: false,
@@ -100,19 +100,19 @@ export default class BridgeNFT extends Command {
     const sourceNetwork: string = await checkOptionFlag(
       supportedNetworksOptions,
       flags.sourceNetwork,
-      'Select the source network from which to beam',
+      'Select the source network from which to bridge',
     )
     const destinationNetwork: string = await checkOptionFlag(
       supportedNetworksOptions,
       flags.destinationNetwork,
-      'Select the destination network which to beam to',
+      'Select the destination network which to bridge to',
       sourceNetwork,
     )
     const collectionAddress: string = await checkContractAddressFlag(
       flags.collectionAddress,
       'Enter the address of the collection smart contract',
     )
-    const tokenId: string = await checkTokenIdFlag(flags.tokenId, 'Enter the token ID of the NFT to beam')
+    const tokenId: string = await checkTokenIdFlag(flags.tokenId, 'Enter the token ID of the NFT to bridge')
 
     this.networkMonitor = new NetworkMonitor({
       parent: this,
@@ -257,7 +257,7 @@ export default class BridgeNFT extends Command {
       this.exit()
     }
 
-    CliUx.ux.action.start('Making beam request...')
+    CliUx.ux.action.start('Making bridge request...')
     const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
       network: sourceNetwork,
       contract: this.networkMonitor.bridgeContract.connect(this.networkMonitor.providers[destinationNetwork]),
@@ -277,7 +277,7 @@ export default class BridgeNFT extends Command {
       }
 
       this.log(
-        `Cross-chain beaming from ${networks[sourceNetwork].shortKey} network, to ${networks[destinationNetwork].shortKey} network has started under job hash ${jobHash}`,
+        `Cross-chain bridging from ${networks[sourceNetwork].shortKey} network, to ${networks[destinationNetwork].shortKey} network has started under job hash ${jobHash}`,
       )
     }
 
