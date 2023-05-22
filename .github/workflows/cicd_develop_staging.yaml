@@ -548,30 +548,30 @@ jobs:
             --set autoscaling.enabled=false \
             --set replicaCount=0 \
             \
-            --set resources.ethereum.limits.cpu=100m \
+            --set resources.ethereum.limits.cpu=500m \
             --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=200Mi \
+            --set resources.ethereum.requests.cpu=500m \
+            --set resources.ethereum.requests.memory=500Mi \
             \
-            --set resources.optimism.limits.cpu=100m \
+            --set resources.optimism.limits.cpu=500m \
             --set resources.optimism.limits.memory=520Mi \
-            --set resources.optimism.requests.cpu=100m \
-            --set resources.optimism.requests.memory=200Mi \
+            --set resources.optimism.requests.cpu=500m \
+            --set resources.optimism.requests.memory=500Mi \
             \
-            --set resources.polygon.limits.cpu=100m \
-            --set resources.polygon.limits.memory=300Mi \
-            --set resources.polygon.requests.cpu=100m \
-            --set resources.polygon.requests.memory=170Mi \
+            --set resources.polygon.limits.cpu=500m \
+            --set resources.polygon.limits.memory=520Mi \
+            --set resources.polygon.requests.cpu=500m \
+            --set resources.polygon.requests.memory=500Mi \
             \
-            --set resources.avalanche.limits.cpu=100m \
-            --set resources.avalanche.limits.memory=300Mi \
-            --set resources.avalanche.requests.cpu=100m \
-            --set resources.avalanche.requests.memory=170Mi \
+            --set resources.avalanche.limits.cpu=500m \
+            --set resources.avalanche.limits.memory=520Mi \
+            --set resources.avalanche.requests.cpu=500m \
+            --set resources.avalanche.requests.memory=500Mi \
             \
-            --set resources.binance.limits.cpu=100m \
-            --set resources.binance.limits.memory=300Mi \
-            --set resources.binance.requests.cpu=100m \
-            --set resources.binance.requests.memory=170Mi \
+            --set resources.binance.limits.cpu=500m \
+            --set resources.binance.limits.memory=500Mi \
+            --set resources.binance.requests.cpu=500m \
+            --set resources.binance.requests.memory=520Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
