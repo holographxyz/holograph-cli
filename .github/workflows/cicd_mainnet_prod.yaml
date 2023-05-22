@@ -235,10 +235,10 @@ jobs:
             --set resources.ethereum.requests.cpu=950m \
             --set resources.ethereum.requests.memory=2000Mi \
             \
-            --set resources.optimism.limits.cpu=100m \
-            --set resources.optimism.limits.memory=1024Mi \
-            --set resources.optimism.requests.cpu=100m \
-            --set resources.optimism.requests.memory=1000Mi \
+            --set resources.optimism.limits.cpu=1024m \
+            --set resources.optimism.limits.memory=2048Mi \
+            --set resources.optimism.requests.cpu=950m \
+            --set resources.optimism.requests.memory=2000Mi \
             \
             --set resources.polygon.limits.cpu=1024m \
             --set resources.polygon.limits.memory=2048Mi \
