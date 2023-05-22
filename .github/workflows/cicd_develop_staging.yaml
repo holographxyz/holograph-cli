@@ -37,7 +37,7 @@ env:
   STG_COMMON_NAMESPACE: develop
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.91
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.93
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
   STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.66
@@ -400,7 +400,7 @@ jobs:
         env:
           RELEASE_NAME: dummy-${{ env.INDEXER_RELEASE_NAME }} # notice
           #
-          ENABLE_REPLAY: 'deactivated' # add a string like 123:345 if you wanna use it
+          ENABLE_REPLAY: 'undefined' # add a string like 123:345 if you wanna use it
           #
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
