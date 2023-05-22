@@ -2040,7 +2040,7 @@ export class NetworkMonitor {
     let result: T | null = null
 
     for (let i = 0; i < attempts; i++) {
-      this.structuredLog(network, `Calling ${func.name} attempt ${i + 1} of ${attempts}`, [])
+      this.debug(network, `Calling ${func.name} attempt ${i + 1} of ${attempts}`)
 
       try {
         result = await func()
