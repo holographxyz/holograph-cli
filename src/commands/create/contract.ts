@@ -157,7 +157,7 @@ export default class Contract extends Command {
         )
         break
 
-      case DeploymentType.deploymentConfig:
+      case DeploymentType.deploymentConfig: {
         // Read the files in the deployments directory
         const deploymentFiles = (await fs.readdir('./deployments')).filter(file => {
           return file.endsWith('.json')
@@ -177,8 +177,9 @@ export default class Contract extends Command {
         }
 
         break
+      }
 
-      case DeploymentType.createConfig:
+      case DeploymentType.createConfig: {
         chainType = await checkOptionFlag(
           supportedNetworksOptions,
           undefined,
@@ -392,6 +393,7 @@ export default class Contract extends Command {
         needToSign = true
 
         break
+      }
     }
 
     const targetNetwork: string = await checkOptionFlag(
@@ -521,11 +523,6 @@ export default class Contract extends Command {
 
           if (deploymentType !== DeploymentType.deploymentConfig && contractDeploymentFile === undefined) {
             // Write the file to the default location with a date
-            contractDeploymentFile = await checkStringFlag(
-              undefined,
-              'Enter the path and file where to save (ie ./contractDeployment.json)',
-            )
-            // contractDeploymentFile = 'contract-deployment-' + new Date().toISOString() + '.json
             contractDeploymentFile = `contract-deployment-${new Date().toISOString().replace(/:/g, '-')}.json`
           }
 
