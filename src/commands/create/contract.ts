@@ -158,9 +158,20 @@ export default class Contract extends Command {
         break
 
       case DeploymentType.deploymentConfig:
-        contractDeploymentFile = await checkStringFlag(flags.deploymentConfig, 'Enter the config file to use')
-        if (await fs.pathExists(contractDeploymentFile as string)) {
-          contractDeployment = (await fs.readJson(contractDeploymentFile as string)) as ContractDeployment
+        // Read the files in the deployments directory
+        const deploymentFiles = (await fs.readdir('./deployments')).filter(file => {
+          return file.endsWith('.json')
+        })
+        contractDeploymentFile = await checkOptionFlag(
+          deploymentFiles,
+          flags.deploymentConfig,
+          'Select the config file to use',
+        )
+
+        if (await fs.pathExists(`./deployments/${contractDeploymentFile}` as string)) {
+          contractDeployment = (await fs.readJson(
+            `./deployments/${contractDeploymentFile}` as string,
+          )) as ContractDeployment
         } else {
           throw new Error('The file "' + (contractDeploymentFile as string) + '" does not exist.')
         }
@@ -509,16 +520,23 @@ export default class Contract extends Command {
           })
 
           if (deploymentType !== DeploymentType.deploymentConfig && contractDeploymentFile === undefined) {
+            // Write the file to the default location with a date
             contractDeploymentFile = await checkStringFlag(
               undefined,
               'Enter the path and file where to save (ie ./contractDeployment.json)',
             )
+            // contractDeploymentFile = 'contract-deployment-' + new Date().toISOString() + '.json
+            contractDeploymentFile = `contract-deployment-${new Date().toISOString().replace(/:/g, '-')}.json`
           }
 
           // NOTE: this will overwrite the file if it already exists (exclamation mark is okay due to check above)
-          await fs.ensureFile(contractDeploymentFile!)
-          await fs.writeFile(contractDeploymentFile!, JSON.stringify(contractDeployment, undefined, 2), 'utf8')
-          this.log('File successfully saved to "' + contractDeploymentFile + '"')
+          await fs.ensureFile(`./deployments/${contractDeploymentFile!}`)
+          await fs.writeFile(
+            `./deployments/${contractDeploymentFile!}`,
+            JSON.stringify(contractDeployment, undefined, 2),
+            'utf8',
+          )
+          this.log(`File successfully saved to ./deployments/${contractDeploymentFile}`)
         }
       }
 

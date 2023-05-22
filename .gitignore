@@ -62,4 +62,4 @@ config.json
 editor.bbprojectd
 
 # Deployments
-/deployments
+!deployments/.gitkeep 
