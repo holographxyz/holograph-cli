@@ -60,3 +60,6 @@ config.json
 
 # BBEdit
 editor.bbprojectd
+
+# Deployments
+/deployments

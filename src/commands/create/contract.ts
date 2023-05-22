@@ -515,7 +515,7 @@ export default class Contract extends Command {
             )
           }
 
-          // NOTE: this will overwrite the file if it already exists (exlaimation mart is okay due to check above)
+          // NOTE: this will overwrite the file if it already exists (exclamation mark is okay due to check above)
           await fs.ensureFile(contractDeploymentFile!)
           await fs.writeFile(contractDeploymentFile!, JSON.stringify(contractDeployment, undefined, 2), 'utf8')
           this.log('File successfully saved to "' + contractDeploymentFile + '"')

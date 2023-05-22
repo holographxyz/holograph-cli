@@ -112,7 +112,7 @@ export default class Analyze extends Command {
       multiple: false,
     }),
     updateApiUrl: Flags.string({
-      description: 'Update database cross-chain table with correct beam status',
+      description: 'Update database cross-chain table with correct bridge status',
     }),
   }
 

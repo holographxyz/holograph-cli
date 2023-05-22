@@ -174,7 +174,7 @@ export default class BridgeNFT extends Command {
     }
 
     CliUx.ux.action.start('Retrieving collection smart contract')
-    const collectionABI = abis.HolographDropERC721ABI
+    const collectionABI = abis.HolographERC721ABI
     const collection = new Contract(collectionAddress, collectionABI, this.networkMonitor.providers[sourceNetwork])
     this.log(`Collection address is ${collection.address}`)
 
