@@ -62,7 +62,7 @@ env:
   TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
 
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.91
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.93
   INDEXER_RELEASE_NAME: xanthos-indexer-testnet # format -> [release_name]-indexer-[env]
   #
   TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.66
@@ -407,7 +407,7 @@ jobs:
         env:
           RELEASE_NAME: dummy-${{ env.INDEXER_RELEASE_NAME }} # notice
           #
-          ENABLE_REPLAY: 'deactivated' # add a string like 123:345 if you wanna use it
+          ENABLE_REPLAY: 'undefined' # add a string like 123:345 if you wanna use it
           #
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
