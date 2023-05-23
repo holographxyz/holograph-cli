@@ -569,9 +569,9 @@ jobs:
             --set resources.avalanche.requests.memory=500Mi \
             \
             --set resources.binance.limits.cpu=500m \
-            --set resources.binance.limits.memory=500Mi \
+            --set resources.binance.limits.memory=520Mi \
             --set resources.binance.requests.cpu=500m \
-            --set resources.binance.requests.memory=520Mi \
+            --set resources.binance.requests.memory=500Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
