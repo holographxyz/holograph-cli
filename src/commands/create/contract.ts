@@ -42,6 +42,7 @@ import {SalesConfiguration} from '../../types/drops'
 import {decodeBridgeableContractDeployedEvent} from '../../events/events'
 import {getEnvironment} from '@holographxyz/environment'
 import {METADATA_RENDERER_ADDRESS} from '../../utils/contracts'
+import {filenameToDate} from '../../utils/utils'
 
 export default class Contract extends Command {
   static hidden = false
@@ -168,6 +169,12 @@ export default class Contract extends Command {
         const deploymentFiles = (await fs.readdir('./deployments')).filter(file => {
           return file.endsWith('.json')
         })
+
+        // Sort files in-place by date in descending order (latest first)
+        deploymentFiles.sort((a, b) => {
+          return filenameToDate(b) - filenameToDate(a)
+        })
+
         contractDeploymentFile = await checkOptionFlag(
           deploymentFiles,
           flags.deploymentConfig,
