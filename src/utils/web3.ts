@@ -103,14 +103,14 @@ export const OPEN_SEA_NFT_URL_PREFIX = {
 declare global {
   type ChainIds = keyof typeof CHAIN_NAMES
   type ChainNames = keyof typeof CHAIN_IDS
-  type SupportedChainIds = typeof SUPPORTED_CHAIN_IDS[number]
-  type SupportedMainnetChainIds = typeof SUPPORTED_MAINNET_CHAIN_IDS[number]
-  type SupportedTestnetChainIds = typeof SUPPORTED_TESTNET_CHAIN_IDS[number]
-  type SupportedChainNames = typeof SUPPORTED_CHAIN_NAMES[number]
-  type SupportedNetworkNames = typeof SUPPORTED_NETWORK_NAMES[number]
-  type DropdownChainIds = typeof DROPDOWN_CHAIN_IDS[number]
-  type DropdownChainNames = typeof DROPDOWN_CHAIN_NAMES[number]
-  type DisabledChainIds = typeof DISABLED_CHAIN_IDS[number]
+  type SupportedChainIds = (typeof SUPPORTED_CHAIN_IDS)[number]
+  type SupportedMainnetChainIds = (typeof SUPPORTED_MAINNET_CHAIN_IDS)[number]
+  type SupportedTestnetChainIds = (typeof SUPPORTED_TESTNET_CHAIN_IDS)[number]
+  type SupportedChainNames = (typeof SUPPORTED_CHAIN_NAMES)[number]
+  type SupportedNetworkNames = (typeof SUPPORTED_NETWORK_NAMES)[number]
+  type DropdownChainIds = (typeof DROPDOWN_CHAIN_IDS)[number]
+  type DropdownChainNames = (typeof DROPDOWN_CHAIN_NAMES)[number]
+  type DisabledChainIds = (typeof DISABLED_CHAIN_IDS)[number]
 }
 
 export const DEFAULT_CHAIN_ID = IS_MAINNET ? C.ethereum : C.goerli
