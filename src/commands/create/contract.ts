@@ -110,7 +110,6 @@ export default class Contract extends Command {
     await this.networkMonitor.run(true)
     CliUx.ux.action.stop()
 
-    let targetNetwork: string
     let chainId: string
     let salt: string
     let bytecodeType: BytecodeType
@@ -144,7 +143,7 @@ export default class Contract extends Command {
       'Select the type of deployment to use',
     )
 
-    targetNetwork = await checkOptionFlag(
+    const targetNetwork = await checkOptionFlag(
       supportedNetworksOptions,
       flags.targetNetwork,
       'Select the network on which the contract will be deployed',
