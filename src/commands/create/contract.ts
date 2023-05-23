@@ -110,7 +110,7 @@ export default class Contract extends Command {
     await this.networkMonitor.run(true)
     CliUx.ux.action.stop()
 
-    let chainType: string
+    let targetNetwork: string
     let chainId: string
     let salt: string
     let bytecodeType: BytecodeType
@@ -144,12 +144,19 @@ export default class Contract extends Command {
       'Select the type of deployment to use',
     )
 
+    targetNetwork = await checkOptionFlag(
+      supportedNetworksOptions,
+      flags.targetNetwork,
+      'Select the network on which the contract will be deployed',
+      txNetwork,
+    )
+
     switch (deploymentType) {
       case DeploymentType.deployedTx:
         txNetwork = await checkOptionFlag(
           supportedNetworksOptions,
           flags.txNetwork,
-          'Select the network on which the transaction was executed',
+          'Select the network on which the previous deployment transaction was executed',
         )
         tx = await checkTransactionHashFlag(
           flags.tx,
@@ -180,13 +187,7 @@ export default class Contract extends Command {
       }
 
       case DeploymentType.createConfig: {
-        chainType = await checkOptionFlag(
-          supportedNetworksOptions,
-          undefined,
-          'Select the primary network of the contract (does not prepend chainId to tokenIds)',
-        )
-
-        chainId = '0x' + networks[chainType].holographId.toString(16).padStart(8, '0')
+        chainId = '0x' + networks[targetNetwork].holographId.toString(16).padStart(8, '0')
         contractDeployment.deploymentConfig.config.chainType = chainId
         salt =
           '0x' +
@@ -392,13 +393,6 @@ export default class Contract extends Command {
         break
       }
     }
-
-    const targetNetwork: string = await checkOptionFlag(
-      supportedNetworksOptions,
-      flags.targetNetwork,
-      'Select the network on which the contract will be executed',
-      txNetwork,
-    )
 
     if (needToSign) {
       sig = await this.networkMonitor.wallets[targetNetwork].signMessage(configHashBytes!)
