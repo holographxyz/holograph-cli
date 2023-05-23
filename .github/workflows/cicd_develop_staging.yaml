@@ -262,6 +262,10 @@ jobs:
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
             --set ingress.blue_green_deployment=false
+      - name: Pause for 60 seconds
+        shell: bash
+        run: |
+          sleep 60
       #
       #
       # NOTICE: --- OPERATOR ---
