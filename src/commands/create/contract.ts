@@ -313,10 +313,7 @@ export default class Contract extends Command {
             ])
             if (salesConfigPrompt.shouldContinue) {
               // Enter the sales config variables
-              const publicSalePrice: string = await checkStringFlag(
-                undefined,
-                'Enter the price of the drop in ether units',
-              )
+              const publicSalePrice: string = await checkStringFlag(undefined, 'Enter the price of the drop in USD')
               const maxSalePurchasePerAddress: number = await checkNumberFlag(
                 undefined,
                 'Enter the maximum number of editions a user can purchase',
@@ -334,7 +331,7 @@ export default class Contract extends Command {
               )
 
               const saleConfig: SalesConfiguration = {
-                publicSalePrice: ethers.utils.parseEther(publicSalePrice), // in ETH
+                publicSalePrice: ethers.utils.parseUnits(publicSalePrice, 6), // in USD
                 maxSalePurchasePerAddress: maxSalePurchasePerAddress, // in number of editions an address can purchase
                 publicSaleStart: publicSaleStart, // in unix time
                 publicSaleEnd: publicSaleEnd, // in unix time
