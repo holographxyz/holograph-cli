@@ -177,6 +177,7 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'true'
+          ENABLE_SYNC: 'true'
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           AVALANCHE_NETWORK: 'avax'
           ETHEREUM_NETWORK: 'eth'
@@ -199,6 +200,7 @@ jobs:
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set ENABLE_SYNC=$ENABLE_SYNC \
             --set HEALTHCHECK=$HEALTHCHECK \
             --set MODE=$MODE \
             \
@@ -235,10 +237,10 @@ jobs:
             --set resources.ethereum.requests.cpu=950m \
             --set resources.ethereum.requests.memory=2000Mi \
             \
-            --set resources.optimism.limits.cpu=100m \
-            --set resources.optimism.limits.memory=1024Mi \
-            --set resources.optimism.requests.cpu=100m \
-            --set resources.optimism.requests.memory=1000Mi \
+            --set resources.optimism.limits.cpu=1024m \
+            --set resources.optimism.limits.memory=2048Mi \
+            --set resources.optimism.requests.cpu=950m \
+            --set resources.optimism.requests.memory=2000Mi \
             \
             --set resources.polygon.limits.cpu=1024m \
             --set resources.polygon.limits.memory=2048Mi \
@@ -267,6 +269,10 @@ jobs:
             --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
             --set ingress.blue_green_deployment=false
+      - name: Pause for 60 seconds
+        shell: bash
+        run: |
+          sleep 60
       #
       #
       # NOTICE: --- OPERATOR ---
@@ -335,28 +341,28 @@ jobs:
             --set mainnet_rpc_config_values.address=${{ env.operator_mainnet_address }} \
             \
             --set resources.ethereum.limits.cpu=250m \
-            --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.limits.memory=550Mi \
+            --set resources.ethereum.requests.cpu=200m \
             --set resources.ethereum.requests.memory=500Mi \
             \
             --set resources.optimism.limits.cpu=250m \
-            --set resources.optimism.limits.memory=520Mi \
-            --set resources.optimism.requests.cpu=100m \
+            --set resources.optimism.limits.memory=550Mi \
+            --set resources.optimism.requests.cpu=200m \
             --set resources.optimism.requests.memory=500Mi \
             \
-            --set resources.polygon.limits.cpu=100m \
-            --set resources.polygon.limits.memory=300Mi \
-            --set resources.polygon.requests.cpu=100m \
-            --set resources.polygon.requests.memory=200Mi \
+            --set resources.polygon.limits.cpu=200m \
+            --set resources.polygon.limits.memory=550Mi \
+            --set resources.polygon.requests.cpu=200m \
+            --set resources.polygon.requests.memory=500Mi \
             \
-            --set resources.avalanche.limits.cpu=100m \
-            --set resources.avalanche.limits.memory=300Mi \
-            --set resources.avalanche.requests.cpu=100m \
-            --set resources.avalanche.requests.memory=200Mi \
+            --set resources.avalanche.limits.cpu=200m \
+            --set resources.avalanche.limits.memory=550Mi \
+            --set resources.avalanche.requests.cpu=200m \
+            --set resources.avalanche.requests.memory=500Mi \
             \
             --set resources.binance.limits.cpu=250m \
             --set resources.binance.limits.memory=820Mi \
-            --set resources.binance.requests.cpu=100m \
+            --set resources.binance.requests.cpu=200m \
             --set resources.binance.requests.memory=800Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
@@ -398,3 +404,186 @@ jobs:
             ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }}
             echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
             curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+
+      ######
+      - name: -> Deploy dummy INDEXER cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          RELEASE_NAME: dummy-${{ env.INDEXER_RELEASE_NAME }} # notice
+          #
+          ENABLE_REPLAY: 'undefined' # add a string like 123:345 if you wanna use it
+          #
+          ENABLE_DEBUG: 'true'
+          ENABLE_SYNC: 'true'
+          HEALTHCHECK: 'true'
+          MODE: 'auto'
+          ENABLE_UNSAFE: 'true'
+          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
+          AVALANCHE_NETWORK: 'avax'
+          ETHEREUM_NETWORK: 'eth'
+          OPTIMISM_NETWORK: 'optimism' # TODO <------------------
+          POLYGON_NETWORK: 'matic'
+          BINANCE_NETWORK: 'binanceSmartChain'
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            helm upgrade --install $RELEASE_NAME \
+            holo-indexer-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
+            -n ${{ env.MAINNET_COMMON_NAMESPACE }} \
+            \
+            --set image.repository=${{ env.ECR_REPOSITORY }} \
+            --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
+            --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
+            --set holo_indexer_password=${{ env.MAINNET_HOLO_INDEXER_PASSWORD }} \
+            --set HOLO_INDEXER_HOST=${{ env.MAINNET_HOLOGRAPH_INDEXER_HOST }} \
+            --set OPERATOR_API_KEY=${{ env.MAINNET_HOLO_INDEXER_OPERATOR_API_KEY }} \
+            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
+            \
+            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set ENABLE_SYNC=$ENABLE_SYNC \
+            --set HEALTHCHECK=$HEALTHCHECK \
+            --set MODE=$MODE \
+            \
+            --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
+            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
+            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
+            --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
+            --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
+            \
+            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            --set ENABLE_REPLAY="${ENABLE_REPLAY}" \
+            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
+            \
+            --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.indexer_mainnet_avalanche_rpc_url }} \
+            --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.indexer_mainnet_polygon_rpc_url }} \
+            --set mainnet_rpc_config_values.ethereum_rpc_url=${{ env.indexer_mainnet_ethereum_rpc_url }} \
+            --set mainnet_rpc_config_values.optimism_rpc_url=${{ env.indexer_mainnet_optimism_rpc_url }} \
+            --set mainnet_rpc_config_values.binance_rpc_url=${{ env.indexer_mainnet_binance_rpc_url }} \
+            \
+            --set mainnet_rpc_config_values.private_key=${{ env.indexer_mainnet_private_key }} \
+            --set mainnet_rpc_config_values.address=${{ env.indexer_mainnet_address }} \
+            --set mainnet_rpc_config_values.version="beta3" \
+            \
+            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.service=$RELEASE_NAME \
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
+            \
+            --set autoscaling.enabled=false \
+            --set replicaCount=0 \
+            \
+            --set resources.ethereum.limits.cpu=1024m \
+            --set resources.ethereum.limits.memory=2048Mi \
+            --set resources.ethereum.requests.cpu=950m \
+            --set resources.ethereum.requests.memory=2000Mi \
+            \
+            --set resources.optimism.limits.cpu=1024m \
+            --set resources.optimism.limits.memory=2048Mi \
+            --set resources.optimism.requests.cpu=950m \
+            --set resources.optimism.requests.memory=2000Mi \
+            \
+            --set resources.polygon.limits.cpu=1024m \
+            --set resources.polygon.limits.memory=2048Mi \
+            --set resources.polygon.requests.cpu=950m \
+            --set resources.polygon.requests.memory=2000Mi \
+            \
+            --set resources.avalanche.limits.cpu=1024m \
+            --set resources.avalanche.limits.memory=2048Mi \
+            --set resources.avalanche.requests.cpu=950m \
+            --set resources.avalanche.requests.memory=2000Mi \
+            \
+            --set resources.binance.limits.cpu=1024m \
+            --set resources.binance.limits.memory=2048Mi \
+            --set resources.binance.requests.cpu=950m \
+            --set resources.binance.requests.memory=2000Mi \
+            \
+            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
+            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
+            --set sqs.SQS_ENDPOINT=${{ env.MAINNET_SQS_ENDPOINT }} \
+            --set sqs.SQS_QUEUE_URL=${{ env.MAINNET_SQS_QUEUE_URL }} \
+            --set sqs.AWS_REGION=us-west-2
+
+      ######
+      - name: -> Deploy dummy OPERATOR cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          RELEASE_NAME: dummy-${{ env.OPERATOR_RELEASE_NAME }} # notice
+          #
+          ENABLE_DEBUG: 'true'
+          ENABLE_SYNC: 'true'
+          HEALTHCHECK: 'true'
+          MODE: 'auto'
+          ENABLE_UNSAFE: 'true'
+          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
+          AVALANCHE_NETWORK: 'avax'
+          POLYGON_NETWORK: 'matic'
+          ETHEREUM_NETWORK: 'eth'
+          OPTIMISM_NETWORK: 'optimism' # TODO <------------------
+          BINANCE_NETWORK: 'binanceSmartChain'
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            helm upgrade --install $RELEASE_NAME \
+            holo-operator-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
+            -n ${{ env.MAINNET_COMMON_NAMESPACE }} \
+            \
+            --set image.repository=${{ env.ECR_REPOSITORY }} \
+            --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
+            --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
+            --set holo_operator_password=${{ env.MAINNET_HOLO_OPERATOR_PASSWORD }} \
+            --set HOLO_OPERATOR_HOST=${{ env.MAINNET_HOLOGRAPH_OPERATOR_HOST }} \
+            --set OPERATOR_API_KEY=${{ env.MAINNET_HOLO_OPERATOR_OPERATOR_API_KEY }} \
+            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
+            \
+            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set ENABLE_SYNC=$ENABLE_SYNC \
+            --set HEALTHCHECK=$HEALTHCHECK \
+            --set MODE=$MODE \
+            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
+            \
+            --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
+            --set POLYGON_NETWORK=$POLYGON_NETWORK \
+            --set ETHEREUM_NETWORK=$ETHEREUM_NETWORK \
+            --set OPTIMISM_NETWORK=$OPTIMISM_NETWORK \
+            --set BINANCE_NETWORK=$BINANCE_NETWORK \
+            \
+            --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.operator_mainnet_avalanche_rpc_url }} \
+            --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.operator_mainnet_polygon_rpc_url }} \
+            --set mainnet_rpc_config_values.ethereum_rpc_url=${{ env.operator_mainnet_ethereum_rpc_url }} \
+            --set mainnet_rpc_config_values.optimism_rpc_url=${{ env.operator_mainnet_optimism_rpc_url }} \
+            --set mainnet_rpc_config_values.binance_rpc_url=${{ env.operator_mainnet_binance_rpc_url }} \
+            \
+            --set mainnet_rpc_config_values.private_key=${{ env.operator_mainnet_private_key }} \
+            --set mainnet_rpc_config_values.address=${{ env.operator_mainnet_address }} \
+            \
+            --set autoscaling.enabled=false \
+            --set replicaCount=0 \
+            \
+            --set resources.ethereum.limits.cpu=250m \
+            --set resources.ethereum.limits.memory=550Mi \
+            --set resources.ethereum.requests.cpu=200m \
+            --set resources.ethereum.requests.memory=500Mi \
+            \
+            --set resources.optimism.limits.cpu=250m \
+            --set resources.optimism.limits.memory=550Mi \
+            --set resources.optimism.requests.cpu=200m \
+            --set resources.optimism.requests.memory=500Mi \
+            \
+            --set resources.polygon.limits.cpu=200m \
+            --set resources.polygon.limits.memory=550Mi \
+            --set resources.polygon.requests.cpu=200m \
+            --set resources.polygon.requests.memory=500Mi \
+            \
+            --set resources.avalanche.limits.cpu=200m \
+            --set resources.avalanche.limits.memory=550Mi \
+            --set resources.avalanche.requests.cpu=200m \
+            --set resources.avalanche.requests.memory=500Mi \
+            \
+            --set resources.binance.limits.cpu=250m \
+            --set resources.binance.limits.memory=820Mi \
+            --set resources.binance.requests.cpu=200m \
+            --set resources.binance.requests.memory=800Mi \
+            \
+            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.service=$RELEASE_NAME \
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }}

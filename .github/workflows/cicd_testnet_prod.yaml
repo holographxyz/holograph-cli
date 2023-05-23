@@ -62,7 +62,7 @@ env:
   TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
 
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.91
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.93
   INDEXER_RELEASE_NAME: xanthos-indexer-testnet # format -> [release_name]-indexer-[env]
   #
   TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.66
@@ -232,29 +232,29 @@ jobs:
             --set autoscaling.polygon.maxReplicas=1 \
             --set autoscaling.binance.maxReplicas=1 \
             \
-            --set resources.ethereum.limits.cpu=100m \
+            --set resources.ethereum.limits.cpu=500m \
             --set resources.ethereum.limits.memory=820Mi \
-            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.requests.cpu=500m \
             --set resources.ethereum.requests.memory=800Mi \
             \
-            --set resources.optimism.limits.cpu=100m \
+            --set resources.optimism.limits.cpu=500m \
             --set resources.optimism.limits.memory=820Mi \
-            --set resources.optimism.requests.cpu=100m \
+            --set resources.optimism.requests.cpu=500m \
             --set resources.optimism.requests.memory=800Mi \
             \
-            --set resources.polygon.limits.cpu=100m \
+            --set resources.polygon.limits.cpu=500m \
             --set resources.polygon.limits.memory=820Mi \
-            --set resources.polygon.requests.cpu=100m \
+            --set resources.polygon.requests.cpu=500m \
             --set resources.polygon.requests.memory=800Mi \
             \
-            --set resources.avalanche.limits.cpu=100m \
+            --set resources.avalanche.limits.cpu=500m \
             --set resources.avalanche.limits.memory=820Mi \
-            --set resources.avalanche.requests.cpu=100m \
+            --set resources.avalanche.requests.cpu=500m \
             --set resources.avalanche.requests.memory=800Mi \
             \
-            --set resources.binance.limits.cpu=100m \
+            --set resources.binance.limits.cpu=500m \
             --set resources.binance.limits.memory=820Mi \
-            --set resources.binance.requests.cpu=100m \
+            --set resources.binance.requests.cpu=500m \
             --set resources.binance.requests.memory=800Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
@@ -269,6 +269,10 @@ jobs:
             --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
             --set ingress.blue_green_deployment=false
+      - name: Pause for 60 seconds
+        shell: bash
+        run: |
+          sleep 60
       #
       #
       # NOTICE: --- OPERATOR ---
@@ -407,7 +411,7 @@ jobs:
         env:
           RELEASE_NAME: dummy-${{ env.INDEXER_RELEASE_NAME }} # notice
           #
-          ENABLE_REPLAY: 'deactivated' # add a string like 123:345 if you wanna use it
+          ENABLE_REPLAY: 'undefined' # add a string like 123:345 if you wanna use it
           #
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'

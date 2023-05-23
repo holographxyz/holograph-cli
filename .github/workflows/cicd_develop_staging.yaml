@@ -37,7 +37,7 @@ env:
   STG_COMMON_NAMESPACE: develop
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.91
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.93
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
   STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.66
@@ -262,6 +262,10 @@ jobs:
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
             --set ingress.blue_green_deployment=false
+      - name: Pause for 60 seconds
+        shell: bash
+        run: |
+          sleep 60
       #
       #
       # NOTICE: --- OPERATOR ---
@@ -400,7 +404,7 @@ jobs:
         env:
           RELEASE_NAME: dummy-${{ env.INDEXER_RELEASE_NAME }} # notice
           #
-          ENABLE_REPLAY: 'deactivated' # add a string like 123:345 if you wanna use it
+          ENABLE_REPLAY: 'undefined' # add a string like 123:345 if you wanna use it
           #
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
@@ -548,30 +552,30 @@ jobs:
             --set autoscaling.enabled=false \
             --set replicaCount=0 \
             \
-            --set resources.ethereum.limits.cpu=100m \
+            --set resources.ethereum.limits.cpu=500m \
             --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=200Mi \
+            --set resources.ethereum.requests.cpu=500m \
+            --set resources.ethereum.requests.memory=500Mi \
             \
-            --set resources.optimism.limits.cpu=100m \
+            --set resources.optimism.limits.cpu=500m \
             --set resources.optimism.limits.memory=520Mi \
-            --set resources.optimism.requests.cpu=100m \
-            --set resources.optimism.requests.memory=200Mi \
+            --set resources.optimism.requests.cpu=500m \
+            --set resources.optimism.requests.memory=500Mi \
             \
-            --set resources.polygon.limits.cpu=100m \
-            --set resources.polygon.limits.memory=300Mi \
-            --set resources.polygon.requests.cpu=100m \
-            --set resources.polygon.requests.memory=170Mi \
+            --set resources.polygon.limits.cpu=500m \
+            --set resources.polygon.limits.memory=520Mi \
+            --set resources.polygon.requests.cpu=500m \
+            --set resources.polygon.requests.memory=500Mi \
             \
-            --set resources.avalanche.limits.cpu=100m \
-            --set resources.avalanche.limits.memory=300Mi \
-            --set resources.avalanche.requests.cpu=100m \
-            --set resources.avalanche.requests.memory=170Mi \
+            --set resources.avalanche.limits.cpu=500m \
+            --set resources.avalanche.limits.memory=520Mi \
+            --set resources.avalanche.requests.cpu=500m \
+            --set resources.avalanche.requests.memory=500Mi \
             \
-            --set resources.binance.limits.cpu=100m \
-            --set resources.binance.limits.memory=300Mi \
-            --set resources.binance.requests.cpu=100m \
-            --set resources.binance.requests.memory=170Mi \
+            --set resources.binance.limits.cpu=500m \
+            --set resources.binance.limits.memory=520Mi \
+            --set resources.binance.requests.cpu=500m \
+            --set resources.binance.requests.memory=500Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \

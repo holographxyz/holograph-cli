@@ -2039,9 +2039,8 @@ export class NetworkMonitor {
   async retry<T>(network: string, func: () => Promise<T>, attempts = 10, interval = 5000): Promise<T | null> {
     let result: T | null = null
 
-    for (let i = 0; i < attempts; i++) {
-      this.structuredLog(network, `Calling ${func.name} attempt ${i + 1} of ${attempts}`, [])
-
+    let i = 0 // declare i outside of loop so it can be used later
+    for (i; i < attempts; i++) {
       try {
         result = await func()
         if (result !== null) {
@@ -2057,6 +2056,6 @@ export class NetworkMonitor {
     }
 
     // If we've exited the loop without returning, it means all attempts were unsuccessful.
-    throw new Error('Maximum attempts reached, function did not succeed.')
+    throw new Error(`Maximum attempts reached for ${func.name}, function did not succeed after ${attempts} attempts`)
   }
 }
