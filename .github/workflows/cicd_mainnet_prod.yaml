@@ -410,10 +410,10 @@ jobs:
           ENABLE_REPLAY: 'undefined' # add a string like 123:345 if you wanna use it
           #
           ENABLE_DEBUG: 'true'
+          ENABLE_SYNC: 'true'
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'true'
-          ENABLE_SYNC: 'true'
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           AVALANCHE_NETWORK: 'avax'
           ETHEREUM_NETWORK: 'eth'
@@ -464,10 +464,8 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
             \
-            --set autoscaling.avalanche.maxReplicas=1 \
-            --set autoscaling.ethereum.maxReplicas=1 \
-            --set autoscaling.polygon.maxReplicas=1 \
-            --set autoscaling.binance.maxReplicas=1 \
+            --set autoscaling.enabled=false \
+            --set replicaCount=0 \
             \
             --set resources.ethereum.limits.cpu=1024m \
             --set resources.ethereum.limits.memory=2048Mi \
@@ -498,14 +496,7 @@ jobs:
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
             --set sqs.SQS_ENDPOINT=${{ env.MAINNET_SQS_ENDPOINT }} \
             --set sqs.SQS_QUEUE_URL=${{ env.MAINNET_SQS_QUEUE_URL }} \
-            --set sqs.AWS_REGION=us-west-2 \
-            \
-            --values .github/values_for_prod_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
-            --set ingress.blue_green_deployment=false
+            --set sqs.AWS_REGION=us-west-2
 
       ######
       - name: -> Deploy dummy OPERATOR cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
@@ -561,6 +552,9 @@ jobs:
             --set mainnet_rpc_config_values.private_key=${{ env.operator_mainnet_private_key }} \
             --set mainnet_rpc_config_values.address=${{ env.operator_mainnet_address }} \
             \
+            --set autoscaling.enabled=false \
+            --set replicaCount=0 \
+            \
             --set resources.ethereum.limits.cpu=250m \
             --set resources.ethereum.limits.memory=550Mi \
             --set resources.ethereum.requests.cpu=200m \
@@ -588,11 +582,4 @@ jobs:
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
-            --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
-            \
-            --values .github/values_for_prod_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-            --set ingress.blue_green_deployment=false
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }}
