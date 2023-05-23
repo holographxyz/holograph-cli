@@ -24,6 +24,7 @@ import {generateInitCode} from '../../utils/initcode'
 import {decodeCrossChainMessageSentEvent} from '../../events/events'
 import {getABIs} from '../../utils/contracts'
 import {getEnvironment} from '@holographxyz/environment'
+import {overrideToMinGasPrice} from '../../utils/web3'
 
 export default class BridgeNFT extends Command {
   static description = 'Bridge a Holographable NFT from one network to another.'
@@ -195,6 +196,7 @@ export default class BridgeNFT extends Command {
       [userWallet.address, userWallet.address, tokenId],
     )
 
+    // Use 10 million gas as base gas to estimate with
     const TESTGASLIMIT: BigNumber = BigNumber.from('10000000')
 
     let payload: BytesLike = await this.networkMonitor.bridgeContract
@@ -213,9 +215,17 @@ export default class BridgeNFT extends Command {
         .callStatic.jobEstimator(payload as string, {gasLimit: TESTGASLIMIT}),
     )
 
+    // we extract the most recent and most accurate gas prices for destination network
     const gasPricing: GasPricing = this.networkMonitor.gasPrices[destinationNetwork]
+
+    // get gas price based on eip-1559 support
     let gasPrice: BigNumber = gasPricing.isEip1559 ? gasPricing.maxFeePerGas! : gasPricing.gasPrice!
-    gasPrice = gasPrice.add(gasPrice.div(BigNumber.from('4')))
+
+    // add 50% overhead to accommodate gas spikes and testing
+    gasPrice = gasPrice.add(gasPrice.div(BigNumber.from('2')))
+
+    // override gas price to minimum if set
+    gasPrice = overrideToMinGasPrice(networks[destinationNetwork].chain as SupportedChainIds, gasPrice)
 
     payload = await this.networkMonitor.bridgeContract
       .connect(this.networkMonitor.providers[sourceNetwork])
@@ -233,11 +243,13 @@ export default class BridgeNFT extends Command {
       .connect(this.networkMonitor.providers[sourceNetwork])
       .callStatic.getMessageFee(networks[destinationNetwork].holographId, estimatedGas, gasPrice, payload)
     const total: BigNumber = fees[0].add(fees[1])
+
     estimatedGas = TESTGASLIMIT.sub(
       await this.networkMonitor.operatorContract
         .connect(this.networkMonitor.providers[destinationNetwork])
         .callStatic.jobEstimator(payload as string, {value: total, gasLimit: TESTGASLIMIT}),
     )
+
     this.log('hlg fee', formatUnits(fees[0], 'ether'), 'ether')
     this.log('lz fee', formatUnits(fees[1], 'ether'), 'ether')
     this.log('lz gasPrice', formatUnits(fees[2], 'gwei'), 'GWEI')
