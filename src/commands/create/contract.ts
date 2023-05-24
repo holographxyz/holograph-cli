@@ -6,9 +6,9 @@ import {BytesLike} from '@ethersproject/bytes'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {networks} from '@holographxyz/networks'
 
-import {BytecodeType, bytecodes, EditionsMetadataRenderer} from '../../utils/bytecodes'
+import {BytecodeType, bytecodes} from '../../utils/bytecodes'
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {web3, zeroAddress, remove0x, sha3} from '../../utils/utils'
+import {web3, zeroAddress, remove0x, sha3, dropEventsEnabled} from '../../utils/utils'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {
   ContractDeployment,
@@ -18,14 +18,8 @@ import {
   decodeDeploymentConfigInput,
 } from '../../utils/contract-deployment'
 import {Signature, strictECDSA} from '../../utils/signature'
+import {configureEvents} from '../../utils/holograph-contract-events'
 import {
-  HolographERC20Event,
-  HolographERC721Event,
-  allEventsEnabled,
-  configureEvents,
-} from '../../utils/holograph-contract-events'
-import {
-  validateBytes,
   checkBytecodeTypeFlag,
   checkDeploymentTypeFlag,
   checkNumberFlag,
@@ -35,7 +29,7 @@ import {
   checkTransactionHashFlag,
   checkUriTypeFlag,
 } from '../../utils/validation'
-import {ContractFactory, ethers} from 'ethers'
+import {ethers} from 'ethers'
 import {UriTypeIndex} from '../../utils/asset-deployment'
 import {
   generateHolographDropERC721InitCode,
@@ -46,17 +40,8 @@ import {
 
 import {SalesConfiguration} from '../../types/drops'
 import {decodeBridgeableContractDeployedEvent} from '../../events/events'
-import {getABIs} from '../../utils/contracts'
 import {getEnvironment} from '@holographxyz/environment'
-
-async function getCodeFromFile(prompt: string): Promise<string> {
-  const codeFile: string = await checkStringFlag(undefined, prompt)
-  if (await fs.pathExists(codeFile as string)) {
-    return validateBytes(await fs.readFile(codeFile, 'utf8'))
-  }
-
-  throw new Error('The file "' + codeFile + '" does not exist.')
-}
+import {METADATA_RENDERER_ADDRESS} from '../../utils/contracts'
 
 export default class Contract extends Command {
   static hidden = false
@@ -86,8 +71,6 @@ export default class Contract extends Command {
     const {flags} = await this.parse(Contract)
     this.log('User configurations loaded.')
 
-    const ENVIRONMENT = getEnvironment()
-    const abis = await getABIs(ENVIRONMENT)
     let configHash: BytesLike
     let tx!: string
     let txNetwork: string | undefined
@@ -131,19 +114,12 @@ export default class Contract extends Command {
     let chainId: string
     let salt: string
     let bytecodeType: BytecodeType
-    const contractTypes: string[] = Object.values(BytecodeType)
     let contractType = ''
     let contractTypeHash: string
     let byteCode: string
-    let eventConfig: string = allEventsEnabled()
+    let eventConfig: string = dropEventsEnabled()
     let sourceInitCode: string = generateInitCode(['bytes'], ['0x00'])
     let initCode: string = generateInitCode(['bytes'], [sourceInitCode])
-
-    let tokenName: string
-    let tokenSymbol: string
-    let domainSeperator: string
-    const domainVersion = '1'
-    let decimals: number
 
     let collectionName = ''
     let collectionSymbol = ''
@@ -159,6 +135,9 @@ export default class Contract extends Command {
     let sig: string
     let signature: Signature
     let needToSign = false
+
+    // Get the ENVIRONMENT
+    const ENVIRONMENT = getEnvironment()
 
     const deploymentType: DeploymentType = await checkDeploymentTypeFlag(
       flags.deploymentType,
@@ -208,76 +187,12 @@ export default class Contract extends Command {
         bytecodeType = await checkBytecodeTypeFlag(undefined, 'Select the bytecode type to deploy')
 
         // Select the contract type to deploy
-        switch (bytecodeType) {
-          case BytecodeType.Custom:
-            contractType = await checkOptionFlag(contractTypes, undefined, 'Select the contract type to create')
-            break
-          default:
-            contractType = bytecodeType.toString()
-            break
-        }
+        contractType = bytecodeType.toString()
 
         contractTypeHash = '0x' + web3.utils.asciiToHex(contractType).slice(2).padStart(64, '0')
-        contractDeployment.deploymentConfig.config.contractType = contractTypeHash
-        byteCode =
-          bytecodeType === BytecodeType.Custom
-            ? await getCodeFromFile(
-                'Provide the filename containing the hex encoded string of the bytecode you want to use',
-              )
-            : bytecodes[bytecodeType]
+        byteCode = bytecodes[bytecodeType]
 
         switch (contractType) {
-          case BytecodeType.SampleERC20:
-            tokenName = await checkStringFlag(undefined, 'Enter the token name to use')
-            tokenSymbol = await checkStringFlag(undefined, 'Enter the token symbol to use')
-            domainSeperator = tokenName
-            decimals = await checkNumberFlag(
-              undefined,
-              'Enter the number of decimals [0-18] to use. The recommended number is 18.',
-            )
-            if (decimals > 18 || decimals < 0) {
-              throw new Error('Invalid decimals was provided: ' + decimals.toString())
-            }
-
-            switch (bytecodeType) {
-              case BytecodeType.SampleERC20:
-                eventConfig = configureEvents([1, 2]) // [HolographERC20Event.bridgeIn, HolographERC20Event.bridgeOut]
-                sourceInitCode = generateInitCode(['address'], [userWallet.address])
-                break
-              case BytecodeType.Custom:
-                eventConfig = configureEvents(
-                  (
-                    await inquirer.prompt([
-                      {
-                        type: 'checkbox',
-                        message: 'Select the events to enable',
-                        name: 'erc20events',
-                        choices: HolographERC20Event,
-                      },
-                    ])
-                  ).erc20events,
-                )
-                sourceInitCode = await getCodeFromFile(
-                  'Provide the filename containing the hex encoded string of the initCode you want to use',
-                )
-                break
-            }
-
-            initCode = generateInitCode(
-              ['string', 'string', 'uint8', 'uint256', 'string', 'string', 'bool', 'bytes'],
-              [
-                tokenName, // string memory tokenName
-                tokenSymbol, // string memory tokenSymbol
-                decimals, // uint8 decimals
-                eventConfig, // uint256 eventConfig
-                domainSeperator,
-                domainVersion,
-                false, // bool skipInit
-                sourceInitCode,
-              ],
-            )
-            break
-
           case BytecodeType.HolographERC721:
             collectionName = await checkStringFlag(undefined, 'Enter the name of the collection')
             collectionSymbol = await checkStringFlag(undefined, 'Enter the collection symbol to use')
@@ -289,43 +204,23 @@ export default class Contract extends Command {
               throw new Error('Invalid royalty basis points was provided: ' + royaltyBps.toString())
             }
 
-            switch (bytecodeType) {
-              case BytecodeType.CxipERC721:
-                eventConfig = configureEvents([1, 2, 7]) // [HolographERC721Event.bridgeIn, HolographERC721Event.bridgeOut, HolographERC721Event.afterBurn]
-                sourceInitCode = generateInitCode(
-                  ['bytes32', 'address', 'bytes'],
-                  [
-                    '0x' + web3.utils.asciiToHex('CxipERC721').slice(2).padStart(64, '0'),
-                    await this.networkMonitor.registryContract.address,
-                    generateInitCode(['address'], [userWallet.address]),
-                  ],
-                )
-                break
+            break
 
-              case BytecodeType.SampleERC721:
-                eventConfig = configureEvents([1, 2, 7]) // [HolographERC721Event.bridgeIn, HolographERC721Event.bridgeOut, HolographERC721Event.afterBurn]
-                sourceInitCode = generateInitCode(['address'], [userWallet.address])
-                break
+          case BytecodeType.CxipERC721: {
+            // NOTE: Since the Drop contract is an extension of the HolographERC721 enforcer, the contract type must be updated accordingly
+            contractType = 'HolographERC721'
+            contractTypeHash = '0x' + web3.utils.asciiToHex(contractType).slice(2).padStart(64, '0')
+            contractDeployment.deploymentConfig.config.contractType = contractTypeHash
 
-              case BytecodeType.Custom:
-                eventConfig = configureEvents(
-                  (
-                    await inquirer.prompt([
-                      {
-                        type: 'checkbox',
-                        message: 'Select the events to enable',
-                        name: 'erc721events',
-                        choices: HolographERC721Event,
-                      },
-                    ])
-                  ).erc721events,
-                )
-                sourceInitCode = await getCodeFromFile(
-                  'Provide the filename containing the hex encoded string of the initCode you want to use',
-                )
-                break
-            }
-
+            eventConfig = configureEvents([1, 2, 7]) // [HolographERC721Event.bridgeIn, HolographERC721Event.bridgeOut, HolographERC721Event.afterBurn]
+            sourceInitCode = generateInitCode(
+              ['bytes32', 'address', 'bytes'],
+              [
+                '0x' + web3.utils.asciiToHex('CxipERC721').slice(2).padStart(64, '0'),
+                await this.networkMonitor.registryContract.address,
+                generateInitCode(['address'], [userWallet.address]),
+              ],
+            )
             initCode = generateInitCode(
               ['string', 'string', 'uint16', 'uint256', 'bool', 'bytes'],
               [
@@ -337,8 +232,8 @@ export default class Contract extends Command {
                 sourceInitCode,
               ],
             )
-
             break
+          }
 
           case BytecodeType.HolographDropERC721: {
             // NOTE: Since the Drop contract is an extension of the HolographERC721 enforcer, the contract type must be updated accordingly
@@ -440,20 +335,6 @@ export default class Contract extends Command {
               salesConfig = Object.values(saleConfig)
             }
 
-            // Connect wallet to the provider
-            const provider = this.networkMonitor.providers[chainType]
-            const account = userWallet.connect(provider)
-
-            // Deploy a metadata renderer contract
-            // TODO: this needs to be removed in the future and a reference to the deployed EditionsMetadataRendererProxy needs to be made here
-            const rendererFactory = new ContractFactory(
-              abis.EditionsMetadataRendererABI,
-              EditionsMetadataRenderer.bytecode,
-              account,
-            )
-            const metadataRenderer = await rendererFactory.deploy()
-            this.log(`Deployed metadata renderer contract at ${metadataRenderer.address}`)
-
             const metadataRendererInitCode = generateMetadataRendererInitCode(description, imageURI, animationURI)
             const holographDropERC721InitCode = generateHolographDropERC721InitCode(
               // eslint-disable-next-line unicorn/prefer-string-slice
@@ -467,7 +348,7 @@ export default class Contract extends Command {
               royaltyBps, // percentage of royalties in bps
               false, // enableOpenSeaRoyaltyRegistry
               salesConfig,
-              metadataRenderer.address, // metadataRenderer
+              METADATA_RENDERER_ADDRESS[ENVIRONMENT],
               metadataRendererInitCode, // metadataRendererInit
             )
 
@@ -475,7 +356,7 @@ export default class Contract extends Command {
               collectionName, // string memory contractName
               collectionSymbol, // string memory contractSymbol
               royaltyBps, // uint16 contractBps
-              allEventsEnabled(), // uint256 eventConfig -  all 32 bytes of f
+              dropEventsEnabled(), // uint256 eventConfig - encoded hash of the event config for drops
               false, // bool skipInit
               holographDropERC721InitCode,
             )

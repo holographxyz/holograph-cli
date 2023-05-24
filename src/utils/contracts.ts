@@ -48,6 +48,14 @@ export const CXIP_ERC721_ADDRESSES: {[key in Environment]: string} = {
   [Environment.mainnet]: '0x690f4b7e0a102047d442CA3FEcDbB024Cb6b1FC5',
 }
 
+export const METADATA_RENDERER_ADDRESS: {[key in Environment]: string} = {
+  [Environment.localhost]: '0x0000000000000000000000000000000000000000',
+  [Environment.experimental]: '0x0000000000000000000000000000000000000000',
+  [Environment.develop]: '0x6420ffC8390506BBC9d894f54b948Be2BE40128d',
+  [Environment.testnet]: '0x4d393Bd460B6Ba0957818e947364eA358600396b',
+  [Environment.mainnet]: '0x4d393Bd460B6Ba0957818e947364eA358600396b',
+}
+
 export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
   ethereum: '0x66A71Dcef29A0fFBDBE3c6a460a3B5BC225Cd675',
   ethereumTestnetGoerli: '0xbfD2135BFfbb0B5378b56643c2Df8a87552Bfa23',
@@ -57,4 +65,6 @@ export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
   avalanche: '0x3c2269811836af69497E5F486A85D7316753cf62',
   avalancheTestnet: '0x93f54D755A063cE7bB9e6Ac47Eccc8e33411d706',
   fantom: '0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7',
+  optimism: '0x3c2269811836af69497E5F486A85D7316753cf62',
+  optimismTestnetGoerli: '0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1',
 } as const

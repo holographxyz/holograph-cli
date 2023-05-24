@@ -176,10 +176,13 @@ export default class BridgeNFT extends Command {
     CliUx.ux.action.start('Retrieving collection smart contract')
     const collectionABI = abis.HolographDropERC721ABI
     const collection = new Contract(collectionAddress, collectionABI, this.networkMonitor.providers[sourceNetwork])
+    this.log(`Collection address is ${collection.address}`)
+
     CliUx.ux.action.stop()
 
     this.log(`tokenId is ${tokenId}`)
     CliUx.ux.action.start('Checking if token ID exists on ' + sourceNetwork + ' network.')
+
     const tokenExists: boolean = await collection.exists(tokenId)
     CliUx.ux.action.stop()
     if (!tokenExists) {
