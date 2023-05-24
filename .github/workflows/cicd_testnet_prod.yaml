@@ -233,9 +233,9 @@ jobs:
             --set autoscaling.binance.maxReplicas=1 \
             \
             --set resources.ethereum.limits.cpu=500m \
-            --set resources.ethereum.limits.memory=820Mi \
+            --set resources.ethereum.limits.memory=1520Mi \
             --set resources.ethereum.requests.cpu=500m \
-            --set resources.ethereum.requests.memory=800Mi \
+            --set resources.ethereum.requests.memory=1500Mi \
             \
             --set resources.optimism.limits.cpu=500m \
             --set resources.optimism.limits.memory=820Mi \
