@@ -1,0 +1,51 @@
+[
+  {
+    "inputs": [],
+    "name": "getReservesAndId",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "reserveX",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "reserveY",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "activeId",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "tokenX",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "tokenY",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]
