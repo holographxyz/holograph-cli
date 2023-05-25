@@ -550,7 +550,7 @@ export default class Operator extends OperatorJobAwareCommand {
           canFail: true,
           waitForReceipt: true,
           interval: 5000,
-          attempts: 5,
+          attempts: 30,
         })
         if (receipt !== null && receipt.status === 1) {
           delete this.operatorJobs[jobHash]
