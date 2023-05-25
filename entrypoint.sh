@@ -53,7 +53,7 @@ holograph config --fromFile $CONFIG_FILE
 # notice: run the specified app
 if [[ $HOLO_CLI_CMD == "operator" ]]
 then
-  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_OPERATOR_HOST --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD $ENABLE_UNSAFE --update-block-height $UPDATE_BLOCK_HEIGHT
+  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_OPERATOR_HOST --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD $ENABLE_UNSAFE --update-block-height $UPDATE_BLOCK_HEIGHT $ENABLE_REPLAY
 
 elif [[ $HOLO_CLI_CMD == "indexer" ]]
 then
