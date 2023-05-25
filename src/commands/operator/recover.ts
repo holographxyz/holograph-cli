@@ -7,8 +7,8 @@ import {TransactionDescription} from '@ethersproject/abi'
 import {networks, supportedNetworks} from '@holographxyz/networks'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
-import { NetworkMonitor, OperatorMode } from "../../utils/network-monitor";
-import { chainIdToNetwork, networkToChainId, sha3 } from "../../utils/utils";
+import {NetworkMonitor, OperatorMode} from '../../utils/network-monitor'
+import {chainIdToNetwork, networkToChainId, sha3} from '../../utils/utils'
 import {checkOptionFlag, checkTransactionHashFlag} from '../../utils/validation'
 import {OperatorJobAwareCommand} from '../../utils/operator-job'
 import {HealthCheck} from '../../base-commands/healthcheck'
@@ -43,16 +43,17 @@ export default class Recover extends OperatorJobAwareCommand {
     network: Flags.string({
       description: 'The network on which the transaction was executed',
       options: supportedNetworks,
-      dependsOn: ['tx']
+      dependsOn: ['tx'],
     }),
     tx: Flags.string({
       description: 'The hash of transaction that we want to attempt to execute',
-      dependsOn: ['network']
+      dependsOn: ['network'],
     }),
     file: Flags.string({
-     char: 'f',
-     description: 'JSON file path of incomplete jobs (ie "./incompleteJobs.json") in format [{ source_tx, source_chain_id}]',
-     exclusive: ['tx']
+      char: 'f',
+      description:
+        'JSON file path of incomplete jobs (ie "./incompleteJobs.json") in format [{ source_tx, source_chain_id}]',
+      exclusive: ['tx'],
     }),
     mode: Flags.string({
       description: 'The mode in which to run the operator',
@@ -77,11 +78,7 @@ export default class Recover extends OperatorJobAwareCommand {
   async run(): Promise<void> {
     this.log('Loading user configurations...')
 
-    const {userWallet, configFile} = await ensureConfigFileIsValid(
-      this.config.configDir,
-      undefined,
-      true,
-    )
+    const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
     this.log('User configurations loaded.')
 
     const {flags} = await this.parse(Recover)
@@ -93,7 +90,7 @@ export default class Recover extends OperatorJobAwareCommand {
           flags.mode,
           'Select the mode in which to run the operator',
         )) as keyof typeof OperatorMode
-        ]
+      ]
 
     this.log(`Operator mode: ${this.operatorMode}`)
 
@@ -149,7 +146,7 @@ export default class Recover extends OperatorJobAwareCommand {
 
     let txArray = []
     // If network and tx flags are provided, construct an array of one element
-    if(!!flags.network || !!flags.tx) {
+    if (Boolean(flags.network) || Boolean(flags.tx)) {
       const flagNetwork: string = await checkOptionFlag(
         supportedNetworks,
         flags.network,
@@ -161,8 +158,7 @@ export default class Recover extends OperatorJobAwareCommand {
         'Enter the hash of transaction from which to extract recovery data from',
       )
 
-      txArray = [{ sourceChainId: networkToChainId[flagNetwork], sourceTx: flagTx }]
-
+      txArray = [{sourceChainId: networkToChainId[flagNetwork], sourceTx: flagTx}]
     } else {
       if (!(await fs.pathExists(flags.file as string))) {
         this.error(`Problem reading ${flags.file}`)
@@ -171,7 +167,7 @@ export default class Recover extends OperatorJobAwareCommand {
       let incompleteJobs: IncompleteJobs[] = []
       try {
         incompleteJobs = (await fs.readJson(flags.file as string)) as IncompleteJobs[]
-        //TODO: add validation of the file
+        // TODO: add validation of the file
       } catch {
         this.error(`One or more lines are an invalid Incomplete jobs JSON object`)
       }
@@ -179,7 +175,7 @@ export default class Recover extends OperatorJobAwareCommand {
       txArray = incompleteJobs.map(item => {
         return {
           sourceChainId: item.source_chain_id,
-          sourceTx: item.source_tx
+          sourceTx: item.source_tx,
         }
       })
     }

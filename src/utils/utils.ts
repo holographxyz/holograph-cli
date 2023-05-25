@@ -55,10 +55,8 @@ export const networkToChainId: Record<string, number> = {
 
 // NOTE: This is an inverse map of networkToChainId
 export const chainIdToNetwork = (): Record<number, string> => {
-  const flipped = Object
-    .entries(networkToChainId)
-    .map(([key, value]) => [value, key]);
-  return Object.fromEntries(flipped);
+  const flipped = Object.entries(networkToChainId).map(([key, value]) => [value, key])
+  return Object.fromEntries(flipped)
 }
 
 export const NETWORK_COLORS: Record<string, string> = {
