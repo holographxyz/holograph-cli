@@ -62,7 +62,7 @@ env:
   MAINNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/mainnet-indexer-processor'
 
   #######################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.91
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.93
   INDEXER_RELEASE_NAME: xanthos-indexer-mainnet # format -> [release_name]-indexer-[env]
   #
   MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.66
@@ -181,7 +181,7 @@ jobs:
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           AVALANCHE_NETWORK: 'avax'
           ETHEREUM_NETWORK: 'eth'
-          OPTIMISM_NETWORK: 'optimism' # TODO <------------------
+          OPTIMISM_NETWORK: 'optimism'
           POLYGON_NETWORK: 'matic'
           BINANCE_NETWORK: 'binanceSmartChain'
         with:
@@ -301,7 +301,7 @@ jobs:
           AVALANCHE_NETWORK: 'avax'
           POLYGON_NETWORK: 'matic'
           ETHEREUM_NETWORK: 'eth'
-          OPTIMISM_NETWORK: 'optimism' # TODO <------------------
+          OPTIMISM_NETWORK: 'optimism'
           BINANCE_NETWORK: 'binanceSmartChain'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
