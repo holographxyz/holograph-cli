@@ -57,8 +57,14 @@ export const getExtendedBlockWithTransactions = async (
   provider: WebSocketProvider | JsonRpcProvider,
   blockNumber: number,
 ): Promise<ExtendedBlockWithTransactions | null> => {
-  const rawBlock: any = await provider.send('eth_getBlockByNumber', [blockNumber.hexify(null, true), true])
-  if (rawBlock === null) {
+  let rawBlock: any
+  try {
+    rawBlock = await provider.send('eth_getBlockByNumber', [blockNumber.hexify(null, true), true])
+    if (rawBlock === null) {
+      return null
+    }
+  } catch (error: any) {
+    console.log(`Error getting extended block ${blockNumber}: ${error.message}`)
     return null
   }
 

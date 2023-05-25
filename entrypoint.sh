@@ -29,12 +29,12 @@ else
   echo "HEALTHCHECK=${HEALTHCHECK}"
 fi
 
-if [[ $ENABLE_REPLAY != "" ]]
+if [[ $ENABLE_REPLAY == "undefined" ]]
 then
-  export ENABLE_REPLAY="--replay ${ENABLE_REPLAY}"
+  export ENABLE_REPLAY=""
   echo "ENABLE_REPLAY=${ENABLE_REPLAY}"
 else
-  export ENABLE_REPLAY=""
+  export ENABLE_REPLAY="--replay ${ENABLE_REPLAY}"
   echo "ENABLE_REPLAY=${ENABLE_REPLAY}"
 fi
 
