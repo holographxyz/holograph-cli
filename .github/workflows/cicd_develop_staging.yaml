@@ -221,6 +221,7 @@ jobs:
             --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }} \
             \
             --set autoscaling.enabled=false \
+            --set replicaCount=1 \
             \
             --set resources.ethereum.limits.memory=520Mi \
             --set resources.ethereum.requests.cpu=100m \
@@ -326,6 +327,7 @@ jobs:
             --set dev_rpc_config_values.address=${{ env.operator_dev_address }} \
             \
             --set autoscaling.enabled=false \
+            --set replicaCount=1 \
             \
             --set resources.ethereum.limits.cpu=100m \
             --set resources.ethereum.limits.memory=500Mi \
