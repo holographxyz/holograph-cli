@@ -223,24 +223,29 @@ jobs:
             --set autoscaling.enabled=false \
             --set replicaCount=1 \
             \
-            --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=500Mi \
+            --set resources.ethereum.limits.cpu=300m \
+            --set resources.ethereum.limits.memory=820Mi \
+            --set resources.ethereum.requests.cpu=300m \
+            --set resources.ethereum.requests.memory=800Mi \
             \
+            --set resources.optimism.limits.cpu=300m \
             --set resources.optimism.limits.memory=520Mi \
-            --set resources.optimism.requests.cpu=100m \
+            --set resources.optimism.requests.cpu=300m \
             --set resources.optimism.requests.memory=500Mi \
             \
+            --set resources.polygon.limits.cpu=300m \
             --set resources.polygon.limits.memory=520Mi \
-            --set resources.polygon.requests.cpu=100m \
+            --set resources.polygon.requests.cpu=300m \
             --set resources.polygon.requests.memory=500Mi \
             \
+            --set resources.avalanche.limits.cpu=300m \
             --set resources.avalanche.limits.memory=520Mi \
-            --set resources.avalanche.requests.cpu=100m \
+            --set resources.avalanche.requests.cpu=300m \
             --set resources.avalanche.requests.memory=500Mi \
             \
+            --set resources.binance.limits.cpu=300m \
             --set resources.binance.limits.memory=520Mi \
-            --set resources.binance.requests.cpu=100m \
+            --set resources.binance.requests.cpu=300m \
             --set resources.binance.requests.memory=500Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
@@ -330,9 +335,9 @@ jobs:
             --set replicaCount=1 \
             \
             --set resources.ethereum.limits.cpu=100m \
-            --set resources.ethereum.limits.memory=500Mi \
+            --set resources.ethereum.limits.memory=800Mi \
             --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=300Mi \
+            --set resources.ethereum.requests.memory=800Mi \
             \
             --set resources.optimism.limits.cpu=100m \
             --set resources.optimism.limits.memory=500Mi \
