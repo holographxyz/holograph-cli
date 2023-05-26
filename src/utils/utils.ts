@@ -230,7 +230,7 @@ export function generateHashedName(name: string): string {
   return `0x${paddedHex}`
 }
 
-export function safeStringify(obj: any, indent = 2) {
+export function safeStringify(obj: any, indent = 2): string {
   let cache: any[] = []
   const retVal = JSON.stringify(
     obj,

@@ -60,6 +60,10 @@ export default class Recover extends OperatorJobAwareCommand {
       options: Object.values(OperatorMode),
       char: 'm',
     }),
+    updateDB: Flags.boolean({
+      description: 'Update the DB with the status of the bridge that was being processed',
+      dependsOn: ['host'],
+    }),
     ...HealthCheck.flags,
   }
 
@@ -366,9 +370,9 @@ export default class Recover extends OperatorJobAwareCommand {
       })
 
       // Manually disabled this as its only needed if indexer is not running when this is processed
-      // if (response !== null && response.status === 1) {
-      //   await this.updateDB(network, sha3(payload), step)
-      // }
+      if (response !== null && response.status === 1 && this.updateDB) {
+        await this.updateDB(network, sha3(payload), step)
+      }
     }
   }
 
