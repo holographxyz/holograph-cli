@@ -60,7 +60,7 @@ export default class Recover extends OperatorJobAwareCommand {
       options: Object.values(OperatorMode),
       char: 'm',
     }),
-    updateDB: Flags.boolean({
+    'update-db': Flags.boolean({
       description: 'Update the DB with the status of the bridge that was being processed',
       dependsOn: ['host'],
     }),
