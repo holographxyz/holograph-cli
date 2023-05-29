@@ -46,6 +46,12 @@ else
   export ENABLE_UNSAFE=""
   echo "ENABLE_UNSAFE=${ENABLE_UNSAFE}"
 fi
+#
+echo "UPDATE_BLOCK_HEIGHT=${UPDATE_BLOCK_HEIGHT}"
+echo "HOLOGRAPH_ENVIRONMENT=${HOLOGRAPH_ENVIRONMENT}"
+echo "NETWORK=${NETWORK}"
+echo "MODE=${MODE}"
+echo "UPDATE_BLOCK_HEIGHT=${UPDATE_BLOCK_HEIGHT}"
 
 # notice: configure
 holograph config --fromFile $CONFIG_FILE
@@ -53,11 +59,11 @@ holograph config --fromFile $CONFIG_FILE
 # notice: run the specified app
 if [[ $HOLO_CLI_CMD == "operator" ]]
 then
-  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_OPERATOR_HOST --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD $ENABLE_UNSAFE --update-block-height $UPDATE_BLOCK_HEIGHT $ENABLE_REPLAY
+  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_OPERATOR_HOST --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD --update-block-height $UPDATE_BLOCK_HEIGHT $ENABLE_REPLAY $ENABLE_UNSAFE
 
 elif [[ $HOLO_CLI_CMD == "indexer" ]]
 then
-  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_INDEXER_HOST $HEALTHCHECK $ENABLE_UNSAFE $ENABLE_SYNC --update-block-height $UPDATE_BLOCK_HEIGHT $ENABLE_REPLAY
+  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_INDEXER_HOST $HEALTHCHECK $ENABLE_SYNC --update-block-height $UPDATE_BLOCK_HEIGHT $ENABLE_REPLAY $ENABLE_UNSAFE
 
 else
   echo
