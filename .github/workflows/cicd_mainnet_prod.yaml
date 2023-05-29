@@ -340,10 +340,10 @@ jobs:
             --set mainnet_rpc_config_values.private_key=${{ env.operator_mainnet_private_key }} \
             --set mainnet_rpc_config_values.address=${{ env.operator_mainnet_address }} \
             \
-            --set resources.ethereum.limits.cpu=250m \
-            --set resources.ethereum.limits.memory=550Mi \
-            --set resources.ethereum.requests.cpu=200m \
-            --set resources.ethereum.requests.memory=500Mi \
+            --set resources.ethereum.limits.cpu=350m \
+            --set resources.ethereum.limits.memory=1024Mi \
+            --set resources.ethereum.requests.cpu=300m \
+            --set resources.ethereum.requests.memory=1000Mi \
             \
             --set resources.optimism.limits.cpu=250m \
             --set resources.optimism.limits.memory=550Mi \
