@@ -90,6 +90,25 @@ export function decodeLzPacketEvent(
     }
   }
 
+  const toFind2 = '0x803305930C1bbae396D03F496a7bF53Ad7fd4303'.toLowerCase().slice(2, 42)
+  if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+    for (let i = 0, l = receipt.logs.length; i < l; i++) {
+      const log = receipt.logs[i]
+      if (
+        log.topics[0] === targetEvents.LzPacket &&
+        (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
+      ) {
+        const packetPayload = iface.decodeEventLog(lzPacketEventFragment, log.data, log.topics)[0] as string
+        if (packetPayload.indexOf(toFind2) > 0) {
+          let index: number = packetPayload.indexOf(toFind2)
+          // address + bytes2 + address
+          index += 40 + 4 + 40
+          return ('0x' + packetPayload.slice(Math.max(0, index))).toLowerCase()
+        }
+      }
+    }
+  }
+
   return undefined
 }
 
