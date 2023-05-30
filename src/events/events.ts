@@ -90,6 +90,7 @@ export function decodeLzPacketEvent(
     }
   }
 
+  // This is a fallback for the legacy messaging module address that was updated for all networks except for optimism
   const toFind2 = '0x803305930C1bbae396D03F496a7bF53Ad7fd4303'.toLowerCase().slice(2, 42)
   if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
     for (let i = 0, l = receipt.logs.length; i < l; i++) {
