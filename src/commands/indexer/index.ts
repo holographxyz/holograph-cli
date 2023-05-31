@@ -39,7 +39,6 @@ import {
 import SqsService from '../../services/sqs-service'
 import {shouldSync, syncFlag} from '../../flags/sync.flag'
 import {BlockHeightOptions, blockHeightFlag} from '../../flags/update-block-height.flag'
-import handleTransferEvent from '../../handlers/sqs-indexer/handle-transfer-event'
 import handleTransferERC721Event from '../../handlers/sqs-indexer/handle-transfer-erc721-event'
 
 dotenv.config()
@@ -359,7 +358,29 @@ export default class Indexer extends HealthCheck {
               ]!.bloomEvent.decode<TransferERC721Event>(type, interestingTransaction.log!)
               //            log('transferERC721Event', transferERC721Event);
               if (transferERC721Event !== null) {
-                await this.handleTransferERC721Event(job, interestingTransaction, transferERC721Event, tags)
+                let isNewMint = false
+                if (transferERC721Event.from === zeroAddress) {
+                  isNewMint = true
+                  for (const log of interestingTransaction.allLogs!) {
+                    if (
+                      this.networkMonitor.operatorAddress === log.address.toLowerCase() &&
+                      this.bloomFilters[EventType.FinishedOperatorJob]!.bloomEvent.sigHash === log.topics[0]
+                    ) {
+                      isNewMint = false
+                      break
+                    }
+                  }
+                }
+
+                handleTransferERC721Event.call(
+                  this,
+                  this.networkMonitor,
+                  interestingTransaction.transaction,
+                  job.network,
+                  transferERC721Event,
+                  isNewMint,
+                  tags,
+                )
               }
             } catch (error: any) {
               this.networkMonitor.structuredLogError(
@@ -526,45 +547,6 @@ export default class Indexer extends HealthCheck {
     tags: (string | number)[] = [],
   ): Promise<void> {
     // this.networkMonitor.structuredLog(job.network, 'HandleTransferERC20Event has been called', tags)
-  }
-
-  async handleTransferERC721Event(
-    job: BlockJob,
-    interestingTransaction: InterestingTransaction,
-    event: TransferERC721Event,
-    tags: (string | number)[] = [],
-  ): Promise<void> {
-    let isNewMint = false
-    if (event.from === zeroAddress) {
-      isNewMint = true
-      for (const log of interestingTransaction.allLogs!) {
-        if (
-          this.networkMonitor.operatorAddress === log.address.toLowerCase() &&
-          this.bloomFilters[EventType.FinishedOperatorJob]!.bloomEvent.sigHash === log.topics[0]
-        ) {
-          isNewMint = false
-          break
-        }
-      }
-    }
-
-    await (isNewMint
-      ? handleTransferERC721Event.call(
-          this,
-          this.networkMonitor,
-          interestingTransaction.transaction,
-          job.network,
-          event,
-          tags,
-        )
-      : handleTransferEvent.call(
-          this,
-          this.networkMonitor,
-          interestingTransaction.transaction,
-          job.network,
-          event,
-          tags,
-        ))
   }
 
   async handleTransferSingleERC1155Event(
