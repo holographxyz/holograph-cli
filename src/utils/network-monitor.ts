@@ -430,7 +430,7 @@ export class NetworkMonitor {
     }
   }
 
-  validateReplayFlagInput(input: string) {
+  validateReplayFlagInput(input: string): boolean {
     if (/([1-9]\d*|0):([1-9]\d*)/.test(input)) {
       // expected type: 8987:8988
       const startAndEndBlock = input.split(':').map(int => Number(int))
