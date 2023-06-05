@@ -133,7 +133,7 @@ export default class Indexer extends HealthCheck {
       configFile,
       networks: flags.networks,
       debug: this.debug,
-      processTransactions: this.processTransactions,
+      processTransactions2: this.processTransactions,
       lastBlockFilename: 'indexer-blocks.json',
       replay: flags.replay,
       apiService: this.apiService,
@@ -186,7 +186,7 @@ export default class Indexer extends HealthCheck {
 
     CliUx.ux.action.start(`Starting indexer`)
     const continuous = flags.replay === '0' // If replay is set, run network monitor stops after catching up to the latest block
-    await this.networkMonitor.run(continuous, undefined, this.filterBuilder)
+    await this.networkMonitor.run(continuous, undefined, this.filterBuilder2)
     CliUx.ux.action.stop('🚀')
 
     // Start health check server on port 6000 or healthCheckPort
@@ -204,7 +204,7 @@ export default class Indexer extends HealthCheck {
   }
   /* eslint-enable @typescript-eslint/no-unused-vars */
 
-  async filterBuilder(): Promise<void> {
+  async filterBuilder2(): Promise<void> {
     this.bloomFilters = {
       [EventType.BridgeableContractDeployed]: buildFilter(
         BloomType.topic,
@@ -284,6 +284,21 @@ export default class Indexer extends HealthCheck {
     this.log('SQS service is reachable')
   }
 
+  async processTransactions(job: BlockJob, interestingTransactions: InterestingTransaction[]): Promise<void> {
+    if (interestingTransactions.length <= 0) {
+      return
+    }
+
+    // Map over the transactions to create an array of Promises
+    const transactionPromises = interestingTransactions.map(interestingTransaction =>
+      this.processSingleTransaction(interestingTransaction, job),
+    )
+
+    // Use Promise.all to execute all the Promises concurrently
+    await Promise.all(transactionPromises)
+  }
+
+  /* eslint-disable no-case-declarations, complexity */
   async processSingleTransaction(interestingTransaction: InterestingTransaction, job: BlockJob) {
     const {transaction} = interestingTransaction
     const tags: (string | number)[] = [transaction.blockNumber as number, this.networkMonitor.randomTag()]
@@ -584,148 +599,4 @@ export default class Indexer extends HealthCheck {
       )
     }
   }
-
-  async processTransactions(job: BlockJob, interestingTransactions: InterestingTransaction[]): Promise<void> {
-    if (interestingTransactions.length <= 0) {
-      return
-    }
-
-    // Map over the transactions to create an array of Promises
-    const transactionPromises = interestingTransactions.map(interestingTransaction =>
-      this.processSingleTransaction(interestingTransaction, job),
-    )
-
-    // Use Promise.all to execute all the Promises concurrently
-    await Promise.all(transactionPromises)
-  }
-
-  /* eslint-enable no-case-declarations */
-
-  /* eslint-disable @typescript-eslint/no-unused-vars */
-  /* eslint-disable @typescript-eslint/no-empty-function */
-  async handleBridgeableContractDeployedEvent(
-    job: BlockJob,
-    interestingTransaction: InterestingTransaction,
-    event: BridgeableContractDeployedEvent,
-    tags: (string | number)[] = [],
-  ): Promise<void> {
-    // add contract to holographable contracts cache
-    this.cachedContracts[event.contractAddress.toLowerCase()] = true
-    // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
-    await sqsHandleContractDeployedEvent.call(
-      this,
-      this.networkMonitor,
-      interestingTransaction.transaction,
-      job.network,
-      tags,
-    )
-  }
-
-  async handleTransferERC20Event(
-    job: BlockJob,
-    interestingTransaction: InterestingTransaction,
-    event: TransferERC20Event,
-    tags: (string | number)[] = [],
-  ): Promise<void> {
-    // this.networkMonitor.structuredLog(job.network, 'HandleTransferERC20Event has been called', tags)
-  }
-
-  async handleTransferERC721Event(
-    job: BlockJob,
-    interestingTransaction: InterestingTransaction,
-    event: TransferERC721Event,
-    tags: (string | number)[] = [],
-  ): Promise<void> {
-    let isNewMint = false
-    if (event.from === zeroAddress) {
-      isNewMint = true
-      for (const log of interestingTransaction.allLogs!) {
-        if (
-          this.networkMonitor.operatorAddress === log.address.toLowerCase() &&
-          this.bloomFilters[EventType.FinishedOperatorJob]!.bloomEvent.sigHash === log.topics[0]
-        ) {
-          isNewMint = false
-          break
-        }
-      }
-    }
-
-    await (isNewMint
-      ? handleTransferERC721Event.call(
-          this,
-          this.networkMonitor,
-          interestingTransaction.transaction,
-          job.network,
-          event,
-          isNewMint,
-          tags,
-        )
-      : handleTransferEvent.call(
-          this,
-          this.networkMonitor,
-          interestingTransaction.transaction,
-          job.network,
-          event,
-          tags,
-        ))
-  }
-
-  async handleTransferSingleERC1155Event(
-    job: BlockJob,
-    interestingTransaction: InterestingTransaction,
-    event: TransferSingleERC1155Event,
-    tags: (string | number)[] = [],
-  ): Promise<void> {}
-
-  async handleTransferBatchERC1155Event(
-    job: BlockJob,
-    interestingTransaction: InterestingTransaction,
-    event: TransferBatchERC1155Event,
-    tags: (string | number)[] = [],
-  ): Promise<void> {}
-
-  async handleCrossChainMessageSentEvent(
-    job: BlockJob,
-    interestingTransaction: InterestingTransaction,
-    event: CrossChainMessageSentEvent,
-    tags: (string | number)[] = [],
-  ): Promise<void> {
-    // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
-    await sqsHandleBridgeEvent.call(this, this.networkMonitor, interestingTransaction.transaction, job.network, tags)
-  }
-
-  async handleAvailableOperatorJobEvent(
-    job: BlockJob,
-    interestingTransaction: InterestingTransaction,
-    event: AvailableOperatorJobEvent,
-    tags: (string | number)[] = [],
-  ): Promise<void> {
-    // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
-    await sqsHandleAvailableOperatorJobEvent.call(
-      this,
-      this.networkMonitor,
-      interestingTransaction.transaction,
-      job.network,
-      tags,
-    )
-  }
-
-  async handleFinishedOperatorJobEvent(
-    job: BlockJob,
-    interestingTransaction: InterestingTransaction,
-    event: FinishedOperatorJobEvent,
-    tags: (string | number)[] = [],
-  ): Promise<void> {
-    // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
-    await sqsHandleBridgeEvent.call(this, this.networkMonitor, interestingTransaction.transaction, job.network, tags)
-  }
-
-  async handleFailedOperatorJobEvent(
-    job: BlockJob,
-    interestingTransaction: InterestingTransaction,
-    event: FailedOperatorJobEvent,
-    tags: (string | number)[] = [],
-  ): Promise<void> {}
-  /* eslint-enable @typescript-eslint/no-unused-vars */
-  /* eslint-enable @typescript-eslint/no-empty-function */
 }
