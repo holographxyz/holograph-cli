@@ -133,7 +133,7 @@ export default class Indexer extends HealthCheck {
       configFile,
       networks: flags.networks,
       debug: this.debug,
-      processTransactions2: this.processTransactions,
+      processTransactions2: this.processTransactions2,
       lastBlockFilename: 'indexer-blocks.json',
       replay: flags.replay,
       apiService: this.apiService,
@@ -284,7 +284,7 @@ export default class Indexer extends HealthCheck {
     this.log('SQS service is reachable')
   }
 
-  async processTransactions(job: BlockJob, interestingTransactions: InterestingTransaction[]): Promise<void> {
+  async processTransactions2(job: BlockJob, interestingTransactions: InterestingTransaction[]): Promise<void> {
     if (interestingTransactions.length <= 0) {
       return
     }
