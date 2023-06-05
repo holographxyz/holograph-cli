@@ -133,7 +133,7 @@ export default class Indexer extends HealthCheck {
       configFile,
       networks: flags.networks,
       debug: this.debug,
-      processTransactions2: this.processTransactions2,
+      processTransactions: this.processTransactions,
       lastBlockFilename: 'indexer-blocks.json',
       replay: flags.replay,
       apiService: this.apiService,
@@ -186,7 +186,7 @@ export default class Indexer extends HealthCheck {
 
     CliUx.ux.action.start(`Starting indexer`)
     const continuous = flags.replay === '0' // If replay is set, run network monitor stops after catching up to the latest block
-    await this.networkMonitor.run(continuous, undefined, this.filterBuilder2)
+    await this.networkMonitor.run(continuous, undefined, this.filterBuilder)
     CliUx.ux.action.stop('🚀')
 
     // Start health check server on port 6000 or healthCheckPort
@@ -204,7 +204,7 @@ export default class Indexer extends HealthCheck {
   }
   /* eslint-enable @typescript-eslint/no-unused-vars */
 
-  async filterBuilder2(): Promise<void> {
+  async filterBuilder(): Promise<void> {
     this.bloomFilters = {
       [EventType.BridgeableContractDeployed]: buildFilter(
         BloomType.topic,
@@ -284,34 +284,29 @@ export default class Indexer extends HealthCheck {
     this.log('SQS service is reachable')
   }
 
-  /* eslint-disable no-case-declarations, complexity */
-  async processTransactions2(job: BlockJob, interestingTransactions: InterestingTransaction[]): Promise<void> {
-    if (interestingTransactions.length <= 0) {
-      return
-    }
+  async processSingleTransaction(interestingTransaction: InterestingTransaction, job: BlockJob) {
+    const {transaction} = interestingTransaction
+    const tags: (string | number)[] = [transaction.blockNumber as number, this.networkMonitor.randomTag()]
+    const {bloomId} = interestingTransaction
+    let type: EventType = EventType[bloomId as keyof typeof EventType]
 
-    for (let i = 0, l: number = interestingTransactions.length; i < l; i++) {
-      const interestingTransaction: InterestingTransaction = interestingTransactions[i]
-      const transaction: TransactionResponse = interestingTransaction.transaction
-      const tags: (string | number)[] = []
-      tags.push(transaction.blockNumber as number, this.networkMonitor.randomTag())
-      this.networkMonitor.structuredLog(
-        job.network,
-        `Processing transaction ${transaction.hash} at block ${transaction.blockNumber}`,
-        tags,
-      )
-      let type: EventType = EventType[interestingTransaction.bloomId as keyof typeof EventType]
-      this.networkMonitor.structuredLog(
-        job.network,
-        `Identified this as a ${interestingTransaction.bloomId} event`,
-        tags,
-      )
+    // Log processing of transaction
+    this.networkMonitor.structuredLog(
+      job.network,
+      `Processing transaction ${transaction.hash} at block ${transaction.blockNumber}`,
+      tags,
+    )
+    this.networkMonitor.structuredLog(job.network, `Identified this as a ${bloomId} event`, tags)
+
+    // Depending on the event type, perform relevant actions
+    try {
       switch (type) {
-        case EventType.BridgeableContractDeployed:
+        case EventType.BridgeableContractDeployed: {
           try {
-            const bridgeableContractDeployedEvent: BridgeableContractDeployedEvent | null = this.bloomFilters[
-              type
-            ]!.bloomEvent.decode<BridgeableContractDeployedEvent>(type, interestingTransaction.log!)
+            const {log} = interestingTransaction
+            const {bloomEvent} = this.bloomFilters[type]!
+            const bridgeableContractDeployedEvent: BridgeableContractDeployedEvent | null =
+              bloomEvent.decode<BridgeableContractDeployedEvent>(type, log!)
 
             if (bridgeableContractDeployedEvent !== null) {
               // add contract to holographable contracts cache
@@ -334,10 +329,12 @@ export default class Indexer extends HealthCheck {
           }
 
           break
+        }
+
         case EventType.TransferERC20:
-        case EventType.TransferERC721:
+        case EventType.TransferERC721: {
           const testLog = interestingTransaction.log!
-          if (testLog.data === undefined || testLog.data === null || testLog.data === '' || testLog.data === '0x') {
+          if (!testLog.data || testLog.data === '0x') {
             type = EventType.TransferERC721
             // this is ERC721
             // *** START OF TEMP CODE ***
@@ -362,7 +359,7 @@ export default class Indexer extends HealthCheck {
               const transferERC721Event: TransferERC721Event | null = this.bloomFilters[
                 type
               ]!.bloomEvent.decode<TransferERC721Event>(type, interestingTransaction.log!)
-              //            log('transferERC721Event', transferERC721Event);
+              // log('transferERC721Event', transferERC721Event);
               if (transferERC721Event !== null) {
                 let isNewMint = false
                 if (transferERC721Event.from === zeroAddress) {
@@ -414,7 +411,9 @@ export default class Indexer extends HealthCheck {
           }
 
           break
-        case EventType.TransferSingleERC1155:
+        }
+
+        case EventType.TransferSingleERC1155: {
           const transferSingleERC1155Event: TransferSingleERC1155Event | null = this.bloomFilters[
             type
           ]!.bloomEvent.decode<TransferSingleERC1155Event>(type, interestingTransaction.log!)
@@ -429,7 +428,9 @@ export default class Indexer extends HealthCheck {
           }
 
           break
-        case EventType.TransferBatchERC1155:
+        }
+
+        case EventType.TransferBatchERC1155: {
           const transferBatchERC1155Event: TransferBatchERC1155Event | null = this.bloomFilters[
             type
           ]!.bloomEvent.decode<TransferBatchERC1155Event>(type, interestingTransaction.log!)
@@ -445,7 +446,9 @@ export default class Indexer extends HealthCheck {
           }
 
           break
-        case EventType.CrossChainMessageSent:
+        }
+
+        case EventType.CrossChainMessageSent: {
           try {
             const crossChainMessageSentEvent: CrossChainMessageSentEvent | null = this.bloomFilters[
               type
@@ -469,7 +472,9 @@ export default class Indexer extends HealthCheck {
           }
 
           break
-        case EventType.AvailableOperatorJob:
+        }
+
+        case EventType.AvailableOperatorJob: {
           try {
             const availableOperatorJobEvent: AvailableOperatorJobEvent | null = this.bloomFilters[
               type
@@ -493,7 +498,9 @@ export default class Indexer extends HealthCheck {
           }
 
           break
-        case EventType.FinishedOperatorJob:
+        }
+
+        case EventType.FinishedOperatorJob: {
           try {
             const finishedOperatorJobEvent: FinishedOperatorJobEvent | null = this.bloomFilters[
               type
@@ -517,7 +524,9 @@ export default class Indexer extends HealthCheck {
           }
 
           break
-        case EventType.FailedOperatorJob:
+        }
+
+        case EventType.FailedOperatorJob: {
           try {
             const failedOperatorJobEvent: FailedOperatorJobEvent | null = this.bloomFilters[
               type
@@ -541,7 +550,9 @@ export default class Indexer extends HealthCheck {
           }
 
           break
-        case EventType.TBD:
+        }
+
+        case EventType.TBD: {
           let filterResult: InterestingTransaction | undefined
           for (const filter of this.networkMonitor.bloomFilters) {
             filterResult = await this.networkMonitor.applyFilter(
@@ -552,17 +563,169 @@ export default class Indexer extends HealthCheck {
               job.network,
             )
             if (filterResult !== undefined) {
-              interestingTransactions[i] = filterResult as InterestingTransaction
-              i -= 1
-              break
+              // Return the filtered transaction to the caller
+              return filterResult
             }
           }
 
           break
-        default:
+        }
+
+        default: {
           this.networkMonitor.structuredLogError(job.network, `UNKNOWN EVENT`, tags)
           break
+        }
       }
+    } catch (error: any) {
+      this.networkMonitor.structuredLogError(
+        job.network,
+        this.errorColor(`Error processing transaction: `, error),
+        tags,
+      )
     }
   }
+
+  async processTransactions(job: BlockJob, interestingTransactions: InterestingTransaction[]): Promise<void> {
+    if (interestingTransactions.length <= 0) {
+      return
+    }
+
+    // Map over the transactions to create an array of Promises
+    const transactionPromises = interestingTransactions.map(interestingTransaction =>
+      this.processSingleTransaction(interestingTransaction, job),
+    )
+
+    // Use Promise.all to execute all the Promises concurrently
+    await Promise.all(transactionPromises)
+  }
+
+  /* eslint-enable no-case-declarations */
+
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+  /* eslint-disable @typescript-eslint/no-empty-function */
+  async handleBridgeableContractDeployedEvent(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: BridgeableContractDeployedEvent,
+    tags: (string | number)[] = [],
+  ): Promise<void> {
+    // add contract to holographable contracts cache
+    this.cachedContracts[event.contractAddress.toLowerCase()] = true
+    // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
+    await sqsHandleContractDeployedEvent.call(
+      this,
+      this.networkMonitor,
+      interestingTransaction.transaction,
+      job.network,
+      tags,
+    )
+  }
+
+  async handleTransferERC20Event(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: TransferERC20Event,
+    tags: (string | number)[] = [],
+  ): Promise<void> {
+    // this.networkMonitor.structuredLog(job.network, 'HandleTransferERC20Event has been called', tags)
+  }
+
+  async handleTransferERC721Event(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: TransferERC721Event,
+    tags: (string | number)[] = [],
+  ): Promise<void> {
+    let isNewMint = false
+    if (event.from === zeroAddress) {
+      isNewMint = true
+      for (const log of interestingTransaction.allLogs!) {
+        if (
+          this.networkMonitor.operatorAddress === log.address.toLowerCase() &&
+          this.bloomFilters[EventType.FinishedOperatorJob]!.bloomEvent.sigHash === log.topics[0]
+        ) {
+          isNewMint = false
+          break
+        }
+      }
+    }
+
+    await (isNewMint
+      ? handleTransferERC721Event.call(
+          this,
+          this.networkMonitor,
+          interestingTransaction.transaction,
+          job.network,
+          event,
+          isNewMint,
+          tags,
+        )
+      : handleTransferEvent.call(
+          this,
+          this.networkMonitor,
+          interestingTransaction.transaction,
+          job.network,
+          event,
+          tags,
+        ))
+  }
+
+  async handleTransferSingleERC1155Event(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: TransferSingleERC1155Event,
+    tags: (string | number)[] = [],
+  ): Promise<void> {}
+
+  async handleTransferBatchERC1155Event(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: TransferBatchERC1155Event,
+    tags: (string | number)[] = [],
+  ): Promise<void> {}
+
+  async handleCrossChainMessageSentEvent(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: CrossChainMessageSentEvent,
+    tags: (string | number)[] = [],
+  ): Promise<void> {
+    // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
+    await sqsHandleBridgeEvent.call(this, this.networkMonitor, interestingTransaction.transaction, job.network, tags)
+  }
+
+  async handleAvailableOperatorJobEvent(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: AvailableOperatorJobEvent,
+    tags: (string | number)[] = [],
+  ): Promise<void> {
+    // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
+    await sqsHandleAvailableOperatorJobEvent.call(
+      this,
+      this.networkMonitor,
+      interestingTransaction.transaction,
+      job.network,
+      tags,
+    )
+  }
+
+  async handleFinishedOperatorJobEvent(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: FinishedOperatorJobEvent,
+    tags: (string | number)[] = [],
+  ): Promise<void> {
+    // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
+    await sqsHandleBridgeEvent.call(this, this.networkMonitor, interestingTransaction.transaction, job.network, tags)
+  }
+
+  async handleFailedOperatorJobEvent(
+    job: BlockJob,
+    interestingTransaction: InterestingTransaction,
+    event: FailedOperatorJobEvent,
+    tags: (string | number)[] = [],
+  ): Promise<void> {}
+  /* eslint-enable @typescript-eslint/no-unused-vars */
+  /* eslint-enable @typescript-eslint/no-empty-function */
 }
