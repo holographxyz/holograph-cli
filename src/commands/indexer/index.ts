@@ -351,9 +351,11 @@ export default class Indexer extends HealthCheck {
           const testLog = interestingTransaction.log!
           if (!testLog.data || testLog.data === '0x') {
             type = EventType.TransferERC721
-            // this is ERC721
+            // This is ERC721
             // *** START OF TEMP CODE ***
-            // we are adding a temporary filter that skips transfer events inside of bridge-in and bridge-out transactions
+            // We are adding a temporary filter that skips transfer events inside of bridge-in and bridge-out transactions
+            // A bridge event contains a "TransferERC721" event. Because our process handles a whole event bridge event,
+            // instead of the sub events we have to dedup them. So we make sure that this "TransferERC721" is not part of a bridge event.
             let isPartOfBridgeTx = false
             for (const log of interestingTransaction.allLogs!) {
               if (
@@ -374,7 +376,6 @@ export default class Indexer extends HealthCheck {
               const transferERC721Event: TransferERC721Event | null = this.bloomFilters[
                 type
               ]!.bloomEvent.decode<TransferERC721Event>(type, interestingTransaction.log!)
-              // log('transferERC721Event', transferERC721Event);
               if (transferERC721Event !== null) {
                 let isNewMint = false
                 if (transferERC721Event.from === zeroAddress) {
@@ -390,7 +391,7 @@ export default class Indexer extends HealthCheck {
                   }
                 }
 
-                handleTransferERC721Event.call(
+                await handleTransferERC721Event.call(
                   this,
                   this.networkMonitor,
                   interestingTransaction.transaction,
@@ -414,7 +415,7 @@ export default class Indexer extends HealthCheck {
                 type
               ]!.bloomEvent.decode<TransferERC20Event>(type, interestingTransaction.log!)
               if (transferERC20Event !== null) {
-                // this.networkMonitor.structuredLog(job.network, 'HandleTransferERC20Event has been called', tags)
+                this.networkMonitor.structuredLog(job.network, 'HandleTransferERC20Event has been called', tags)
               }
             } catch (error: any) {
               this.networkMonitor.structuredLogError(
