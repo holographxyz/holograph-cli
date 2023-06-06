@@ -170,6 +170,18 @@ interface AbstractError extends Error {
   [key: string]: any
 }
 
+export type ExitCodeType = 0 | 'SIGINT' | 'SIGTERM'
+
+function clearTimers(
+  pingTimeout: NodeJS.Timeout | null,
+  keepAliveInterval: NodeJS.Timeout | null,
+  terminator: NodeJS.Timeout | null,
+): void {
+  if (pingTimeout) clearTimeout(pingTimeout)
+  if (keepAliveInterval) clearInterval(keepAliveInterval)
+  if (terminator) clearTimeout(terminator)
+}
+
 export const keepAlive = ({
   debug,
   websocket,
@@ -179,65 +191,20 @@ export const keepAlive = ({
 }: KeepAliveParams): void => {
   let pingTimeout: NodeJS.Timeout | null = null
   let keepAliveInterval: NodeJS.Timeout | null = null
-  let counter = 0
-  let errorCounter = 0
   let terminator: NodeJS.Timeout | null = null
-  const errorHandler: (err: ExtendedError) => void = (err: ExtendedError) => {
-    if (errorCounter === 0) {
-      errorCounter++
-      debug(`websocket error event triggered ${err.code} ${JSON.stringify(err.reason)}`)
-      if (keepAliveInterval) {
-        clearInterval(keepAliveInterval)
-      }
 
-      if (pingTimeout) {
-        clearTimeout(pingTimeout)
-      }
+  const errorHandler = (err: ExtendedError) => {
+    debug(`websocket error event triggered ${err.code} ${JSON.stringify(err.reason)}`)
+    clearTimers(pingTimeout, keepAliveInterval, terminator)
 
-      terminator = setTimeout(() => {
-        websocket.terminate()
-      }, checkInterval)
-    }
+    terminator = setTimeout(() => {
+      websocket.terminate()
+    }, checkInterval)
   }
-
-  websocket.on('ping', (data: any) => {
-    websocket.pong(data)
-  })
-
-  websocket.on('redirect', (url: string, request: any) => {
-    debug(
-      JSON.stringify(
-        {
-          on: 'redirect',
-          url,
-          request,
-        },
-        undefined,
-        2,
-      ),
-    )
-  })
-
-  websocket.on('unexpected-response', (request: any, response: any) => {
-    debug(
-      JSON.stringify(
-        {
-          on: 'unexpected-response',
-          request,
-          response,
-        },
-        undefined,
-        2,
-      ),
-    )
-  })
 
   websocket.on('open', () => {
     debug(`websocket open event triggered`)
     websocket.off('error', errorHandler)
-    if (terminator) {
-      clearTimeout(terminator)
-    }
 
     keepAliveInterval = setInterval(() => {
       websocket.ping()
@@ -249,51 +216,36 @@ export const keepAlive = ({
 
   websocket.on('close', (code: number, reason: any) => {
     debug(`websocket close event triggered`)
-    if (counter === 0) {
-      debug(`websocket closed`)
-      counter++
-      if (keepAliveInterval) {
-        clearInterval(keepAliveInterval)
-      }
+    clearTimers(pingTimeout, keepAliveInterval, terminator)
 
-      if (pingTimeout) {
-        clearTimeout(pingTimeout)
-      }
-
-      setTimeout(() => {
-        onDisconnect(code, reason)
-      }, checkInterval)
-    }
+    setTimeout(() => {
+      onDisconnect(code, reason)
+    }, checkInterval)
   })
 
   websocket.on('error', errorHandler)
+  websocket.on('pong', () => clearTimers(pingTimeout, keepAliveInterval, terminator))
 
-  websocket.on('pong', () => {
-    if (pingTimeout) {
-      clearInterval(pingTimeout)
-    }
-  })
+  const events = ['ping', 'redirect', 'unexpected-response']
+  for (const event of events) {
+    websocket.on(event, (...args) => {
+      if (event === 'ping') {
+        websocket.pong(args[0])
+      } else {
+        debug(JSON.stringify({on: event, args}, undefined, 2))
+      }
+    })
+  }
 }
 
 const cleanTags = (tagIds?: string | number | (number | string)[]): string => {
-  if (tagIds === undefined) {
+  if (!tagIds) {
     return ''
   }
 
-  const tags: string[] = []
-  if (typeof tagIds === 'string' || typeof tagIds === 'number') {
-    tags.push(tagIds.toString())
-  } else {
-    if (tagIds.length === 0) {
-      return ''
-    }
+  const tags: string[] = Array.isArray(tagIds) ? tagIds.map(tag => tag.toString()) : [tagIds.toString()]
 
-    for (const tag of tagIds) {
-      tags.push(tag.toString())
-    }
-  }
-
-  return ' [' + tags.join('] [') + ']'
+  return tags.length > 0 ? ` [${tags.join('] [')}]` : ''
 }
 
 type ImplementsCommand = Command
@@ -399,21 +351,15 @@ export class NetworkMonitor {
     const output: {[key: string]: ProviderStatus} = {}
 
     for (const network of supportedNetworks) {
-      if (
-        !(network in this.configFile.networks) ||
-        !('providerUrl' in this.configFile.networks[network]) ||
-        this.configFile.networks[network].providerUrl === undefined ||
-        this.configFile.networks[network].providerUrl === ''
-      ) {
-        output[network] = ProviderStatus.NOT_CONFIGURED
+      const networkConfig = this.configFile.networks[network]
+      if (networkConfig?.providerUrl) {
+        output[network] = this.providers[network]
+          ? this.ws[network]?.readyState === WebSocket.OPEN
+            ? ProviderStatus.CONNECTED
+            : ProviderStatus.DISCONNECTED
+          : ProviderStatus.DISCONNECTED
       } else {
-        output[network] = this.providers[network] === undefined ? ProviderStatus.DISCONNECTED : ProviderStatus.CONNECTED
-        // check if using a WebSocketProvider connection
-        if (output[network] === ProviderStatus.CONNECTED && network in this.ws) {
-          // using WebSocketProvider, do a more thorough test
-          output[network] =
-            this.ws[network].readyState === WebSocket.OPEN ? ProviderStatus.CONNECTED : ProviderStatus.DISCONNECTED
-        }
+        output[network] = ProviderStatus.NOT_CONFIGURED
       }
     }
 
@@ -642,20 +588,17 @@ export class NetworkMonitor {
 
   disconnectBuilder(network: string, rpcEndpoint: string, subscribe: boolean): (code: number, reason: any) => void {
     return (code: number, reason: any): void => {
-      const restart = () => {
-        this.structuredLog(
-          network,
-          `Error in websocket connection, restarting... ${webSocketErrorCodes[code]} ${JSON.stringify(reason)}`,
-        )
-        this.lastBlockJobDone[network] = Date.now()
-        this.walletNonces[network] = -1
-        this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
-      }
-
       this.structuredLog(network, `Websocket is closed. Restarting connection for ${networks[network].name}`)
-      // terminate the existing websocket
       this.ws[network].terminate()
-      restart()
+
+      this.structuredLog(
+        network,
+        `Error in websocket connection, restarting... ${webSocketErrorCodes[code]} ${JSON.stringify(reason)}`,
+      )
+
+      this.lastBlockJobDone[network] = Date.now()
+      this.walletNonces[network] = -1
+      this.failoverWebSocketProvider(network, rpcEndpoint, subscribe)
     }
   }
 
@@ -683,9 +626,6 @@ export class NetworkMonitor {
       const protocol = new URL(rpcEndpoint).protocol
       switch (protocol) {
         case 'https:':
-          this.providers[network] = new JsonRpcProvider(rpcEndpoint)
-
-          break
         case 'http:':
           this.providers[network] = new JsonRpcProvider(rpcEndpoint)
 
@@ -901,26 +841,25 @@ export class NetworkMonitor {
   }
 
   restartProvider = async (network: string): Promise<void> => {
-    const rpcEndpoint = (this.configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork).providerUrl
+    const networkConfig = this.configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork
+    const rpcEndpoint = networkConfig.providerUrl
     const protocol = new URL(rpcEndpoint).protocol
+
     switch (protocol) {
       case 'http:':
-        this.providers[network] = new JsonRpcProvider(rpcEndpoint)
-
-        break
       case 'https:':
         this.providers[network] = new JsonRpcProvider(rpcEndpoint)
 
         break
       case 'wss:':
-        this.ws[network].close(1012, 'Block Job Handler has been inactive longer than threshold time.')
-        //  this.failoverWebSocketProvider.bind(this)(network, rpcEndpoint, false)
+        this.ws[network]?.close(1012, 'Block Job Handler has been inactive longer than threshold time.')
+
         break
       default:
         throw new Error('Unsupported RPC provider protocol -> ' + protocol)
     }
 
-    if (this.userWallet !== undefined) {
+    if (this.userWallet) {
       this.wallets[network] = this.userWallet.connect(this.providers[network])
       this.walletNonces[network] = await this.getNonce({
         network,
@@ -935,18 +874,16 @@ export class NetworkMonitor {
     }
   }
 
-  blockJobMonitor = (network: string): Promise<void> => {
-    return new Promise<void>(() => {
-      if (Date.now() - this.lastBlockJobDone[network] > TIMEOUT_THRESHOLD) {
-        this.structuredLog(
-          network,
-          color.yellow('Block Job Handler has been inactive longer than threshold time. Restarting.'),
-          [],
-        )
-        this.lastBlockJobDone[network] = Date.now()
-        this.restartProvider(network)
-      }
-    })
+  async blockJobMonitor(network: string): Promise<void> {
+    if (Date.now() - this.lastBlockJobDone[network] > TIMEOUT_THRESHOLD) {
+      this.structuredLog(
+        network,
+        color.yellow('Block Job Handler has been inactive longer than threshold time. Restarting.'),
+        [],
+      )
+      this.lastBlockJobDone[network] = Date.now()
+      await this.restartProvider(network)
+    }
   }
 
   jobHandlerBuilder: (network: string) => () => void = (network: string): (() => void) => {
@@ -955,17 +892,18 @@ export class NetworkMonitor {
     }
   }
 
-  blockJobHandler = async (network: string, job?: BlockJob): Promise<void> => {
-    if (job !== undefined) {
+  async blockJobHandler(network: string, job?: BlockJob): Promise<void> {
+    if (job) {
       this.latestBlockHeight[job.network] = job.block
+
       if (this.verbose) {
         this.structuredLog(job.network, `Block processing complete ✅`, job.block)
       }
 
-      if (
-        (this.parent.id === 'indexer' || this.parent.id === 'operator') &&
-        this.isUpdateBlockHeightUsingApiEnabled()
-      ) {
+      const shouldUpdateBlockHeight =
+        this.parent.id && ['indexer', 'operator'].includes(this.parent.id) && this.isUpdateBlockHeightUsingApiEnabled()
+
+      if (shouldUpdateBlockHeight) {
         try {
           await this.updateLastProcessedBlock(job)
         } catch (error: any) {
@@ -977,32 +915,24 @@ export class NetworkMonitor {
       this.blockJobs[job.network].shift()
     }
 
-    this.lastBlockJobDone[network] = Date.now()
-    this.lastProcessBlockDone[network] = Date.now()
+    const now = Date.now()
+    this.lastBlockJobDone[network] = now
+    this.lastProcessBlockDone[network] = now
+
     if (this.blockJobs[network].length > 0) {
       const blockJob: BlockJob = this.blockJobs[network][0] as BlockJob
-      if (this.enableV2) {
-        try {
-          await this.processBlock2(blockJob)
-        } catch (error: any) {
-          this.structuredLogError(blockJob.network, `Error processing block: ${error}`, blockJob.block)
-        }
-      } else {
-        try {
-          await this.processBlock(blockJob)
-        } catch (error: any) {
-          this.structuredLogError(blockJob.network, `Error processing block: ${error}`, blockJob.block)
-        }
+      try {
+        await (this.enableV2 ? this.processBlock2(blockJob) : this.processBlock(blockJob))
+      } catch (error: any) {
+        this.structuredLogError(blockJob.network, `Error processing block: ${error}`, blockJob.block)
       }
     } else if (this.needToSubscribe) {
       setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
-    } else {
-      if (network in this.blockJobMonitorProcess) {
-        this.structuredLog(network, 'All jobs done for network')
-        clearInterval(this.blockJobMonitorProcess[network])
-        delete this.blockJobMonitorProcess[network]
-        this.runningProcesses -= 1
-      }
+    } else if (this.blockJobMonitorProcess[network]) {
+      this.structuredLog(network, 'All jobs done for network')
+      clearInterval(this.blockJobMonitorProcess[network])
+      delete this.blockJobMonitorProcess[network]
+      this.runningProcesses -= 1
 
       if (this.runningProcesses === 0) {
         this.log('Finished the last job. Exiting...')
@@ -1097,26 +1027,40 @@ export class NetworkMonitor {
     return output
   }
 
+  /**
+   * This function filters through transactions and logs to identify and add "interesting" transactions to the interestingTransactions array.
+   * An "interesting" transaction is defined by a specific bloomId, corresponding transaction, log, and all associated logs.
+   * The function applies a set of conditions and validations to identify these transactions.
+   *
+   * The bloomFilters are iterated over, and for each filter, every log is evaluated.
+   * Logs that do not match the filter event or are already included are skipped.
+   * If the log is validated as interesting by an optional eventValidator, it is added to the interestingTransactions array.
+   * Alternatively, logs that are in the "to be determined" (TBD) list of contracts and are not already included in the tbdLogs are also added.
+   * If no eventValidator is present, the transaction is still added as an interesting transaction.
+   *
+   * @param {BlockJob} job - The block job currently being processed
+   * @param {TransactionResponse[]} transactions - An array of transaction objects
+   * @param {Log[]} logs - An array of log objects
+   * @param {InterestingTransaction[]} interestingTransactions - An array to which the new interesting transactions will be added
+   * @return {Promise<void>}
+   */
   async filterTransactions2(
     job: BlockJob,
     transactions: TransactionResponse[],
     logs: Log[],
     interestingTransactions: InterestingTransaction[],
   ): Promise<void> {
-    const allLogs: {[key: string]: Log[]} = {}
+    const allLogs: {[key: string]: Log[]} = this.createAllLogs(logs)
+    const txMap: {[key: string]: TransactionResponse} = this.createTxMap(transactions)
     const tbdLogs: number[] = []
-    const txMap: {[key: string]: TransactionResponse} = {}
-    for (const tx of transactions) {
-      txMap[tx.hash] = tx
-    }
 
+    // Iterate over bloomFilters
     for (const filter of this.bloomFilters) {
-      const event: Event = filter.bloomEvent
-      for (const log of logs) {
-        if (!(log.transactionHash in allLogs)) {
-          allLogs[log.transactionHash] = this.filterLogsByTx(log.transactionHash, logs)
-        }
+      const {bloomEvent: event} = filter
 
+      // Iterate over logs
+      for (const log of logs) {
+        // Skip logs that don't match the event or have already been included
         if (
           log.topics.length === 0 ||
           log.topics[0] !== event.sigHash ||
@@ -1125,45 +1069,99 @@ export class NetworkMonitor {
           continue
         }
 
-        if (filter.eventValidator) {
-          if (filter.eventValidator.bind(this.parent)(job.network, txMap[log.transactionHash], log)) {
-            interestingTransactions.push({
-              bloomId: filter.bloomId,
-              transaction: txMap[log.transactionHash],
-              log,
-              allLogs: allLogs[log.transactionHash]!,
-            } as InterestingTransaction)
-          } else if (this.tbdCachedContracts.includes(log.address.toLowerCase()) && !tbdLogs.includes(log.logIndex)) {
-            interestingTransactions.push({
-              bloomId: 'TBD',
-              transaction: txMap[log.transactionHash],
-              log,
-              allLogs: allLogs[log.transactionHash]!,
-            } as InterestingTransaction)
-            tbdLogs.push(log.logIndex)
-          }
+        // Check if the log is interesting based on the validator
+        const {eventValidator, bloomId} = filter
+
+        if (eventValidator?.bind(this.parent)(job.network, txMap[log.transactionHash], log)) {
+          this.pushInterestingTransaction(bloomId, txMap, log, allLogs, interestingTransactions)
+        } else if (this.tbdCachedContracts.includes(log.address.toLowerCase()) && !tbdLogs.includes(log.logIndex)) {
+          this.pushInterestingTransaction('TBD', txMap, log, allLogs, interestingTransactions)
+          tbdLogs.push(log.logIndex)
         } else {
-          interestingTransactions.push({
-            bloomId: filter.bloomId,
-            transaction: txMap[log.transactionHash],
-            log,
-            allLogs: allLogs[log.transactionHash]!,
-          } as InterestingTransaction)
+          this.pushInterestingTransaction(bloomId, txMap, log, allLogs, interestingTransactions)
         }
       }
     }
   }
 
-  adjustBridgeableContractDeployedLogs(logs: Log[], index: number, address: string): Log[] {
-    let firstIndex: number = index
-    for (let i = 0, l: number = logs.length; i < l; i++) {
-      if (logs[i].address.toLowerCase() === address && firstIndex > i) {
-        firstIndex = i
+  /**
+   * This function creates a mapping of transaction hashes to their corresponding logs.
+   * Each key-value pair corresponds to a transaction hash and the array of logs associated with that transaction.
+   * The filterLogsByTx function is used to get the logs for a particular transaction hash.
+   *
+   * @param {Log[]} logs - An array of log objects
+   * @return {Object} allLogs - An object where each key is a transaction hash and each value is an array of logs for that transaction
+   */
+  createAllLogs(logs: Log[]): {[key: string]: Log[]} {
+    const allLogs: {[key: string]: Log[]} = {}
+    for (const log of logs) {
+      if (!(log.transactionHash in allLogs)) {
+        allLogs[log.transactionHash] = this.filterLogsByTx(log.transactionHash, logs)
       }
     }
 
-    if (firstIndex !== index) {
-      const targetLog: Log = logs[index]
+    return allLogs
+  }
+
+  /**
+   * This function creates a mapping of transaction hashes to their corresponding transaction data.
+   * Each key-value pair corresponds to a transaction hash and the data of the transaction.
+   *
+   * @param {TransactionResponse[]} transactions - An array of transaction objects
+   * @return {Object} txMap - An object where each key is a transaction hash and each value is the corresponding transaction data
+   */
+  createTxMap(transactions: TransactionResponse[]): {[key: string]: TransactionResponse} {
+    const txMap: {[key: string]: TransactionResponse} = {}
+    for (const tx of transactions) {
+      txMap[tx.hash] = tx
+    }
+
+    return txMap
+  }
+
+  /**
+   * This function adds an interesting transaction to the interestingTransactions array.
+   * An interesting transaction is defined by its bloomId, transaction data, a specific log, and all logs associated with the transaction.
+   *
+   * @param {string} bloomId - The bloom ID of the interesting transaction
+   * @param {Object} txMap - The mapping of transaction hashes to their corresponding transaction data
+   * @param {Log} log - A specific log associated with the transaction
+   * @param {Object} allLogs - The mapping of transaction hashes to their corresponding logs
+   * @param {InterestingTransaction[]} interestingTransactions - An array to which the new interesting transaction will be added
+   */
+  pushInterestingTransaction(
+    bloomId: string,
+    txMap: {[key: string]: TransactionResponse},
+    log: Log,
+    allLogs: {[key: string]: Log[]},
+    interestingTransactions: InterestingTransaction[],
+  ): void {
+    interestingTransactions.push({
+      bloomId,
+      transaction: txMap[log.transactionHash],
+      log,
+      allLogs: allLogs[log.transactionHash]!,
+    } as InterestingTransaction)
+  }
+
+  /**
+   * Adjusts the order of bridgeable contract deployed logs in the given array by moving the log at the specified index
+   * to the first occurrence of the specified address in the array.
+   *
+   * @param {Log[]} logs - The array of logs to adjust
+   * @param {number} index - The index of the log to be moved
+   * @param {string} address - The address to search for in the logs
+   * @returns {Log[]} - The adjusted array of logs
+   */
+  adjustBridgeableContractDeployedLogs(logs: Log[], index: number, address: string): Log[] {
+    const targetLog: Log = logs[index]
+    const targetAddress: string = address.toLowerCase()
+
+    // Find the first occurrence of the address in the array
+    const firstIndex: number = logs.findIndex((log: Log) => log.address.toLowerCase() === targetAddress)
+
+    // If the first occurrence is before the target index, swap the positions of the logs
+    if (firstIndex !== -1 && firstIndex < index) {
       logs.splice(index, 1)
       logs.splice(firstIndex, 0, targetLog)
     }
@@ -1171,25 +1169,33 @@ export class NetworkMonitor {
     return logs
   }
 
+  /**
+   * Sorts the logs array by moving the logs of the BridgeableContractDeployed event
+   * with valid BridgeableContractDeployedEvent data to the beginning of the array.
+   *
+   * @param {Log[]} logs - The array of logs to sort
+   * @returns {Log[]} - The sorted array of logs
+   */
   sortLogs(logs: Log[]): Log[] {
     const event: Event = eventMap[EventType.BridgeableContractDeployed]
-    let log: Log
-    let bridgeableContractDeployedEvent: BridgeableContractDeployedEvent | null
-    for (let i = 0, l: number = logs.length; i < l; i++) {
-      log = logs[i]
+    const sortedLogs: Log[] = []
+
+    for (const log of logs) {
       if (log.topics.length > 0 && log.topics[0] === event.sigHash) {
-        bridgeableContractDeployedEvent = event.decode<BridgeableContractDeployedEvent>(event.type, log)
+        const bridgeableContractDeployedEvent: BridgeableContractDeployedEvent | null =
+          event.decode<BridgeableContractDeployedEvent>(event.type, log)
+
         if (bridgeableContractDeployedEvent !== null) {
           if (!this.tbdCachedContracts.includes(bridgeableContractDeployedEvent.contractAddress)) {
             this.tbdCachedContracts.push(bridgeableContractDeployedEvent.contractAddress)
           }
 
-          logs = this.adjustBridgeableContractDeployedLogs(logs, i, bridgeableContractDeployedEvent.contractAddress)
+          sortedLogs.unshift(log) // Add the log to the beginning of the sorted array
         }
       }
     }
 
-    return logs
+    return sortedLogs
   }
 
   extractGasData(network: string, block: Block | BlockWithTransactions, tx: TransactionResponse): void {
