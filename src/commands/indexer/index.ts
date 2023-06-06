@@ -203,7 +203,7 @@ export default class Indexer extends HealthCheck {
     }
   }
 
-  bloomFilterAddress = (address: string) => ({
+  bloomFilterAddress = (address: string): Pick<BloomFilter, 'bloomType' | 'bloomValue' | 'bloomValueHashed'> => ({
     bloomType: BloomType.contract,
     bloomValue: address,
     bloomValueHashed: address,
