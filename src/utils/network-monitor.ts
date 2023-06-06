@@ -1198,68 +1198,89 @@ export class NetworkMonitor {
     return sortedLogs
   }
 
+  /**
+   * This function extracts gas price data from a given transaction and block within a specific network.
+   * For EIP-1559 transactions, it calculates the priority fee and updates the 'nextPriorityFee' field in the gasPrices object.
+   * For non-EIP-1559 (legacy) transactions, it updates the average gas price for the network.
+   *
+   * @param network - The network for which to extract gas data.
+   * @param block - The block (with or without transactions) to use for the extraction.
+   * @param tx - The transaction from which to extract the gas data.
+   */
   extractGasData(network: string, block: Block | BlockWithTransactions, tx: TransactionResponse): void {
+    // Check if network supports EIP-1559
     if (this.gasPrices[network].isEip1559) {
-      // set current tx priority fee
+      // Calculate the priority fee based on transaction type
       let priorityFee: BigNumber = ZERO
-      let remainder: BigNumber
       if (tx.maxFeePerGas === undefined || tx.maxPriorityFeePerGas === undefined) {
-        // we have a legacy transaction here, so need to calculate priority fee out
+        // For legacy transactions, calculate priority fee manually
         priorityFee = tx.gasPrice!.sub(block.baseFeePerGas!)
       } else {
-        // we have EIP-1559 transaction here, get priority fee
-        // check first that base block fee is less than maxFeePerGas
-        remainder = tx.maxFeePerGas!.sub(block.baseFeePerGas!)
+        // For EIP-1559 transactions, determine the smaller of the maxPriorityFeePerGas and the difference between maxFeePerGas and baseFeePerGas
+        const remainder = tx.maxFeePerGas!.sub(block.baseFeePerGas!)
         priorityFee = remainder.gt(tx.maxPriorityFeePerGas!) ? tx.maxPriorityFeePerGas! : remainder
       }
 
+      // Update the 'nextPriorityFee' field for the network
       if (this.gasPrices[network].nextPriorityFee === null) {
         this.gasPrices[network].nextPriorityFee = priorityFee
       } else {
+        // Calculate the average of the current and new priority fee
         this.gasPrices[network].nextPriorityFee = this.gasPrices[network].nextPriorityFee!.add(priorityFee).div(TWO)
       }
     }
-    // for legacy networks (non EIP-1559), get average rolling gasPrice
-    // it's important to skip this calculation if gas price is 0, which happens in some instances like on BSC
-    // we check first that gasPrice variable is actually set, and we check that it is greater than zero
+    // Handle non-EIP-1559 (legacy) transactions
     else if (tx.gasPrice !== undefined && tx.gasPrice !== null && tx.gasPrice!.gt(ZERO)) {
-      // if current network gas pricing is null, then this means it's the first time that gas price data is being set
+      // Check if it's the first time setting gas price data for this network
       if (this.gasPrices[network].gasPrice === null) {
         this.gasPrices[network].gasPrice = tx.gasPrice!
       }
-      // otherwise we already have gas price data set, we just add new value to it and divide by two to get the floating average
+      // If gas price data is already set, update it with the average of the current and new gas price
       else {
         this.gasPrices[network].gasPrice = this.gasPrices[network].gasPrice!.add(tx.gasPrice!).div(TWO)
       }
     }
   }
 
+  /**
+   * This asynchronous function updates the last processed block for either an 'Indexer' or an 'Operator'.
+   * It takes a 'BlockJob' as input and does not return any value.
+   * It throws an error if the 'parent' object is not of type 'Indexer' or 'Operator'.
+   *
+   * @param job - The BlockJob instance containing information about the block to process.
+   * @throws Will throw an error if the processType is neither 'Indexer' nor 'Operator'.
+   */
   async updateLastProcessedBlock(job: BlockJob): Promise<void> {
-    let processType: BlockHeightProcessType | undefined
-
-    if (this.parent.constructor.name === 'Indexer') {
-      processType = BlockHeightProcessType.INDEXER
-    } else if (this.parent.constructor.name === 'Operator') {
-      processType = BlockHeightProcessType.OPERATOR
+    // Mapping between constructor names and corresponding BlockHeightProcessType values
+    const processTypeDict: {[key: string]: BlockHeightProcessType} = {
+      Indexer: BlockHeightProcessType.INDEXER,
+      Operator: BlockHeightProcessType.OPERATOR,
     }
 
+    // Get the process type based on the parent constructor name
+    const processType = processTypeDict[this.parent.constructor.name]
+
+    // Check if processType is defined, else throw an error
     if (processType === undefined) {
       throw new Error(`updateLastProcessedBlock: processType is neither Indexer or Operator`)
     }
 
     try {
+      // Make the updateBlockHeight API call with processType, network chain and block
       const rawResponse = await this.apiService.updateBlockHeight(
         processType,
         getNetworkByKey(job.network).chain,
         job.block,
       )
+
+      // If response is not undefined, log the mutation response
       if (rawResponse !== undefined) {
         const {data: response, headers} = rawResponse
-
         const requestId = headers.get('x-request-id') ?? ''
         this.structuredLog(job.network, `Mutation response ${JSON.stringify(response)}`, [requestId])
       }
     } catch (error: any) {
+      // Log error in case of any failure
       this.structuredLogError(job.network, error, [`Request failed with errors: ${error}`])
     }
   }
@@ -1379,27 +1400,42 @@ export class NetworkMonitor {
     }
   }
 
+  /**
+   * This method processes a block for a given job. It extracts the transactions
+   * from the block and if they are "interesting", it processes them further.
+   * "Interesting" transactions are those which passed the filter criteria.
+   * The method also updates the gas pricing information for recent blocks and
+   * handles any error situations gracefully by logging the error.
+   *
+   * @param job - The job object containing details about the block to process.
+   * It includes details like the network and the block number.
+   *
+   * @returns Promise<void> - The function is asynchronous and doesn't return a value.
+   * It operates on instance properties.
+   */
   async processBlock2(job: BlockJob): Promise<void> {
     const interestingTransactions: InterestingTransaction[] = []
     this.activated[job.network] = true
-    if (this.verbose) {
-      this.structuredLog(job.network, `Getting block 🔍`, job.block)
-    }
+    this.structuredLogVerbose(job.network, `Getting block 🔍`, job.block)
 
     try {
+      // Attempt to fetch the block with its transactions
       const block = await this.getBlockWithTransactions({
         network: job.network,
         blockNumber: job.block,
         attempts: 10,
       })
 
-      if (block !== undefined && block !== null && 'transactions' in block) {
-        const recentBlock = this.currentBlockHeight[job.network] - job.block < 5
+      // If the block and transactions exist, process further
+      if (block && 'transactions' in block) {
+        const isRecentBlock = this.currentBlockHeight[job.network] - job.block < 5
 
-        if (recentBlock) {
+        // If the block is a recent one, update the gas pricing info
+        if (isRecentBlock) {
           this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
         }
 
+        // Check bloom logs and fetch logs if present
         if (this.checkBloomLogs(block)) {
           let logs = await this.getLogs({
             network: job.network,
@@ -1407,30 +1443,27 @@ export class NetworkMonitor {
             attempts: 10,
           })
 
+          // If logs are present, sort and filter transactions
           if (logs !== null) {
             logs = this.sortLogs(logs as Log[])
             await this.filterTransactions2(job, block.transactions, logs as Log[], interestingTransactions)
           }
         }
 
-        if (recentBlock) {
-          this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
-        }
-
-        if (interestingTransactions.length > 0) {
-          if (this.processTransactions2 === undefined) {
-            throw new Error('processTransactions2 is undefined')
-          }
-
-          await this.processTransactions2?.bind(this.parent)(job, interestingTransactions)
+        // If there are interesting transactions and the processing function is available, process them
+        if (interestingTransactions.length > 0 && this.processTransactions2) {
+          await this.processTransactions2.bind(this.parent)(job, interestingTransactions)
         }
       }
     } catch (error: any) {
+      // If there is an error in processing the block, log it
       this.structuredLogError(job.network, `Error processing block ${error}`, job.block)
     } finally {
+      // Regardless of whether the processing succeeded or failed, handle the job
       try {
         await this.blockJobHandler(job.network, job)
       } catch (error: any) {
+        // Log any error in handling the job
         this.structuredLogError(job.network, `Error handling block ${error}`, job.block)
       }
     }
@@ -1506,6 +1539,12 @@ export class NetworkMonitor {
         capitalize(networks[network].name),
       )}] [${errorColor('error')}]${cleanTags(tagId)} ${errorMessage}`,
     )
+  }
+
+  structuredLogVerbose(network: string, message: string, block: number): void {
+    if (this.verbose) {
+      this.structuredLog(network, message, block)
+    }
   }
 
   decodePacketEvent(receipt: TransactionReceipt, target?: string): string | undefined {
