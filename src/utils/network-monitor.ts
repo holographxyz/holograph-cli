@@ -1240,12 +1240,7 @@ export class NetworkMonitor {
 
   checkBloomLogs(block: ExtendedBlockWithTransactions): boolean {
     for (const filter of this.bloomFilters) {
-      if (!isInBloom(block.logsBloom, filter.bloomValueHashed)) {
-        continue
-      }
-
-      // check if there is additional validation required
-      if (filter.bloomFilterValidators) {
+      if (isInBloom(block.logsBloom, filter.bloomValueHashed) && filter.bloomFilterValidators) {
         // iterate over each validator
         for (const validator of filter.bloomFilterValidators) {
           // if a match is found, then pass the transaction through
@@ -1253,7 +1248,7 @@ export class NetworkMonitor {
             return true
           }
         }
-      } else {
+      } else if (isInBloom(block.logsBloom, filter.bloomValueHashed)) {
         return true
       }
     }
@@ -1624,45 +1619,30 @@ export class NetworkMonitor {
       return gasLimit
     }
 
+    // A mapping for known revert reasons and their explanations
+    const knownRevertReasons: {[key: string]: string | undefined} = {
+      'HOLOGRAPH: already deployed': 'The deploy request is invalid, since requested contract is already deployed.',
+      'HOLOGRAPH: invalid job':
+        'Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.',
+      'HOLOGRAPH: not holographed': 'Need to first deploy a holographable contract on destination chain.',
+    }
+
     try {
       return await this.retry(network, getGasLimitAttempt, attempts, interval)
     } catch (error: any) {
       this.structuredLog(network, `Failed calculating gas limit`, tags)
+
       // Error handling logic for known reasons
       let revertReason = 'unknown revert reason'
       let revertExplanation = 'unknown'
-      let knownReason = false
+
       if ('reason' in error && error.reason.startsWith('execution reverted:')) {
         // transaction reverted, we got a `revert` error from web3 call
         revertReason = error.reason.split('execution reverted: ')[1]
-        switch (revertReason) {
-          case 'HOLOGRAPH: already deployed': {
-            revertExplanation = 'The deploy request is invalid, since requested contract is already deployed.'
-            knownReason = true
-            break
-          }
-
-          case 'HOLOGRAPH: invalid job': {
-            revertExplanation =
-              'Job has most likely been already completed. If it has not, then that means the cross-chain message has not arrived yet.'
-            knownReason = true
-            break
-          }
-
-          case 'HOLOGRAPH: not holographed': {
-            revertExplanation = 'Need to first deploy a holographable contract on destination chain.'
-            knownReason = true
-            break
-          }
-        }
-
-        if (knownReason) {
-          this.structuredLog(network, `[web3] ${revertReason} (${revertExplanation})`, tags)
-        } else {
-          this.structuredLog(network, error, tags)
-        }
+        revertExplanation = knownRevertReasons[revertReason] || revertReason
       }
 
+      this.structuredLog(network, `[web3] ${revertReason} (${revertExplanation})`, tags)
       this.structuredLog(network, `Transaction is expected to revert`, tags)
       return null
     }
@@ -1675,14 +1655,18 @@ export class NetworkMonitor {
     attempts = 10,
     interval = 3000,
   }: SendTransactionParams): Promise<TransactionResponse | null> {
+    const wallet = this.wallets[network]
+    const provider = this.providers[network]
+    const gasPricing: GasPricing = this.gasPrices[network]
+    let gasPrice: BigNumber | undefined
+    const rawTxGasPrice: BigNumber = BigNumber.from(rawTx.gasPrice ?? 0)
+
+    // Remove the gasPrice from rawTx to avoid EIP1559 error that type2 tx does not allow for use of gasPrice
+    delete rawTx.gasPrice
+
+    // Define function that attempts to send transaction
     const sendTransactionAttempt = async (): Promise<TransactionResponse> => {
       let txHash: string | null = null
-      const gasPricing: GasPricing = this.gasPrices[network]
-      let gasPrice: BigNumber | undefined
-      const rawTxGasPrice: BigNumber = BigNumber.from(rawTx.gasPrice ?? 0)
-
-      // Remove the gasPrice from rawTx to avoid EIP1559 error that type2 tx does not allow for use of gasPrice
-      delete rawTx.gasPrice
 
       try {
         // move gas price info around to support EIP-1559
@@ -1700,14 +1684,16 @@ export class NetworkMonitor {
           delete rawTx.value
         }
 
-        const populatedTx = await this.wallets[network].populateTransaction(rawTx)
-        const signedTx = await this.wallets[network].signTransaction(populatedTx)
+        const populatedTx = await wallet.populateTransaction(rawTx)
+        const signedTx = await wallet.signTransaction(populatedTx)
+
         if (txHash === null) {
           txHash = keccak256(signedTx)
         }
 
         this.structuredLog(network, 'Attempting to send transaction -> ' + JSON.stringify(populatedTx), tags)
-        const tx = await this.providers[network].sendTransaction(signedTx)
+
+        const tx = await provider.sendTransaction(signedTx)
 
         if (tx === null) {
           throw new Error('Failed submitting transaction')
@@ -1724,6 +1710,7 @@ export class NetworkMonitor {
             attempts,
             interval,
           })
+
           if (tx === null) {
             throw error
           } else {
@@ -1740,6 +1727,7 @@ export class NetworkMonitor {
       }
     }
 
+    // Attempt to send the transaction, with retries
     try {
       return await this.retry(network, sendTransactionAttempt, attempts, interval)
     } catch (error: any) {
