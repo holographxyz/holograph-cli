@@ -846,7 +846,7 @@ export class NetworkMonitor {
     const protocol = new URL(rpcEndpoint).protocol
 
     switch (protocol) {
-      case 'http:':
+      case 'http:': // fallthrough for http and https
       case 'https:':
         this.providers[network] = new JsonRpcProvider(rpcEndpoint)
 
@@ -895,10 +895,7 @@ export class NetworkMonitor {
   async blockJobHandler(network: string, job?: BlockJob): Promise<void> {
     if (job) {
       this.latestBlockHeight[job.network] = job.block
-
-      if (this.verbose) {
-        this.structuredLog(job.network, `Block processing complete ✅`, job.block)
-      }
+      this.structuredLogVerbose(job.network, `Block processing complete ✅`, job.block)
 
       const shouldUpdateBlockHeight =
         this.parent.id && ['indexer', 'operator'].includes(this.parent.id) && this.isUpdateBlockHeightUsingApiEnabled()
@@ -941,6 +938,18 @@ export class NetworkMonitor {
     }
   }
 
+  /**
+   * Applies a filter to a transaction log to determine if the log is interesting.
+   *
+   * @param filter - The BloomFilter object containing the event to be matched and an optional validation function.
+   * @param log - The transaction log to be filtered.
+   * @param tx - The transaction response that contains the log.
+   * @param parent - The parent object that is used as the context for the validation function.
+   * @param network - The network where the transaction was executed.
+   *
+   * @returns - An InterestingTransaction object if the log passes the filter and the validation function, if provided.
+   * Otherwise, it returns undefined.
+   */
   /* eslint-disable-next-line max-params */
   async applyFilter(
     filter: BloomFilter,
@@ -950,9 +959,14 @@ export class NetworkMonitor {
     network: string,
   ): Promise<InterestingTransaction | undefined> {
     const event: Event = filter.bloomEvent
+
+    // Check if the first topic of the log matches the signature hash of the event in the filter.
     if (log.topics.length > 0 && log.topics[0] === event.sigHash) {
+      // If a validation function is provided in the filter, it is used to further validate the log.
       if (filter.eventValidator) {
+        // The validation function is bound to the parent object and called with the network, transaction response, and log.
         if (filter.eventValidator.bind(parent)(network, tx, log)) {
+          // If the log passes the validation function, an InterestingTransaction object is returned.
           return {
             bloomId: filter.bloomId,
             transaction: tx,
@@ -960,6 +974,7 @@ export class NetworkMonitor {
           } as InterestingTransaction
         }
       } else {
+        // If no validation function is provided, an InterestingTransaction object is returned as long as the log matches the event in the filter.
         return {
           bloomId: filter.bloomId,
           transaction: tx,
@@ -968,9 +983,19 @@ export class NetworkMonitor {
       }
     }
 
+    // If the log does not pass the filter or the validation function, undefined is returned.
     return undefined
   }
 
+  /**
+   * Checks if the given log is already included in the list of interesting transactions.
+   *
+   * @param log - The transaction log to be checked.
+   * @param interestingTransactions - An array of interesting transactions.
+   *
+   * @returns - A boolean indicating whether the log is already included in the interesting transactions.
+   * If it is included, it returns true; otherwise, false.
+   */
   isInterestingTransactionLogAlreadyIncluded(log: Log, interestingTransactions: InterestingTransaction[]): boolean {
     const interestingTx = interestingTransactions.find(
       tx => tx.log?.transactionHash === log.transactionHash && tx.log.logIndex === log.logIndex,
@@ -978,6 +1003,14 @@ export class NetworkMonitor {
     return interestingTx !== undefined
   }
 
+  /**
+   * Filters transaction logs based on the transaction hash.
+   *
+   * @param tx - The transaction hash used for filtering.
+   * @param logs - An array of transaction logs to be filtered.
+   *
+   * @returns - An array of transaction logs that match the given transaction hash.
+   */
   filterLogsByTx(tx: string, logs: Log[]): Log[] {
     const output: Log[] = []
     for (const log of logs) {
