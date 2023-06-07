@@ -383,7 +383,8 @@ export default class Indexer extends HealthCheck {
                 type
               ]!.bloomEvent.decode<TransferERC20Event>(type, interestingTransaction.log!)
               if (transferERC20Event !== null) {
-                this.networkMonitor.structuredLog(job.network, 'HandleTransferERC20Event has been called', tags)
+                // No need to log ERC20 transfers at the moment
+                // this.networkMonitor.structuredLog(job.network, 'HandleTransferERC20Event has been called', tags)
               }
             } catch (error: any) {
               this.networkMonitor.structuredLogError(

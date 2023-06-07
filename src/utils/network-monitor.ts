@@ -1107,57 +1107,48 @@ export class NetworkMonitor {
   }
 
   /**
-   * Adjusts the order of bridgeable contract deployed logs in the given array by moving the log at the specified index
-   * to the first occurrence of the specified address in the array.
+   * This function sorts the logs by bringing forward the logs with BridgeableContractDeployed events
+   * if there's a log from the same contract that appears earlier in the list.
+   * It also populates the tbdCachedContracts array with contract addresses from BridgeableContractDeployed events.
    *
-   * @param {Log[]} logs - The array of logs to adjust
-   * @param {number} index - The index of the log to be moved
-   * @param {string} address - The address to search for in the logs
-   * @returns {Log[]} - The adjusted array of logs
-   */
-  adjustBridgeableContractDeployedLogs(logs: Log[], index: number, address: string): Log[] {
-    const targetLog: Log = logs[index]
-    const targetAddress: string = address.toLowerCase()
-
-    // Find the first occurrence of the address in the array
-    const firstIndex: number = logs.findIndex((log: Log) => log.address.toLowerCase() === targetAddress)
-
-    // If the first occurrence is before the target index, swap the positions of the logs
-    if (firstIndex !== -1 && firstIndex < index) {
-      logs.splice(index, 1)
-      logs.splice(firstIndex, 0, targetLog)
-    }
-
-    return logs
-  }
-
-  /**
-   * Sorts the logs array by moving the logs of the BridgeableContractDeployed event
-   * with valid BridgeableContractDeployedEvent data to the beginning of the array.
+   * @param logs - An array of logs to be sorted.
    *
-   * @param {Log[]} logs - The array of logs to sort
-   * @returns {Log[]} - The sorted array of logs
+   * @returns An array of logs, sorted based on the BridgeableContractDeployed events.
    */
   sortLogs(logs: Log[]): Log[] {
     const event: Event = eventMap[EventType.BridgeableContractDeployed]
-    const sortedLogs: Log[] = []
+    const bridgeableContractAddresses: {[address: string]: number} = {} // To keep track of addresses and their earliest index
 
-    for (const log of logs) {
+    for (let i = 0, l = logs.length; i < l; i++) {
+      const log = logs[i]
       if (log.topics.length > 0 && log.topics[0] === event.sigHash) {
-        const bridgeableContractDeployedEvent: BridgeableContractDeployedEvent | null =
-          event.decode<BridgeableContractDeployedEvent>(event.type, log)
+        const bridgeableContractDeployedEvent = event.decode<BridgeableContractDeployedEvent>(event.type, log)
+        if (bridgeableContractDeployedEvent) {
+          const {contractAddress} = bridgeableContractDeployedEvent
 
-        if (bridgeableContractDeployedEvent !== null) {
-          if (!this.tbdCachedContracts.includes(bridgeableContractDeployedEvent.contractAddress)) {
-            this.tbdCachedContracts.push(bridgeableContractDeployedEvent.contractAddress)
+          if (!this.tbdCachedContracts.includes(contractAddress)) {
+            this.tbdCachedContracts.push(contractAddress)
           }
 
-          sortedLogs.unshift(log) // Add the log to the beginning of the sorted array
+          // Check if we have seen this address before, and update the earliest index if needed
+          if (
+            bridgeableContractAddresses[contractAddress] === undefined ||
+            i < bridgeableContractAddresses[contractAddress]
+          ) {
+            bridgeableContractAddresses[contractAddress] = i
+          }
         }
       }
     }
 
-    return sortedLogs
+    // Sort based on the earliest index of their corresponding contract address
+    logs.sort((a, b) => {
+      const aAddressIndex = bridgeableContractAddresses[a.address.toLowerCase()] || Number.POSITIVE_INFINITY
+      const bAddressIndex = bridgeableContractAddresses[b.address.toLowerCase()] || Number.POSITIVE_INFINITY
+      return aAddressIndex - bAddressIndex
+    })
+
+    return logs
   }
 
   /**
@@ -1343,17 +1334,11 @@ export class NetworkMonitor {
     this.providers[network].on('block', (blockNumber: string) => {
       const block = Number.parseInt(blockNumber, 10)
       if (this.currentBlockHeight[network] !== 0 && block - this.currentBlockHeight[network] > 1) {
-        if (this.verbose) {
-          this.structuredLog(network, `Resuming previously dropped connection, gotta do some catching up`)
-        }
+        this.structuredLogVerbose(network, `Resuming previously dropped connection, gotta do some catching up`, block)
 
         let latest = this.currentBlockHeight[network]
         // If the current network's block number is ahead of the network monitor's latest block, add the blocks to the queue
         while (block - latest > 0) {
-          // if (this.verbose) {
-          //   this.structuredLog(network, `Block (Syncing)`, latest)
-          // }
-
           this.blockJobs[network].push({
             network: network,
             block: latest,
