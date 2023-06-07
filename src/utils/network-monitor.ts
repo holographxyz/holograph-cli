@@ -922,7 +922,7 @@ export class NetworkMonitor {
     if (this.blockJobs[network].length > 0) {
       const blockJob: BlockJob = this.blockJobs[network][0] as BlockJob
       try {
-        await (this.enableV2 ? this.processBlock2(blockJob) : this.processBlock(blockJob))
+        await this.processBlock(blockJob)
       } catch (error: any) {
         this.structuredLogError(blockJob.network, `Error processing block: ${error}`, blockJob.block)
       }
@@ -969,44 +969,6 @@ export class NetworkMonitor {
     }
 
     return undefined
-  }
-
-  filterTransactions(
-    job: BlockJob,
-    transaction: TransactionResponse,
-    interestingTransactions: TransactionResponse[],
-  ): void {
-    const to: string = transaction.to?.toLowerCase() || ''
-    const from: string = transaction.from?.toLowerCase() || ''
-    let data: string
-    for (const filter of this.filters) {
-      const match: string = filter.networkDependant
-        ? (filter.match as {[key: string]: string})[job.network]
-        : (filter.match as string)
-      switch (filter.type) {
-        case FilterType.to:
-          if (to === match) {
-            interestingTransactions.push(transaction)
-          }
-
-          break
-        case FilterType.from:
-          if (from === match) {
-            interestingTransactions.push(transaction)
-          }
-
-          break
-        case FilterType.functionSig:
-          data = transaction.data?.slice(0, 10) || ''
-          if (data === match) {
-            interestingTransactions.push(transaction)
-          }
-
-          break
-        default:
-          break
-      }
-    }
   }
 
   isInterestingTransactionLogAlreadyIncluded(log: Log, interestingTransactions: InterestingTransaction[]): boolean {
@@ -1308,98 +1270,6 @@ export class NetworkMonitor {
     return false
   }
 
-  async processBlock(job: BlockJob): Promise<void> {
-    this.activated[job.network] = true
-    if (this.verbose) {
-      this.structuredLog(job.network, `Getting block 🔍`, job.block)
-    }
-
-    const block: ExtendedBlockWithTransactions | null = await this.getBlockWithTransactions({
-      network: job.network,
-      blockNumber: job.block,
-      attempts: 10,
-    })
-    if (block !== undefined && block !== null && 'transactions' in block) {
-      const recentBlock = this.currentBlockHeight[job.network] - job.block < 5
-      if (this.verbose) {
-        this.structuredLog(job.network, `Block retrieved 📥`, job.block)
-        /*
-        Temporarily disabled
-        this.structuredLog(job.network, `Calculating block gas`, job.block)
-        if (this.gasPrices[job.network].isEip1559) {
-          this.structuredLog(
-            job.network,
-            `Calculated block gas price was ${formatUnits(
-              this.gasPrices[job.network].nextBlockFee!,
-              'gwei',
-            )} GWEI, and actual block gas price is ${formatUnits(block.baseFeePerGas!, 'gwei')} GWEI`,
-            job.block,
-          )
-        }
-        */
-      }
-
-      if (recentBlock) {
-        this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
-      }
-
-      // const priorityFees: BigNumber = this.gasPrices[job.network].nextPriorityFee!
-      if (this.verbose && block.transactions.length === 0) {
-        this.structuredLog(job.network, `Zero transactions in block`, job.block)
-      }
-
-      const interestingTransactions: TransactionResponse[] = []
-      for (let i = 0, l = block.transactions.length; i < l; i++) {
-        if (recentBlock) {
-          this.extractGasData(job.network, block, block.transactions[i])
-        }
-
-        this.filterTransactions(job, block.transactions[i], interestingTransactions)
-      }
-
-      if (recentBlock) {
-        this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
-      }
-
-      /*
-      Temporarily disabled
-      if (this.verbose && this.gasPrices[job.network].isEip1559 && priorityFees !== null) {
-        this.structuredLog(
-          job.network,
-          `Calculated block priority fees was ${formatUnits(
-            priorityFees,
-            'gwei',
-          )} GWEI, and actual block priority fees is ${formatUnits(
-            this.gasPrices[job.network].nextPriorityFee!,
-            'gwei',
-          )} GWEI`,
-          job.block,
-        )
-      }
-      */
-
-      if (interestingTransactions.length > 0) {
-        if (this.verbose) {
-          this.structuredLog(job.network, `Found ${interestingTransactions.length} interesting transactions`, job.block)
-        }
-
-        if (this.processTransactions !== undefined) {
-          await this.processTransactions?.bind(this.parent)(job, interestingTransactions)
-        }
-
-        this.blockJobHandler(job.network, job)
-      } else {
-        this.blockJobHandler(job.network, job)
-      }
-    } else {
-      if (this.verbose) {
-        this.structuredLog(job.network, `${color.red('Dropped block')}`, job.block)
-      }
-
-      this.blockJobHandler(job.network)
-    }
-  }
-
   /**
    * This method processes a block for a given job. It extracts the transactions
    * from the block and if they are "interesting", it processes them further.
@@ -1413,7 +1283,7 @@ export class NetworkMonitor {
    * @returns Promise<void> - The function is asynchronous and doesn't return a value.
    * It operates on instance properties.
    */
-  async processBlock2(job: BlockJob): Promise<void> {
+  async processBlock(job: BlockJob): Promise<void> {
     const interestingTransactions: InterestingTransaction[] = []
     this.activated[job.network] = true
     this.structuredLogVerbose(job.network, `Getting block 🔍`, job.block)
