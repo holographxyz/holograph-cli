@@ -90,8 +90,8 @@ export function calculateNextBlockFee(network: string, parent: Block | BlockWith
 
   let gasUsedDelta: BigNumber
   let baseFeeDelta: BigNumber
-  const maxFeeIncrease: BigNumber = baseFeePerGas.mul(BigNumber.from('10000')).div(blockFeeConfig.maxBaseFeeIncrease)
-  const maxFeeDecrease: BigNumber = baseFeePerGas.mul(BigNumber.from('10000')).div(blockFeeConfig.maxBaseFeeDecrease)
+  const maxFeeIncrease: BigNumber = baseFeePerGas.mul(blockFeeConfig.maxBaseFeeIncrease).div(BigNumber.from('10000'))
+  const maxFeeDecrease: BigNumber = baseFeePerGas.mul(blockFeeConfig.maxBaseFeeDecrease).div(BigNumber.from('10000'))
 
   // If the parent block used more gas than its target, the baseFee should increase.
   if (parent.gasUsed.gt(parentGasTarget)) {
