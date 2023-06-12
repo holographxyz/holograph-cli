@@ -4,7 +4,6 @@ import {Environment} from '@holographxyz/environment'
 import {CliUx, Flags} from '@oclif/core'
 import color from '@oclif/color'
 import dotenv from 'dotenv'
-import ethers from 'ethers'
 
 import {BlockHeightProcessType, Logger} from '../../types/api'
 import {InterestingTransaction} from '../../types/network-monitor'
@@ -45,6 +44,7 @@ import {BlockHeightOptions, blockHeightFlag} from '../../flags/update-block-heig
 import handleTransferERC721Event from '../../handlers/sqs-indexer/handle-transfer-erc721-event'
 import handleFailedOperatorJobEvent from '../../handlers/sqs-indexer/handle-failed-operator-job-event'
 import handleTransferBatchERC1155Event from '../../handlers/sqs-indexer/handle-transfer-batch-erc1155-event'
+import {defaultAbiCoder} from '@ethersproject/abi'
 
 dotenv.config()
 
@@ -188,7 +188,8 @@ export default class Indexer extends HealthCheck {
     }
 
     CliUx.ux.action.start(`Starting indexer`)
-    const continuous = flags.replay === '0' // If replay is set, run network monitor stops after catching up to the latest block
+    // const continuous = flags.replay === '0' // If replay is set, run network monitor stops after catching up to the latest block
+    const continuous = false
     await this.networkMonitor.run(continuous, undefined, this.filterBuilder2)
     CliUx.ux.action.stop('🚀')
 
@@ -197,6 +198,15 @@ export default class Indexer extends HealthCheck {
     if (enableHealthCheckServer) {
       await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, healthCheckPort})
     }
+
+    // this.networkMonitor.blockJobs['arbitrumTestnetGoerli'].push({network: 'arbitrumTestnetGoerli', block: 25650929})
+    // this.networkMonitor.blockJobs['arbitrumTestnetGoerli'].push({network: 'arbitrumTestnetGoerli', block: 25650930})
+    // this.networkMonitor.blockJobs['arbitrumTestnetGoerli'].push({network: 'arbitrumTestnetGoerli', block: 25650931})
+    // this.networkMonitor.blockJobs['arbitrumTestnetGoerli'].push({network: 'arbitrumTestnetGoerli', block: 25650932})
+
+    setInterval(() => {
+      this.networkMonitor.tempRunBlock('arbitrumTestnetGoerli')
+    }, 5000)
   }
 
   /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -321,13 +331,13 @@ export default class Indexer extends HealthCheck {
 
         case EventType.HolographableContractEvent: {
           /*
-This is sample payload inside of HolographableContractEvent
-0x0000000000000000000000000000000000000000000000000000000000000080351b8d13789e4d8d2717631559251955685881a31494dd0b8b19b4ef8530bb6d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c6deae10eb98f3ed75255b41acff54fc33facade0000000000000000000000000000000000000000000000000000000000000001
-*/
+          This is sample payload inside of HolographableContractEvent
+          0x0000000000000000000000000000000000000000000000000000000000000080351b8d13789e4d8d2717631559251955685881a31494dd0b8b19b4ef8530bb6d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c6deae10eb98f3ed75255b41acff54fc33facade0000000000000000000000000000000000000000000000000000000000000001
+          */
           const holographableContractEvent: HolographableContractEvent | null = this.bloomFilters[
             type
           ]!.bloomEvent.decode<HolographableContractEvent>(type, interestingTransaction.log!)
-          const decodedFromPayload: any = ethers.utils.defaultAbiCoder.decode(
+          const decodedFromPayload: any = defaultAbiCoder.decode(
             ['bytes32', 'address', 'address', 'uint256'],
             holographableContractEvent!.payload,
           )
@@ -357,6 +367,7 @@ This is sample payload inside of HolographableContractEvent
 
             // *** END OF TEMP CODE ***
             try {
+              // TODO add handling for if holographableContractEvent is null
               const transferERC721Event: TransferERC721Event | null = {
                 type: EventType.TransferERC721,
                 contract: holographableContractEvent!.contractAddress,
@@ -415,7 +426,7 @@ This is sample payload inside of HolographableContractEvent
                 tags,
               )
             }
-*/
+            */
           }
 
           break

@@ -1330,7 +1330,7 @@ export class NetworkMonitor {
         if (this.checkBloomLogs(block)) {
           let logs = await this.getLogs({
             network: job.network,
-            blockNumber: job.block,
+            fromBlock: job.block,
             attempts: 10,
           })
 
@@ -1356,6 +1356,74 @@ export class NetworkMonitor {
       } catch (error: any) {
         // Log any error in handling the job
         this.structuredLogError(job.network, `Error handling block ${error}`, job.block)
+      }
+    }
+  }
+
+  async tempRunBlock(network: string): Promise<void> {
+    const blockJobsLength = this.blockJobs[network].length
+
+    const jobs: BlockJob[] = []
+    for (let i = 0; i < blockJobsLength; i++) {
+      jobs.push(this.blockJobs[network].shift()!)
+    }
+
+    this.processBlockByRange(jobs)
+  }
+
+  // Temporary method to process transactions for Arbitrum
+  // Testing processing a range of blocks
+  async processBlockByRange(jobs: BlockJob[]): Promise<void> {
+    // If there are no jobs no need to process
+    if (jobs.length === 0) {
+      return
+    }
+
+    const interestingTransactions: InterestingTransaction[] = []
+    this.activated[jobs[0].network] = true
+
+    // TODO: Change the block number to string type in structured logs so we can print a range
+    this.structuredLogVerbose(jobs[0].network, `Start block 🔍`, jobs[0].block)
+    this.structuredLogVerbose(jobs[0].network, `End block 🔍`, jobs[jobs.length - 1].block)
+
+    try {
+      let logs = await this.getLogs({
+        network: jobs[0].network,
+        fromBlock: jobs[0].block,
+        toBlock: jobs[jobs.length - 1].block,
+        attempts: 10,
+      })
+
+      // If logs are present, sort and filter transactions
+      if (logs !== null) {
+        // Grab the transactions from the logs
+        const transactions: TransactionResponse[] = logs.map(log => {
+          return {hash: log.transactionHash, blockNumber: log.blockNumber} as unknown as TransactionResponse
+        })
+
+        logs = this.sortLogs(logs as Log[])
+        await this.filterTransactions2(jobs[0], transactions, logs as Log[], interestingTransactions)
+      }
+
+      // If there are interesting transactions and the processing function is available, process them
+      if (interestingTransactions.length > 0 && this.processTransactions2) {
+        await this.processTransactions2.bind(this.parent)(jobs[0], interestingTransactions)
+      }
+    } catch (error: any) {
+      // If there is an error in processing the block, log it
+      this.structuredLogError(jobs[0].network, `Error processing block range ${error}`)
+      this.structuredLogError(jobs[0].network, `Start block ❌`, jobs[0].block)
+      this.structuredLogError(jobs[0].network, `End block ❌`, jobs[jobs.length - 1].block)
+    } finally {
+      // Regardless of whether the processing succeeded or failed, handle the job
+      try {
+        // TODO: Reenable this
+        // await this.blockJobHandler(jobs[0].network, jobs[0])
+
+        this.lastBlockJobDone[jobs[0].network] = Date.now()
+      } catch (error: any) {
+        // Log any error in handling the job
+        this.structuredLogError(jobs[0].network, `Error handling block ${error}`, jobs[0].block)
       }
     }
   }
@@ -1465,18 +1533,18 @@ export class NetworkMonitor {
   }
 
   async getLogs({
-    blockNumber,
+    fromBlock,
+    toBlock,
     network,
     tags = [] as (string | number)[],
     attempts = 10,
     interval = 10_000,
   }: LogsParams): Promise<Log[] | null> {
-    const targetBlock: string = BigNumber.from(blockNumber).toHexString()
     const topicsArray = this.bloomFilters.map(bloomFilter => bloomFilter.bloomValueHashed)
 
     const filter: Filter = {
-      fromBlock: targetBlock,
-      toBlock: targetBlock,
+      fromBlock: BigNumber.from(fromBlock).toHexString(),
+      toBlock: BigNumber.from(toBlock ? toBlock : fromBlock).toHexString(),
       topics: [topicsArray], // topics array needs to be wrapped in a nested array
     }
 
@@ -1491,7 +1559,7 @@ export class NetworkMonitor {
         }
       } catch (error: any) {
         if (error.message !== 'cannot query unfinalized data') {
-          this.structuredLog(network, `Failed retrieving logs for block ${blockNumber}`, tags)
+          this.structuredLog(network, `Failed retrieving logs for block ${fromBlock}`, tags)
           // In case of any other error, we throw it to be caught by the retry function.
           throw error
         }
