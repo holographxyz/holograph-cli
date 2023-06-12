@@ -315,8 +315,10 @@ export default class Indexer extends HealthCheck {
 
           break
         }
+
         case EventType.HolographableContractEvent: {
           // TODO: add logic to handle holographable contract events
+          break
         }
 
         case EventType.TransferERC20:
