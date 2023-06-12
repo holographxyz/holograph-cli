@@ -212,26 +212,28 @@ export default class Indexer extends HealthCheck {
   async filterBuilder2(): Promise<void> {
     const factoryAddress = this.networkMonitor.factoryAddress
     const operatorAddress = this.networkMonitor.operatorAddress
+    const registryAddress = this.networkMonitor.registryAddress
 
-    const buildEventFilter = (eventType: EventType, contractType?: ContractType) =>
+    const buildEventFilter = (eventType: EventType, targetAddress?: string, contractType?: ContractType) =>
       buildFilter(
         BloomType.topic,
         eventType,
         undefined,
-        contractType ? undefined : [this.bloomFilterAddress(operatorAddress || factoryAddress)],
+        targetAddress ? [this.bloomFilterAddress(targetAddress!)] : undefined,
         contractType ? this.checkAgainstCachedContracts(contractType) : undefined,
       )
 
     this.bloomFilters = {
-      [EventType.BridgeableContractDeployed]: buildEventFilter(EventType.BridgeableContractDeployed),
-      [EventType.TransferERC20]: buildEventFilter(EventType.TransferERC20, ContractType.ERC20),
-      [EventType.TransferERC721]: buildEventFilter(EventType.TransferERC721, ContractType.ERC721),
-      [EventType.TransferSingleERC1155]: buildEventFilter(EventType.TransferSingleERC1155, ContractType.ERC1155),
-      [EventType.TransferBatchERC1155]: buildEventFilter(EventType.TransferBatchERC1155, ContractType.ERC1155),
-      [EventType.CrossChainMessageSent]: buildEventFilter(EventType.CrossChainMessageSent),
-      [EventType.AvailableOperatorJob]: buildEventFilter(EventType.AvailableOperatorJob),
-      [EventType.FinishedOperatorJob]: buildEventFilter(EventType.FinishedOperatorJob),
-      [EventType.FailedOperatorJob]: buildEventFilter(EventType.FailedOperatorJob),
+      [EventType.BridgeableContractDeployed]: buildEventFilter(EventType.BridgeableContractDeployed, factoryAddress),
+      [EventType.HolographableContractEvent]: buildEventFilter(EventType.HolographableContractEvent, registryAddress),
+      // [EventType.TransferERC20]: buildEventFilter(EventType.TransferERC20, undefined, ContractType.ERC20),
+      // [EventType.TransferERC721]: buildEventFilter(EventType.TransferERC721, undefined, ContractType.ERC721),
+      // [EventType.TransferSingleERC1155]: buildEventFilter(EventType.TransferSingleERC1155, undefined, ContractType.ERC1155),
+      // [EventType.TransferBatchERC1155]: buildEventFilter(EventType.TransferBatchERC1155, undefined, ContractType.ERC1155),
+      [EventType.CrossChainMessageSent]: buildEventFilter(EventType.CrossChainMessageSent, operatorAddress),
+      [EventType.AvailableOperatorJob]: buildEventFilter(EventType.AvailableOperatorJob, operatorAddress),
+      [EventType.FinishedOperatorJob]: buildEventFilter(EventType.FinishedOperatorJob, operatorAddress),
+      [EventType.FailedOperatorJob]: buildEventFilter(EventType.FailedOperatorJob, operatorAddress),
     }
 
     this.networkMonitor.bloomFilters = Object.values(this.bloomFilters) as BloomFilter[]
@@ -312,6 +314,9 @@ export default class Indexer extends HealthCheck {
           }
 
           break
+        }
+        case EventType.HolographableContractEvent: {
+          // TODO: add logic to handle holographable contract events
         }
 
         case EventType.TransferERC20:

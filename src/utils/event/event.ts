@@ -21,12 +21,18 @@ export enum EventType {
   PacketLZ = 'PacketLZ',
   V1PacketLZ = 'V1PacketLZ',
   TestLzEvent = 'TestLzEvent',
+  HolographableContractEvent = 'HolographableContractEvent',
 }
 
 export interface BaseEvent {
   type: EventType
   contract: string
   logIndex: number
+}
+
+export interface HolographableContractEvent extends BaseEvent {
+  contractAddress: string
+  payload: string
 }
 
 export interface TransferERC20Event extends BaseEvent {
@@ -81,6 +87,7 @@ export interface FailedOperatorJobEvent extends BaseEvent {
 }
 
 export type DecodedEvent =
+  | HolographableContractEvent
   | TransferERC20Event
   | TransferERC721Event
   | TransferSingleERC1155Event
@@ -107,6 +114,15 @@ export const decodeKnownEvent = <T extends DecodedEvent>(
   switch (type) {
     case EventType.UNKNOWN:
       return null
+    case EventType.HolographableContractEvent:
+      output = {
+        type,
+        contract: (log.address as string).toLowerCase(),
+        logIndex: log.logIndex,
+        contractAddress: (decodedLog._holographableContract as string).toLowerCase(),
+        payload: (decodedLog._payload as string).toLowerCase(),
+      } as unknown as T
+      break
     case EventType.TransferERC20:
       output = {
         type,
@@ -227,6 +243,10 @@ type EventMap = {[key in keyof typeof EventType]: Event}
 export const eventMap: EventMap = {
   [EventType.UNKNOWN]: {} as unknown as Event,
   [EventType.TBD]: {} as unknown as Event,
+  [EventType.HolographableContractEvent]: eventBuilder(
+    EventType.HolographableContractEvent,
+    'HolographableContractEvent(address indexed _holographableContract, bytes _payload)',
+  ),
   [EventType.TransferERC20]: eventBuilder(
     EventType.TransferERC20,
     'Transfer(address indexed _from, address indexed _to, uint256 _value)',

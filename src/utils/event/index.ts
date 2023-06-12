@@ -16,12 +16,14 @@ import {
   Event,
   eventBuilder,
   eventMap,
+  HolographableContractEvent,
 } from './event'
 import {EventValidator, BloomType, BloomFilterValidator, BloomFilter, buildFilter, BloomFilterMap} from './filter'
 
 export {
   EventType,
   BaseEvent,
+  HolographableContractEvent,
   TransferERC20Event,
   TransferERC721Event,
   TransferSingleERC1155Event,
