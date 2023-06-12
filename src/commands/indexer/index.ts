@@ -1,8 +1,10 @@
 import {Log, TransactionResponse} from '@ethersproject/abstract-provider'
+import {BigNumber} from '@ethersproject/bignumber'
 import {Environment} from '@holographxyz/environment'
 import {CliUx, Flags} from '@oclif/core'
 import color from '@oclif/color'
 import dotenv from 'dotenv'
+import ethers from 'ethers'
 
 import {BlockHeightProcessType, Logger} from '../../types/api'
 import {InterestingTransaction} from '../../types/network-monitor'
@@ -23,6 +25,7 @@ import {
   AvailableOperatorJobEvent,
   FinishedOperatorJobEvent,
   FailedOperatorJobEvent,
+  HolographableContractEvent,
 } from '../../utils/event'
 
 import {BlockJob, NetworkMonitor, networksFlag, replayFlag} from '../../utils/network-monitor'
@@ -317,7 +320,104 @@ export default class Indexer extends HealthCheck {
         }
 
         case EventType.HolographableContractEvent: {
-          // TODO: add logic to handle holographable contract events
+          /*
+This is sample payload inside of HolographableContractEvent
+0x0000000000000000000000000000000000000000000000000000000000000080351b8d13789e4d8d2717631559251955685881a31494dd0b8b19b4ef8530bb6d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c6deae10eb98f3ed75255b41acff54fc33facade0000000000000000000000000000000000000000000000000000000000000001
+*/
+          const holographableContractEvent: HolographableContractEvent | null = this.bloomFilters[
+            type
+          ]!.bloomEvent.decode<HolographableContractEvent>(type, interestingTransaction.log!)
+          const decodedFromPayload: any = ethers.utils.defaultAbiCoder.decode(
+            ['bytes32', 'address', 'address', 'uint256'],
+            holographableContractEvent!.payload,
+          )
+
+          if (decodedFromPayload[0] === '0x351b8d13789e4d8d2717631559251955685881a31494dd0b8b19b4ef8530bb6d') {
+            // 0x351b8d13789e4d8d2717631559251955685881a31494dd0b8b19b4ef8530bb6d == keccak256("TransferERC721(address,address,uint256)")
+            type = EventType.TransferERC721
+            // This is ERC721
+            // *** START OF TEMP CODE ***
+            // We are adding a temporary filter that skips transfer events inside of bridge-in and bridge-out transactions
+            // A bridge event contains a "TransferERC721" event. Because our process handles a whole event bridge event,
+            // instead of the sub events we have to dedup them. So we make sure that this "TransferERC721" is not part of a bridge event.
+            let isPartOfBridgeTx = false
+            for (const log of interestingTransaction.allLogs!) {
+              if (
+                log.topics[0] === this.bloomFilters[EventType.CrossChainMessageSent]!.bloomValueHashed ||
+                log.topics[0] === this.bloomFilters[EventType.FinishedOperatorJob]!.bloomValueHashed
+              ) {
+                isPartOfBridgeTx = true
+                break
+              }
+            }
+
+            if (isPartOfBridgeTx) {
+              break
+            }
+
+            // *** END OF TEMP CODE ***
+            try {
+              const transferERC721Event: TransferERC721Event | null = {
+                type: EventType.TransferERC721,
+                contract: holographableContractEvent!.contractAddress,
+                logIndex: holographableContractEvent!.logIndex,
+                from: decodedFromPayload[1],
+                to: decodedFromPayload[2],
+                tokenId: BigNumber.from(decodedFromPayload[3]),
+              } as TransferERC721Event
+              if (transferERC721Event !== null) {
+                let isNewMint = false
+                if (transferERC721Event.from === zeroAddress) {
+                  isNewMint = true
+                  for (const log of interestingTransaction.allLogs!) {
+                    if (
+                      this.networkMonitor.operatorAddress === log.address.toLowerCase() &&
+                      this.bloomFilters[EventType.FinishedOperatorJob]!.bloomEvent.sigHash === log.topics[0]
+                    ) {
+                      isNewMint = false
+                      break
+                    }
+                  }
+                }
+
+                await handleTransferERC721Event.call(
+                  this,
+                  this.networkMonitor,
+                  interestingTransaction.transaction,
+                  job.network,
+                  transferERC721Event,
+                  isNewMint,
+                  tags,
+                )
+              }
+            } catch (error: any) {
+              this.networkMonitor.structuredLogError(
+                job.network,
+                this.errorColor(`Decoding TransferERC721Event error: `, error),
+                tags,
+              )
+            }
+          } else {
+            // this is ERC20
+            /*
+            try {
+              const transferERC20Event: TransferERC20Event | null = this.bloomFilters[
+                type
+              ]!.bloomEvent.decode<TransferERC20Event>(type, interestingTransaction.log!)
+              if (transferERC20Event !== null) {
+                // No need to log ERC20 transfers at the moment
+                // this.networkMonitor.structuredLog(job.network, 'HandleTransferERC20Event has been called', tags)
+              }
+            } catch (error: any) {
+              this.networkMonitor.structuredLogError(
+                job.network,
+                this.errorColor(`Decoding TransferERC20Event error: `, error),
+                tags,
+              )
+            }
+*/
+          }
+
           break
         }
 
