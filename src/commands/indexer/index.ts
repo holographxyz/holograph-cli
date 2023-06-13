@@ -80,6 +80,8 @@ export default class Indexer extends HealthCheck {
 
   environment!: Environment
 
+  legacyBlocks = true
+
   /**
    * Command Entry Point
    */
@@ -144,6 +146,8 @@ export default class Indexer extends HealthCheck {
       BlockHeightOptions: updateBlockHeight as BlockHeightOptions,
       blockRanges: flags.blockRange,
     })
+
+    this.legacyBlocks = flags.blockRange === '0'
 
     switch (updateBlockHeight) {
       case BlockHeightOptions.API:
@@ -228,17 +232,32 @@ export default class Indexer extends HealthCheck {
         contractType ? this.checkAgainstCachedContracts(contractType) : undefined,
       )
 
+    let tempBloomFilterMap: BloomFilterMap = {}
+    if (this.legacyBlocks) {
+      tempBloomFilterMap = {
+        [EventType.TransferERC20]: buildEventFilter(EventType.TransferERC20, undefined, ContractType.ERC20),
+        [EventType.TransferERC721]: buildEventFilter(EventType.TransferERC721, undefined, ContractType.ERC721),
+        [EventType.TransferSingleERC1155]: buildEventFilter(
+          EventType.TransferSingleERC1155,
+          undefined,
+          ContractType.ERC1155,
+        ),
+        [EventType.TransferBatchERC1155]: buildEventFilter(
+          EventType.TransferBatchERC1155,
+          undefined,
+          ContractType.ERC1155,
+        ),
+      }
+    }
+
     this.bloomFilters = {
       [EventType.BridgeableContractDeployed]: buildEventFilter(EventType.BridgeableContractDeployed, factoryAddress),
       [EventType.HolographableContractEvent]: buildEventFilter(EventType.HolographableContractEvent, registryAddress),
-      // [EventType.TransferERC20]: buildEventFilter(EventType.TransferERC20, undefined, ContractType.ERC20),
-      // [EventType.TransferERC721]: buildEventFilter(EventType.TransferERC721, undefined, ContractType.ERC721),
-      // [EventType.TransferSingleERC1155]: buildEventFilter(EventType.TransferSingleERC1155, undefined, ContractType.ERC1155),
-      // [EventType.TransferBatchERC1155]: buildEventFilter(EventType.TransferBatchERC1155, undefined, ContractType.ERC1155),
       [EventType.CrossChainMessageSent]: buildEventFilter(EventType.CrossChainMessageSent, operatorAddress),
       [EventType.AvailableOperatorJob]: buildEventFilter(EventType.AvailableOperatorJob, operatorAddress),
       [EventType.FinishedOperatorJob]: buildEventFilter(EventType.FinishedOperatorJob, operatorAddress),
       [EventType.FailedOperatorJob]: buildEventFilter(EventType.FailedOperatorJob, operatorAddress),
+      ...tempBloomFilterMap,
     }
 
     this.networkMonitor.bloomFilters = Object.values(this.bloomFilters) as BloomFilter[]
