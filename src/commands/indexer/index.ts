@@ -1,5 +1,4 @@
 import {Log, TransactionResponse} from '@ethersproject/abstract-provider'
-import {BigNumber} from '@ethersproject/bignumber'
 import {Environment} from '@holographxyz/environment'
 import {CliUx, Flags} from '@oclif/core'
 import color from '@oclif/color'
@@ -15,6 +14,8 @@ import {
   BloomFilter,
   buildFilter,
   BloomFilterMap,
+  DecodedEvent,
+  HolographableContractEvent,
   TransferERC20Event,
   TransferERC721Event,
   TransferSingleERC1155Event,
@@ -24,10 +25,10 @@ import {
   AvailableOperatorJobEvent,
   FinishedOperatorJobEvent,
   FailedOperatorJobEvent,
-  HolographableContractEvent,
+  decodeHolographableContractEvent,
 } from '../../utils/event'
 
-import {BlockJob, NetworkMonitor, networksFlag, replayFlag} from '../../utils/network-monitor'
+import {BlockJob, NetworkMonitor, networksFlag, replayFlag, blockRangeFlag} from '../../utils/network-monitor'
 import {zeroAddress} from '../../utils/utils'
 import {HealthCheck} from '../../base-commands/healthcheck'
 import {ensureConfigFileIsValid} from '../../utils/config'
@@ -44,7 +45,6 @@ import {BlockHeightOptions, blockHeightFlag} from '../../flags/update-block-heig
 import handleTransferERC721Event from '../../handlers/sqs-indexer/handle-transfer-erc721-event'
 import handleFailedOperatorJobEvent from '../../handlers/sqs-indexer/handle-failed-operator-job-event'
 import handleTransferBatchERC1155Event from '../../handlers/sqs-indexer/handle-transfer-batch-erc1155-event'
-import {defaultAbiCoder} from '@ethersproject/abi'
 
 dotenv.config()
 
@@ -64,6 +64,7 @@ export default class Indexer extends HealthCheck {
     ...blockHeightFlag,
     ...networksFlag,
     ...replayFlag,
+    ...blockRangeFlag,
     ...HealthCheck.flags,
   }
 
@@ -141,6 +142,7 @@ export default class Indexer extends HealthCheck {
       replay: flags.replay,
       apiService: this.apiService,
       BlockHeightOptions: updateBlockHeight as BlockHeightOptions,
+      blockRanges: flags.blockRange,
     })
 
     switch (updateBlockHeight) {
@@ -188,8 +190,7 @@ export default class Indexer extends HealthCheck {
     }
 
     CliUx.ux.action.start(`Starting indexer`)
-    // const continuous = flags.replay === '0' // If replay is set, run network monitor stops after catching up to the latest block
-    const continuous = false
+    const continuous = flags.replay === '0' // If replay is set, run network monitor stops after catching up to the latest block
     await this.networkMonitor.run(continuous, undefined, this.filterBuilder2)
     CliUx.ux.action.stop('🚀')
 
@@ -198,15 +199,6 @@ export default class Indexer extends HealthCheck {
     if (enableHealthCheckServer) {
       await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, healthCheckPort})
     }
-
-    // this.networkMonitor.blockJobs['arbitrumTestnetGoerli'].push({network: 'arbitrumTestnetGoerli', block: 25650929})
-    // this.networkMonitor.blockJobs['arbitrumTestnetGoerli'].push({network: 'arbitrumTestnetGoerli', block: 25650930})
-    // this.networkMonitor.blockJobs['arbitrumTestnetGoerli'].push({network: 'arbitrumTestnetGoerli', block: 25650931})
-    // this.networkMonitor.blockJobs['arbitrumTestnetGoerli'].push({network: 'arbitrumTestnetGoerli', block: 25650932})
-
-    setInterval(() => {
-      this.networkMonitor.tempRunBlock('arbitrumTestnetGoerli')
-    }, 5000)
   }
 
   /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -330,103 +322,69 @@ export default class Indexer extends HealthCheck {
         }
 
         case EventType.HolographableContractEvent: {
-          /*
-          This is sample payload inside of HolographableContractEvent
-          0x0000000000000000000000000000000000000000000000000000000000000080351b8d13789e4d8d2717631559251955685881a31494dd0b8b19b4ef8530bb6d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c6deae10eb98f3ed75255b41acff54fc33facade0000000000000000000000000000000000000000000000000000000000000001
-          */
           const holographableContractEvent: HolographableContractEvent | null = this.bloomFilters[
             type
           ]!.bloomEvent.decode<HolographableContractEvent>(type, interestingTransaction.log!)
-          const decodedFromPayload: any = defaultAbiCoder.decode(
-            ['bytes32', 'address', 'address', 'uint256'],
-            holographableContractEvent!.payload,
-          )
-
-          if (decodedFromPayload[0] === '0x351b8d13789e4d8d2717631559251955685881a31494dd0b8b19b4ef8530bb6d') {
-            // 0x351b8d13789e4d8d2717631559251955685881a31494dd0b8b19b4ef8530bb6d == keccak256("TransferERC721(address,address,uint256)")
-            type = EventType.TransferERC721
-            // This is ERC721
-            // *** START OF TEMP CODE ***
-            // We are adding a temporary filter that skips transfer events inside of bridge-in and bridge-out transactions
-            // A bridge event contains a "TransferERC721" event. Because our process handles a whole event bridge event,
-            // instead of the sub events we have to dedup them. So we make sure that this "TransferERC721" is not part of a bridge event.
-            let isPartOfBridgeTx = false
-            for (const log of interestingTransaction.allLogs!) {
-              if (
-                log.topics[0] === this.bloomFilters[EventType.CrossChainMessageSent]!.bloomValueHashed ||
-                log.topics[0] === this.bloomFilters[EventType.FinishedOperatorJob]!.bloomValueHashed
-              ) {
-                isPartOfBridgeTx = true
-                break
-              }
-            }
-
-            if (isPartOfBridgeTx) {
-              break
-            }
-
-            // *** END OF TEMP CODE ***
-            try {
-              // TODO add handling for if holographableContractEvent is null
-              const transferERC721Event: TransferERC721Event | null = {
-                type: EventType.TransferERC721,
-                contract: holographableContractEvent!.contractAddress,
-                logIndex: holographableContractEvent!.logIndex,
-                from: decodedFromPayload[1],
-                to: decodedFromPayload[2],
-                tokenId: BigNumber.from(decodedFromPayload[3]),
-              } as TransferERC721Event
-              if (transferERC721Event !== null) {
-                let isNewMint = false
-                if (transferERC721Event.from === zeroAddress) {
-                  isNewMint = true
+          if (holographableContractEvent !== null) {
+            const decodedEvent: DecodedEvent | null = decodeHolographableContractEvent(holographableContractEvent)
+            if (decodedEvent !== null) {
+              switch (decodedEvent.type) {
+                case EventType.TransferERC20:
+                  type = EventType.TransferERC20
+                  const transferERC20Event: TransferERC20Event = decodedEvent as TransferERC20Event
+                  // No need to log ERC20 transfers at the moment
+                  // this.networkMonitor.structuredLog(job.network, 'HandleTransferERC20Event has been called', tags)
+                  break
+                case EventType.TransferERC721:
+                  type = EventType.TransferERC721
+                  // *** START OF TEMP CODE ***
+                  // We are adding a temporary filter that skips transfer events inside of bridge-in and bridge-out transactions
+                  // A bridge event contains a "TransferERC721" event. Because our process handles a whole event bridge event,
+                  // instead of the sub events we have to dedup them. So we make sure that this "TransferERC721" is not part of a bridge event.
+                  let isPartOfBridgeTx = false
                   for (const log of interestingTransaction.allLogs!) {
                     if (
-                      this.networkMonitor.operatorAddress === log.address.toLowerCase() &&
-                      this.bloomFilters[EventType.FinishedOperatorJob]!.bloomEvent.sigHash === log.topics[0]
+                      log.topics[0] === this.bloomFilters[EventType.CrossChainMessageSent]!.bloomValueHashed ||
+                      log.topics[0] === this.bloomFilters[EventType.FinishedOperatorJob]!.bloomValueHashed
                     ) {
-                      isNewMint = false
+                      isPartOfBridgeTx = true
                       break
                     }
                   }
-                }
 
-                await handleTransferERC721Event.call(
-                  this,
-                  this.networkMonitor,
-                  interestingTransaction.transaction,
-                  job.network,
-                  transferERC721Event,
-                  isNewMint,
-                  tags,
-                )
+                  if (isPartOfBridgeTx) {
+                    break
+                  }
+                  // *** END OF TEMP CODE ***
+
+                  const transferERC721Event: TransferERC721Event = decodedEvent as TransferERC721Event
+
+                  let isNewMint = false
+                  if (transferERC721Event.from === zeroAddress) {
+                    isNewMint = true
+                    for (const log of interestingTransaction.allLogs!) {
+                      if (
+                        this.networkMonitor.operatorAddress === log.address.toLowerCase() &&
+                        this.bloomFilters[EventType.FinishedOperatorJob]!.bloomEvent.sigHash === log.topics[0]
+                      ) {
+                        isNewMint = false
+                        break
+                      }
+                    }
+                  }
+
+                  await handleTransferERC721Event.call(
+                    this,
+                    this.networkMonitor,
+                    interestingTransaction.transaction,
+                    job.network,
+                    transferERC721Event,
+                    isNewMint,
+                    tags,
+                  )
+                  break
               }
-            } catch (error: any) {
-              this.networkMonitor.structuredLogError(
-                job.network,
-                this.errorColor(`Decoding TransferERC721Event error: `, error),
-                tags,
-              )
             }
-          } else {
-            // this is ERC20
-            /*
-            try {
-              const transferERC20Event: TransferERC20Event | null = this.bloomFilters[
-                type
-              ]!.bloomEvent.decode<TransferERC20Event>(type, interestingTransaction.log!)
-              if (transferERC20Event !== null) {
-                // No need to log ERC20 transfers at the moment
-                // this.networkMonitor.structuredLog(job.network, 'HandleTransferERC20Event has been called', tags)
-              }
-            } catch (error: any) {
-              this.networkMonitor.structuredLogError(
-                job.network,
-                this.errorColor(`Decoding TransferERC20Event error: `, error),
-                tags,
-              )
-            }
-            */
           }
 
           break

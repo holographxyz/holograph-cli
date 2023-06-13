@@ -70,6 +70,13 @@ export const replayFlag = {
   }),
 }
 
+export const blockRangeFlag = {
+  blockRange: Flags.string({
+    description: 'Process block ranges instead of single blocks.',
+    default: '0',
+  }),
+}
+
 export const networksFlag = {
   networks: Flags.string({
     description: 'Space separated list of networks to use',
@@ -265,6 +272,7 @@ type NetworkMonitorOptions = {
   verbose?: boolean
   apiService?: ApiService
   BlockHeightOptions?: BlockHeightOptions
+  blockRanges?: string
 }
 
 export class NetworkMonitor {
@@ -306,6 +314,7 @@ export class NetworkMonitor {
   exited = false
   lastProcessBlockDone: {[key: string]: number} = {}
   lastBlockJobDone: {[key: string]: number} = {}
+  processBlocksByRange: {[key: string]: boolean} = {}
   blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
   gasPrices: {[key: string]: GasPricing} = {}
   holograph!: Contract
@@ -473,6 +482,12 @@ export class NetworkMonitor {
     }
 
     this.networks = [...new Set(options.networks)]
+
+    if (options.blockRanges !== undefined && options.blockRanges !== '0') {
+      for (const network of this.networks) {
+        this.processBlocksByRange[network] = true
+      }
+    }
 
     // Replay can only be used with a single network at a time since the block number provided to the replay flag is global
     // This can be updated in the future to support multiple networks with different block numbers simple logic is preferred for now
@@ -911,6 +926,12 @@ export class NetworkMonitor {
         }
       }
 
+      // this is added to accomodate block ranges
+      // function will continue removing first index of block job array until it matches last block job
+      while (this.blockJobs[job.network][0].block !== job.block) {
+        this.blockJobs[job.network].shift()
+      }
+
       this.blockJobs[job.network].shift()
     }
 
@@ -919,11 +940,24 @@ export class NetworkMonitor {
     this.lastProcessBlockDone[network] = now
 
     if (this.blockJobs[network].length > 0) {
-      const blockJob: BlockJob = this.blockJobs[network][0] as BlockJob
-      try {
-        await this.processBlock(blockJob)
-      } catch (error: any) {
-        this.structuredLogError(blockJob.network, `Error processing block: ${error}`, blockJob.block)
+      if (network in this.processBlocksByRange && this.processBlocksByRange[network]) {
+        const blockJobsLength = this.blockJobs[network].length
+        const jobs: BlockJob[] = this.blockJobs[network].slice(0, blockJobsLength - 1)
+        try {
+          await this.processBlockByRange(network, jobs)
+        } catch (error: any) {
+          this.structuredLogError(network, `Error processing block ranges: ${error}`, [
+            jobs[0].block,
+            jobs[jobs.length - 1].block,
+          ])
+        }
+      } else {
+        const blockJob: BlockJob = this.blockJobs[network][0] as BlockJob
+        try {
+          await this.processBlock(blockJob)
+        } catch (error: any) {
+          this.structuredLogError(blockJob.network, `Error processing block: ${error}`, blockJob.block)
+        }
       }
     } else if (this.needToSubscribe) {
       setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
@@ -1360,70 +1394,56 @@ export class NetworkMonitor {
     }
   }
 
-  async tempRunBlock(network: string): Promise<void> {
-    const blockJobsLength = this.blockJobs[network].length
-
-    const jobs: BlockJob[] = []
-    for (let i = 0; i < blockJobsLength; i++) {
-      jobs.push(this.blockJobs[network].shift()!)
-    }
-
-    this.processBlockByRange(jobs)
-  }
-
   // Temporary method to process transactions for Arbitrum
   // Testing processing a range of blocks
-  async processBlockByRange(jobs: BlockJob[]): Promise<void> {
+  async processBlockByRange(network: string, jobs: BlockJob[]): Promise<void> {
     // If there are no jobs no need to process
     if (jobs.length === 0) {
-      return
-    }
+      await this.blockJobHandler(network)
+    } else {
+      const interestingTransactions: InterestingTransaction[] = []
+      this.activated[network] = true
 
-    const interestingTransactions: InterestingTransaction[] = []
-    this.activated[jobs[0].network] = true
+      // TODO: Change the block number to string type in structured logs so we can print a range
+      this.structuredLogVerbose(network, `Getting block range 🔍`, [jobs[0].block, jobs[jobs.length - 1].block])
 
-    // TODO: Change the block number to string type in structured logs so we can print a range
-    this.structuredLogVerbose(jobs[0].network, `Start block 🔍`, jobs[0].block)
-    this.structuredLogVerbose(jobs[0].network, `End block 🔍`, jobs[jobs.length - 1].block)
-
-    try {
-      let logs = await this.getLogs({
-        network: jobs[0].network,
-        fromBlock: jobs[0].block,
-        toBlock: jobs[jobs.length - 1].block,
-        attempts: 10,
-      })
-
-      // If logs are present, sort and filter transactions
-      if (logs !== null) {
-        // Grab the transactions from the logs
-        const transactions: TransactionResponse[] = logs.map(log => {
-          return {hash: log.transactionHash, blockNumber: log.blockNumber} as unknown as TransactionResponse
+      try {
+        let logs = await this.getLogs({
+          network,
+          fromBlock: jobs[0].block,
+          toBlock: jobs[jobs.length - 1].block,
+          attempts: 10,
         })
 
-        logs = this.sortLogs(logs as Log[])
-        await this.filterTransactions2(jobs[0], transactions, logs as Log[], interestingTransactions)
-      }
+        // If logs are present, sort and filter transactions
+        if (logs !== null) {
+          // Grab the transactions from the logs
+          const transactions: TransactionResponse[] = logs.map(log => {
+            return {hash: log.transactionHash, blockNumber: log.blockNumber} as unknown as TransactionResponse
+          })
 
-      // If there are interesting transactions and the processing function is available, process them
-      if (interestingTransactions.length > 0 && this.processTransactions2) {
-        await this.processTransactions2.bind(this.parent)(jobs[0], interestingTransactions)
-      }
-    } catch (error: any) {
-      // If there is an error in processing the block, log it
-      this.structuredLogError(jobs[0].network, `Error processing block range ${error}`)
-      this.structuredLogError(jobs[0].network, `Start block ❌`, jobs[0].block)
-      this.structuredLogError(jobs[0].network, `End block ❌`, jobs[jobs.length - 1].block)
-    } finally {
-      // Regardless of whether the processing succeeded or failed, handle the job
-      try {
-        // TODO: Reenable this
-        // await this.blockJobHandler(jobs[0].network, jobs[0])
+          logs = this.sortLogs(logs as Log[])
+          await this.filterTransactions2(jobs[0], transactions, logs as Log[], interestingTransactions)
+        }
 
-        this.lastBlockJobDone[jobs[0].network] = Date.now()
+        // If there are interesting transactions and the processing function is available, process them
+        if (interestingTransactions.length > 0 && this.processTransactions2) {
+          await this.processTransactions2.bind(this.parent)(jobs[0], interestingTransactions)
+        }
       } catch (error: any) {
-        // Log any error in handling the job
-        this.structuredLogError(jobs[0].network, `Error handling block ${error}`, jobs[0].block)
+        // If there is an error in processing the block, log it
+        this.structuredLogError(network, `Error processing block range ❌ ${error}`, [
+          jobs[0].block,
+          jobs[jobs.length - 1].block,
+        ])
+      } finally {
+        // Regardless of whether the processing succeeded or failed, handle the job
+        try {
+          await this.blockJobHandler(network, jobs[jobs.length - 1])
+        } catch (error: any) {
+          // Log any error in handling the job
+          this.structuredLogError(network, `Error handling block ${error}`, jobs[0].block)
+        }
       }
     }
   }
@@ -1494,7 +1514,7 @@ export class NetworkMonitor {
     )
   }
 
-  structuredLogVerbose(network: string, message: string, block: number): void {
+  structuredLogVerbose(network: string, message: string, block: number | number[]): void {
     if (this.verbose) {
       this.structuredLog(network, message, block)
     }
