@@ -70,10 +70,10 @@ export const replayFlag = {
   }),
 }
 
-export const blockRangeFlag = {
-  blockRange: Flags.string({
+export const processBlockRange = {
+  'process-block-range': Flags.boolean({
     description: 'Process block ranges instead of single blocks.',
-    default: '0',
+    default: false,
   }),
 }
 
@@ -272,7 +272,7 @@ type NetworkMonitorOptions = {
   verbose?: boolean
   apiService?: ApiService
   BlockHeightOptions?: BlockHeightOptions
-  blockRanges?: string
+  processBlockRange?: boolean
 }
 
 export class NetworkMonitor {
@@ -483,7 +483,7 @@ export class NetworkMonitor {
 
     this.networks = [...new Set(options.networks)]
 
-    if (options.blockRanges !== undefined && options.blockRanges !== '0') {
+    if (options.processBlockRange) {
       for (const network of this.networks) {
         this.processBlocksByRange[network] = true
       }

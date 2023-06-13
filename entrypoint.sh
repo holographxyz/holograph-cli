@@ -38,6 +38,15 @@ else
   echo "ENABLE_REPLAY=${ENABLE_REPLAY}"
 fi
 
+if [[ $ENABLE_PROCESS_BLOCK_RANGE == 'true' ]]
+then
+  export $ENABLE_PROCESS_BLOCK_RANGE="--process-block-range"
+  echo "$ENABLE_PROCESS_BLOCK_RANGE=${$ENABLE_PROCESS_BLOCK_RANGE}"
+else
+  export $ENABLE_PROCESS_BLOCK_RANGE=""
+  echo "$ENABLE_PROCESS_BLOCK_RANGE=${$ENABLE_PROCESS_BLOCK_RANGE}"
+fi
+
 if [[ $ENABLE_UNSAFE == 'true' ]] && [[ $HOLOGRAPH_ENVIRONMENT == "mainnet" ]]
 then
   export ENABLE_UNSAFE='--unsafe'
@@ -59,11 +68,11 @@ holograph config --fromFile $CONFIG_FILE
 # notice: run the specified app
 if [[ $HOLO_CLI_CMD == "operator" ]]
 then
-  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_OPERATOR_HOST --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD --update-block-height $UPDATE_BLOCK_HEIGHT $ENABLE_REPLAY $ENABLE_UNSAFE
+  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_OPERATOR_HOST --mode $MODE $ENABLE_SYNC $HEALTHCHECK --unsafePassword $PASSWORD --update-block-height $UPDATE_BLOCK_HEIGHT $ENABLE_REPLAY $ENABLE_PROCESS_BLOCK_RANGE $ENABLE_UNSAFE
 
 elif [[ $HOLO_CLI_CMD == "indexer" ]]
 then
-  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_INDEXER_HOST $HEALTHCHECK $ENABLE_SYNC --update-block-height $UPDATE_BLOCK_HEIGHT $ENABLE_REPLAY $ENABLE_UNSAFE
+  eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_INDEXER_HOST $HEALTHCHECK $ENABLE_SYNC --update-block-height $UPDATE_BLOCK_HEIGHT $ENABLE_REPLAY $ENABLE_PROCESS_BLOCK_RANGE $ENABLE_UNSAFE
 
 else
   echo

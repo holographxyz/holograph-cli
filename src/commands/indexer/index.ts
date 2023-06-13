@@ -28,7 +28,7 @@ import {
   decodeHolographableContractEvent,
 } from '../../utils/event'
 
-import {BlockJob, NetworkMonitor, networksFlag, replayFlag, blockRangeFlag} from '../../utils/network-monitor'
+import {BlockJob, NetworkMonitor, networksFlag, replayFlag, processBlockRange} from '../../utils/network-monitor'
 import {zeroAddress} from '../../utils/utils'
 import {HealthCheck} from '../../base-commands/healthcheck'
 import {ensureConfigFileIsValid} from '../../utils/config'
@@ -64,7 +64,7 @@ export default class Indexer extends HealthCheck {
     ...blockHeightFlag,
     ...networksFlag,
     ...replayFlag,
-    ...blockRangeFlag,
+    ...processBlockRange,
     ...HealthCheck.flags,
   }
 
@@ -93,6 +93,8 @@ export default class Indexer extends HealthCheck {
     const healthCheckPort = flags.healthCheckPort
     let updateBlockHeight = flags.updateBlockHeight
     const syncFlag = flags.sync
+    const processBlockRange = flags['process-block-range']
+    this.legacyBlocks = !processBlockRange
 
     this.log('Loading user configurations...')
     const {environment, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
@@ -144,10 +146,8 @@ export default class Indexer extends HealthCheck {
       replay: flags.replay,
       apiService: this.apiService,
       BlockHeightOptions: updateBlockHeight as BlockHeightOptions,
-      blockRanges: flags.blockRange,
+      processBlockRange: processBlockRange,
     })
-
-    this.legacyBlocks = flags.blockRange === '0'
 
     switch (updateBlockHeight) {
       case BlockHeightOptions.API:
