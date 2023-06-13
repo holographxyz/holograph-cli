@@ -1399,8 +1399,19 @@ export class NetworkMonitor {
     }
   }
 
-  // Temporary method to process transactions for Arbitrum
-  // Testing processing a range of blocks
+  /**
+   * This function asynchronously processes a range of block jobs for a specific network. If no jobs
+   * are provided, it simply delegates to the block job handler function for the next job.
+   *
+   * If jobs are provided, it gets all the logs for the range of blocks covered by the jobs, sorts and filters
+   * the transactions contained in the logs, and then processes any 'interesting' transactions.
+   *
+   * In case of any errors during the processing or handling of jobs, the errors are logged.
+   *
+   * @param network: The network on which the block jobs are to be processed.
+   * @param jobs: An array of block jobs to be processed.
+   * @returns Promise<void>: This function returns a promise that resolves to void, meaning it doesn't return a value but it does perform asynchronous operations.
+   */
   async processBlockByRange(network: string, jobs: BlockJob[]): Promise<void> {
     // If there are no jobs no need to process
     if (jobs.length === 0) {
@@ -1409,7 +1420,6 @@ export class NetworkMonitor {
       const interestingTransactions: InterestingTransaction[] = []
       this.activated[network] = true
 
-      // TODO: Change the block number to string type in structured logs so we can print a range
       this.structuredLogVerbose(network, `Getting block range 🔍`, [jobs[0].block, jobs[jobs.length - 1].block])
 
       try {
