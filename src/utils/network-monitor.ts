@@ -329,6 +329,7 @@ export class NetworkMonitor {
   HOLOGRAPH_ADDRESSES = HOLOGRAPH_ADDRESSES
   apiService!: ApiService
   blockHeightOptions?: BlockHeightOptions
+  blockRangeLimit = 15
 
   // this is specifically for handling localhost-based CLI usage with holograph-protocol package
   localhostWallets: {[key: string]: Wallet} = {}
@@ -942,9 +943,9 @@ export class NetworkMonitor {
     if (this.blockJobs[network].length > 0) {
       if (network in this.processBlocksByRange && this.processBlocksByRange[network]) {
         let blockJobsLength = this.blockJobs[network].length
-        // we soft cap block range to 15 in order to avoid a potential 10k/10 second result limits that some RPC endpoints enforce
-        if (blockJobsLength > 15) {
-          blockJobsLength = 15
+        // we soft cap block range to blockRangeLimit (default 15) in order to avoid a potential 10k/10 second result limits that some RPC endpoints enforce
+        if (blockJobsLength > this.blockRangeLimit) {
+          blockJobsLength = this.blockRangeLimit
         }
 
         const jobs: BlockJob[] = this.blockJobs[network].slice(0, blockJobsLength)
@@ -1444,6 +1445,23 @@ export class NetworkMonitor {
         // If there are interesting transactions and the processing function is available, process them
         if (interestingTransactions.length > 0 && this.processTransactions2) {
           await this.processTransactions2.bind(this.parent)(jobs[0], interestingTransactions)
+        }
+
+        const job: BlockJob = jobs[jobs.length - 1]
+        // Attempt to fetch the block with its transactions
+        const block = await this.getBlockWithTransactions({
+          network: job.network,
+          blockNumber: job.block,
+          attempts: 10,
+        })
+        // If the block and transactions exist, process further
+        if (block && 'transactions' in block) {
+          const isRecentBlock = this.currentBlockHeight[job.network] - job.block < this.blockRangeLimit
+
+          // If the block is a recent one, update the gas pricing info
+          if (isRecentBlock) {
+            this.gasPrices[job.network] = updateGasPricing(job.network, block, this.gasPrices[job.network])
+          }
         }
       } catch (error: any) {
         // If there is an error in processing the block, log it
