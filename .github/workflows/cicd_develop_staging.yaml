@@ -37,10 +37,10 @@ env:
   STG_COMMON_NAMESPACE: develop
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.95
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.97
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.68
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.70
   OPERATOR_RELEASE_NAME: operator-dev # format -> [release_name]-operator-[env]
   #######################################
   #
@@ -173,7 +173,9 @@ jobs:
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
           ENABLE_SYNC: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE: 'undefined' # undefined/true
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
+          #
           AVALANCHE_NETWORK: 'fuji'
           ETHEREUM_NETWORK: 'goerli'
           OPTIMISM_NETWORK: 'optimismTestnetGoerli'
@@ -209,6 +211,7 @@ jobs:
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
+            --set ENABLE_PROCESS_BLOCK_RANGE=$ENABLE_PROCESS_BLOCK_RANGE \
             \
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_dev_avalancheTestnet_rpc_url }} \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_dev_polygonTestnet_rpc_url }} \
@@ -292,7 +295,9 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
+          ENABLE_PROCESS_BLOCK_RANGE: 'undefined' # undefined/true
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
+          #
           AVALANCHE_NETWORK: 'fuji'
           POLYGON_NETWORK: 'mumbai'
           ETHEREUM_NETWORK: 'goerli'
@@ -320,6 +325,7 @@ jobs:
             --set MODE=$MODE \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
+            --set ENABLE_PROCESS_BLOCK_RANGE=$ENABLE_PROCESS_BLOCK_RANGE \
             \
             --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
             --set POLYGON_NETWORK=$POLYGON_NETWORK \
