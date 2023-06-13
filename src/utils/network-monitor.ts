@@ -941,7 +941,12 @@ export class NetworkMonitor {
 
     if (this.blockJobs[network].length > 0) {
       if (network in this.processBlocksByRange && this.processBlocksByRange[network]) {
-        const blockJobsLength = this.blockJobs[network].length
+        let blockJobsLength = this.blockJobs[network].length
+        // we soft cap block range to 15 in order to avoid a potential 10k/10 second result limits that some RPC endpoints enforce
+        if (blockJobsLength > 15) {
+          blockJobsLength = 15
+        }
+
         const jobs: BlockJob[] = this.blockJobs[network].slice(0, blockJobsLength)
         try {
           await this.processBlockByRange(network, jobs)
