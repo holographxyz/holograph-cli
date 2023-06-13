@@ -115,19 +115,19 @@ export const decodeHolographableContractEvent = (
   )[0]
 
   switch (eventSignature) {
-    case eventMap[EventType.HolographableTransferERC20].sigHash:
+    case eventMap[EventType.HolographableTransferERC20].customSigHash!:
       type = EventType.TransferERC20
       realEvent = eventMap[EventType.HolographableTransferERC20]
       break
-    case eventMap[EventType.HolographableTransferERC721].sigHash:
+    case eventMap[EventType.HolographableTransferERC721].customSigHash!:
       type = EventType.TransferERC721
       realEvent = eventMap[EventType.HolographableTransferERC721]
       break
-    case eventMap[EventType.HolographableTransferSingleERC1155].sigHash:
+    case eventMap[EventType.HolographableTransferSingleERC1155].customSigHash!:
       type = EventType.TransferSingleERC1155
       realEvent = eventMap[EventType.HolographableTransferSingleERC1155]
       break
-    case eventMap[EventType.HolographableTransferBatchERC1155].sigHash:
+    case eventMap[EventType.HolographableTransferBatchERC1155].customSigHash!:
       type = EventType.TransferBatchERC1155
       realEvent = eventMap[EventType.HolographableTransferBatchERC1155]
       break
@@ -319,6 +319,7 @@ export const decodeKnownEvent = <T extends DecodedEvent>(
 export interface Event {
   type: EventType
   sigHash: string
+  customSigHash?: string
   name: string
   eventName: string
   event: string
@@ -330,7 +331,8 @@ export const eventBuilder = (eventType: EventType, event: string, customSig?: st
   const fragment: EventFragment = EventFragment.from(event)
   return {
     type: eventType,
-    sigHash: customSig ? iface.getEventTopic(EventFragment.from(customSig)) : iface.getEventTopic(fragment),
+    sigHash: iface.getEventTopic(fragment),
+    customSigHash: customSig ? iface.getEventTopic(EventFragment.from(customSig)) : undefined,
     name: EventType[eventType],
     eventName: fragment.name,
     event,

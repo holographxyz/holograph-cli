@@ -942,7 +942,7 @@ export class NetworkMonitor {
     if (this.blockJobs[network].length > 0) {
       if (network in this.processBlocksByRange && this.processBlocksByRange[network]) {
         const blockJobsLength = this.blockJobs[network].length
-        const jobs: BlockJob[] = this.blockJobs[network].slice(0, blockJobsLength - 1)
+        const jobs: BlockJob[] = this.blockJobs[network].slice(0, blockJobsLength)
         try {
           await this.processBlockByRange(network, jobs)
         } catch (error: any) {
