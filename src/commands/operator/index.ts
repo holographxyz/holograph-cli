@@ -1,25 +1,53 @@
+import {TransactionReceipt} from '@ethersproject/abstract-provider'
+import {Environment} from '@holographxyz/environment'
+import {CliUx, Flags} from '@oclif/core'
+import color from '@oclif/color'
+import dotenv from 'dotenv'
+
+import {BlockHeightProcessType, Logger} from '../../types/api'
+import {InterestingTransaction} from '../../types/network-monitor'
+import {
+  EventType,
+  BloomType,
+  BloomFilter,
+  buildFilter,
+  BloomFilterMap,
+  CrossChainMessageSentEvent,
+  AvailableOperatorJobEvent,
+  FinishedOperatorJobEvent,
+  FailedOperatorJobEvent,
+} from '../../utils/event'
+
+import {
+  BlockJob,
+  NetworkMonitor,
+  networksFlag,
+  replayFlag,
+  processBlockRange,
+  OperatorMode,
+} from '../../utils/network-monitor'
+import {HealthCheck} from '../../base-commands/healthcheck'
+import {ensureConfigFileIsValid} from '../../utils/config'
+import ApiService from '../../services/api-service'
+
+import {shouldSync, syncFlag} from '../../flags/sync.flag'
+import {BlockHeightOptions, blockHeightFlag} from '../../flags/update-block-height.flag'
+
+dotenv.config()
+
+/*
+  NEED TO CHECK
+*/
 import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import * as inquirer from 'inquirer'
-import {CliUx, Flags} from '@oclif/core'
-import {TransactionDescription} from '@ethersproject/abi'
 import {BigNumber} from '@ethersproject/bignumber'
-import {TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
-import {Environment} from '@holographxyz/environment'
-import {getNetworkByHolographId, networks} from '@holographxyz/networks'
-import {ensureConfigFileIsValid} from '../../utils/config'
 import {GasPricing} from '../../utils/gas'
-import {networksFlag, FilterType, OperatorMode, BlockJob, NetworkMonitor} from '../../utils/network-monitor'
-import {web3, functionSignature, sha3} from '../../utils/utils'
 import {checkOptionFlag} from '../../utils/validation'
 import {OperatorJobAwareCommand, OperatorJob} from '../../utils/operator-job'
-import {HealthCheck} from '../../base-commands/healthcheck'
-import {BlockHeightProcessType, Logger} from '../../types/api'
-import ApiService from '../../services/api-service'
-import color from '@oclif/color'
-import {decodeAvailableOperatorJobEvent, decodeCrossChainMessageSentEvent, decodeLzEvent} from '../../events/events'
-import {shouldSync, syncFlag} from '../../flags/sync.flag'
-import {BlockHeightOptions, blockHeightFlag} from '../../flags/update-block-height.flag'
+/*
+  END NEED TO CHECK
+*/
 
 /**
  * Operator
@@ -43,35 +71,45 @@ export default class Operator extends OperatorJobAwareCommand {
       char: 'h',
       required: false,
     }),
-    ...blockHeightFlag,
     ...syncFlag,
+    ...blockHeightFlag,
     ...networksFlag,
+    ...replayFlag,
+    ...processBlockRange,
     ...HealthCheck.flags,
   }
+
+  // API Params
+  BASE_URL?: string
+  apiService!: ApiService
+  apiColor = color.keyword('orange')
+  errorColor = color.keyword('red')
+  bloomFilters!: BloomFilterMap
+
+  environment!: Environment
+
+  legacyBlocks = true
 
   /**
    * Operator class variables
    */
   operatorMode: OperatorMode = OperatorMode.listen
-  environment!: Environment
   jobsFile!: string
-
-  // API Params
-  apiService!: ApiService
-  apiColor = color.keyword('orange')
 
   /**
    * Command Entry Point
    */
   async run(): Promise<void> {
+    this.log(`Operator command has begun!!!`)
     const {flags} = await this.parse(Operator)
-
-    // Check the flags
+    this.BASE_URL = flags.host
     const enableHealthCheckServer = flags.healthCheck
     const healthCheckPort = flags.healthCheckPort
+    let updateBlockHeight = flags.updateBlockHeight
     const syncFlag = flags.sync
+    const processBlockRange = flags['process-block-range']
+    this.legacyBlocks = !processBlockRange
     const unsafePassword = flags.unsafePassword
-    const updateBlockHeight = flags.updateBlockHeight
 
     this.operatorMode =
       OperatorMode[
@@ -90,10 +128,20 @@ export default class Operator extends OperatorJobAwareCommand {
       unsafePassword,
       true,
     )
-    this.environment = environment
     this.log('User configurations loaded.')
 
-    if (flags.host !== undefined && updateBlockHeight !== undefined && updateBlockHeight === BlockHeightOptions.API) {
+    this.environment = environment
+
+    if (flags.replay !== '0') {
+      this.log('Replay flag enabled, will not load or save block heights.')
+      updateBlockHeight = BlockHeightOptions.DISABLE
+    }
+
+    if (
+      this.BASE_URL !== undefined &&
+      updateBlockHeight !== undefined &&
+      updateBlockHeight === BlockHeightOptions.API
+    ) {
       if (this.environment === Environment.experimental || this.environment === Environment.localhost) {
         this.log(`Skipping API authentication for ${Environment[this.environment]} environment`)
       } else {
@@ -107,7 +155,7 @@ export default class Operator extends OperatorJobAwareCommand {
             error: this.error,
             jsonEnabled: () => false,
           }
-          this.apiService = new ApiService(flags.host, logger)
+          this.apiService = new ApiService(this.BASE_URL!, logger)
           await this.apiService.operatorLogin()
         } catch (error: any) {
           this.log('Error: Failed to get Operator Token from API')
@@ -125,15 +173,18 @@ export default class Operator extends OperatorJobAwareCommand {
     }
 
     this.networkMonitor = new NetworkMonitor({
+      enableV2: true,
       parent: this,
       configFile,
       networks: flags.networks,
       debug: this.debug,
-      processTransactions: this.processTransactions,
+      processTransactions2: this.processTransactions2,
       userWallet,
       lastBlockFilename: 'operator-blocks.json',
+      replay: flags.replay,
       apiService: this.apiService,
       BlockHeightOptions: updateBlockHeight as BlockHeightOptions,
+      processBlockRange: processBlockRange,
     })
 
     this.jobsFile = path.join(this.config.configDir, this.networkMonitor.environment + '.operator-job-details.json')
@@ -141,7 +192,7 @@ export default class Operator extends OperatorJobAwareCommand {
     switch (updateBlockHeight) {
       case BlockHeightOptions.API:
         if (flags.host === undefined) {
-          this.error(`--blockHeight flag option API requires the --host flag`)
+          this.errorColor(`--blockHeight flag option API requires the --host flag`)
         }
 
         this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocksHeights(
@@ -158,6 +209,11 @@ export default class Operator extends OperatorJobAwareCommand {
         break
     }
 
+    if (this.apiService !== undefined) {
+      this.apiService.setStructuredLog(this.networkMonitor.structuredLog.bind(this.networkMonitor))
+      this.apiService.setStructuredLogError(this.networkMonitor.structuredLogError.bind(this.networkMonitor))
+    }
+
     if ((await shouldSync(syncFlag, this.networkMonitor.latestBlockHeight)) === false) {
       this.networkMonitor.latestBlockHeight = {}
       this.networkMonitor.currentBlockHeight = {}
@@ -168,7 +224,8 @@ export default class Operator extends OperatorJobAwareCommand {
     this.networkMonitor.exitCallback = this.exitCallback.bind(this)
 
     CliUx.ux.action.start(`Starting operator in mode: ${OperatorMode[this.operatorMode]}`)
-    await this.networkMonitor.run(true, undefined, this.filterBuilder)
+    const continuous = flags.replay === '0' // If replay is set, run network monitor stops after catching up to the latest block
+    await this.networkMonitor.run(continuous, undefined, this.filterBuilder2)
     CliUx.ux.action.stop('🚀')
 
     // check if file exists
@@ -197,7 +254,7 @@ export default class Operator extends OperatorJobAwareCommand {
       setTimeout(this.processOperatorJobs.bind(this, network), 60_000)
     }
 
-    // Start health check server on port 6000
+    // Start health check server on port 6000 or healthCheckPort
     // Can be used to monitor that the operator is online and running
     if (enableHealthCheckServer) {
       await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, healthCheckPort})
@@ -215,32 +272,31 @@ export default class Operator extends OperatorJobAwareCommand {
     fs.writeFileSync(this.jobsFile, JSON.stringify(jobs, undefined, 2))
   }
 
-  /**
-   * Build the filters to search for events via the network monitor
-   */
-  async filterBuilder(): Promise<void> {
-    this.networkMonitor.filters = [
-      // want to catch AvailableOperatorJob event instead of watching LZ Endpoint from address
-      {
-        type: FilterType.from,
-        match: this.networkMonitor.LAYERZERO_RECEIVERS,
-        networkDependant: true,
-      },
-      // want to also catch FinishedOperatorJob and FailedOperatorJob event
-      // for now we catch all calls to HolographOperator with function executeJob
-      {
-        type: FilterType.functionSig,
-        match: functionSignature('executeJob(bytes)'),
-        networkDependant: false,
-      },
-    ]
-    if (this.environment === Environment.localhost) {
-      this.networkMonitor.filters.push({
-        type: FilterType.to,
-        match: this.networkMonitor.bridgeAddress,
-        networkDependant: false,
-      })
+  bloomFilterAddress = (address: string): Pick<BloomFilter, 'bloomType' | 'bloomValue' | 'bloomValueHashed'> => ({
+    bloomType: BloomType.contract,
+    bloomValue: address,
+    bloomValueHashed: address,
+  })
+
+  async filterBuilder2(): Promise<void> {
+    const operatorAddress = this.networkMonitor.operatorAddress
+
+    const buildEventFilter = (eventType: EventType, targetAddress?: string) =>
+      buildFilter(
+        BloomType.topic,
+        eventType,
+        undefined,
+        targetAddress ? [this.bloomFilterAddress(targetAddress!)] : undefined,
+      )
+
+    this.bloomFilters = {
+      [EventType.CrossChainMessageSent]: buildEventFilter(EventType.CrossChainMessageSent, operatorAddress),
+      [EventType.AvailableOperatorJob]: buildEventFilter(EventType.AvailableOperatorJob, operatorAddress),
+      [EventType.FinishedOperatorJob]: buildEventFilter(EventType.FinishedOperatorJob, operatorAddress),
+      [EventType.FailedOperatorJob]: buildEventFilter(EventType.FailedOperatorJob, operatorAddress),
     }
+
+    this.networkMonitor.bloomFilters = Object.values(this.bloomFilters) as BloomFilter[]
 
     // for first time init, get operator status details
     for (const network of this.networkMonitor.networks) {
@@ -252,185 +308,170 @@ export default class Operator extends OperatorJobAwareCommand {
     }
   }
 
-  /**
-   * Process the transactions in each block job
-   */
-  async processTransactions(job: BlockJob, transactions: TransactionResponse[]): Promise<void> {
-    if (transactions.length > 0) {
-      for (const transaction of transactions) {
-        const tags: (string | number)[] = []
-        tags.push(transaction.blockNumber as number, this.networkMonitor.randomTag())
-        const to: string | undefined = transaction.to?.toLowerCase()
-        const from: string | undefined = transaction.from?.toLowerCase()
-        if (to === this.networkMonitor.bridgeAddress) {
-          // this only triggers in localhost environment
-          this.networkMonitor.structuredLog(
-            job.network,
-            `handleBridgeOutEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
-            tags,
-          )
-          await this.handleBridgeOutEvent(transaction, job.network, tags)
-        } else if (to === this.networkMonitor.operatorAddress) {
-          // use this to speed up logic for getting AvailableOperatorJob event
-          this.networkMonitor.structuredLog(
-            job.network,
-            `handleBridgeInEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
-            tags,
-          )
-          await this.handleBridgeInEvent(transaction, job.network, tags)
-        } else if (from === this.networkMonitor.LAYERZERO_RECEIVERS[job.network]) {
-          this.networkMonitor.structuredLog(
-            job.network,
-            `handleAvailableOperatorJobEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
-            tags,
-          )
-          await this.handleAvailableOperatorJobEvent(transaction, job.network, tags)
-        } else if (transaction.data?.slice(0, 10).startsWith(functionSignature('executeJob(bytes)'))) {
-          this.networkMonitor.structuredLog(
-            job.network,
-            `handleBridgeInEvent ${networks[job.network].explorer}/tx/${transaction.hash}`,
-            tags,
-          )
-          await this.handleBridgeInEvent(transaction, job.network, tags)
-        } else {
-          this.networkMonitor.structuredLog(job.network, `irrelevant transaction`, tags)
-        }
-      }
+  async processTransactions2(job: BlockJob, interestingTransactions: InterestingTransaction[]): Promise<void> {
+    const startTime = performance.now()
+
+    if (interestingTransactions.length <= 0) {
+      return
     }
+
+    // Map over the transactions to create an array of Promises
+    const transactionPromises = interestingTransactions.map(interestingTransaction =>
+      this.processSingleTransaction(interestingTransaction, job),
+    )
+
+    // Use Promise.all to execute all the Promises concurrently
+    await Promise.all(transactionPromises)
+
+    const endTime = performance.now()
+    const duration = endTime - startTime
+    this.networkMonitor.structuredLog(
+      job.network,
+      `Processed ${transactionPromises.length} transactions in ${duration}ms`,
+    )
   }
 
-  async handleBridgeOutEvent(
-    transaction: TransactionResponse,
-    network: string,
-    tags: (string | number)[],
-  ): Promise<void> {
-    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
-      network,
-      transactionHash: transaction.hash,
-      attempts: 10,
-      canFail: true,
-    })
-    if (receipt === null) {
-      throw new Error(`Could not get receipt for ${transaction.hash}`)
-    }
+  async processSingleTransaction(interestingTransaction: InterestingTransaction, job: BlockJob) {
+    const tags: (string | number)[] = [
+      interestingTransaction.transaction.blockNumber as number,
+      this.networkMonitor.randomTag(),
+    ]
+    const type: EventType = EventType[interestingTransaction.bloomId as keyof typeof EventType]
 
-    if (receipt.status === 1) {
-      this.networkMonitor.structuredLog(network, `Checking for job hash`, tags)
-      const operatorJobHash: string | undefined = decodeCrossChainMessageSentEvent(
-        receipt,
-        this.networkMonitor.operatorAddress,
-      )
-      if (operatorJobHash === undefined) {
-        this.networkMonitor.structuredLog(network, `No CrossChainMessageSent event found`, tags)
-      } else {
-        const bridgeTransaction = await this.networkMonitor.bridgeContract.interface.parseTransaction({
-          data: transaction.data,
-        })
-        const args: any[] = decodeLzEvent(receipt, this.networkMonitor.lzEndpointAddress[network])!
-        const jobHash: string = web3.utils.keccak256(args[2] as string)
-        this.networkMonitor.structuredLog(network, `Bridge request found for job hash ${jobHash}`, tags)
-        // adding this double check for just in case
-        if (this.environment === Environment.localhost) {
-          await this.executeLzPayload(
-            getNetworkByHolographId(bridgeTransaction.args[0]).key,
-            jobHash,
-            [args[0], args[1], 0, args[2]],
-            tags,
-          )
-        }
-      }
-    } else {
-      this.networkMonitor.structuredLog(network, `Transaction failed, ignoring it`, tags)
-    }
-  }
+    // Log processing of transaction
+    this.networkMonitor.structuredLog(
+      job.network,
+      `Processing transaction ${interestingTransaction.transaction.hash} at block ${interestingTransaction.transaction.blockNumber}`,
+      tags,
+    )
+    this.networkMonitor.structuredLog(job.network, `Identified this as a ${interestingTransaction.bloomId} event`, tags)
 
-  async handleBridgeInEvent(
-    transaction: TransactionResponse,
-    network: string,
-    tags: (string | number)[],
-  ): Promise<void> {
-    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
-      network,
-      transactionHash: transaction.hash,
-      attempts: 10,
-      canFail: true,
-    })
-    if (receipt === null) {
-      throw new Error(`Could not get receipt for ${transaction.hash}`)
-    }
-
-    if (receipt.status === 1) {
-      this.networkMonitor.structuredLog(network, `Checking for executeJob function`, tags)
-      const parsedTransaction: TransactionDescription =
-        this.networkMonitor.operatorContract.interface.parseTransaction(transaction)
-      if (parsedTransaction.name === 'executeJob') {
-        this.networkMonitor.structuredLog(network, `Extracting bridgeInRequest from transaction`, tags)
-        const args: any[] | undefined = Object.values(parsedTransaction.args)
-        const operatorJobPayload: string | undefined = args === undefined ? undefined : args[0]
-        const operatorJobHash: string | undefined =
-          operatorJobPayload === undefined ? undefined : sha3(operatorJobPayload)
-        if (operatorJobHash === undefined) {
-          this.networkMonitor.structuredLog(network, `Could not find bridgeInRequest in ${transaction.hash}`, tags)
-        } else {
-          this.networkMonitor.structuredLog(network, `Operator executed job ${operatorJobHash}`, tags)
-          // remove job from operatorJobs if it exists
-          if (operatorJobHash in this.operatorJobs) {
-            this.networkMonitor.structuredLog(network, `Removing job from list of available jobs`, tags)
-            delete this.operatorJobs[operatorJobHash]
+    // Depending on the event type, perform relevant actions
+    try {
+      switch (type) {
+        case EventType.CrossChainMessageSent: {
+          try {
+            const crossChainMessageSentEvent: CrossChainMessageSentEvent | null = this.bloomFilters[
+              type
+            ]!.bloomEvent.decode<CrossChainMessageSentEvent>(type, interestingTransaction.log!)
+            if (crossChainMessageSentEvent !== null) {
+              this.networkMonitor.structuredLog(
+                job.network,
+                `Bridge request found for job hash ${crossChainMessageSentEvent.messageHash}`,
+                tags,
+              )
+            }
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(
+              job.network,
+              this.errorColor(`Decoding CrossChainMessageSentEvent error: `, error),
+              tags,
+            )
           }
 
-          // update operator details, in case operator was selected for a job, or any data changed
-          this.networkMonitor.structuredLog(network, `Updating operator status`, tags)
-          await this.updateOperatorStatus(network)
+          break
         }
-      } else {
-        this.networkMonitor.structuredLog(
-          network,
-          `Function call was ${parsedTransaction.name} and not executeJob`,
-          tags,
-        )
-      }
-    } else {
-      this.networkMonitor.structuredLog(network, `Transaction failed, ignoring it`, tags)
-    }
-  }
 
-  /**
-   * Handle the AvailableOperatorJob event from the LayerZero contract when one is picked up while processing transactions
-   */
-  async handleAvailableOperatorJobEvent(
-    transaction: TransactionResponse,
-    network: string,
-    tags: (string | number)[],
-  ): Promise<void> {
-    const receipt: TransactionReceipt | null = await this.networkMonitor.getTransactionReceipt({
-      network,
-      transactionHash: transaction.hash,
-      attempts: 30,
-      canFail: true,
-    })
-    if (receipt === null) {
-      throw new Error(`Could not get receipt for ${transaction.hash}`)
-    }
+        case EventType.AvailableOperatorJob: {
+          try {
+            const availableOperatorJobEvent: AvailableOperatorJobEvent | null = this.bloomFilters[
+              type
+            ]!.bloomEvent.decode<AvailableOperatorJobEvent>(type, interestingTransaction.log!)
+            if (availableOperatorJobEvent !== null) {
+              this.networkMonitor.structuredLog(
+                job.network,
+                `Found a new job ${availableOperatorJobEvent.jobHash}`,
+                tags,
+              )
+              // first update operator details, in case operator was selected for a job, or any data changed
+              this.networkMonitor.structuredLog(job.network, `Updating operator status`, tags)
+              await this.updateOperatorStatus(job.network)
+              // then add operator job to internal list of jobs to monitor and work on
+              this.networkMonitor.structuredLog(job.network, `Adding job to list of available jobs`, tags)
+              await this.decodeOperatorJob(
+                job.network,
+                availableOperatorJobEvent.jobHash,
+                availableOperatorJobEvent.payload,
+                tags,
+              )
+            }
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(
+              job.network,
+              this.errorColor(`Decoding AvailableOperatorJobEvent error: `, error),
+              tags,
+            )
+          }
 
-    if (receipt.status === 1) {
-      this.networkMonitor.structuredLog(network, `Checking for job hash`, tags)
-      const operatorJobPayloadData = decodeAvailableOperatorJobEvent(receipt, this.networkMonitor.operatorAddress)
-      const operatorJobHash = operatorJobPayloadData === undefined ? undefined : operatorJobPayloadData[0]
-      const operatorJobPayload = operatorJobPayloadData === undefined ? undefined : operatorJobPayloadData[1]
-      if (operatorJobHash === undefined) {
-        this.networkMonitor.structuredLog(network, `No AvailableOperatorJob event found`, tags)
-      } else {
-        this.networkMonitor.structuredLog(network, `Found a new job ${operatorJobHash}`, tags)
-        // first update operator details, in case operator was selected for a job, or any data changed
-        this.networkMonitor.structuredLog(network, `Updating operator status`, tags)
-        await this.updateOperatorStatus(network)
-        // then add operator job to internal list of jobs to monitor and work on
-        this.networkMonitor.structuredLog(network, `Adding job to list of available jobs`, tags)
-        await this.decodeOperatorJob(network, operatorJobHash as string, operatorJobPayload as string, tags)
+          break
+        }
+
+        case EventType.FinishedOperatorJob: {
+          try {
+            const finishedOperatorJobEvent: FinishedOperatorJobEvent | null = this.bloomFilters[
+              type
+            ]!.bloomEvent.decode<FinishedOperatorJobEvent>(type, interestingTransaction.log!)
+            if (finishedOperatorJobEvent !== null) {
+              this.networkMonitor.structuredLog(
+                job.network,
+                `Operator executed job ${finishedOperatorJobEvent.jobHash}`,
+                tags,
+              )
+              // remove job from operatorJobs if it exists
+              if (finishedOperatorJobEvent.jobHash in this.operatorJobs) {
+                this.networkMonitor.structuredLog(job.network, `Removing job from list of available jobs`, tags)
+                delete this.operatorJobs[finishedOperatorJobEvent.jobHash]
+              }
+
+              // update operator details, in case operator was selected for a job, or any data changed
+              this.networkMonitor.structuredLog(job.network, `Updating operator status`, tags)
+              await this.updateOperatorStatus(job.network)
+            }
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(
+              job.network,
+              this.errorColor(`Decoding FinishedOperatorJobEvent error: `, error),
+              tags,
+            )
+          }
+
+          break
+        }
+
+        case EventType.FailedOperatorJob: {
+          try {
+            const failedOperatorJobEvent: FailedOperatorJobEvent | null = this.bloomFilters[
+              type
+            ]!.bloomEvent.decode<FailedOperatorJobEvent>(type, interestingTransaction.log!)
+            if (failedOperatorJobEvent !== null) {
+              this.networkMonitor.structuredLog(
+                job.network,
+                `Operator job finished but with failed code ${failedOperatorJobEvent.jobHash}`,
+                tags,
+              )
+            }
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(
+              job.network,
+              this.errorColor(`Decoding FailedOperatorJobEvent error: `, error),
+              tags,
+            )
+          }
+
+          break
+        }
+
+        default: {
+          this.networkMonitor.structuredLogError(job.network, `UNKNOWN EVENT`, tags)
+          break
+        }
       }
-    } else {
-      this.networkMonitor.structuredLog(network, `Transaction failed, ignoring it`, tags)
+    } catch (error: any) {
+      this.networkMonitor.structuredLogError(
+        job.network,
+        this.errorColor(`Error processing transaction: `, error),
+        tags,
+      )
     }
   }
 
@@ -564,59 +605,5 @@ export default class Operator extends OperatorJobAwareCommand {
     }
 
     return true
-  }
-
-  /**
-   * Execute the lz message payload on the destination network
-   */
-  async executeLzPayload(network: string, jobHash: string, args: any[], tags: (string | number)[]): Promise<void> {
-    // If the operator is in listen mode, payloads will not be executed
-    // If the operator is in manual mode, the payload must be manually executed
-    // If the operator is in auto mode, the payload will be executed automatically
-    let operate = this.operatorMode === OperatorMode.auto
-    if (this.operatorMode === OperatorMode.manual) {
-      const operatorPrompt: any = await inquirer.prompt([
-        {
-          name: 'shouldContinue',
-          message: `A transaction appeared on ${network} for execution, would you like to operate?\n`,
-          type: 'confirm',
-          default: true,
-        },
-      ])
-      operate = operatorPrompt.shouldContinue
-    }
-
-    if (operate) {
-      const data: string = (
-        await this.networkMonitor.messagingModuleContract
-          .connect(this.networkMonitor.localhostWallets[network])
-          .populateTransaction.lzReceive(...args)
-      ).data!
-      let estimatedGas: BigNumber | undefined
-      try {
-        estimatedGas = await this.networkMonitor.lzEndpointContract[network].estimateGas.adminCall(
-          this.networkMonitor.messagingModuleAddress,
-          data,
-        )
-      } catch {
-        this.networkMonitor.structuredLog(network, 'Job is not valid/available for ' + jobHash, tags)
-      }
-
-      if (estimatedGas !== undefined) {
-        this.networkMonitor.structuredLog(network, 'Sending cross-chain message for ' + jobHash, tags)
-        const tx = await this.networkMonitor.lzEndpointContract[network].adminCall(
-          this.networkMonitor.messagingModuleAddress,
-          data,
-        )
-        const receipt = await tx.wait()
-        if (receipt.status === 1) {
-          this.networkMonitor.structuredLog(network, 'Sent cross-chain message for ' + jobHash, tags)
-        } else {
-          this.networkMonitor.structuredLog(network, 'Failed sending cross-chain message for ' + jobHash, tags)
-        }
-      }
-    } else {
-      this.networkMonitor.structuredLog(network, 'Dropped potential payload to execute', tags)
-    }
   }
 }

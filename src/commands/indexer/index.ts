@@ -14,6 +14,8 @@ import {
   BloomFilter,
   buildFilter,
   BloomFilterMap,
+  DecodedEvent,
+  HolographableContractEvent,
   TransferERC20Event,
   TransferERC721Event,
   TransferSingleERC1155Event,
@@ -23,9 +25,10 @@ import {
   AvailableOperatorJobEvent,
   FinishedOperatorJobEvent,
   FailedOperatorJobEvent,
+  decodeHolographableContractEvent,
 } from '../../utils/event'
 
-import {BlockJob, NetworkMonitor, networksFlag, replayFlag} from '../../utils/network-monitor'
+import {BlockJob, NetworkMonitor, networksFlag, replayFlag, processBlockRange} from '../../utils/network-monitor'
 import {zeroAddress} from '../../utils/utils'
 import {HealthCheck} from '../../base-commands/healthcheck'
 import {ensureConfigFileIsValid} from '../../utils/config'
@@ -61,6 +64,7 @@ export default class Indexer extends HealthCheck {
     ...blockHeightFlag,
     ...networksFlag,
     ...replayFlag,
+    ...processBlockRange,
     ...HealthCheck.flags,
   }
 
@@ -76,6 +80,8 @@ export default class Indexer extends HealthCheck {
 
   environment!: Environment
 
+  legacyBlocks = true
+
   /**
    * Command Entry Point
    */
@@ -87,6 +93,8 @@ export default class Indexer extends HealthCheck {
     const healthCheckPort = flags.healthCheckPort
     let updateBlockHeight = flags.updateBlockHeight
     const syncFlag = flags.sync
+    const processBlockRange = flags['process-block-range']
+    this.legacyBlocks = !processBlockRange
 
     this.log('Loading user configurations...')
     const {environment, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
@@ -138,6 +146,7 @@ export default class Indexer extends HealthCheck {
       replay: flags.replay,
       apiService: this.apiService,
       BlockHeightOptions: updateBlockHeight as BlockHeightOptions,
+      processBlockRange: processBlockRange,
     })
 
     switch (updateBlockHeight) {
@@ -212,26 +221,43 @@ export default class Indexer extends HealthCheck {
   async filterBuilder2(): Promise<void> {
     const factoryAddress = this.networkMonitor.factoryAddress
     const operatorAddress = this.networkMonitor.operatorAddress
+    const registryAddress = this.networkMonitor.registryAddress
 
-    const buildEventFilter = (eventType: EventType, contractType?: ContractType) =>
+    const buildEventFilter = (eventType: EventType, targetAddress?: string, contractType?: ContractType) =>
       buildFilter(
         BloomType.topic,
         eventType,
         undefined,
-        contractType ? undefined : [this.bloomFilterAddress(operatorAddress || factoryAddress)],
+        targetAddress ? [this.bloomFilterAddress(targetAddress!)] : undefined,
         contractType ? this.checkAgainstCachedContracts(contractType) : undefined,
       )
 
+    let tempBloomFilterMap: BloomFilterMap = {}
+    if (this.legacyBlocks) {
+      tempBloomFilterMap = {
+        [EventType.TransferERC20]: buildEventFilter(EventType.TransferERC20, undefined, ContractType.ERC20),
+        [EventType.TransferERC721]: buildEventFilter(EventType.TransferERC721, undefined, ContractType.ERC721),
+        [EventType.TransferSingleERC1155]: buildEventFilter(
+          EventType.TransferSingleERC1155,
+          undefined,
+          ContractType.ERC1155,
+        ),
+        [EventType.TransferBatchERC1155]: buildEventFilter(
+          EventType.TransferBatchERC1155,
+          undefined,
+          ContractType.ERC1155,
+        ),
+      }
+    }
+
     this.bloomFilters = {
-      [EventType.BridgeableContractDeployed]: buildEventFilter(EventType.BridgeableContractDeployed),
-      [EventType.TransferERC20]: buildEventFilter(EventType.TransferERC20, ContractType.ERC20),
-      [EventType.TransferERC721]: buildEventFilter(EventType.TransferERC721, ContractType.ERC721),
-      [EventType.TransferSingleERC1155]: buildEventFilter(EventType.TransferSingleERC1155, ContractType.ERC1155),
-      [EventType.TransferBatchERC1155]: buildEventFilter(EventType.TransferBatchERC1155, ContractType.ERC1155),
-      [EventType.CrossChainMessageSent]: buildEventFilter(EventType.CrossChainMessageSent),
-      [EventType.AvailableOperatorJob]: buildEventFilter(EventType.AvailableOperatorJob),
-      [EventType.FinishedOperatorJob]: buildEventFilter(EventType.FinishedOperatorJob),
-      [EventType.FailedOperatorJob]: buildEventFilter(EventType.FailedOperatorJob),
+      [EventType.BridgeableContractDeployed]: buildEventFilter(EventType.BridgeableContractDeployed, factoryAddress),
+      [EventType.HolographableContractEvent]: buildEventFilter(EventType.HolographableContractEvent, registryAddress),
+      [EventType.CrossChainMessageSent]: buildEventFilter(EventType.CrossChainMessageSent, operatorAddress),
+      [EventType.AvailableOperatorJob]: buildEventFilter(EventType.AvailableOperatorJob, operatorAddress),
+      [EventType.FinishedOperatorJob]: buildEventFilter(EventType.FinishedOperatorJob, operatorAddress),
+      [EventType.FailedOperatorJob]: buildEventFilter(EventType.FailedOperatorJob, operatorAddress),
+      ...tempBloomFilterMap,
     }
 
     this.networkMonitor.bloomFilters = Object.values(this.bloomFilters) as BloomFilter[]
@@ -309,6 +335,75 @@ export default class Indexer extends HealthCheck {
               this.errorColor(`Decoding BridgeableContractDeployedEvent error: `, error),
               tags,
             )
+          }
+
+          break
+        }
+
+        case EventType.HolographableContractEvent: {
+          const holographableContractEvent: HolographableContractEvent | null = this.bloomFilters[
+            type
+          ]!.bloomEvent.decode<HolographableContractEvent>(type, interestingTransaction.log!)
+          if (holographableContractEvent !== null) {
+            const decodedEvent: DecodedEvent | null = decodeHolographableContractEvent(holographableContractEvent)
+            if (decodedEvent !== null) {
+              switch (decodedEvent.type) {
+                case EventType.TransferERC20:
+                  type = EventType.TransferERC20
+                  const transferERC20Event: TransferERC20Event = decodedEvent as TransferERC20Event
+                  // No need to log ERC20 transfers at the moment
+                  // this.networkMonitor.structuredLog(job.network, 'HandleTransferERC20Event has been called', tags)
+                  break
+                case EventType.TransferERC721:
+                  type = EventType.TransferERC721
+                  // *** START OF TEMP CODE ***
+                  // We are adding a temporary filter that skips transfer events inside of bridge-in and bridge-out transactions
+                  // A bridge event contains a "TransferERC721" event. Because our process handles a whole event bridge event,
+                  // instead of the sub events we have to dedup them. So we make sure that this "TransferERC721" is not part of a bridge event.
+                  let isPartOfBridgeTx = false
+                  for (const log of interestingTransaction.allLogs!) {
+                    if (
+                      log.topics[0] === this.bloomFilters[EventType.CrossChainMessageSent]!.bloomValueHashed ||
+                      log.topics[0] === this.bloomFilters[EventType.FinishedOperatorJob]!.bloomValueHashed
+                    ) {
+                      isPartOfBridgeTx = true
+                      break
+                    }
+                  }
+
+                  if (isPartOfBridgeTx) {
+                    break
+                  }
+                  // *** END OF TEMP CODE ***
+
+                  const transferERC721Event: TransferERC721Event = decodedEvent as TransferERC721Event
+
+                  let isNewMint = false
+                  if (transferERC721Event.from === zeroAddress) {
+                    isNewMint = true
+                    for (const log of interestingTransaction.allLogs!) {
+                      if (
+                        this.networkMonitor.operatorAddress === log.address.toLowerCase() &&
+                        this.bloomFilters[EventType.FinishedOperatorJob]!.bloomEvent.sigHash === log.topics[0]
+                      ) {
+                        isNewMint = false
+                        break
+                      }
+                    }
+                  }
+
+                  await handleTransferERC721Event.call(
+                    this,
+                    this.networkMonitor,
+                    interestingTransaction.transaction,
+                    job.network,
+                    transferERC721Event,
+                    isNewMint,
+                    tags,
+                  )
+                  break
+              }
+            }
           }
 
           break

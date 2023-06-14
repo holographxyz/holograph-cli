@@ -35,6 +35,7 @@ ENV MODE=default-value
 #
 ENV ENABLE_UNSAFE=default-value
 ENV ENABLE_REPLAY=undefined
+ENV ENABLE_PROCESS_BLOCK_RANGE=undefined
 # api[default] / file / disable
 ENV UPDATE_BLOCK_HEIGHT=api
 
