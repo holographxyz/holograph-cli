@@ -1109,11 +1109,13 @@ export class NetworkMonitor {
         // Check if the log is interesting based on the validator
         const {eventValidator, bloomId} = filter
 
-        if (eventValidator?.bind(this.parent)(job.network, txMap[log.transactionHash], log)) {
-          this.pushInterestingTransaction(bloomId, txMap, log, allLogs, interestingTransactions)
-        } else if (this.tbdCachedContracts.includes(log.address.toLowerCase()) && !tbdLogs.includes(log.logIndex)) {
-          this.pushInterestingTransaction('TBD', txMap, log, allLogs, interestingTransactions)
-          tbdLogs.push(log.logIndex)
+        if (eventValidator) {
+          if (eventValidator!.bind(this.parent)(job.network, txMap[log.transactionHash], log)) {
+            this.pushInterestingTransaction(bloomId, txMap, log, allLogs, interestingTransactions)
+          } else if (this.tbdCachedContracts.includes(log.address.toLowerCase()) && !tbdLogs.includes(log.logIndex)) {
+            this.pushInterestingTransaction('TBD', txMap, log, allLogs, interestingTransactions)
+            tbdLogs.push(log.logIndex)
+          }
         } else {
           this.pushInterestingTransaction(bloomId, txMap, log, allLogs, interestingTransactions)
         }
