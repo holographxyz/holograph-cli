@@ -195,7 +195,7 @@ export default class BridgeContract extends Command {
       this.exit()
     }
 
-    CliUx.ux.action.start('Making beam request...')
+    CliUx.ux.action.start('Making bridge request...')
     const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
       network: sourceNetwork,
       contract: this.networkMonitor.bridgeContract.connect(this.networkMonitor.providers[destinationNetwork]),
@@ -222,7 +222,7 @@ export default class BridgeContract extends Command {
       }
 
       this.log(
-        `Cross-chain beaming from ${networks[sourceNetwork].shortKey} network, to ${networks[destinationNetwork].shortKey} network has started under job hash ${jobHash}`,
+        `Cross-chain bridging from ${networks[sourceNetwork].shortKey} network, to ${networks[destinationNetwork].shortKey} network has started under job hash ${jobHash}`,
       )
     }
 

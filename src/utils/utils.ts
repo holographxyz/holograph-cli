@@ -245,3 +245,10 @@ export function safeStringify(obj: any, indent = 2): string {
   cache = null!
   return retVal
 }
+
+// Helper function to convert filename to date
+export function filenameToDate(filename: string) {
+  const dateString = filename.slice('contract-deployment-'.length, filename.length - '.json'.length)
+  const formattedDate = dateString.slice(0, 13) + ':' + dateString.slice(14, 16) + ':' + dateString.slice(17)
+  return new Date(formattedDate).getTime()
+}

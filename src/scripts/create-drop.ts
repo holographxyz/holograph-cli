@@ -58,7 +58,7 @@ require('dotenv').config()
   const publicSaleEnd = Math.floor(new Date('9999-12-31').getTime() / 1000) // December 31, 9999, which is the maximum representable date in JavaScript
 
   const saleConfig: SalesConfiguration = {
-    publicSalePrice: ethers.BigNumber.from(publicSalePrice), // in USD
+    publicSalePrice: ethers.utils.parseUnits(publicSalePrice, 6), // in USD
     maxSalePurchasePerAddress: maxSalePurchasePerAddress, // in number of editions an address can purchase
     publicSaleStart: publicSaleStart, // in unix time
     publicSaleEnd: publicSaleEnd, // in unix time

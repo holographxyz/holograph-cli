@@ -42,6 +42,7 @@ import {SalesConfiguration} from '../../types/drops'
 import {decodeBridgeableContractDeployedEvent} from '../../events/events'
 import {getEnvironment} from '@holographxyz/environment'
 import {METADATA_RENDERER_ADDRESS} from '../../utils/contracts'
+import {filenameToDate} from '../../utils/utils'
 
 export default class Contract extends Command {
   static hidden = false
@@ -110,7 +111,6 @@ export default class Contract extends Command {
     await this.networkMonitor.run(true)
     CliUx.ux.action.stop()
 
-    let chainType: string
     let chainId: string
     let salt: string
     let bytecodeType: BytecodeType
@@ -144,12 +144,19 @@ export default class Contract extends Command {
       'Select the type of deployment to use',
     )
 
+    const targetNetwork = await checkOptionFlag(
+      supportedNetworksOptions,
+      flags.targetNetwork,
+      'Select the network on which the contract will be deployed',
+      txNetwork,
+    )
+
     switch (deploymentType) {
       case DeploymentType.deployedTx:
         txNetwork = await checkOptionFlag(
           supportedNetworksOptions,
           flags.txNetwork,
-          'Select the network on which the transaction was executed',
+          'Select the network on which the previous deployment transaction was executed',
         )
         tx = await checkTransactionHashFlag(
           flags.tx,
@@ -157,24 +164,36 @@ export default class Contract extends Command {
         )
         break
 
-      case DeploymentType.deploymentConfig:
-        contractDeploymentFile = await checkStringFlag(flags.deploymentConfig, 'Enter the config file to use')
-        if (await fs.pathExists(contractDeploymentFile as string)) {
-          contractDeployment = (await fs.readJson(contractDeploymentFile as string)) as ContractDeployment
+      case DeploymentType.deploymentConfig: {
+        // Read the files in the deployments directory
+        const deploymentFiles = (await fs.readdir('./deployments')).filter(file => {
+          return file.endsWith('.json')
+        })
+
+        // Sort files in-place by date in descending order (latest first)
+        deploymentFiles.sort((a, b) => {
+          return filenameToDate(b) - filenameToDate(a)
+        })
+
+        contractDeploymentFile = await checkOptionFlag(
+          deploymentFiles,
+          flags.deploymentConfig,
+          'Select the config file to use',
+        )
+
+        if (await fs.pathExists(`./deployments/${contractDeploymentFile}` as string)) {
+          contractDeployment = (await fs.readJson(
+            `./deployments/${contractDeploymentFile}` as string,
+          )) as ContractDeployment
         } else {
           throw new Error('The file "' + (contractDeploymentFile as string) + '" does not exist.')
         }
 
         break
+      }
 
-      case DeploymentType.createConfig:
-        chainType = await checkOptionFlag(
-          supportedNetworksOptions,
-          undefined,
-          'Select the primary network of the contract (does not prepend chainId to tokenIds)',
-        )
-
-        chainId = '0x' + networks[chainType].holographId.toString(16).padStart(8, '0')
+      case DeploymentType.createConfig: {
+        chainId = '0x' + networks[targetNetwork].holographId.toString(16).padStart(8, '0')
         contractDeployment.deploymentConfig.config.chainType = chainId
         salt =
           '0x' +
@@ -301,10 +320,7 @@ export default class Contract extends Command {
             ])
             if (salesConfigPrompt.shouldContinue) {
               // Enter the sales config variables
-              const publicSalePrice: string = await checkStringFlag(
-                undefined,
-                'Enter the price of the drop in ether units',
-              )
+              const publicSalePrice: string = await checkStringFlag(undefined, 'Enter the price of the drop in USD')
               const maxSalePurchasePerAddress: number = await checkNumberFlag(
                 undefined,
                 'Enter the maximum number of editions a user can purchase',
@@ -322,7 +338,7 @@ export default class Contract extends Command {
               )
 
               const saleConfig: SalesConfiguration = {
-                publicSalePrice: ethers.utils.parseEther(publicSalePrice), // in ETH
+                publicSalePrice: ethers.utils.parseUnits(publicSalePrice, 6), // in USD
                 maxSalePurchasePerAddress: maxSalePurchasePerAddress, // in number of editions an address can purchase
                 publicSaleStart: publicSaleStart, // in unix time
                 publicSaleEnd: publicSaleEnd, // in unix time
@@ -381,14 +397,8 @@ export default class Contract extends Command {
         needToSign = true
 
         break
+      }
     }
-
-    const targetNetwork: string = await checkOptionFlag(
-      supportedNetworksOptions,
-      flags.targetNetwork,
-      'Select the network on which the contract will be executed',
-      txNetwork,
-    )
 
     if (needToSign) {
       sig = await this.networkMonitor.wallets[targetNetwork].signMessage(configHashBytes!)
@@ -509,16 +519,18 @@ export default class Contract extends Command {
           })
 
           if (deploymentType !== DeploymentType.deploymentConfig && contractDeploymentFile === undefined) {
-            contractDeploymentFile = await checkStringFlag(
-              undefined,
-              'Enter the path and file where to save (ie ./contractDeployment.json)',
-            )
+            // Write the file to the default location with a date
+            contractDeploymentFile = `contract-deployment-${new Date().toISOString().replace(/:/g, '-')}.json`
           }
 
-          // NOTE: this will overwrite the file if it already exists (exlaimation mart is okay due to check above)
-          await fs.ensureFile(contractDeploymentFile!)
-          await fs.writeFile(contractDeploymentFile!, JSON.stringify(contractDeployment, undefined, 2), 'utf8')
-          this.log('File successfully saved to "' + contractDeploymentFile + '"')
+          // NOTE: this will overwrite the file if it already exists (exclamation mark is okay due to check above)
+          await fs.ensureFile(`./deployments/${contractDeploymentFile!}`)
+          await fs.writeFile(
+            `./deployments/${contractDeploymentFile!}`,
+            JSON.stringify(contractDeployment, undefined, 2),
+            'utf8',
+          )
+          this.log(`File successfully saved to ./deployments/${contractDeploymentFile}`)
         }
       }
 
