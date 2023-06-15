@@ -173,7 +173,7 @@ jobs:
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
           ENABLE_SYNC: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE: 'undefined' # undefined/true
+          ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           #
           AVALANCHE_NETWORK: 'fuji'
@@ -295,7 +295,7 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
-          ENABLE_PROCESS_BLOCK_RANGE: 'undefined' # undefined/true
+          ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           #
           AVALANCHE_NETWORK: 'fuji'
