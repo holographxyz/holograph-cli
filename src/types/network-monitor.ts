@@ -3,7 +3,8 @@ import {Log, TransactionReceipt, TransactionResponse} from '@ethersproject/abstr
 
 export type LogsParams = {
   network: string
-  blockNumber: number
+  fromBlock: number
+  toBlock?: number
   tags?: (string | number)[]
   attempts?: number
   canFail?: boolean

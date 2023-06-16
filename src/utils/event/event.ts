@@ -10,9 +10,13 @@ export enum EventType {
   UNKNOWN = 'UNKNOWN',
   TBD = 'TBD',
   TransferERC20 = 'TransferERC20',
+  HolographableTransferERC20 = 'HolographableTransferERC20',
   TransferERC721 = 'TransferERC721',
+  HolographableTransferERC721 = 'HolographableTransferERC721',
   TransferSingleERC1155 = 'TransferSingleERC1155',
+  HolographableTransferSingleERC1155 = 'HolographableTransferSingleERC1155',
   TransferBatchERC1155 = 'TransferBatchERC1155',
+  HolographableTransferBatchERC1155 = 'HolographableTransferBatchERC1155',
   BridgeableContractDeployed = 'BridgeableContractDeployed',
   CrossChainMessageSent = 'CrossChainMessageSent',
   AvailableOperatorJob = 'AvailableOperatorJob',
@@ -21,12 +25,18 @@ export enum EventType {
   PacketLZ = 'PacketLZ',
   V1PacketLZ = 'V1PacketLZ',
   TestLzEvent = 'TestLzEvent',
+  HolographableContractEvent = 'HolographableContractEvent',
 }
 
 export interface BaseEvent {
   type: EventType
   contract: string
   logIndex: number
+}
+
+export interface HolographableContractEvent extends BaseEvent {
+  contractAddress: string
+  payload: string
 }
 
 export interface TransferERC20Event extends BaseEvent {
@@ -81,6 +91,7 @@ export interface FailedOperatorJobEvent extends BaseEvent {
 }
 
 export type DecodedEvent =
+  | HolographableContractEvent
   | TransferERC20Event
   | TransferERC721Event
   | TransferSingleERC1155Event
@@ -92,6 +103,95 @@ export type DecodedEvent =
   | FailedOperatorJobEvent
 
 export type EventDecoder = <T extends DecodedEvent>(type: EventType, log: Log) => T | null
+
+export const decodeHolographableContractEvent = (
+  holographableContractEvent: HolographableContractEvent,
+): DecodedEvent | null => {
+  let type: EventType = EventType.UNKNOWN
+  let realEvent: Event = eventMap[EventType.UNKNOWN]
+
+  const eventSignature: string = (
+    defaultAbiCoder.decode(['bytes32'], holographableContractEvent.payload) as string[]
+  )[0]
+
+  switch (eventSignature) {
+    case eventMap[EventType.HolographableTransferERC20].customSigHash!:
+      type = EventType.TransferERC20
+      realEvent = eventMap[EventType.HolographableTransferERC20]
+      break
+    case eventMap[EventType.HolographableTransferERC721].customSigHash!:
+      type = EventType.TransferERC721
+      realEvent = eventMap[EventType.HolographableTransferERC721]
+      break
+    case eventMap[EventType.HolographableTransferSingleERC1155].customSigHash!:
+      type = EventType.TransferSingleERC1155
+      realEvent = eventMap[EventType.HolographableTransferSingleERC1155]
+      break
+    case eventMap[EventType.HolographableTransferBatchERC1155].customSigHash!:
+      type = EventType.TransferBatchERC1155
+      realEvent = eventMap[EventType.HolographableTransferBatchERC1155]
+      break
+  }
+  let log: Log = {
+    address: holographableContractEvent.contractAddress,
+    logIndex: holographableContractEvent.logIndex,
+    topics: [realEvent.sigHash],
+    data: holographableContractEvent.payload,
+  } as unknown as Log
+
+  let output: DecodedEvent | null = null
+  const decodedLog: Result | null = iface.decodeEventLog(realEvent.fragment, log.data, log.topics)
+  if (decodedLog === null) {
+    return null
+  }
+
+  switch (type) {
+    case EventType.TransferERC20:
+      output = {
+        type,
+        contract: (log.address as string).toLowerCase(),
+        logIndex: log.logIndex,
+        from: (decodedLog._from as string).toLowerCase(),
+        to: (decodedLog._to as string).toLowerCase(),
+        value: BigNumber.from(decodedLog._value),
+      } as unknown as TransferERC20Event
+      break
+    case EventType.TransferERC721:
+      output = {
+        type,
+        contract: (log.address as string).toLowerCase(),
+        logIndex: log.logIndex,
+        from: (decodedLog._from as string).toLowerCase(),
+        to: (decodedLog._to as string).toLowerCase(),
+        tokenId: BigNumber.from(decodedLog._tokenId),
+      } as unknown as TransferERC721Event
+      break
+    case EventType.TransferSingleERC1155:
+      output = {
+        type,
+        contract: (log.address as string).toLowerCase(),
+        logIndex: log.logIndex,
+        from: (decodedLog._from as string).toLowerCase(),
+        to: (decodedLog._to as string).toLowerCase(),
+        tokenId: BigNumber.from(decodedLog._tokenId),
+        value: BigNumber.from(decodedLog._value),
+      } as unknown as TransferSingleERC1155Event
+      break
+    case EventType.TransferBatchERC1155:
+      output = {
+        type,
+        contract: (log.address as string).toLowerCase(),
+        logIndex: log.logIndex,
+        from: (decodedLog._from as string).toLowerCase(),
+        to: (decodedLog._to as string).toLowerCase(),
+        tokenIds: decodedLog._tokenIds as BigNumber[],
+        values: decodedLog._values as BigNumber[],
+      } as unknown as TransferBatchERC1155Event
+      break
+  }
+
+  return output
+}
 
 export const decodeKnownEvent = <T extends DecodedEvent>(
   type: EventType,
@@ -107,7 +207,26 @@ export const decodeKnownEvent = <T extends DecodedEvent>(
   switch (type) {
     case EventType.UNKNOWN:
       return null
+    case EventType.HolographableContractEvent:
+      output = {
+        type,
+        contract: (log.address as string).toLowerCase(),
+        logIndex: log.logIndex,
+        contractAddress: (decodedLog._holographableContract as string).toLowerCase(),
+        payload: (decodedLog._payload as string).toLowerCase(),
+      } as unknown as T
+      break
     case EventType.TransferERC20:
+      output = {
+        type,
+        contract: (log.address as string).toLowerCase(),
+        logIndex: log.logIndex,
+        from: (decodedLog._from as string).toLowerCase(),
+        to: (decodedLog._to as string).toLowerCase(),
+        value: BigNumber.from(decodedLog._value),
+      } as unknown as T
+      break
+    case EventType.HolographableTransferERC20:
       output = {
         type,
         contract: (log.address as string).toLowerCase(),
@@ -200,6 +319,7 @@ export const decodeKnownEvent = <T extends DecodedEvent>(
 export interface Event {
   type: EventType
   sigHash: string
+  customSigHash?: string
   name: string
   eventName: string
   event: string
@@ -207,11 +327,12 @@ export interface Event {
   decode: EventDecoder
 }
 
-export const eventBuilder = (eventType: EventType, event: string): Event => {
+export const eventBuilder = (eventType: EventType, event: string, customSig?: string): Event => {
   const fragment: EventFragment = EventFragment.from(event)
   return {
     type: eventType,
     sigHash: iface.getEventTopic(fragment),
+    customSigHash: customSig ? iface.getEventTopic(EventFragment.from(customSig)) : undefined,
     name: EventType[eventType],
     eventName: fragment.name,
     event,
@@ -227,21 +348,45 @@ type EventMap = {[key in keyof typeof EventType]: Event}
 export const eventMap: EventMap = {
   [EventType.UNKNOWN]: {} as unknown as Event,
   [EventType.TBD]: {} as unknown as Event,
+  [EventType.HolographableContractEvent]: eventBuilder(
+    EventType.HolographableContractEvent,
+    'HolographableContractEvent(address indexed _holographableContract, bytes _payload)',
+  ),
   [EventType.TransferERC20]: eventBuilder(
     EventType.TransferERC20,
     'Transfer(address indexed _from, address indexed _to, uint256 _value)',
+  ),
+  [EventType.HolographableTransferERC20]: eventBuilder(
+    EventType.HolographableTransferERC20,
+    'TransferERC20(bytes32 _event, address _from, address _to, _value)',
+    'TransferERC20(address _from, address _to, _value)',
   ),
   [EventType.TransferERC721]: eventBuilder(
     EventType.TransferERC721,
     'Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId)',
   ),
+  [EventType.HolographableTransferERC721]: eventBuilder(
+    EventType.HolographableTransferERC721,
+    'TransferERC721(bytes32 _event, address _from, address _to, uint256 _tokenId)',
+    'TransferERC721(address _from, address _to, uint256 _tokenId)',
+  ),
   [EventType.TransferSingleERC1155]: eventBuilder(
     EventType.TransferSingleERC1155,
     'TransferSingle(address indexed _operator, address indexed _from, address indexed _to, uint256 _tokenId, uint256 _value)',
   ),
+  [EventType.HolographableTransferSingleERC1155]: eventBuilder(
+    EventType.HolographableTransferSingleERC1155,
+    'TransferSingleERC1155(bytes32 _event, address _operator, address _from, address _to, uint256 _tokenId, uint256 _value)',
+    'TransferSingleERC1155(address _operator, address _from, address _to, uint256 _tokenId, uint256 _value)',
+  ),
   [EventType.TransferBatchERC1155]: eventBuilder(
     EventType.TransferBatchERC1155,
     'TransferBatch(address indexed _operator, address indexed _from, address indexed _to, uint256[] _tokenIds, uint256[] _values)',
+  ),
+  [EventType.HolographableTransferBatchERC1155]: eventBuilder(
+    EventType.HolographableTransferBatchERC1155,
+    'TransferBatchERC1155(bytes32 _event, address _operator, address _from, address _to, uint256[] _tokenIds, uint256[] _values)',
+    'TransferBatchERC1155(address _operator, address _from, address _to, uint256[] _tokenIds, uint256[] _values)',
   ),
   [EventType.BridgeableContractDeployed]: eventBuilder(
     EventType.BridgeableContractDeployed,

@@ -53,6 +53,12 @@ export const networkToChainId: Record<string, number> = {
   arbitrum: 42_161,
 }
 
+// NOTE: This is an inverse map of networkToChainId
+export const chainIdToNetwork = (): Record<number, string> => {
+  const flipped = Object.entries(networkToChainId).map(([key, value]) => [value, key])
+  return Object.fromEntries(flipped)
+}
+
 export const NETWORK_COLORS: Record<string, string> = {
   localhost: '#83EEFF',
   localhost2: '#ff0000',
@@ -224,7 +230,7 @@ export function generateHashedName(name: string): string {
   return `0x${paddedHex}`
 }
 
-export function safeStringify(obj: any, indent = 2) {
+export function safeStringify(obj: any, indent = 2): string {
   let cache: any[] = []
   const retVal = JSON.stringify(
     obj,
@@ -238,4 +244,11 @@ export function safeStringify(obj: any, indent = 2) {
   )
   cache = null!
   return retVal
+}
+
+// Helper function to convert filename to date
+export function filenameToDate(filename: string) {
+  const dateString = filename.slice('contract-deployment-'.length, filename.length - '.json'.length)
+  const formattedDate = dateString.slice(0, 13) + ':' + dateString.slice(14, 16) + ':' + dateString.slice(17)
+  return new Date(formattedDate).getTime()
 }
