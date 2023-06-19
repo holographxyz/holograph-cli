@@ -10,13 +10,14 @@ async function handleTransferERC721Event(
   transaction: TransactionResponse,
   network: string,
   event: TransferERC721Event,
+  isNewMint: boolean,
   tags: (string | number)[],
 ): Promise<void> {
   const {from, to, tokenId, contract: contractAddress, logIndex} = event
 
   const messageBody: SqsMessageBody = {
     type: PayloadType.ERC721,
-    eventName: EventName.MintNft,
+    eventName: isNewMint ? EventName.MintNft : EventName.TransferERC721,
     eventSignature: 'Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId)',
     tagId: tags,
     chainId: networkToChainId[network],

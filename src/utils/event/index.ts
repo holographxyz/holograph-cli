@@ -1,6 +1,7 @@
 import {
   EventType,
   BaseEvent,
+  HolographableContractEvent,
   TransferERC20Event,
   TransferERC721Event,
   TransferSingleERC1155Event,
@@ -12,6 +13,7 @@ import {
   FailedOperatorJobEvent,
   DecodedEvent,
   EventDecoder,
+  decodeHolographableContractEvent,
   decodeKnownEvent,
   Event,
   eventBuilder,
@@ -22,6 +24,7 @@ import {EventValidator, BloomType, BloomFilterValidator, BloomFilter, buildFilte
 export {
   EventType,
   BaseEvent,
+  HolographableContractEvent,
   TransferERC20Event,
   TransferERC721Event,
   TransferSingleERC1155Event,
@@ -33,6 +36,7 @@ export {
   FailedOperatorJobEvent,
   DecodedEvent,
   EventDecoder,
+  decodeHolographableContractEvent,
   decodeKnownEvent,
   Event,
   eventBuilder,

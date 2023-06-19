@@ -67,4 +67,6 @@ export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
   fantom: '0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7',
   optimism: '0x3c2269811836af69497E5F486A85D7316753cf62',
   optimismTestnetGoerli: '0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1',
+  arbitrumOne: '0x3c2269811836af69497E5F486A85D7316753cf62'.toLowerCase(),
+  arbitrumTestnetGoerli: '0x6aB5Ae6822647046626e83ee6dB8187151E1d5ab'.toLowerCase(),
 } as const

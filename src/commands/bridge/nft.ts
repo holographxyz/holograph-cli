@@ -24,6 +24,7 @@ import {generateInitCode} from '../../utils/initcode'
 import {decodeCrossChainMessageSentEvent} from '../../events/events'
 import {getABIs} from '../../utils/contracts'
 import {getEnvironment} from '@holographxyz/environment'
+import {overrideToMinGasPrice} from '../../utils/web3'
 
 export default class BridgeNFT extends Command {
   static description = 'Bridge a Holographable NFT from one network to another.'
@@ -39,20 +40,20 @@ export default class BridgeNFT extends Command {
       required: false,
     }),
     tokenId: Flags.string({
-      description: 'The token ID of the NFT to beam',
+      description: 'The token ID of the NFT to bridge',
       parse: validateTokenIdInput,
       multiple: false,
       required: false,
     }),
     sourceNetwork: Flags.string({
-      description: 'The source network from which to beam',
+      description: 'The source network from which to bridge',
       parse: validateNetwork,
       options: supportedShortNetworks,
       multiple: false,
       required: false,
     }),
     destinationNetwork: Flags.string({
-      description: 'The destination network which to beam to',
+      description: 'The destination network which to bridge to',
       parse: validateNetwork,
       options: supportedShortNetworks,
       multiple: false,
@@ -100,19 +101,19 @@ export default class BridgeNFT extends Command {
     const sourceNetwork: string = await checkOptionFlag(
       supportedNetworksOptions,
       flags.sourceNetwork,
-      'Select the source network from which to beam',
+      'Select the source network from which to bridge',
     )
     const destinationNetwork: string = await checkOptionFlag(
       supportedNetworksOptions,
       flags.destinationNetwork,
-      'Select the destination network which to beam to',
+      'Select the destination network which to bridge to',
       sourceNetwork,
     )
     const collectionAddress: string = await checkContractAddressFlag(
       flags.collectionAddress,
       'Enter the address of the collection smart contract',
     )
-    const tokenId: string = await checkTokenIdFlag(flags.tokenId, 'Enter the token ID of the NFT to beam')
+    const tokenId: string = await checkTokenIdFlag(flags.tokenId, 'Enter the token ID of the NFT to bridge')
 
     this.networkMonitor = new NetworkMonitor({
       parent: this,
@@ -174,7 +175,7 @@ export default class BridgeNFT extends Command {
     }
 
     CliUx.ux.action.start('Retrieving collection smart contract')
-    const collectionABI = abis.HolographDropERC721ABI
+    const collectionABI = abis.HolographERC721ABI
     const collection = new Contract(collectionAddress, collectionABI, this.networkMonitor.providers[sourceNetwork])
     this.log(`Collection address is ${collection.address}`)
 
@@ -195,6 +196,7 @@ export default class BridgeNFT extends Command {
       [userWallet.address, userWallet.address, tokenId],
     )
 
+    // Use 10 million gas as base gas to estimate with
     const TESTGASLIMIT: BigNumber = BigNumber.from('10000000')
 
     let payload: BytesLike = await this.networkMonitor.bridgeContract
@@ -213,9 +215,17 @@ export default class BridgeNFT extends Command {
         .callStatic.jobEstimator(payload as string, {gasLimit: TESTGASLIMIT}),
     )
 
+    // we extract the most recent and most accurate gas prices for destination network
     const gasPricing: GasPricing = this.networkMonitor.gasPrices[destinationNetwork]
+
+    // get gas price based on eip-1559 support
     let gasPrice: BigNumber = gasPricing.isEip1559 ? gasPricing.maxFeePerGas! : gasPricing.gasPrice!
-    gasPrice = gasPrice.add(gasPrice.div(BigNumber.from('4')))
+
+    // add 50% overhead to accommodate gas spikes and testing
+    gasPrice = gasPrice.add(gasPrice.div(BigNumber.from('2')))
+
+    // override gas price to minimum if set
+    gasPrice = overrideToMinGasPrice(networks[destinationNetwork].chain as SupportedChainIds, gasPrice)
 
     payload = await this.networkMonitor.bridgeContract
       .connect(this.networkMonitor.providers[sourceNetwork])
@@ -233,11 +243,13 @@ export default class BridgeNFT extends Command {
       .connect(this.networkMonitor.providers[sourceNetwork])
       .callStatic.getMessageFee(networks[destinationNetwork].holographId, estimatedGas, gasPrice, payload)
     const total: BigNumber = fees[0].add(fees[1])
+
     estimatedGas = TESTGASLIMIT.sub(
       await this.networkMonitor.operatorContract
         .connect(this.networkMonitor.providers[destinationNetwork])
         .callStatic.jobEstimator(payload as string, {value: total, gasLimit: TESTGASLIMIT}),
     )
+
     this.log('hlg fee', formatUnits(fees[0], 'ether'), 'ether')
     this.log('lz fee', formatUnits(fees[1], 'ether'), 'ether')
     this.log('lz gasPrice', formatUnits(fees[2], 'gwei'), 'GWEI')
@@ -257,7 +269,7 @@ export default class BridgeNFT extends Command {
       this.exit()
     }
 
-    CliUx.ux.action.start('Making beam request...')
+    CliUx.ux.action.start('Making bridge request...')
     const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
       network: sourceNetwork,
       contract: this.networkMonitor.bridgeContract.connect(this.networkMonitor.providers[destinationNetwork]),
@@ -277,7 +289,7 @@ export default class BridgeNFT extends Command {
       }
 
       this.log(
-        `Cross-chain beaming from ${networks[sourceNetwork].shortKey} network, to ${networks[destinationNetwork].shortKey} network has started under job hash ${jobHash}`,
+        `Cross-chain bridging from ${networks[sourceNetwork].shortKey} network, to ${networks[destinationNetwork].shortKey} network has started under job hash ${jobHash}`,
       )
     }
 

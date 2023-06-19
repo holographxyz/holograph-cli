@@ -37,10 +37,10 @@ env:
   STG_COMMON_NAMESPACE: develop
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.93
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.98
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.66
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.71
   OPERATOR_RELEASE_NAME: operator-dev # format -> [release_name]-operator-[env]
   #######################################
   #
@@ -49,6 +49,7 @@ env:
   indexer_dev_polygonTestnet_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }}
   indexer_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }}
   indexer_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_OPTIMISM_GOERLI_RPC_URL }}
+  indexer_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_ARBITRUM_GOERLI_RPC_URL }}
   indexer_dev_binanceTestnet_rpc_url: ${{ secrets.INDEXER_DEV_BSC_TESTNET_RPC_URL }}
   #
   indexer_dev_private_key: ${{ secrets.INDEXER_DEV_PRIVATE_KEY }}
@@ -58,6 +59,7 @@ env:
   operator_dev_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }}
   operator_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_GOERLI_RPC_URL }}
   operator_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_OPTIMISM_GOERLI_RPC_URL }}
+  operator_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_ARBITRUM_GOERLI_RPC_URL }}
   operator_dev_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_BSC_TESTNET_RPC_URL }}
   #
   operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
@@ -172,9 +174,18 @@ jobs:
           ENABLE_UNSAFE: 'false'
           ENABLE_SYNC: 'true'
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
+          #
+          ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
+          ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
+          #
           AVALANCHE_NETWORK: 'fuji'
           ETHEREUM_NETWORK: 'goerli'
           OPTIMISM_NETWORK: 'optimismTestnetGoerli'
+          ARBITRUM_NETWORK: 'arbitrumTestnetGoerli'
           POLYGON_NETWORK: 'mumbai'
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
         with:
@@ -200,16 +211,25 @@ jobs:
             --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
             --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
             --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
+            --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
             --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
             --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
             \
+            --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
+            --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
+            --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
+            --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
+            --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
+            --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
+            \
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_dev_avalancheTestnet_rpc_url }} \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_dev_polygonTestnet_rpc_url }} \
             --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.indexer_dev_ethereumTestnetGoerli_rpc_url }} \
             --set dev_rpc_config_values.optimismTestnetGoerli_rpc_url=${{ env.indexer_dev_optimismTestnetGoerli_rpc_url }} \
+            --set dev_rpc_config_values.arbitrumTestnetGoerli_rpc_url=${{ env.indexer_dev_arbitrumTestnetGoerli_rpc_url }} \
             --set dev_rpc_config_values.binanceTestnet_rpc_url=${{ env.indexer_dev_binanceTestnet_rpc_url }} \
             \
             --set dev_rpc_config_values.private_key=${{ env.indexer_dev_private_key }} \
@@ -220,34 +240,31 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }} \
             \
-            --set autoscaling.avalanche.maxReplicas=1 \
-            --set autoscaling.ethereum.maxReplicas=1 \
-            --set autoscaling.polygon.maxReplicas=1 \
-            --set autoscaling.binance.maxReplicas=1 \
+            --set autoscaling.enabled=false \
+            --set replicaCount=1 \
             \
-            --set resources.ethereum.limits.cpu=100m \
-            --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=500Mi \
+            --set resources.ethereum.limits.memory=820Mi \
+            --set resources.ethereum.requests.cpu=300m \
+            --set resources.ethereum.requests.memory=800Mi \
             \
-            --set resources.optimism.limits.cpu=100m \
             --set resources.optimism.limits.memory=520Mi \
-            --set resources.optimism.requests.cpu=100m \
+            --set resources.optimism.requests.cpu=300m \
             --set resources.optimism.requests.memory=500Mi \
             \
-            --set resources.polygon.limits.cpu=100m \
+            --set resources.arbitrum.limits.memory=520Mi \
+            --set resources.arbitrum.requests.cpu=300m \
+            --set resources.arbitrum.requests.memory=500Mi \
+            \
             --set resources.polygon.limits.memory=520Mi \
-            --set resources.polygon.requests.cpu=100m \
+            --set resources.polygon.requests.cpu=300m \
             --set resources.polygon.requests.memory=500Mi \
             \
-            --set resources.avalanche.limits.cpu=100m \
             --set resources.avalanche.limits.memory=520Mi \
-            --set resources.avalanche.requests.cpu=100m \
+            --set resources.avalanche.requests.cpu=300m \
             --set resources.avalanche.requests.memory=500Mi \
             \
-            --set resources.binance.limits.cpu=100m \
             --set resources.binance.limits.memory=520Mi \
-            --set resources.binance.requests.cpu=100m \
+            --set resources.binance.requests.cpu=300m \
             --set resources.binance.requests.memory=500Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
@@ -291,10 +308,19 @@ jobs:
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
+          #
+          ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
+          ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
+          #
           AVALANCHE_NETWORK: 'fuji'
           POLYGON_NETWORK: 'mumbai'
           ETHEREUM_NETWORK: 'goerli'
           OPTIMISM_NETWORK: 'optimismTestnetGoerli'
+          ARBITRUM_NETWORK: 'arbitrumTestnetGoerli'
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
@@ -318,42 +344,53 @@ jobs:
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
             \
+            --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
+            --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
+            --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
+            --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
+            --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
+            --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
+            \
             --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
             --set POLYGON_NETWORK=$POLYGON_NETWORK \
             --set ETHEREUM_NETWORK=$ETHEREUM_NETWORK \
             --set OPTIMISM_NETWORK=$OPTIMISM_NETWORK \
+            --set ARBITRUM_NETWORK=$ARBITRUM_NETWORK \
             --set BINANCE_NETWORK=$BINANCE_NETWORK \
             \
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_dev_avalancheTestnet_rpc_url }} \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_dev_polygonTestnet_rpc_url }} \
             --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.operator_dev_ethereumTestnetGoerli_rpc_url }} \
             --set dev_rpc_config_values.optimismTestnetGoerli_rpc_url=${{ env.operator_dev_optimismTestnetGoerli_rpc_url }} \
+            --set dev_rpc_config_values.arbitrumTestnetGoerli_rpc_url=${{ env.operator_dev_arbitrumTestnetGoerli_rpc_url }} \
             --set dev_rpc_config_values.binanceTestnet_rpc_url=${{ env.operator_dev_binanceTestnet_rpc_url }} \
             \
             --set dev_rpc_config_values.private_key=${{ env.operator_dev_private_key }} \
             --set dev_rpc_config_values.address=${{ env.operator_dev_address }} \
             \
-            --set resources.ethereum.limits.cpu=100m \
-            --set resources.ethereum.limits.memory=500Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=300Mi \
+            --set autoscaling.enabled=false \
+            --set replicaCount=1 \
             \
-            --set resources.optimism.limits.cpu=100m \
+            --set resources.ethereum.limits.memory=800Mi \
+            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.requests.memory=800Mi \
+            \
             --set resources.optimism.limits.memory=500Mi \
             --set resources.optimism.requests.cpu=100m \
             --set resources.optimism.requests.memory=300Mi \
             \
-            --set resources.polygon.limits.cpu=100m \
+            --set resources.arbitrum.limits.memory=500Mi \
+            --set resources.arbitrum.requests.cpu=100m \
+            --set resources.arbitrum.requests.memory=300Mi \
+            \
             --set resources.polygon.limits.memory=500Mi \
             --set resources.polygon.requests.cpu=100m \
             --set resources.polygon.requests.memory=300Mi \
             \
-            --set resources.avalanche.limits.cpu=100m \
             --set resources.avalanche.limits.memory=500Mi \
             --set resources.avalanche.requests.cpu=100m \
             --set resources.avalanche.requests.memory=300Mi \
             \
-            --set resources.binance.limits.cpu=100m \
             --set resources.binance.limits.memory=500Mi \
             --set resources.binance.requests.cpu=100m \
             --set resources.binance.requests.memory=300Mi \
@@ -397,186 +434,3 @@ jobs:
             ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
             echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
             curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-
-      ######
-      - name: -> Deploy dummy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
-        uses: tensor-hq/eksctl-helm-action@main
-        env:
-          RELEASE_NAME: dummy-${{ env.INDEXER_RELEASE_NAME }} # notice
-          #
-          ENABLE_REPLAY: 'undefined' # add a string like 123:345 if you wanna use it
-          #
-          ENABLE_DEBUG: 'true'
-          ENABLE_SYNC: 'true'
-          HEALTHCHECK: 'true'
-          MODE: 'auto'
-          ENABLE_UNSAFE: 'false'
-          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
-          AVALANCHE_NETWORK: 'fuji'
-          ETHEREUM_NETWORK: 'goerli'
-          OPTIMISM_NETWORK: 'optimismTestnetGoerli'
-          POLYGON_NETWORK: 'mumbai'
-          BINANCE_NETWORK: 'binanceSmartChainTestnet'
-        with:
-          eks_cluster: ${{ env.CLUSTER_NAME }}
-          command: |-
-            helm upgrade --install $RELEASE_NAME \
-            holo-indexer-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }}.tgz \
-            -n ${{ env.STG_COMMON_NAMESPACE }} \
-            \
-            --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
-            --set config_file_data=${{ env.INDEXER_HOLOGRAPH_CONFIG_FILE_DATA }} \
-            --set holo_indexer_password=${{ env.STG_HOLOGRAPH_INDEXER_PASSWORD }} \
-            --set HOLO_INDEXER_HOST=${{ env.STG_HOLOGRAPH_INDEXER_HOST }} \
-            --set OPERATOR_API_KEY=${{ env.STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY }} \
-            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
-            \
-            --set ENABLE_DEBUG=$ENABLE_DEBUG \
-            --set ENABLE_SYNC=$ENABLE_SYNC \
-            --set HEALTHCHECK=$HEALTHCHECK \
-            --set MODE=$MODE \
-            \
-            --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
-            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
-            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
-            --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
-            --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
-            \
-            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
-            --set ENABLE_REPLAY="${ENABLE_REPLAY}" \
-            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
-            \
-            --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_dev_avalancheTestnet_rpc_url }} \
-            --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_dev_polygonTestnet_rpc_url }} \
-            --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.indexer_dev_ethereumTestnetGoerli_rpc_url }} \
-            --set dev_rpc_config_values.optimismTestnetGoerli_rpc_url=${{ env.indexer_dev_optimismTestnetGoerli_rpc_url }} \
-            --set dev_rpc_config_values.binanceTestnet_rpc_url=${{ env.indexer_dev_binanceTestnet_rpc_url }} \
-            \
-            --set dev_rpc_config_values.private_key=${{ env.indexer_dev_private_key }} \
-            --set dev_rpc_config_values.address=${{ env.indexer_dev_address }} \
-            --set dev_rpc_config_values.version="beta3" \
-            \
-            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-            --set datadog_tags.service=$RELEASE_NAME \
-            --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }} \
-            \
-            --set autoscaling.enabled=false \
-            --set replicaCount=0 \
-            \
-            --set resources.ethereum.limits.cpu=100m \
-            --set resources.ethereum.limits.memory=500Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=300Mi \
-            \
-            --set resources.optimism.limits.cpu=100m \
-            --set resources.optimism.limits.memory=500Mi \
-            --set resources.optimism.requests.cpu=100m \
-            --set resources.optimism.requests.memory=300Mi \
-            \
-            --set resources.polygon.limits.cpu=100m \
-            --set resources.polygon.limits.memory=500Mi \
-            --set resources.polygon.requests.cpu=100m \
-            --set resources.polygon.requests.memory=300Mi \
-            \
-            --set resources.avalanche.limits.cpu=100m \
-            --set resources.avalanche.limits.memory=500Mi \
-            --set resources.avalanche.requests.cpu=100m \
-            --set resources.avalanche.requests.memory=300Mi \
-            \
-            --set resources.binance.limits.cpu=100m \
-            --set resources.binance.limits.memory=500Mi \
-            --set resources.binance.requests.cpu=100m \
-            --set resources.binance.requests.memory=300Mi \
-            \
-            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
-            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
-            --set sqs.SQS_ENDPOINT=${{ env.DEV_SQS_ENDPOINT }} \
-            --set sqs.SQS_QUEUE_URL=${{ env.DEV_SQS_QUEUE_URL }} \
-            --set sqs.AWS_REGION=us-west-2
-
-      ######
-      - name: -> Deploy dummy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
-        uses: tensor-hq/eksctl-helm-action@main
-        env:
-          RELEASE_NAME: dummy-${{ env.OPERATOR_RELEASE_NAME }} # notice
-          #
-          ENABLE_DEBUG: 'true'
-          ENABLE_SYNC: 'true'
-          HEALTHCHECK: 'true'
-          MODE: 'auto'
-          ENABLE_UNSAFE: 'false'
-          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
-          AVALANCHE_NETWORK: 'fuji'
-          POLYGON_NETWORK: 'mumbai'
-          ETHEREUM_NETWORK: 'goerli'
-          OPTIMISM_NETWORK: 'optimismTestnetGoerli'
-          BINANCE_NETWORK: 'binanceSmartChainTestnet'
-        with:
-          eks_cluster: ${{ env.CLUSTER_NAME }}
-          command: |-
-            helm upgrade --install $RELEASE_NAME \
-            holo-operator-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}.tgz \
-            -n ${{ env.STG_COMMON_NAMESPACE }} \
-            \
-            --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
-            --set config_file_data=${{ env.OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA }} \
-            --set holo_operator_password=${{ env.STG_HOLOGRAPH_OPERATOR_PASSWORD }} \
-            --set HOLO_OPERATOR_HOST=${{ env.STG_HOLOGRAPH_OPERATOR_HOST }} \
-            --set OPERATOR_API_KEY=${{ env.STG_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY }} \
-            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
-            \
-            --set ENABLE_DEBUG=$ENABLE_DEBUG \
-            --set ENABLE_SYNC=$ENABLE_SYNC \
-            --set HEALTHCHECK=$HEALTHCHECK \
-            --set MODE=$MODE \
-            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
-            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
-            \
-            --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
-            --set POLYGON_NETWORK=$POLYGON_NETWORK \
-            --set ETHEREUM_NETWORK=$ETHEREUM_NETWORK \
-            --set OPTIMISM_NETWORK=$OPTIMISM_NETWORK \
-            --set BINANCE_NETWORK=$BINANCE_NETWORK \
-            \
-            --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_dev_avalancheTestnet_rpc_url }} \
-            --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_dev_polygonTestnet_rpc_url }} \
-            --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.operator_dev_ethereumTestnetGoerli_rpc_url }} \
-            --set dev_rpc_config_values.optimismTestnetGoerli_rpc_url=${{ env.operator_dev_optimismTestnetGoerli_rpc_url }} \
-            --set dev_rpc_config_values.binanceTestnet_rpc_url=${{ env.operator_dev_binanceTestnet_rpc_url }} \
-            \
-            --set dev_rpc_config_values.private_key=${{ env.operator_dev_private_key }} \
-            --set dev_rpc_config_values.address=${{ env.operator_dev_address }} \
-            \
-            --set autoscaling.enabled=false \
-            --set replicaCount=0 \
-            \
-            --set resources.ethereum.limits.cpu=500m \
-            --set resources.ethereum.limits.memory=520Mi \
-            --set resources.ethereum.requests.cpu=500m \
-            --set resources.ethereum.requests.memory=500Mi \
-            \
-            --set resources.optimism.limits.cpu=500m \
-            --set resources.optimism.limits.memory=520Mi \
-            --set resources.optimism.requests.cpu=500m \
-            --set resources.optimism.requests.memory=500Mi \
-            \
-            --set resources.polygon.limits.cpu=500m \
-            --set resources.polygon.limits.memory=520Mi \
-            --set resources.polygon.requests.cpu=500m \
-            --set resources.polygon.requests.memory=500Mi \
-            \
-            --set resources.avalanche.limits.cpu=500m \
-            --set resources.avalanche.limits.memory=520Mi \
-            --set resources.avalanche.requests.cpu=500m \
-            --set resources.avalanche.requests.memory=500Mi \
-            \
-            --set resources.binance.limits.cpu=500m \
-            --set resources.binance.limits.memory=520Mi \
-            --set resources.binance.requests.cpu=500m \
-            --set resources.binance.requests.memory=500Mi \
-            \
-            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-            --set datadog_tags.service=$RELEASE_NAME \
-            --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}

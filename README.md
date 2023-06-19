@@ -147,13 +147,13 @@ USAGE
 
 FLAGS
   --collectionAddress=<value>    The address of the collection smart contract
-  --destinationNetwork=<option>  The destination network which to beam to
+  --destinationNetwork=<option>  The destination network which to bridge to
                                  <options: goerli|mumbai|fuji>
   --env=<option>                 [default: testnet] Holograph environment to use
                                  <options: mainnet|testnet|develop|experimental>
-  --sourceNetwork=<option>       The source network from which to beam
+  --sourceNetwork=<option>       The source network from which to bridge
                                  <options: goerli|mumbai|fuji>
-  --tokenId=<value>              The token ID of the NFT to beam
+  --tokenId=<value>              The token ID of the NFT to bridge
 
 DESCRIPTION
   Bridge a Holographable NFT from one network to another.
