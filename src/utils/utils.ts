@@ -50,7 +50,7 @@ export const networkToChainId: Record<string, number> = {
   optimismTestnetGoerli: 420,
   optimism: 10,
   arbitrumTestnetGoerli: 421_613,
-  arbitrum: 42_161,
+  arbitrumOne: 42_161,
 }
 
 // NOTE: This is an inverse map of networkToChainId
@@ -71,7 +71,7 @@ export const NETWORK_COLORS: Record<string, string> = {
   ethereumTestnetGoerli: '#83EEFF',
   ethereum: '#83EEFF',
   arbitrumTestnetGoerli: '#28a0f0',
-  arbitrum: '#28a0f0',
+  arbitrumOne: '#28a0f0',
   optimismTestnetGoerli: '#3498db',
   optimism: '#3498db',
 }
