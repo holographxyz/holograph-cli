@@ -192,7 +192,7 @@ jobs:
           AVALANCHE_NETWORK: 'avax'
           ETHEREUM_NETWORK: 'eth'
           OPTIMISM_NETWORK: 'optimism'
-          ARBITRUM_NETWORK: 'arbitrum'
+          ARBITRUM_NETWORK: 'arbitrumOne'
           POLYGON_NETWORK: 'matic'
           BINANCE_NETWORK: 'binanceSmartChain'
         with:
