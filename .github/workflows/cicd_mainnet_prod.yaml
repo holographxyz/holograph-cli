@@ -192,7 +192,7 @@ jobs:
           AVALANCHE_NETWORK: 'avax'
           ETHEREUM_NETWORK: 'eth'
           OPTIMISM_NETWORK: 'optimism'
-          ARBITRUM_NETWORK: 'arbitrum'
+          ARBITRUM_NETWORK: 'arbitrumOne'
           POLYGON_NETWORK: 'matic'
           BINANCE_NETWORK: 'binanceSmartChain'
         with:
@@ -327,7 +327,7 @@ jobs:
           POLYGON_NETWORK: 'matic'
           ETHEREUM_NETWORK: 'eth'
           OPTIMISM_NETWORK: 'optimism'
-          ARBITRUM_NETWORK: 'arbitrum'
+          ARBITRUM_NETWORK: 'arbitrumOne'
           BINANCE_NETWORK: 'binanceSmartChain'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
