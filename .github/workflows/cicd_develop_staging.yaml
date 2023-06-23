@@ -37,10 +37,10 @@ env:
   STG_COMMON_NAMESPACE: develop
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.97
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.0.99
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.70
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.71
   OPERATOR_RELEASE_NAME: operator-dev # format -> [release_name]-operator-[env]
   #######################################
   #
@@ -176,6 +176,13 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           #
+          ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
+          ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
+          #
           AVALANCHE_NETWORK: 'fuji'
           ETHEREUM_NETWORK: 'goerli'
           OPTIMISM_NETWORK: 'optimismTestnetGoerli'
@@ -211,7 +218,13 @@ jobs:
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
-            --set ENABLE_PROCESS_BLOCK_RANGE=$ENABLE_PROCESS_BLOCK_RANGE \
+            \
+            --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
+            --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
+            --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
+            --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
+            --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
+            --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
             \
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_dev_avalancheTestnet_rpc_url }} \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_dev_polygonTestnet_rpc_url }} \
@@ -298,6 +311,13 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           #
+          ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
+          ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
+          #
           AVALANCHE_NETWORK: 'fuji'
           POLYGON_NETWORK: 'mumbai'
           ETHEREUM_NETWORK: 'goerli'
@@ -325,7 +345,13 @@ jobs:
             --set MODE=$MODE \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
-            --set ENABLE_PROCESS_BLOCK_RANGE=$ENABLE_PROCESS_BLOCK_RANGE \
+            \
+            --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
+            --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
+            --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
+            --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
+            --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
+            --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
             \
             --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
             --set POLYGON_NETWORK=$POLYGON_NETWORK \
