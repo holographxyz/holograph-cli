@@ -180,6 +180,7 @@ jobs:
           MODE: 'auto'
           ENABLE_UNSAFE: 'true'
           ENABLE_SYNC: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           #
           ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
@@ -314,6 +315,7 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           #
           ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
