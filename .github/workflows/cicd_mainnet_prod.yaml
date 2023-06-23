@@ -64,7 +64,7 @@ env:
   MAINNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/mainnet-indexer-processor'
 
   #######################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.98
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.99
   INDEXER_RELEASE_NAME: zeus-indexer-mainnet # format -> [release_name]-indexer-[env]
   #
   MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.71
