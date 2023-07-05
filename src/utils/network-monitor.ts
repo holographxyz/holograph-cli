@@ -581,7 +581,6 @@ export class NetworkMonitor {
     for (const network of networks) {
       const networkName = getNetworkByChainId(network).key
       const balance = await this.providers[networkName].getBalance(address)
-      // @ts-ignore
       if(balance.lte(minGasBalance[networkName])){
         throw new Error(`Balance for ${networkName} is too low`)
       }
