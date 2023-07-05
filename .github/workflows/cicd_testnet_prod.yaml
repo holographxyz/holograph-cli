@@ -192,8 +192,8 @@ jobs:
           #
           AVALANCHE_NETWORK: 'fuji'
           ETHEREUM_NETWORK: 'goerli'
-          OPTIMISM_NETWORK: 'optimismTestnetGoerli'
-          ARBITRUM_NETWORK: 'arbitrumTestnetGoerli'
+          OPTIMISM_NETWORK: 'optimismGoerli'
+          ARBITRUM_NETWORK: 'arbitrumGoerli'
           POLYGON_NETWORK: 'mumbai'
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
         with:

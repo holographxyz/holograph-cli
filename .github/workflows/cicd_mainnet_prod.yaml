@@ -190,11 +190,11 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
           #
-          AVALANCHE_NETWORK: 'avax'
-          ETHEREUM_NETWORK: 'eth'
+          AVALANCHE_NETWORK: 'avalanche'
+          ETHEREUM_NETWORK: 'ethereum'
           OPTIMISM_NETWORK: 'optimism'
           ARBITRUM_NETWORK: 'arbitrumOne'
-          POLYGON_NETWORK: 'matic'
+          POLYGON_NETWORK: 'polygon'
           BINANCE_NETWORK: 'binanceSmartChain'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
