@@ -13,7 +13,7 @@ import TokenChainService from '../../services/token-chain-service'
 import {PodBondAmounts} from '../../types/holograph-operator'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {NetworkMonitor, networkFlag} from '../../utils/network-monitor'
-import {toLong18} from '../../utils/utils'
+import {toLong18} from '../../utils/web3'
 import {checkOptionFlag} from '../../utils/validation'
 import Operator from '.'
 

@@ -42,7 +42,7 @@ import {
 
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {GasPricing, initializeGasPricing, updateGasPricing} from './gas'
-import {capitalize, NETWORK_COLORS, sleep, zeroAddress} from './utils'
+import {capitalize, sleep} from './utils'
 import {CXIP_ERC721_ADDRESSES, HOLOGRAPH_ADDRESSES} from './contracts'
 import {BlockHeight, BlockHeightProcessType} from '../types/api'
 import ApiService from '../services/api-service'
@@ -59,6 +59,7 @@ import {
   InterestingTransaction,
 } from '../types/network-monitor'
 import {BlockHeightOptions} from '../flags/update-block-height.flag'
+import {NETWORK_COLORS, zeroAddress} from './web3'
 
 export const replayFlag = {
   replay: Flags.string({

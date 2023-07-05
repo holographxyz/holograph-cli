@@ -29,7 +29,7 @@ import {
 } from '../../utils/event'
 
 import {BlockJob, NetworkMonitor, networksFlag, replayFlag, processBlockRange} from '../../utils/network-monitor'
-import {zeroAddress} from '../../utils/utils'
+import {zeroAddress} from '../../utils/web3'
 import {HealthCheck} from '../../base-commands/healthcheck'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import ApiService from '../../services/api-service'

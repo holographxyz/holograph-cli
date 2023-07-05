@@ -8,7 +8,6 @@ import {networks, supportedNetworks} from '@holographxyz/networks'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {NetworkMonitor, OperatorMode} from '../../utils/network-monitor'
-import {chainIdToNetwork, networkToChainId, sha3} from '../../utils/utils'
 import {checkOptionFlag, checkTransactionHashFlag} from '../../utils/validation'
 import {OperatorJobAwareCommand} from '../../utils/operator-job'
 import {HealthCheck} from '../../base-commands/healthcheck'
@@ -18,6 +17,7 @@ import {CrossChainTransaction, Logger, TransactionStatus} from '../../types/api'
 import color from '@oclif/color'
 import {decodeAvailableOperatorJobEvent, decodeLzPacketEvent} from '../../events/events'
 import * as fs from 'fs-extra'
+import {chainIdToNetwork, networkToChainId, sha3} from '../../utils/web3'
 
 enum Step {
   OPERATOR,
