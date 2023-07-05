@@ -191,18 +191,17 @@ export default class Recover extends OperatorJobAwareCommand {
     }
 
     this.log(`Number of jobs to resolve: ${txArray.length}`)
-    // console.log(txArray)
     // Check balance for every unique network in txArray
-    const uniqueNetworks = txArray.filter((value, index, self) => {
-      return self.findIndex(v => v.sourceChainId === value.sourceChainId) === index;
-    }).map(item => item.sourceChainId)
+    const uniqueNetworks = txArray
+      .filter((value, index, self) => {
+        return self.findIndex(v => v.sourceChainId === value.sourceChainId) === index
+      })
+      .map(item => item.sourceChainId)
 
     console.log(uniqueNetworks)
     console.log(userWallet)
 
     await this.networkMonitor.checkWalletBalances(userWallet.address, uniqueNetworks as number[])
-
-
 
     for (const element of txArray) {
       const tx = element.sourceTx as string

@@ -571,17 +571,17 @@ export class NetworkMonitor {
 
   async checkWalletBalances(address: string, networks: number[]): Promise<void> {
     const minGasBalance = {
-      'polygon': BigNumber.from('2500000000000000'),
-      'etherum': BigNumber.from('5400000000000000'),
-      'avalanche': BigNumber.from('10000000000000000'),
-      'binanceSmartChain': BigNumber.from('740000000000000'),
-      'optimism': BigNumber.from('54000000000000'),
-      'arbitrumOne': BigNumber.from('100000000000000'),
+      polygon: BigNumber.from('2500000000000000'),
+      etherum: BigNumber.from('5400000000000000'),
+      avalanche: BigNumber.from('10000000000000000'),
+      binanceSmartChain: BigNumber.from('740000000000000'),
+      optimism: BigNumber.from('54000000000000'),
+      arbitrumOne: BigNumber.from('100000000000000'),
     }
     for (const network of networks) {
       const networkName = getNetworkByChainId(network).key
       const balance = await this.providers[networkName].getBalance(address)
-      if(balance.lte(minGasBalance[networkName])){
+      if (balance.lte(minGasBalance[networkName])) {
         throw new Error(`Balance for ${networkName} is too low`)
       }
     }
