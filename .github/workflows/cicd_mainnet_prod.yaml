@@ -20,8 +20,8 @@ env:
   MAINNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_MAINNET_OPERATOR_API_KEY }}
   MAINNET_HOLO_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_OPERATOR_MAINNET_OPERATOR_API_KEY}}
   #
-  MAINNET_HOLOGRAPH_INDEXER_HOST: 'http://zeus-holo-api.mainnet.svc.cluster.local:443'
-  MAINNET_HOLOGRAPH_OPERATOR_HOST: 'http://zeus-holo-api.mainnet.svc.cluster.local:443'
+  MAINNET_HOLOGRAPH_INDEXER_HOST: 'http://blondie-holo-api.mainnet.svc.cluster.local:443'
+  MAINNET_HOLOGRAPH_OPERATOR_HOST: 'http://blondie-holo-api.mainnet.svc.cluster.local:443'
   #
   MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.MAINNET_HOLO_INDEXER_PASSWORD }}
   MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.MAINNET_HOLO_OPERATOR_PASSWORD }}
@@ -65,10 +65,10 @@ env:
 
   #######################################
   MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.99
-  INDEXER_RELEASE_NAME: zeus-indexer-mainnet # format -> [release_name]-indexer-[env]
+  INDEXER_RELEASE_NAME: blondie-indexer-mainnet # format -> [release_name]-indexer-[env]
   #
   MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.71
-  OPERATOR_RELEASE_NAME: zeus-operator-mainnet # format -> [release_name]-operator-[env]
+  OPERATOR_RELEASE_NAME: blondie-operator-mainnet # format -> [release_name]-operator-[env]
   #######################################
 
 ## notice: the trigger
