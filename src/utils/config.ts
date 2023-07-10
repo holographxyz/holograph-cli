@@ -157,7 +157,12 @@ export async function ensureConfigFileIsValid(
 
   try {
     const configFile = await fs.readJson(configPath)
-    await validateBeta3Schema(configFile)
+
+    const result = validateBeta3Schema(configFile)
+    if (result.error) {
+      throw new Error(`Configuration Validation Check: ${result.error.message}`)
+    }
+
     const userWallet: Wallet = await tryToUnlockWallet(configFile as ConfigFile, unlockWallet, unsafePassword)
 
     process.stdout.write(`\n👉 Environment: ${environment}\n\n`)
@@ -174,7 +179,7 @@ export async function ensureConfigFileIsValid(
   }
 }
 
-export async function validateBeta3Schema(config: Record<string, unknown>): Promise<void> {
+export function validateBeta3Schema(config: Record<string, unknown>): Joi.ValidationResult<any> {
   const networkObjects: {[k: string]: any} = {} as {[k: string]: any}
   for (const network of supportedNetworks) {
     networkObjects[network] = Joi.object({
@@ -196,7 +201,7 @@ export async function validateBeta3Schema(config: Record<string, unknown>): Prom
     .required()
     .unknown(false)
 
-  await beta3Schema.validateAsync(config)
+  return beta3Schema.validate(config, {abortEarly: false})
 }
 
 export async function checkFileExists(configPath: string): Promise<boolean> {

@@ -20,8 +20,8 @@ env:
   TESTNET_HOLOGRAPH_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO - create new gh secret for TESTNET. should be different from staging????
   TESTNET_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
-  TESTNET_HOLOGRAPH_INDEXER_HOST: 'http://testzeus-holo-api.testnet.svc.cluster.local:443'
-  TESTNET_HOLOGRAPH_OPERATOR_HOST: 'http://testzeus-holo-api.testnet.svc.cluster.local:443'
+  TESTNET_HOLOGRAPH_INDEXER_HOST: 'http://testblondie-holo-api.testnet.svc.cluster.local:443'
+  TESTNET_HOLOGRAPH_OPERATOR_HOST: 'http://testblondie-holo-api.testnet.svc.cluster.local:443'
   #
   TESTNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
   TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
@@ -64,11 +64,11 @@ env:
   TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
 
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.98
-  INDEXER_RELEASE_NAME: zeus-indexer-testnet # format -> [release_name]-indexer-[env]
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.99
+  INDEXER_RELEASE_NAME: blondie-indexer-testnet # format -> [release_name]-indexer-[env]
   #
   TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.71
-  OPERATOR_RELEASE_NAME: zeus-operator-testnet # format -> [release_name]-operator-[env]
+  OPERATOR_RELEASE_NAME: blondie-operator-testnet # format -> [release_name]-operator-[env]
   #######################################
 
 # notice: the trigger
@@ -180,6 +180,7 @@ jobs:
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
           ENABLE_SYNC: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           #
           ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
@@ -191,8 +192,8 @@ jobs:
           #
           AVALANCHE_NETWORK: 'fuji'
           ETHEREUM_NETWORK: 'goerli'
-          OPTIMISM_NETWORK: 'optimismTestnetGoerli'
-          ARBITRUM_NETWORK: 'arbitrumTestnetGoerli'
+          OPTIMISM_NETWORK: 'optimismGoerli'
+          ARBITRUM_NETWORK: 'arbitrumGoerli'
           POLYGON_NETWORK: 'mumbai'
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
         with:
@@ -314,6 +315,7 @@ jobs:
           HEALTHCHECK: 'true'
           MODE: 'auto'
           ENABLE_UNSAFE: 'false'
+          ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
           UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
           #
           ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true

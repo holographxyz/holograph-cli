@@ -65,6 +65,11 @@ export default class Recover extends OperatorJobAwareCommand {
       dependsOn: ['host'],
     }),
     ...HealthCheck.flags,
+    'config-file': Flags.string({description: 'Path to the config file to load'}),
+    // NOTE: Apply dash case to operator and indexer
+    'unsafe-password': Flags.string({
+      description: 'Enter the plain text password for the wallet in the holograph cli config',
+    }),
   }
 
   // API Params
@@ -80,12 +85,13 @@ export default class Recover extends OperatorJobAwareCommand {
    * Command Entry Point
    */
   async run(): Promise<void> {
-    this.log('Loading user configurations...')
-
-    const {userWallet, configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, true)
-    this.log('User configurations loaded.')
-
     const {flags} = await this.parse(Recover)
+    const configFilePath = flags['config-file'] ?? this.config.configDir
+    const unsafePassword = flags['unsafe-password']
+
+    this.log('Loading user configurations...')
+    const {userWallet, configFile} = await ensureConfigFileIsValid(configFilePath, unsafePassword, true)
+    this.log('User configurations loaded.')
 
     this.operatorMode =
       OperatorMode[

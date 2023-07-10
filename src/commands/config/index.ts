@@ -302,7 +302,11 @@ export default class Config extends Command {
     if (jsonString !== undefined) {
       this.log(`checking jsonString input`)
       const output = JSON.parse(jsonString)
-      await validateBeta3Schema(output)
+      const result = validateBeta3Schema(output)
+      if (result.error) {
+        throw new Error(`Configuration Validation Check: ${result.error.message}`)
+      }
+
       this.log(output)
       // Since the json at the desired path is valid, we save it!
       await fs.outputJSON(configPath, output, {spaces: 2})
