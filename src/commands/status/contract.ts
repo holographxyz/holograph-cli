@@ -1,16 +1,12 @@
-import * as fs from 'fs-extra'
 import * as inquirer from 'inquirer'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {addressValidator} from '../../utils/validation'
-import {Environment, getEnvironment} from '@holographxyz/environment'
-import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
 import {networks} from '@holographxyz/networks'
-import path from 'node:path'
+import {NetworkMonitor} from '../../utils/network-monitor'
 
 export default class Contract extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
@@ -28,56 +24,13 @@ export default class Contract extends Command {
     }),
   }
 
+  networkMonitor!: NetworkMonitor
   registryAddress!: string
   supportedNetworks: string[] = []
   contractAddress!: string
-
-  providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   holograph!: ethers.Contract
   registryContract!: ethers.Contract
   ownableContract!: ethers.Contract
-
-  async initializeEthers(configFile: ConfigFile, environment: Environment): Promise<void> {
-    for (let i = 0, l = this.supportedNetworks.length; i < l; i++) {
-      const network = this.supportedNetworks[i]
-      const rpcEndpoint = (configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork).providerUrl
-      const protocol = new URL(rpcEndpoint).protocol
-      switch (protocol) {
-        case 'https:':
-          this.providers[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
-
-          break
-        case 'wss:':
-          this.providers[network] = new ethers.providers.WebSocketProvider(rpcEndpoint)
-          break
-        default:
-          throw new Error('Unsupported RPC provider protocol -> ' + protocol)
-      }
-    }
-
-    const holographABI = await fs.readJson(path.join(__dirname, `../../abi/${environment}/Holograph.json`))
-    this.holograph = new ethers.Contract(
-      HOLOGRAPH_ADDRESSES[environment],
-      holographABI,
-      this.providers[this.supportedNetworks[0]],
-    )
-
-    const holographRegistryABI = await fs.readJson(
-      path.join(__dirname, `.../../abi/${environment}/HolographRegistry.json`),
-    )
-    this.registryAddress = await this.holograph.getRegistry()
-    this.registryContract = new ethers.Contract(
-      this.registryAddress,
-      holographRegistryABI,
-      this.providers[this.supportedNetworks[0]],
-    )
-    const ownerABI = await fs.readJson(path.join(__dirname, `.../../abi/${environment}/Owner.json`))
-    this.ownableContract = new ethers.Contract(
-      this.contractAddress,
-      ownerABI,
-      this.providers[this.supportedNetworks[0]],
-    )
-  }
 
   async validateContractAddress(): Promise<void> {
     if (this.contractAddress === '') {
@@ -114,7 +67,24 @@ export default class Contract extends Command {
 
     this.supportedNetworks = Object.keys(configFile.networks)
 
-    await this.initializeEthers(configFile, environment)
+    this.networkMonitor = new NetworkMonitor({
+      parent: this,
+      configFile,
+      debug: this.debug,
+      userWallet: undefined,
+      verbose: false,
+    })
+
+    CliUx.ux.action.start('Loading network RPC providers')
+    await this.networkMonitor.run(true)
+    CliUx.ux.action.stop()
+
+    const abis = await getABIs(environment)
+    this.ownableContract = new ethers.Contract(
+      this.contractAddress,
+      abis.OwnerABI,
+      this.networkMonitor.providers[this.supportedNetworks[0]],
+    )
 
     // data we want
     // network -- deployed -- valid -- address -- explorer link
@@ -127,8 +97,8 @@ export default class Contract extends Command {
         owner: '0x',
         link: '',
       }
-      const provider = this.providers[network]
-      const registry = this.registryContract.connect(provider)
+      const provider = this.networkMonitor.providers[network]
+      const registry = this.networkMonitor.registryContract.connect(provider)
       const ownable = this.ownableContract.connect(provider)
       const code = await provider.getCode(this.contractAddress, 'latest')
       if (code === '0x') {

@@ -1,5 +1,3 @@
-import * as fs from 'fs-extra'
-import * as path from 'node:path'
 import {Contract, ethers} from 'ethers'
 import {SalesConfiguration} from '../types/drops'
 import {bytecodes} from '../utils/bytecodes'
@@ -8,7 +6,7 @@ import {
   generateHolographERC721InitCode,
   generateMetadataRendererInitCode,
 } from '../utils/initcode'
-import {dropEventsEnabled, sha3, web3} from '../utils/utils'
+import {dropEventsEnabled, sha3, web3} from '../utils/web3'
 import {networks} from '@holographxyz/networks'
 import {strictECDSA, Signature} from '../utils/signature'
 import {DeploymentConfig} from '../utils/contract-deployment'
@@ -35,9 +33,7 @@ require('dotenv').config()
 
   // Get the ABI
   const abis = await getABIs(ENVIRONMENT)
-
-  const holographABI = await fs.readJson(path.join(__dirname, `../abi/${ENVIRONMENT}/Holograph.json`))
-  const holograph = new Contract(HOLOGRAPH_ADDRESSES[ENVIRONMENT], holographABI, provider)
+  const holograph = new Contract(HOLOGRAPH_ADDRESSES[ENVIRONMENT], abis.HolographABI, provider)
   const factoryProxyAddress = (await holograph.getFactory()).toLowerCase()
 
   // NOTE: Since the Drop contract is an extension of the HolographERC721 enforcer, the contract type must be updated accordingly

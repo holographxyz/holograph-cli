@@ -19,6 +19,7 @@ interface ContractAbis {
   LayerZeroABI: Array<Record<string, any>>
   MockLZEndpointABI: Array<Record<string, any>>
   EditionsMetadataRendererABI: Array<Record<string, any>>
+  OwnerABI: Array<Record<string, any>>
 }
 
 export const getABIs = async (environment: string): Promise<ContractAbis> => {
@@ -40,6 +41,7 @@ export const getABIs = async (environment: string): Promise<ContractAbis> => {
     EditionsMetadataRendererABI: await fs.readJson(
       path.join(__dirname, `../abi/${environment}/EditionsMetadataRenderer.json`),
     ),
+    OwnerABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/Owner.json`)),
   }
 }
 

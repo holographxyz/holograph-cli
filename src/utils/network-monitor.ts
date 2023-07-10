@@ -763,7 +763,7 @@ export class NetworkMonitor {
     }
 
     for (const contractName of Object.keys(contractsMap)) {
-      this.contracts[contractName as keyof IContracts] = new Contract(
+      ;(this[contractName as keyof this] as Contract) = new Contract(
         contractsMap[contractName].address,
         contractsMap[contractName].abi,
         this.providers[this.networks[0]],
