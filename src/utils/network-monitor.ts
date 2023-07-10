@@ -762,7 +762,7 @@ export class NetworkMonitor {
       messagingModuleContract: {address: this.messagingModuleAddress, abi: abis.LayerZeroABI},
     }
 
-    for (const contractName in contractsMap) {
+    for (const contractName of Object.keys(contractsMap)) {
       this.contracts[contractName as keyof IContracts] = new Contract(
         contractsMap[contractName].address,
         contractsMap[contractName].abi,
