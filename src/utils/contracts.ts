@@ -3,7 +3,25 @@ const path = require('node:path')
 
 import {Environment} from '@holographxyz/environment'
 
-export const getABIs = async (environment: string): Promise<any> => {
+interface ContractAbis {
+  CxipERC721ABI: Array<Record<string, any>>
+  FaucetABI: Array<Record<string, any>>
+  HolographABI: Array<Record<string, any>>
+  HolographerABI: Array<Record<string, any>>
+  HolographBridgeABI: Array<Record<string, any>>
+  HolographERC20ABI: Array<Record<string, any>>
+  HolographERC721ABI: Array<Record<string, any>>
+  HolographDropERC721ABI: Array<Record<string, any>>
+  HolographFactoryABI: Array<Record<string, any>>
+  HolographInterfacesABI: Array<Record<string, any>>
+  HolographOperatorABI: Array<Record<string, any>>
+  HolographRegistryABI: Array<Record<string, any>>
+  LayerZeroABI: Array<Record<string, any>>
+  MockLZEndpointABI: Array<Record<string, any>>
+  EditionsMetadataRendererABI: Array<Record<string, any>>
+}
+
+export const getABIs = async (environment: string): Promise<ContractAbis> => {
   return {
     CxipERC721ABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/CxipERC721.json`)),
     FaucetABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/Faucet.json`)),
@@ -18,6 +36,7 @@ export const getABIs = async (environment: string): Promise<any> => {
     HolographOperatorABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographOperator.json`)),
     HolographRegistryABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/HolographRegistry.json`)),
     LayerZeroABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/LayerZeroEndpointInterface.json`)),
+    MockLZEndpointABI: await fs.readJson(path.join(__dirname, `../abi/${environment}/MockLZEndpoint.json`)),
     EditionsMetadataRendererABI: await fs.readJson(
       path.join(__dirname, `../abi/${environment}/EditionsMetadataRenderer.json`),
     ),

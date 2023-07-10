@@ -43,7 +43,7 @@ import {
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {GasPricing, initializeGasPricing, updateGasPricing} from './gas'
 import {capitalize, sleep} from './utils'
-import {CXIP_ERC721_ADDRESSES, HOLOGRAPH_ADDRESSES} from './contracts'
+import {CXIP_ERC721_ADDRESSES, HOLOGRAPH_ADDRESSES, getABIs} from './contracts'
 import {BlockHeight, BlockHeightProcessType} from '../types/api'
 import ApiService from '../services/api-service'
 import {iface, packetEventFragment, targetEvents} from '../events/events'
@@ -139,6 +139,25 @@ export type TransactionFilter = {
   type: FilterType
   match: string | {[key: string]: string}
   networkDependant: boolean
+}
+
+export type ContractInfo = {
+  address: string
+  abi: any
+}
+
+export type ContractMap = {
+  [contractName: string]: ContractInfo
+}
+
+interface IContracts {
+  cxipERC721Contract: Contract
+  bridgeContract: Contract
+  factoryContract: Contract
+  interfacesContract: Contract
+  operatorContract: Contract
+  registryContract: Contract
+  messagingModuleContract: Contract
 }
 
 const TIMEOUT_THRESHOLD = 60_000
@@ -318,15 +337,17 @@ export class NetworkMonitor {
   processBlocksByRange: {[key: string]: boolean} = {}
   blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
   gasPrices: {[key: string]: GasPricing} = {}
+  contracts: Partial<IContracts> = {}
   holograph!: Contract
   holographer!: Contract
+  cxipERC721Contract!: Contract
   bridgeContract!: Contract
   factoryContract!: Contract
   interfacesContract!: Contract
   operatorContract!: Contract
   registryContract!: Contract
-  cxipERC721Contract!: Contract
   messagingModuleContract!: Contract
+
   HOLOGRAPH_ADDRESSES = HOLOGRAPH_ADDRESSES
   apiService!: ApiService
   blockHeightOptions?: BlockHeightOptions
@@ -708,67 +729,46 @@ export class NetworkMonitor {
       this.activated[network] = true
     }
 
-    const holographABI = await fs.readJson(path.join(__dirname, `../abi/${this.environment}/Holograph.json`))
+    // Setup contracts
+    const abis = await getABIs(this.environment)
+    this.holographer = new Contract(zeroAddress, abis.HolographerABI, this.providers[this.networks[0]])
     this.holograph = new Contract(
       this.HOLOGRAPH_ADDRESSES[this.environment],
-      holographABI,
+      abis.HolographABI,
       this.providers[this.networks[0]],
     )
-
-    const holographerABI = await fs.readJson(path.join(__dirname, `../abi/${this.environment}/Holographer.json`))
-    this.holographer = new Contract(zeroAddress, holographerABI, this.providers[this.networks[0]])
-
+    this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
+    this.operatorContract = new Contract(
+      this.operatorAddress,
+      abis.HolographOperatorABI,
+      this.providers[this.networks[0]],
+    )
     this.bridgeAddress = (await this.holograph.getBridge()).toLowerCase()
     this.factoryAddress = (await this.holograph.getFactory()).toLowerCase()
     this.interfacesAddress = (await this.holograph.getInterfaces()).toLowerCase()
-    this.operatorAddress = (await this.holograph.getOperator()).toLowerCase()
     this.registryAddress = (await this.holograph.getRegistry()).toLowerCase()
     this.tokenAddress = (await this.holograph.getUtilityToken()).toLowerCase()
+    this.messagingModuleAddress = (await this.operatorContract.getMessagingModule()).toLowerCase()
     this.cxipERC721Address = CXIP_ERC721_ADDRESSES[this.environment]
 
-    // Setup contracts
-    const CxipERC721ABI = await fs.readJson(path.join(__dirname, `../abi/${this.environment}/CxipERC721.json`))
-    this.cxipERC721Contract = new Contract(this.cxipERC721Address, CxipERC721ABI, this.providers[this.networks[0]])
+    // Get ABIs and setup contracts
+    const contractsMap: ContractMap = {
+      cxipERC721Contract: {address: this.cxipERC721Address, abi: abis.CxipERC721ABI},
+      bridgeContract: {address: this.bridgeAddress, abi: abis.HolographBridgeABI},
+      factoryContract: {address: this.factoryAddress, abi: abis.HolographFactoryABI},
+      interfacesContract: {address: this.interfacesAddress, abi: abis.HolographInterfacesABI},
+      operatorContract: {address: this.operatorAddress, abi: abis.HolographOperatorABI},
+      registryContract: {address: this.registryAddress, abi: abis.HolographRegistryABI},
+      messagingModuleContract: {address: this.messagingModuleAddress, abi: abis.LayerZeroABI},
+    }
 
-    const holographBridgeABI = await fs.readJson(
-      path.join(__dirname, `../abi/${this.environment}/HolographBridge.json`),
-    )
-    this.bridgeContract = new Contract(this.bridgeAddress, holographBridgeABI, this.providers[this.networks[0]])
-
-    const holographFactoryABI = await fs.readJson(
-      path.join(__dirname, `../abi/${this.environment}/HolographFactory.json`),
-    )
-    this.factoryContract = new Contract(this.factoryAddress, holographFactoryABI, this.providers[this.networks[0]])
-
-    const holographInterfacesABI = await fs.readJson(
-      path.join(__dirname, `../abi/${this.environment}/HolographInterfaces.json`),
-    )
-    this.interfacesContract = new Contract(
-      this.interfacesAddress,
-      holographInterfacesABI,
-      this.providers[this.networks[0]],
-    )
-
-    const holographOperatorABI = await fs.readJson(
-      path.join(__dirname, `../abi/${this.environment}/HolographOperator.json`),
-    )
-    this.operatorContract = new Contract(this.operatorAddress, holographOperatorABI, this.providers[this.networks[0]])
-
-    this.messagingModuleAddress = (await this.operatorContract.getMessagingModule()).toLowerCase()
-
-    const holographRegistryABI = await fs.readJson(
-      path.join(__dirname, `../abi/${this.environment}/HolographRegistry.json`),
-    )
-    this.registryContract = new Contract(this.registryAddress, holographRegistryABI, this.providers[this.networks[0]])
-
-    const holographMessagingModuleABI = await fs.readJson(
-      path.join(__dirname, `../abi/${this.environment}/LayerZeroModule.json`),
-    )
-    this.messagingModuleContract = new Contract(
-      this.messagingModuleAddress,
-      holographMessagingModuleABI,
-      this.providers[this.networks[0]],
-    )
+    for (const contractName in contractsMap) {
+      this.contracts[contractName as keyof IContracts] = new Contract(
+        contractsMap[contractName].address,
+        contractsMap[contractName].abi,
+        this.providers[this.networks[0]],
+      )
+    }
 
     for (const network of this.networks) {
       if (this.environment === Environment.localhost) {
@@ -777,7 +777,7 @@ export class NetworkMonitor {
         this.lzEndpointAddress[network] = (
           await this.messagingModuleContract.connect(this.providers[network]).getLZEndpoint()
         ).toLowerCase()
-        const lzEndpointABI = await fs.readJson(path.join(__dirname, `../abi/${this.environment}/MockLZEndpoint.json`))
+        const lzEndpointABI = abis.MockLZEndpointABI
         this.lzEndpointContract[network] = new Contract(
           this.lzEndpointAddress[network],
           lzEndpointABI,

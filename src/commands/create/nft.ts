@@ -123,7 +123,7 @@ export default class NFT extends Command {
     )
 
     // Load the ABI for the collection type to mint from
-    let collectionABI: string
+    let collectionABI: Record<string, any>[]
     switch (collectionType) {
       case 'CxipERC721':
         collectionABI = abis.CxipERC721ABI
