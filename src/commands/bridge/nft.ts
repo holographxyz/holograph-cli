@@ -225,7 +225,7 @@ export default class BridgeNFT extends Command {
     gasPrice = gasPrice.add(gasPrice.div(BigNumber.from('2')))
 
     // override gas price to minimum if set
-    gasPrice = overrideToMinGasPrice(networks[destinationNetwork].chain as SupportedChainIds, gasPrice)
+    gasPrice = overrideToMinGasPrice(networks[destinationNetwork].chain, gasPrice)
 
     payload = await this.networkMonitor.bridgeContract
       .connect(this.networkMonitor.providers[sourceNetwork])

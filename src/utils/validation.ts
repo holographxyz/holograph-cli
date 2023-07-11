@@ -7,7 +7,7 @@ import {BytecodeType} from './bytecodes'
 import {ConfigNetworks} from './config'
 import {DeploymentType, deploymentProcesses} from './contract-deployment'
 import {TokenUriType} from './asset-deployment'
-import {remove0x} from './utils'
+import {remove0x} from './web3'
 
 export interface SelectOption {
   name: string

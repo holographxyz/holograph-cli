@@ -1,7 +1,7 @@
 import {TransactionResponse} from '@ethersproject/abstract-provider'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import SqsService from '../../services/sqs-service'
-import {networkToChainId, remove0x} from '../../utils/utils'
+import {networkToChainId, remove0x} from '../../utils/web3'
 import {EventName, PayloadType, SqsMessageBody} from '../../types/sqs'
 import {TransferERC721Event} from '../../utils/event'
 
