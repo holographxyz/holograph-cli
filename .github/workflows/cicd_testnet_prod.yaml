@@ -43,6 +43,7 @@ env:
   indexer_testnet_optimismTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_OPTIMISM_GOERLI_RPC_URL }}
   indexer_testnet_arbitrumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_ARBITRUM_GOERLI_RPC_URL }}
   indexer_testnet_binanceTestnet_rpc_url: ${{ secrets.INDEXER_PROD_BSC_TESTNET_RPC_URL }}
+  indexer_testnet_mantleTestnet_rpc_url: "https://rpc.testnet.mantle.xyz" #TODO
   #
   indexer_testnet_private_key: ${{ secrets.INDEXER_PROD_PRIVATE_KEY }}
   indexer_testnet_address: ${{ secrets.INDEXER_PROD_ADDRESS }}
@@ -53,6 +54,7 @@ env:
   operator_testnet_optimismTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_OPTIMISM_GOERLI_RPC_URL }}
   operator_testnet_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_ARBITRUM_GOERLI_RPC_URL }}
   operator_testnet_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_BSC_TESTNET_RPC_URL }}
+  operator_testnet_mantleTestnet_rpc_url: "https://rpc.testnet.mantle.xyz" #TODO
   #
   operator_testnet_private_key: ${{ secrets.OPERATOR_PROD_PRIVATE_KEY }}
   operator_testnet_address: ${{ secrets.OPERATOR_PROD_ADDRESS }}
@@ -64,10 +66,10 @@ env:
   TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
 
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.99
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.1
   INDEXER_RELEASE_NAME: blondie-indexer-testnet # format -> [release_name]-indexer-[env]
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.71
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.72
   OPERATOR_RELEASE_NAME: blondie-operator-testnet # format -> [release_name]-operator-[env]
   #######################################
 
@@ -186,6 +188,7 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
           ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_mantle: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
@@ -196,6 +199,7 @@ jobs:
           ARBITRUM_NETWORK: 'arbitrumGoerli'
           POLYGON_NETWORK: 'mumbai'
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
+          MANTLE_NETWORK: 'mantleTestnet'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -222,12 +226,14 @@ jobs:
             --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
             --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
             --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
+            --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
             \
             --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
             --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
+            --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
             --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
             --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
             --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
@@ -239,6 +245,7 @@ jobs:
             --set testnet_rpc_config_values.optimismTestnetGoerli_rpc_url=${{ env.indexer_testnet_optimismTestnetGoerli_rpc_url }} \
             --set testnet_rpc_config_values.arbitrumTestnetGoerli_rpc_url=${{ env.indexer_testnet_arbitrumTestnetGoerli_rpc_url }} \
             --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.indexer_testnet_binanceTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.indexer_testnet_mantleTestnet_rpc_url }} \
             \
             --set testnet_rpc_config_values.private_key=${{ env.indexer_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.indexer_testnet_address }} \
@@ -274,6 +281,10 @@ jobs:
             --set resources.binance.limits.memory=820Mi \
             --set resources.binance.requests.cpu=500m \
             --set resources.binance.requests.memory=800Mi \
+            \
+            --set resources.mantle.limits.memory=820Mi \
+            --set resources.mantle.requests.cpu=500m \
+            --set resources.mantle.requests.memory=800Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -321,6 +332,7 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
           ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_mantle: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
@@ -331,6 +343,7 @@ jobs:
           OPTIMISM_NETWORK: 'optimismTestnetGoerli'
           ARBITRUM_NETWORK: 'arbitrumTestnetGoerli'
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
+          MANTLE_NETWORK: 'mantleTestnet'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -355,6 +368,7 @@ jobs:
             \
             --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
             --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
+            --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
             --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
             --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
             --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
@@ -366,6 +380,7 @@ jobs:
             --set OPTIMISM_NETWORK=$OPTIMISM_NETWORK \
             --set ARBITRUM_NETWORK=$ARBITRUM_NETWORK \
             --set BINANCE_NETWORK=$BINANCE_NETWORK \
+            --set MANTLE_NETWORK=$MANTLE_NETWORK \
             \
             --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_testnet_avalancheTestnet_rpc_url }} \
             --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_testnet_polygonTestnet_rpc_url }} \
@@ -373,6 +388,7 @@ jobs:
             --set testnet_rpc_config_values.optimismTestnetGoerli_rpc_url=${{ env.operator_testnet_optimismTestnetGoerli_rpc_url }} \
             --set testnet_rpc_config_values.arbitrumTestnetGoerli_rpc_url=${{ env.operator_testnet_arbitrumTestnetGoerli_rpc_url }} \
             --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.operator_testnet_binanceTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.operator_testnet_mantleTestnet_rpc_url }} \
             \
             --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
@@ -403,6 +419,10 @@ jobs:
             --set resources.binance.limits.memory=550Mi \
             --set resources.binance.requests.cpu=200m \
             --set resources.binance.requests.memory=500Mi \
+            \
+            --set resources.mantle.limits.memory=550Mi \
+            --set resources.mantle.requests.cpu=200m \
+            --set resources.mantle.requests.memory=500Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
