@@ -1418,10 +1418,10 @@
     dotenv "^10.0.0"
     path "^0.12.7"
 
-"@holographxyz/networks@0.1.29":
-  version "0.1.29"
-  resolved "https://registry.yarnpkg.com/@holographxyz/networks/-/networks-0.1.29.tgz#3f6f41f86ebb96322064c6fbbfec0a04ab6e2254"
-  integrity sha512-IjHRfASE+emz1Mtq4K6kHGTDK6g4xc23mYRksk+q3kKSPTDbKOqSH15H+lzvQeqJk1ojS9G0goZ9J/MH5iQHwQ==
+"@holographxyz/networks@0.1.31":
+  version "0.1.31"
+  resolved "https://registry.yarnpkg.com/@holographxyz/networks/-/networks-0.1.31.tgz#1d53b416ceaba8fd3392a55e297e9e590ecc02d5"
+  integrity sha512-57bhV3fbX7sNp1tH/2dt05EpuHmeUhdWyZsDE7Ll0r/pJ4nhdkwLnWGalF0wM4ArU5sqMuW6uDyJTqFThFUFsw==
   dependencies:
     "@ethersproject/bignumber" "^5.7.0"
     "@holographxyz/environment" "0.1.10"
