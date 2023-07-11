@@ -2,6 +2,26 @@ import * as fs from 'fs-extra'
 const path = require('node:path')
 
 import {Environment} from '@holographxyz/environment'
+import {Contract} from 'ethers'
+
+export type ContractInfo = {
+  address: string
+  abi: any
+}
+
+export type ContractMap = {
+  [contractName: string]: ContractInfo
+}
+
+export interface IContracts {
+  cxipERC721Contract: Contract
+  bridgeContract: Contract
+  factoryContract: Contract
+  interfacesContract: Contract
+  operatorContract: Contract
+  registryContract: Contract
+  messagingModuleContract: Contract
+}
 
 interface ContractAbis {
   CxipERC721ABI: Array<Record<string, any>>

@@ -43,7 +43,7 @@ import {
 import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
 import {GasPricing, initializeGasPricing, updateGasPricing} from './gas'
 import {capitalize, sleep} from './utils'
-import {CXIP_ERC721_ADDRESSES, HOLOGRAPH_ADDRESSES, getABIs} from './contracts'
+import {CXIP_ERC721_ADDRESSES, ContractMap, HOLOGRAPH_ADDRESSES, IContracts, getABIs} from './contracts'
 import {BlockHeight, BlockHeightProcessType} from '../types/api'
 import ApiService from '../services/api-service'
 import {iface, packetEventFragment, targetEvents} from '../events/events'
@@ -139,25 +139,6 @@ export type TransactionFilter = {
   type: FilterType
   match: string | {[key: string]: string}
   networkDependant: boolean
-}
-
-export type ContractInfo = {
-  address: string
-  abi: any
-}
-
-export type ContractMap = {
-  [contractName: string]: ContractInfo
-}
-
-interface IContracts {
-  cxipERC721Contract: Contract
-  bridgeContract: Contract
-  factoryContract: Contract
-  interfacesContract: Contract
-  operatorContract: Contract
-  registryContract: Contract
-  messagingModuleContract: Contract
 }
 
 const TIMEOUT_THRESHOLD = 60_000

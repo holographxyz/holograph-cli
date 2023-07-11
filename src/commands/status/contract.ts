@@ -7,6 +7,8 @@ import {ensureConfigFileIsValid} from '../../utils/config'
 import {addressValidator} from '../../utils/validation'
 import {networks} from '@holographxyz/networks'
 import {NetworkMonitor} from '../../utils/network-monitor'
+import {getABIs} from '../../utils/contracts'
+import {getEnvironment} from '@holographxyz/environment'
 
 export default class Contract extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
