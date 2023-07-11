@@ -2,6 +2,7 @@ import Web3 from 'web3'
 
 import {BigNumber, BigNumberish} from '@ethersproject/bignumber'
 import {formatUnits} from '@ethersproject/units'
+import {networks} from '@holographxyz/networks'
 
 export const web3 = new Web3()
 
@@ -38,20 +39,9 @@ export const webSocketConfig = {
   },
 }
 
-export const networkToChainId: Record<string, number> = {
-  ethereum: 1,
-  ethereumTestnetGoerli: 5,
-  polygon: 137,
-  polygonTestnet: 80_001,
-  avalanche: 43_114,
-  avalancheTestnet: 43_113,
-  binanceSmartChain: 56,
-  binanceSmartChainTestnet: 97,
-  optimismTestnetGoerli: 420,
-  optimism: 10,
-  arbitrumTestnetGoerli: 421_613,
-  arbitrumOne: 42_161,
-}
+export const networkToChainId: Record<string, number> = Object.fromEntries(
+  Object.entries(networks).map(([key, network]) => [key, network.chain]),
+)
 
 // NOTE: This is an inverse map of networkToChainId
 export const chainIdToNetwork = (): Record<number, string> => {
@@ -59,22 +49,9 @@ export const chainIdToNetwork = (): Record<number, string> => {
   return Object.fromEntries(flipped)
 }
 
-export const NETWORK_COLORS: Record<string, string> = {
-  localhost: '#83EEFF',
-  localhost2: '#ff0000',
-  avalancheTestnet: '#ff0000',
-  avalanche: '#ff0000',
-  binanceSmartChain: '#f0b90b',
-  binanceSmartChainTestnet: '#f0b90b',
-  polygonTestnet: '#B026FF ',
-  polygon: '#B026FF ',
-  ethereumTestnetGoerli: '#83EEFF',
-  ethereum: '#83EEFF',
-  arbitrumTestnetGoerli: '#28a0f0',
-  arbitrumOne: '#28a0f0',
-  optimismTestnetGoerli: '#3498db',
-  optimism: '#3498db',
-}
+export const NETWORK_COLORS: Record<string, string> = Object.fromEntries(
+  Object.entries(networks).map(([key, network]) => [key, network.color]),
+)
 
 export const rgbToHex = (rgb: number): string => {
   const hex = Number(rgb).toString(16)
