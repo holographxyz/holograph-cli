@@ -98,16 +98,18 @@ export const METADATA_RENDERER_ADDRESS: {[key in Environment]: string} = {
 }
 
 export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
-  ethereum: '0x66A71Dcef29A0fFBDBE3c6a460a3B5BC225Cd675',
-  ethereumTestnetGoerli: '0xbfD2135BFfbb0B5378b56643c2Df8a87552Bfa23',
-  polygon: '0x3c2269811836af69497E5F486A85D7316753cf62',
-  polygonTestnet: '0xf69186dfBa60DdB133E91E9A4B5673624293d8F8',
-  binanceSmartChain: '0x3c2269811836af69497E5F486A85D7316753cf62',
-  avalanche: '0x3c2269811836af69497E5F486A85D7316753cf62',
-  avalancheTestnet: '0x93f54D755A063cE7bB9e6Ac47Eccc8e33411d706',
-  fantom: '0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7',
-  optimism: '0x3c2269811836af69497E5F486A85D7316753cf62',
-  optimismTestnetGoerli: '0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1',
+  ethereum: '0x66A71Dcef29A0fFBDBE3c6a460a3B5BC225Cd675'.toLowerCase(),
+  ethereumTestnetGoerli: '0xbfD2135BFfbb0B5378b56643c2Df8a87552Bfa23'.toLowerCase(),
+  polygon: '0x3c2269811836af69497E5F486A85D7316753cf62'.toLowerCase(),
+  polygonTestnet: '0xf69186dfBa60DdB133E91E9A4B5673624293d8F8'.toLowerCase(),
+  binanceSmartChain: '0x3c2269811836af69497E5F486A85D7316753cf62'.toLowerCase(),
+  avalanche: '0x3c2269811836af69497E5F486A85D7316753cf62'.toLowerCase(),
+  avalancheTestnet: '0x93f54D755A063cE7bB9e6Ac47Eccc8e33411d706'.toLowerCase(),
+  fantom: '0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7'.toLowerCase(),
+  optimism: '0x3c2269811836af69497E5F486A85D7316753cf62'.toLowerCase(),
+  optimismTestnetGoerli: '0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1'.toLowerCase(),
   arbitrumOne: '0x3c2269811836af69497E5F486A85D7316753cf62'.toLowerCase(),
   arbitrumTestnetGoerli: '0x6aB5Ae6822647046626e83ee6dB8187151E1d5ab'.toLowerCase(),
+  mantleTestnet: '0x0000000000000000000000000000000000000000'.toLowerCase(),
+  mantle: '0x0000000000000000000000000000000000000000'.toLowerCase(),
 } as const
