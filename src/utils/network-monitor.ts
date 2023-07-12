@@ -349,6 +349,7 @@ export class NetworkMonitor {
     binanceSmartChainTestnet: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     optimismTestnetGoerli: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     arbitrumTestnetGoerli: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
+    mantleTestnet: '0x0000000000000000000000000000000000000000'.toLowerCase(),
 
     ethereum: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
     polygon: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
@@ -356,6 +357,7 @@ export class NetworkMonitor {
     binanceSmartChain: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
     optimism: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
     arbitrumOne: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
+    mantle: '0x0000000000000000000000000000000000000000'.toLowerCase(),
   }
 
   needToSubscribe = false
