@@ -5,7 +5,7 @@ import {BigNumber, BigNumberish, BytesLike} from 'ethers'
 import Web3 from 'web3'
 
 import {bytecodes, BytecodeType} from './bytecodes'
-import {remove0x, sha3} from './utils'
+import {remove0x, sha3} from './web3'
 import {validateNetwork, validateNonEmptyString, validateTransactionHash} from './validation'
 
 export const web3 = new Web3()

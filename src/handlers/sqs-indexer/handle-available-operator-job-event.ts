@@ -3,7 +3,7 @@ import {TransactionResponse} from '@ethersproject/abstract-provider'
 import {NetworkMonitor} from '../../utils/network-monitor'
 
 import SqsService from '../../services/sqs-service'
-import {networkToChainId} from '../../utils/utils'
+import {networkToChainId} from '../../utils/web3'
 import {EventName, PayloadType, SqsMessageBody} from '../../types/sqs'
 
 async function handleAvailableOperatorJobEvent(

@@ -2,7 +2,8 @@ import {Contract} from '@ethersproject/contracts'
 import {TransactionReceipt} from '@ethersproject/providers'
 import {BigNumber} from '@ethersproject/bignumber'
 
-import {getSecondsLeft, toShort18, toShort18Str} from '../utils/utils'
+import {getSecondsLeft} from '../utils/utils'
+import {toShort18, toShort18Str} from '../utils/web3'
 import CoreChainService from './core-chain-service'
 import {NetworkMonitor} from '../utils/network-monitor'
 
