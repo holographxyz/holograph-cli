@@ -43,6 +43,7 @@ env:
   indexer_mainnet_optimism_rpc_url: ${{ secrets.INDEXER_MAINNET_OPTIMISM_RPC_URL }}
   indexer_mainnet_arbitrum_rpc_url: ${{ secrets.INDEXER_MAINNET_ARBITRUM_RPC_URL }}
   indexer_mainnet_binance_rpc_url: ${{ secrets.INDEXER_MAINNET_BINANCE_RPC_URL }}
+  indexer_mainnet_mantle_rpc_url: "http://rpc.mantle.xyz/" #TODO
   #
   indexer_mainnet_private_key: ${{ secrets.INDEXER_MAINNET_PRIVATE_KEY }}
   indexer_mainnet_address: ${{ secrets.INDEXER_MAINNET_ADDRESS }}
@@ -53,6 +54,7 @@ env:
   operator_mainnet_optimism_rpc_url: ${{ secrets.OPERATOR_MAINNET_OPTIMISM_RPC_URL }}
   operator_mainnet_arbitrum_rpc_url: ${{ secrets.OPERATOR_MAINNET_ARBITRUM_RPC_URL }}
   operator_mainnet_binance_rpc_url: ${{ secrets.OPERATOR_MAINNET_BINANCE_RPC_URL }}
+  operator_mainnet_mantle_rpc_url: "http://rpc.mantle.xyz/" #TODO
   #
   operator_mainnet_private_key: ${{ secrets.OPERATOR_MAINNET_PRIVATE_KEY }}
   operator_mainnet_address: ${{ secrets.OPERATOR_MAINNET_ADDRESS }}
@@ -64,10 +66,10 @@ env:
   MAINNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/mainnet-indexer-processor'
 
   #######################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.0.99
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.1
   INDEXER_RELEASE_NAME: blondie-indexer-mainnet # format -> [release_name]-indexer-[env]
   #
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.71
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.72
   OPERATOR_RELEASE_NAME: blondie-operator-mainnet # format -> [release_name]-operator-[env]
   #######################################
 
@@ -186,6 +188,7 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
           ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_mantle: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
@@ -196,6 +199,7 @@ jobs:
           ARBITRUM_NETWORK: 'arbitrumOne'
           POLYGON_NETWORK: 'polygon'
           BINANCE_NETWORK: 'binanceSmartChain'
+          MANTLE_NETWORK: 'mantle'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -222,12 +226,14 @@ jobs:
             --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
             --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
             --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
+            --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
             \
             --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
             --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
+            --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
             --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
             --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
             --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
@@ -239,6 +245,7 @@ jobs:
             --set mainnet_rpc_config_values.optimism_rpc_url=${{ env.indexer_mainnet_optimism_rpc_url }} \
             --set mainnet_rpc_config_values.arbitrum_rpc_url=${{ env.indexer_mainnet_arbitrum_rpc_url }} \
             --set mainnet_rpc_config_values.binance_rpc_url=${{ env.indexer_mainnet_binance_rpc_url }} \
+            --set mainnet_rpc_config_values.mantle_rpc_url=${{ env.indexer_mainnet_mantle_rpc_url }} \
             \
             --set mainnet_rpc_config_values.private_key=${{ env.indexer_mainnet_private_key }} \
             --set mainnet_rpc_config_values.address=${{ env.indexer_mainnet_address }} \
@@ -274,6 +281,10 @@ jobs:
             --set resources.binance.limits.memory=2048Mi \
             --set resources.binance.requests.cpu=950m \
             --set resources.binance.requests.memory=2000Mi \
+            \
+            --set resources.mantle.limits.memory=2048Mi \
+            --set resources.mantle.requests.cpu=950m \
+            --set resources.mantle.requests.memory=2000Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -321,6 +332,7 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
           ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_mantle: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
@@ -331,6 +343,7 @@ jobs:
           OPTIMISM_NETWORK: 'optimism'
           ARBITRUM_NETWORK: 'arbitrumOne'
           BINANCE_NETWORK: 'binanceSmartChain'
+          MANTLE_NETWORK: 'mantle'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -355,6 +368,7 @@ jobs:
             \
             --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
             --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
+            --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
             --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
             --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
             --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
@@ -366,6 +380,7 @@ jobs:
             --set OPTIMISM_NETWORK=$OPTIMISM_NETWORK \
             --set ARBITRUM_NETWORK=$ARBITRUM_NETWORK \
             --set BINANCE_NETWORK=$BINANCE_NETWORK \
+            --set MANTLE_NETWORK=$MANTLE_NETWORK \
             \
             --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.operator_mainnet_avalanche_rpc_url }} \
             --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.operator_mainnet_polygon_rpc_url }} \
@@ -373,6 +388,7 @@ jobs:
             --set mainnet_rpc_config_values.optimism_rpc_url=${{ env.operator_mainnet_optimism_rpc_url }} \
             --set mainnet_rpc_config_values.arbitrum_rpc_url=${{ env.operator_mainnet_arbitrum_rpc_url }} \
             --set mainnet_rpc_config_values.binance_rpc_url=${{ env.operator_mainnet_binance_rpc_url }} \
+            --set mainnet_rpc_config_values.mantle_rpc_url=${{ env.operator_mainnet_mantle_rpc_url }} \
             \
             --set mainnet_rpc_config_values.private_key=${{ env.operator_mainnet_private_key }} \
             --set mainnet_rpc_config_values.address=${{ env.operator_mainnet_address }} \
@@ -403,6 +419,10 @@ jobs:
             --set resources.binance.limits.memory=820Mi \
             --set resources.binance.requests.cpu=300m \
             --set resources.binance.requests.memory=800Mi \
+            \
+            --set resources.mantle.limits.memory=820Mi \
+            --set resources.mantle.requests.cpu=300m \
+            --set resources.mantle.requests.memory=800Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \

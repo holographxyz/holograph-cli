@@ -15,7 +15,7 @@ import {
 } from '@holographxyz/networks'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {toAscii, sha3, storageSlot} from '../../utils/utils'
+import {toAscii, sha3, storageSlot} from '../../utils/web3'
 import {FilterType, BlockJob, NetworkMonitor, TransactionType} from '../../utils/network-monitor'
 import ApiService from '../../services/api-service'
 import {CrossChainTransaction, TransactionStatus, Logger} from '../../types/api'

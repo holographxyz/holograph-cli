@@ -9,7 +9,7 @@ import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {networks, supportedShortNetworks} from '@holographxyz/networks'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {web3, zeroAddress} from '../../utils/utils'
+import {web3, zeroAddress} from '../../utils/web3'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {DeploymentConfig} from '../../utils/contract-deployment'
 import {validateNetwork, validateNonEmptyString, checkOptionFlag, checkStringFlag} from '../../utils/validation'

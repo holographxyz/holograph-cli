@@ -1,7 +1,7 @@
 import {TransactionResponse} from '@ethersproject/abstract-provider'
 
 import SqsService from '../../services/sqs-service'
-import {networkToChainId} from '../../utils/utils'
+import {networkToChainId} from '../../utils/web3'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import {EventName, PayloadType, SqsMessageBody} from '../../types/sqs'
 

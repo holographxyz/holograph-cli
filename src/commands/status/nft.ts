@@ -1,16 +1,12 @@
-import * as fs from 'fs-extra'
 import * as inquirer from 'inquirer'
 
 import {CliUx, Command, Flags} from '@oclif/core'
 import {ethers} from 'ethers'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
-import {ConfigFile, ConfigNetwork, ConfigNetworks} from '../../utils/config'
 import {addressValidator, tokenValidator} from '../../utils/validation'
-import {Environment, getEnvironment} from '@holographxyz/environment'
-import {HOLOGRAPH_ADDRESSES} from '../../utils/contracts'
 import {networks} from '@holographxyz/networks'
-import path from 'node:path'
+import {NetworkMonitor} from '../../utils/network-monitor'
 
 export default class Nft extends Command {
   static LAST_BLOCKS_FILE_NAME = 'blocks.json'
@@ -36,54 +32,12 @@ export default class Nft extends Command {
   tokenId!: string
   contractAddress!: string
 
+  networkMonitor!: NetworkMonitor
   registryAddress!: string
   supportedNetworks: string[] = []
-  providers: {[key: string]: ethers.providers.JsonRpcProvider | ethers.providers.WebSocketProvider} = {}
   holograph!: ethers.Contract
   registryContract!: ethers.Contract
   erc721Contract!: ethers.Contract
-
-  async initializeEthers(configFile: ConfigFile, environment: Environment): Promise<void> {
-    for (let i = 0, l = this.supportedNetworks.length; i < l; i++) {
-      const network = this.supportedNetworks[i]
-      const rpcEndpoint = (configFile.networks[network as keyof ConfigNetworks] as ConfigNetwork).providerUrl
-      const protocol = new URL(rpcEndpoint).protocol
-      switch (protocol) {
-        case 'https:':
-          this.providers[network] = new ethers.providers.JsonRpcProvider(rpcEndpoint)
-
-          break
-        case 'wss:':
-          this.providers[network] = new ethers.providers.WebSocketProvider(rpcEndpoint)
-          break
-        default:
-          throw new Error('Unsupported RPC provider protocol -> ' + protocol)
-      }
-    }
-
-    const holographABI = await fs.readJson(path.join(__dirname, `../../abi/${environment}/Holograph.json`))
-    this.holograph = new ethers.Contract(
-      HOLOGRAPH_ADDRESSES[environment],
-      holographABI,
-      this.providers[this.supportedNetworks[0]],
-    )
-
-    const holographRegistryABI = await fs.readJson(
-      path.join(__dirname, `../../abi/${environment}/HolographRegistry.json`),
-    )
-    this.registryAddress = await this.holograph.getRegistry()
-    this.registryContract = new ethers.Contract(
-      this.registryAddress,
-      holographRegistryABI,
-      this.providers[this.supportedNetworks[0]],
-    )
-    const erc721ABI = await fs.readJson(path.join(__dirname, `../../abi/${environment}/ERC721Holograph.json`))
-    this.erc721Contract = new ethers.Contract(
-      this.contractAddress,
-      erc721ABI,
-      this.providers[this.supportedNetworks[0]],
-    )
-  }
 
   async validateContractAddress(): Promise<void> {
     if (this.contractAddress === '') {
@@ -130,7 +84,6 @@ export default class Nft extends Command {
    */
   async run(): Promise<void> {
     this.log('Loading user configurations...')
-    const environment = getEnvironment()
     const {configFile} = await ensureConfigFileIsValid(this.config.configDir, undefined, false)
     this.log('User configurations loaded.')
 
@@ -142,7 +95,17 @@ export default class Nft extends Command {
 
     this.supportedNetworks = Object.keys(configFile.networks)
 
-    await this.initializeEthers(configFile, environment)
+    this.networkMonitor = new NetworkMonitor({
+      parent: this,
+      configFile,
+      debug: this.debug,
+      userWallet: undefined,
+      verbose: false,
+    })
+
+    CliUx.ux.action.start('Loading network RPC providers')
+    await this.networkMonitor.run(true)
+    CliUx.ux.action.stop()
 
     // data we want
     // network -- deployed -- valid -- address -- explorer link
@@ -157,9 +120,9 @@ export default class Nft extends Command {
         owner: '0x',
         link: '',
       }
-      const provider = this.providers[network]
-      const registry = this.registryContract.connect(provider)
-      const erc721 = this.erc721Contract.connect(provider)
+      const provider = this.networkMonitor.providers[network]
+      const registry = this.networkMonitor.registryContract.connect(provider)
+      const erc721 = this.networkMonitor.cxipERC721Contract.connect(provider)
       const code = await provider.getCode(this.contractAddress, 'latest')
       const token = ethers.BigNumber.from(this.tokenId)
       if (code === '0x') {

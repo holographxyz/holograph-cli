@@ -358,8 +358,8 @@ export const eventMap: EventMap = {
   ),
   [EventType.HolographableTransferERC20]: eventBuilder(
     EventType.HolographableTransferERC20,
-    'TransferERC20(bytes32 _event, address _from, address _to, _value)',
-    'TransferERC20(address _from, address _to, _value)',
+    'TransferERC20(bytes32 _event, address _from, address _to, uint256 _value)',
+    'TransferERC20(address _from, address _to, uint256 _value)',
   ),
   [EventType.TransferERC721]: eventBuilder(
     EventType.TransferERC721,

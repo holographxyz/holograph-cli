@@ -3,7 +3,7 @@ import {Contract} from '@ethersproject/contracts'
 import {formatUnits} from '@ethersproject/units'
 
 import {NetworkMonitor} from './network-monitor'
-import {zeroAddress} from './utils'
+import {zeroAddress} from './web3'
 import {HealthCheck} from '../base-commands/healthcheck'
 
 export interface OperatorJobDetails {
