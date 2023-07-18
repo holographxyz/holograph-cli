@@ -43,7 +43,7 @@ env:
   indexer_mainnet_optimism_rpc_url: ${{ secrets.INDEXER_MAINNET_OPTIMISM_RPC_URL }}
   indexer_mainnet_arbitrum_rpc_url: ${{ secrets.INDEXER_MAINNET_ARBITRUM_RPC_URL }}
   indexer_mainnet_binance_rpc_url: ${{ secrets.INDEXER_MAINNET_BINANCE_RPC_URL }}
-  indexer_mainnet_mantle_rpc_url: "http://rpc.mantle.xyz/" #TODO
+  indexer_mainnet_mantle_rpc_url: ${{ secrets.INDEXER_MAINNET_MANTLE_RPC_URL }}
   #
   indexer_mainnet_private_key: ${{ secrets.INDEXER_MAINNET_PRIVATE_KEY }}
   indexer_mainnet_address: ${{ secrets.INDEXER_MAINNET_ADDRESS }}
@@ -54,7 +54,7 @@ env:
   operator_mainnet_optimism_rpc_url: ${{ secrets.OPERATOR_MAINNET_OPTIMISM_RPC_URL }}
   operator_mainnet_arbitrum_rpc_url: ${{ secrets.OPERATOR_MAINNET_ARBITRUM_RPC_URL }}
   operator_mainnet_binance_rpc_url: ${{ secrets.OPERATOR_MAINNET_BINANCE_RPC_URL }}
-  operator_mainnet_mantle_rpc_url: "http://rpc.mantle.xyz/" #TODO
+  operator_mainnet_mantle_rpc_url: ${{ secrets.OPERATOR_MAINNET_MANTLE_RPC_URL }}
   #
   operator_mainnet_private_key: ${{ secrets.OPERATOR_MAINNET_PRIVATE_KEY }}
   operator_mainnet_address: ${{ secrets.OPERATOR_MAINNET_ADDRESS }}
