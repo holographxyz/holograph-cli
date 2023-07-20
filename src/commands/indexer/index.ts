@@ -45,6 +45,7 @@ import {BlockHeightOptions, blockHeightFlag} from '../../flags/update-block-heig
 import handleTransferERC721Event from '../../handlers/sqs-indexer/handle-transfer-erc721-event'
 import handleFailedOperatorJobEvent from '../../handlers/sqs-indexer/handle-failed-operator-job-event'
 import handleTransferBatchERC1155Event from '../../handlers/sqs-indexer/handle-transfer-batch-erc1155-event'
+import {CrossChainMessageType} from '../../utils/event/event'
 
 dotenv.config()
 
@@ -503,6 +504,7 @@ export default class Indexer extends HealthCheck {
               this.networkMonitor,
               interestingTransaction.transaction,
               job.network,
+              CrossChainMessageType.ERC721,
               tags,
             )
           }
@@ -533,15 +535,38 @@ export default class Indexer extends HealthCheck {
             const crossChainMessageSentEvent: CrossChainMessageSentEvent | null = this.bloomFilters[
               type
             ]!.bloomEvent.decode<CrossChainMessageSentEvent>(type, interestingTransaction.log!)
-            if (crossChainMessageSentEvent !== null) {
-              // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
-              await sqsHandleBridgeEvent.call(
-                this,
-                this.networkMonitor,
-                interestingTransaction.transaction,
-                job.network,
-                tags,
-              )
+
+            // TODO: Check the various types of cross chain messages
+            let crossChainMessageType: CrossChainMessageType | null = CrossChainMessageType.ERC721
+            if (interestingTransaction.allLogs) {
+              // Make sure we have logs
+              for (const log of interestingTransaction.allLogs) {
+                if (log.topics[0] === '0x0f5759b4182507dcfc771071166f98d7ca331262e5134eaa74b676adce2138b7') {
+                  console.log('BRIDGED CONTRACT FOUND')
+                  crossChainMessageType = CrossChainMessageType.CONTRACT
+                  break
+                }
+
+                // TODO: Think of a cleaner way to handle besides hardcoding the hash. Maybe something like this:
+                // if (
+                //   log.topics[0] === this.bloomFilters[CrossChainMessageType.CONTRACT]!.bloomValueHashed ||
+                // ) {
+                //   crossChainMessageType = CrossChainMessageType.CONTRACT
+                //   break
+                // }
+              }
+
+              if (crossChainMessageSentEvent !== null) {
+                // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
+                await sqsHandleBridgeEvent.call(
+                  this,
+                  this.networkMonitor,
+                  interestingTransaction.transaction,
+                  job.network,
+                  crossChainMessageType,
+                  tags,
+                )
+              }
             }
           } catch (error: any) {
             this.networkMonitor.structuredLogError(
@@ -559,6 +584,20 @@ export default class Indexer extends HealthCheck {
             const availableOperatorJobEvent: AvailableOperatorJobEvent | null = this.bloomFilters[
               type
             ]!.bloomEvent.decode<AvailableOperatorJobEvent>(type, interestingTransaction.log!)
+
+            // TODO: Check the various types of cross chain messages
+            let crossChainMessageType: CrossChainMessageType | null = CrossChainMessageType.ERC721
+            if (interestingTransaction.allLogs) {
+              // Make sure we have logs
+              for (const log of interestingTransaction.allLogs) {
+                if (log.topics[0] === '0x0f5759b4182507dcfc771071166f98d7ca331262e5134eaa74b676adce2138b7') {
+                  console.log('BRIDGED CONTRACT FOUND')
+                  crossChainMessageType = CrossChainMessageType.CONTRACT
+                  break
+                }
+              }
+            }
+
             if (availableOperatorJobEvent !== null) {
               // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
               await sqsHandleAvailableOperatorJobEvent.call(
@@ -566,6 +605,7 @@ export default class Indexer extends HealthCheck {
                 this.networkMonitor,
                 interestingTransaction.transaction,
                 job.network,
+                crossChainMessageType,
                 tags,
               )
             }
@@ -592,6 +632,7 @@ export default class Indexer extends HealthCheck {
                 this.networkMonitor,
                 interestingTransaction.transaction,
                 job.network,
+                CrossChainMessageType.ERC721,
                 tags,
               )
             }
