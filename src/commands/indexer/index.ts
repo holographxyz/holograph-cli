@@ -266,7 +266,9 @@ export default class Indexer extends HealthCheck {
 
   detectCrossChainMessageType(allLogs: Log[]): CrossChainMessageType {
     const crossChainMessageTopics = {
+      // BridgeableContractDeployed(address,bytes32)
       [CrossChainMessageType.CONTRACT]: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
+      // Transfer(address,address,uint256)
       [CrossChainMessageType.ERC721]: '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
     }
 

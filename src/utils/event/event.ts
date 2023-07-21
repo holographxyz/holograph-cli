@@ -18,7 +18,6 @@ export enum EventType {
   TransferBatchERC1155 = 'TransferBatchERC1155',
   HolographableTransferBatchERC1155 = 'HolographableTransferBatchERC1155',
   BridgeableContractDeployed = 'BridgeableContractDeployed',
-  // BridgedContractDeployed = 'BridgedContractDeployed',
   CrossChainMessageSent = 'CrossChainMessageSent',
   AvailableOperatorJob = 'AvailableOperatorJob',
   FinishedOperatorJob = 'FinishedOperatorJob',
@@ -401,10 +400,6 @@ export const eventMap: EventMap = {
     EventType.BridgeableContractDeployed,
     'BridgeableContractDeployed(address indexed _contractAddress, bytes32 indexed _hash)',
   ),
-  // [EventType.BridgedContractDeployed]: eventBuilder(
-  //   EventType.BridgedContractDeployed,
-  //   'BridgedContractDeployed(address indexed _contractAddress, bytes32 indexed _hash)', // TODO: This isn't a real event type
-  // ),
   [EventType.CrossChainMessageSent]: eventBuilder(
     EventType.CrossChainMessageSent,
     'CrossChainMessageSent(bytes32 _messageHash)',
