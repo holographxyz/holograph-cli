@@ -45,6 +45,7 @@ import {BlockHeightOptions, blockHeightFlag} from '../../flags/update-block-heig
 import handleTransferERC721Event from '../../handlers/sqs-indexer/handle-transfer-erc721-event'
 import handleFailedOperatorJobEvent from '../../handlers/sqs-indexer/handle-failed-operator-job-event'
 import handleTransferBatchERC1155Event from '../../handlers/sqs-indexer/handle-transfer-batch-erc1155-event'
+import {CrossChainMessageType} from '../../utils/event/event'
 
 dotenv.config()
 
@@ -261,6 +262,24 @@ export default class Indexer extends HealthCheck {
     }
 
     this.networkMonitor.bloomFilters = Object.values(this.bloomFilters) as BloomFilter[]
+  }
+
+  detectCrossChainMessageType(allLogs: Log[]): CrossChainMessageType {
+    const foundLog = allLogs.find(
+      log =>
+        log.topics[0] === this.bloomFilters[EventType.BridgeableContractDeployed]?.bloomValueHashed ||
+        log.topics[0] === this.bloomFilters[EventType.TransferERC721]?.bloomValueHashed,
+    )
+
+    if (foundLog?.topics[0] === this.bloomFilters[EventType.BridgeableContractDeployed]?.bloomValueHashed) {
+      return CrossChainMessageType.CONTRACT
+    }
+
+    if (foundLog?.topics[0] === this.bloomFilters[EventType.TransferERC721]?.bloomValueHashed) {
+      return CrossChainMessageType.ERC721
+    }
+
+    return CrossChainMessageType.UNKNOWN
   }
 
   async checkSqsServiceAvailability(): Promise<void> {
@@ -503,6 +522,7 @@ export default class Indexer extends HealthCheck {
               this.networkMonitor,
               interestingTransaction.transaction,
               job.network,
+              CrossChainMessageType.ERC721,
               tags,
             )
           }
@@ -533,6 +553,12 @@ export default class Indexer extends HealthCheck {
             const crossChainMessageSentEvent: CrossChainMessageSentEvent | null = this.bloomFilters[
               type
             ]!.bloomEvent.decode<CrossChainMessageSentEvent>(type, interestingTransaction.log!)
+
+            if (!interestingTransaction.allLogs) {
+              throw new Error('CrossChainMessageSentEvent has no allLogs')
+            }
+
+            const crossChainMessageType = this.detectCrossChainMessageType(interestingTransaction.allLogs)
             if (crossChainMessageSentEvent !== null) {
               // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
               await sqsHandleBridgeEvent.call(
@@ -540,6 +566,7 @@ export default class Indexer extends HealthCheck {
                 this.networkMonitor,
                 interestingTransaction.transaction,
                 job.network,
+                crossChainMessageType,
                 tags,
               )
             }
@@ -559,6 +586,13 @@ export default class Indexer extends HealthCheck {
             const availableOperatorJobEvent: AvailableOperatorJobEvent | null = this.bloomFilters[
               type
             ]!.bloomEvent.decode<AvailableOperatorJobEvent>(type, interestingTransaction.log!)
+
+            if (!interestingTransaction.allLogs) {
+              throw new Error('CrossChainMessageSentEvent has no allLogs')
+            }
+
+            const crossChainMessageType = this.detectCrossChainMessageType(interestingTransaction.allLogs)
+
             if (availableOperatorJobEvent !== null) {
               // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
               await sqsHandleAvailableOperatorJobEvent.call(
@@ -566,6 +600,7 @@ export default class Indexer extends HealthCheck {
                 this.networkMonitor,
                 interestingTransaction.transaction,
                 job.network,
+                crossChainMessageType,
                 tags,
               )
             }
@@ -592,6 +627,7 @@ export default class Indexer extends HealthCheck {
                 this.networkMonitor,
                 interestingTransaction.transaction,
                 job.network,
+                CrossChainMessageType.ERC721,
                 tags,
               )
             }

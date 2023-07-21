@@ -1,4 +1,5 @@
 import {Environment} from '@holographxyz/environment'
+import {CrossChainMessageType} from '../utils/event/event'
 
 export enum PayloadType {
   HolographProtocol = 'HolographProtocol',
@@ -22,7 +23,7 @@ export type SqsMessageBody = {
   chainId: number
   holographAddress: string
   environment: Environment
-  payload: MintEventPayload | BridgeEventPayload | TransferEventPayload
+  payload: ContractDeployedEventPayload | MintEventPayload | BridgeEventPayload | TransferEventPayload
 }
 
 export type MintEventPayload = {
@@ -43,7 +44,13 @@ export type TransferEventPayload = {
   tokenId: string
 }
 
+export type ContractDeployedEventPayload = {
+  tx: string
+  blockNum: number
+}
+
 export type BridgeEventPayload = {
   tx: string
   blockNum: number
+  crossChainMessageType: CrossChainMessageType
 }
