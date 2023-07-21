@@ -620,6 +620,13 @@ export default class Indexer extends HealthCheck {
             const finishedOperatorJobEvent: FinishedOperatorJobEvent | null = this.bloomFilters[
               type
             ]!.bloomEvent.decode<FinishedOperatorJobEvent>(type, interestingTransaction.log!)
+
+            if (!interestingTransaction.allLogs) {
+              throw new Error('CrossChainMessageSentEvent has no allLogs')
+            }
+
+            const crossChainMessageType = this.detectCrossChainMessageType(interestingTransaction.allLogs)
+
             if (finishedOperatorJobEvent !== null) {
               // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
               await sqsHandleBridgeEvent.call(
@@ -627,7 +634,7 @@ export default class Indexer extends HealthCheck {
                 this.networkMonitor,
                 interestingTransaction.transaction,
                 job.network,
-                CrossChainMessageType.ERC721,
+                crossChainMessageType,
                 tags,
               )
             }
