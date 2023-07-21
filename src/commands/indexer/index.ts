@@ -264,6 +264,26 @@ export default class Indexer extends HealthCheck {
     this.networkMonitor.bloomFilters = Object.values(this.bloomFilters) as BloomFilter[]
   }
 
+  detectCrossChainMessageType(allLogs: Log[]): CrossChainMessageType {
+    const crossChainMessageTopics = {
+      [CrossChainMessageType.CONTRACT]: '0xa802207d4c618b40db3b25b7b90e6f483e16b2c1f8d3610b15b345a718c6b41b',
+      [CrossChainMessageType.ERC721]: '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
+    }
+
+    let crossChainMessageType: CrossChainMessageType = CrossChainMessageType.UNKNOWN
+    for (const log of allLogs) {
+      if (log.topics[0] === crossChainMessageTopics[CrossChainMessageType.CONTRACT]) {
+        crossChainMessageType = CrossChainMessageType.CONTRACT
+        break
+      } else if (log.topics[0] === crossChainMessageTopics[CrossChainMessageType.ERC721]) {
+        crossChainMessageType = CrossChainMessageType.ERC721
+        break
+      }
+    }
+
+    return crossChainMessageType
+  }
+
   async checkSqsServiceAvailability(): Promise<void> {
     this.log('Checking SQS service availability...')
     await SqsService.Instance.healthCheck()
@@ -536,37 +556,21 @@ export default class Indexer extends HealthCheck {
               type
             ]!.bloomEvent.decode<CrossChainMessageSentEvent>(type, interestingTransaction.log!)
 
-            // TODO: Check the various types of cross chain messages
-            let crossChainMessageType: CrossChainMessageType | null = CrossChainMessageType.ERC721
-            if (interestingTransaction.allLogs) {
-              // Make sure we have logs
-              for (const log of interestingTransaction.allLogs) {
-                if (log.topics[0] === '0x0f5759b4182507dcfc771071166f98d7ca331262e5134eaa74b676adce2138b7') {
-                  console.log('BRIDGED CONTRACT FOUND')
-                  crossChainMessageType = CrossChainMessageType.CONTRACT
-                  break
-                }
+            if (!interestingTransaction.allLogs) {
+              throw new Error('CrossChainMessageSentEvent has no allLogs')
+            }
 
-                // TODO: Think of a cleaner way to handle besides hardcoding the hash. Maybe something like this:
-                // if (
-                //   log.topics[0] === this.bloomFilters[CrossChainMessageType.CONTRACT]!.bloomValueHashed ||
-                // ) {
-                //   crossChainMessageType = CrossChainMessageType.CONTRACT
-                //   break
-                // }
-              }
-
-              if (crossChainMessageSentEvent !== null) {
-                // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
-                await sqsHandleBridgeEvent.call(
-                  this,
-                  this.networkMonitor,
-                  interestingTransaction.transaction,
-                  job.network,
-                  crossChainMessageType,
-                  tags,
-                )
-              }
+            const crossChainMessageType = this.detectCrossChainMessageType(interestingTransaction.allLogs)
+            if (crossChainMessageSentEvent !== null) {
+              // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
+              await sqsHandleBridgeEvent.call(
+                this,
+                this.networkMonitor,
+                interestingTransaction.transaction,
+                job.network,
+                crossChainMessageType,
+                tags,
+              )
             }
           } catch (error: any) {
             this.networkMonitor.structuredLogError(
@@ -585,18 +589,11 @@ export default class Indexer extends HealthCheck {
               type
             ]!.bloomEvent.decode<AvailableOperatorJobEvent>(type, interestingTransaction.log!)
 
-            // TODO: Check the various types of cross chain messages
-            let crossChainMessageType: CrossChainMessageType | null = CrossChainMessageType.ERC721
-            if (interestingTransaction.allLogs) {
-              // Make sure we have logs
-              for (const log of interestingTransaction.allLogs) {
-                if (log.topics[0] === '0x0f5759b4182507dcfc771071166f98d7ca331262e5134eaa74b676adce2138b7') {
-                  console.log('BRIDGED CONTRACT FOUND')
-                  crossChainMessageType = CrossChainMessageType.CONTRACT
-                  break
-                }
-              }
+            if (!interestingTransaction.allLogs) {
+              throw new Error('CrossChainMessageSentEvent has no allLogs')
             }
+
+            const crossChainMessageType = this.detectCrossChainMessageType(interestingTransaction.allLogs)
 
             if (availableOperatorJobEvent !== null) {
               // should optimize SQS logic to not make additional calls since all data is already digested and parsed here

@@ -1,7 +1,6 @@
 /* eslint-disable unicorn/no-abusive-eslint-disable */
 /* eslint-disable */
 import {Log, TransactionResponse} from '@ethersproject/abstract-provider'
-import {keccak256} from '@ethersproject/keccak256'
 
 import {Event, EventType, eventMap} from './event'
 
