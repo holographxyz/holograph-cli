@@ -305,43 +305,41 @@ export default class Indexer extends HealthCheck {
   preprocessTransactions(interestingTransactions: InterestingTransaction[]): InterestingTransaction[] {
     const groupedByTransactionHashAndBloomId: {[hash: string]: {[bloomId: string]: any}} = {}
     const seenCombinations = new Set()
-
-    // Prepare a new array for the non-duplicate items.
     const updatedInterestingTransactions: InterestingTransaction[] = []
 
     for (const item of interestingTransactions) {
-      const hash = item.transaction.hash
-      const bloomId = item.bloomId
+      const {hash} = item.transaction
+      const {bloomId} = item
       const identifier = `${hash}-${bloomId}`
 
+      const isCrossChainMessageSent = bloomId === 'CrossChainMessageSent'
+
       // If the current bloomId is "CrossChainMessageSent" and we've seen this combination before, skip the rest of this iteration.
-      if (bloomId === 'CrossChainMessageSent' && seenCombinations.has(identifier)) {
+      if (isCrossChainMessageSent && seenCombinations.has(identifier)) {
         continue
       }
 
-      // Add the combination to the set (only if bloomId is "CrossChainMessageSent")
-      if (bloomId === 'CrossChainMessageSent') {
+      if (isCrossChainMessageSent) {
         seenCombinations.add(identifier)
       }
 
-      // Continue processing as before
-      if (!groupedByTransactionHashAndBloomId[hash]) {
-        groupedByTransactionHashAndBloomId[hash] = {}
-      }
+      const {transaction, log, allLogs} = item
 
-      if (!groupedByTransactionHashAndBloomId[hash][bloomId]) {
-        groupedByTransactionHashAndBloomId[hash][bloomId] = {
-          transaction: item.transaction,
-          log: item.log,
+      // Initialize or get existing entry
+      const transactionGroup =
+        groupedByTransactionHashAndBloomId[hash] || (groupedByTransactionHashAndBloomId[hash] = {})
+      const bloomGroup =
+        transactionGroup[bloomId] ||
+        (transactionGroup[bloomId] = {
+          transaction,
+          log,
           allLogs: [],
-        }
+        })
+
+      if (allLogs) {
+        bloomGroup.allLogs.push(...allLogs)
       }
 
-      if (item.allLogs) {
-        groupedByTransactionHashAndBloomId[hash][bloomId].allLogs.push(...item.allLogs)
-      }
-
-      // Add the current item to the new array
       updatedInterestingTransactions.push(item)
     }
 
@@ -354,8 +352,6 @@ export default class Indexer extends HealthCheck {
     if (interestingTransactions.length <= 0) {
       return
     }
-
-    console.log(interestingTransactions[0].allLogs)
 
     // Filter out duplicate transaction / bloomId combinations (only CrossChainMessageSent is considered for now)
     interestingTransactions = this.preprocessTransactions(interestingTransactions)
