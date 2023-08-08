@@ -295,6 +295,35 @@ export default class Indexer extends HealthCheck {
       return
     }
 
+    // Preprocess the transactions to group them by transaction hash
+    console.log(interestingTransactions)
+    const groupedByTransactionHash: any = {}
+
+    interestingTransactions.forEach(item => {
+      const hash = item.transaction.hash
+
+      // Initialize if not already
+      if (!groupedByTransactionHash[hash]) {
+        groupedByTransactionHash[hash] = {
+          bloomId: item.bloomId,
+          transaction: item.transaction,
+          log: item.log, // Add this line
+          allLogs: [],
+        }
+      }
+
+      // Concatenate all logs into the array
+      if (item.allLogs) {
+        groupedByTransactionHash[hash].allLogs.push(...item.allLogs)
+      }
+    })
+
+    console.log('^^^^^^^^^^^')
+    // console.log(JSON.stringify(groupedByTransactionHash))
+    interestingTransactions = Object.values(groupedByTransactionHash)
+
+    console.log(interestingTransactions)
+
     // Map over the transactions to create an array of Promises
     const transactionPromises = interestingTransactions.map(interestingTransaction =>
       this.processSingleTransaction(interestingTransaction, job),
