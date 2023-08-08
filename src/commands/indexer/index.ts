@@ -288,6 +288,66 @@ export default class Indexer extends HealthCheck {
     this.log('SQS service is reachable')
   }
 
+  /**
+   * Preprocesses a list of transactions to remove duplicates based on a combination of transaction hash and the bloomId.
+   * Specifically, it filters out duplicate entries where the bloomId is 'CrossChainMessageSent'.
+   *
+   * How it works:
+   * 1. Iterates over each transaction.
+   * 2. Creates a unique identifier using the transaction hash and bloomId.
+   * 3. If the bloomId is 'CrossChainMessageSent' and the identifier is already seen, the transaction is skipped.
+   * 4. Otherwise, the transaction is processed: it's added to the groupedByTransactionHashAndBloomId dictionary and the updatedInterestingTransactions array.
+   * 5. The end result is a list of transactions with duplicates (based on the specific criteria) removed.
+   *
+   * @param interestingTransactions - The list of transactions to be preprocessed.
+   * @returns A new list of transactions with duplicates removed based on the described criteria.
+   */
+  preprocessTransactions(interestingTransactions: InterestingTransaction[]): InterestingTransaction[] {
+    const groupedByTransactionHashAndBloomId: {[hash: string]: {[bloomId: string]: any}} = {}
+    const seenCombinations = new Set()
+
+    // Prepare a new array for the non-duplicate items.
+    const updatedInterestingTransactions: InterestingTransaction[] = []
+
+    for (const item of interestingTransactions) {
+      const hash = item.transaction.hash
+      const bloomId = item.bloomId
+      const identifier = `${hash}-${bloomId}`
+
+      // If the current bloomId is "CrossChainMessageSent" and we've seen this combination before, skip the rest of this iteration.
+      if (bloomId === 'CrossChainMessageSent' && seenCombinations.has(identifier)) {
+        continue
+      }
+
+      // Add the combination to the set (only if bloomId is "CrossChainMessageSent")
+      if (bloomId === 'CrossChainMessageSent') {
+        seenCombinations.add(identifier)
+      }
+
+      // Continue processing as before
+      if (!groupedByTransactionHashAndBloomId[hash]) {
+        groupedByTransactionHashAndBloomId[hash] = {}
+      }
+
+      if (!groupedByTransactionHashAndBloomId[hash][bloomId]) {
+        groupedByTransactionHashAndBloomId[hash][bloomId] = {
+          transaction: item.transaction,
+          log: item.log,
+          allLogs: [],
+        }
+      }
+
+      if (item.allLogs) {
+        groupedByTransactionHashAndBloomId[hash][bloomId].allLogs.push(...item.allLogs)
+      }
+
+      // Add the current item to the new array
+      updatedInterestingTransactions.push(item)
+    }
+
+    return updatedInterestingTransactions
+  }
+
   async processTransactions2(job: BlockJob, interestingTransactions: InterestingTransaction[]): Promise<void> {
     const startTime = performance.now()
 
@@ -295,34 +355,10 @@ export default class Indexer extends HealthCheck {
       return
     }
 
-    // Preprocess the transactions to group them by transaction hash
-    console.log(interestingTransactions)
-    const groupedByTransactionHash: any = {}
+    console.log(interestingTransactions[0].allLogs)
 
-    interestingTransactions.forEach(item => {
-      const hash = item.transaction.hash
-
-      // Initialize if not already
-      if (!groupedByTransactionHash[hash]) {
-        groupedByTransactionHash[hash] = {
-          bloomId: item.bloomId,
-          transaction: item.transaction,
-          log: item.log, // Add this line
-          allLogs: [],
-        }
-      }
-
-      // Concatenate all logs into the array
-      if (item.allLogs) {
-        groupedByTransactionHash[hash].allLogs.push(...item.allLogs)
-      }
-    })
-
-    console.log('^^^^^^^^^^^')
-    // console.log(JSON.stringify(groupedByTransactionHash))
-    interestingTransactions = Object.values(groupedByTransactionHash)
-
-    console.log(interestingTransactions)
+    // Filter out duplicate transaction / bloomId combinations (only CrossChainMessageSent is considered for now)
+    interestingTransactions = this.preprocessTransactions(interestingTransactions)
 
     // Map over the transactions to create an array of Promises
     const transactionPromises = interestingTransactions.map(interestingTransaction =>
