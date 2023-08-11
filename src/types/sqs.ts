@@ -13,6 +13,7 @@ export enum EventName {
   ContractDeployed = 'ContractDeployed',
   AvailableOperatorJob = 'AvailableOperatorJob',
   TransferERC721 = 'TransferERC721',
+  FailedOperatorJob = 'FailedOperatorJob',
 }
 
 export type SqsMessageBody = {
@@ -23,7 +24,12 @@ export type SqsMessageBody = {
   chainId: number
   holographAddress: string
   environment: Environment
-  payload: ContractDeployedEventPayload | MintEventPayload | BridgeEventPayload | TransferEventPayload
+  payload:
+    | ContractDeployedEventPayload
+    | MintEventPayload
+    | BridgeEventPayload
+    | TransferEventPayload
+    | FailedOperatorJobPayload
 }
 
 export type MintEventPayload = {
@@ -53,4 +59,10 @@ export type BridgeEventPayload = {
   tx: string
   blockNum: number
   crossChainMessageType: CrossChainMessageType
+}
+
+export type FailedOperatorJobPayload = {
+  tx: string
+  blockNum: number
+  jobHash: string
 }
