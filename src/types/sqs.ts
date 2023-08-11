@@ -1,5 +1,5 @@
 import {Environment} from '@holographxyz/environment'
-import {CrossChainMessageType, FailedOperatorJobEvent} from '../utils/event/event'
+import {CrossChainMessageType} from '../utils/event/event'
 
 export enum PayloadType {
   HolographProtocol = 'HolographProtocol',
