@@ -711,6 +711,9 @@ export default class Indexer extends HealthCheck {
         }
 
         case EventType.FailedOperatorJob: {
+          // TODO: Figure out if it's an NFT or Collection
+          // Add status field to the payload
+
           try {
             const failedOperatorJobEvent: FailedOperatorJobEvent | null = this.bloomFilters[
               type
