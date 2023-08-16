@@ -158,7 +158,7 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
          which index position inside of the pod doe they hold (used for fallback operator calculations),
          the current pod size (used for fallback operator calculations).
   */
-  async updateOperatorStatus(network: string): Promise<Boolean> {
+  async updateOperatorStatus(network: string): Promise<boolean> {
     const contract: Contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.providers[network])
 
     // A flag indicating the success of all contract calls
