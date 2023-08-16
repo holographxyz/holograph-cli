@@ -85,33 +85,49 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
     operatorJobPayload: string,
     tags: (string | number)[],
   ): Promise<OperatorJob | undefined> {
-    const contract: Contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.providers[network])
-    const rawJobDetails: any[] = await contract.getJobDetails(operatorJobHash)
-    const jobDetails: OperatorJobDetails = {
-      pod: rawJobDetails[0] as number,
-      blockTimes: rawJobDetails[1] as number,
-      operator: (rawJobDetails[2] as string).toLowerCase(),
-      startBlock: rawJobDetails[3] as number,
-      startTimestamp: BigNumber.from(rawJobDetails[4]),
-      fallbackOperators: rawJobDetails[5] as number[],
-    } as OperatorJobDetails
-    if (jobDetails.startBlock > 0) {
-      // for some reason these logs dont have tag attached.
+    try {
+      const contract: Contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.providers[network])
+
+      // Try to fetch job details
+      const rawJobDetails: any[] = await contract.getJobDetails(operatorJobHash)
+
+      // Validate rawJobDetails before processing
+      if (!rawJobDetails || rawJobDetails.length < 6) {
+        throw new Error(`Invalid job details for job ${operatorJobHash}`)
+      }
+
+      const jobDetails: OperatorJobDetails = {
+        pod: rawJobDetails[0] as number,
+        blockTimes: rawJobDetails[1] as number,
+        operator: (rawJobDetails[2] as string).toLowerCase(),
+        startBlock: rawJobDetails[3] as number,
+        startTimestamp: BigNumber.from(rawJobDetails[4]),
+        fallbackOperators: rawJobDetails[5] as number[],
+      } as OperatorJobDetails
+
+      if (jobDetails.startBlock <= 0) {
+        throw new Error(`Invalid startBlock for job ${operatorJobHash}`)
+      }
 
       this.networkMonitor.structuredLog(network, `Decoded valid job ${operatorJobHash}`, tags)
       this.networkMonitor.structuredLog(network, `Selected operator for job is ${jobDetails.operator}`, tags)
+
       const targetTime: number = this.getTargetTime(network, jobDetails)
-      // extract gasLimit and gasPrice from payload
+
+      // Extract gasLimit and gasPrice from payload
       const gasLimit: BigNumber = BigNumber.from('0x' + operatorJobPayload.slice(-128, -64))
       this.networkMonitor.structuredLog(network, `Job gas limit is ${gasLimit.toNumber()}`, tags)
+
       const gasPrice: BigNumber = BigNumber.from('0x' + operatorJobPayload.slice(-64))
       this.networkMonitor.structuredLog(network, `Job maximum gas price is ${formatUnits(gasPrice, 'gwei')} GWEI`, tags)
+
       const remainingTime: number = Math.round((targetTime - Date.now()) / 1000)
       this.networkMonitor.structuredLog(
         network,
         `Job can be operated ${remainingTime <= 0 ? 'immediately' : 'in ' + remainingTime + ' seconds'}`,
         tags,
       )
+
       this.operatorJobs[operatorJobHash] = {
         network,
         hash: operatorJobHash,
@@ -122,17 +138,12 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
         jobDetails,
         tags,
       } as OperatorJob
-      // process.stdout.write('\n\n' + JSON.stringify(this.operatorJobs[operatorJobHash],undefined,2) + '\n\n')
+
       return this.operatorJobs[operatorJobHash]
+    } catch (error: any) {
+      this.networkMonitor.structuredLogError(network, `Error decoding job ${operatorJobHash}: ${error.message}`, tags)
+      return undefined
     }
-
-    this.networkMonitor.structuredLogError(
-      network,
-      `Could not decode job ${operatorJobHash} (invalid or already completed)`,
-      tags,
-    )
-
-    return undefined
   }
 
   updateJobTimes(): void {
@@ -147,22 +158,62 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
          which index position inside of the pod doe they hold (used for fallback operator calculations),
          the current pod size (used for fallback operator calculations).
   */
-  async updateOperatorStatus(network: string): Promise<void> {
+  async updateOperatorStatus(network: string): Promise<Boolean> {
     const contract: Contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.providers[network])
-    this.operatorStatus.active[network] = !BigNumber.from(
-      await contract.getBondedAmount(this.operatorStatus.address),
-    ).isZero()
-    this.operatorStatus.currentPod[network] = BigNumber.from(
-      await contract.getBondedPod(this.operatorStatus.address),
-    ).toNumber()
-    this.operatorStatus.podIndex[network] = BigNumber.from(
-      await contract.getBondedPodIndex(this.operatorStatus.address),
-    ).toNumber()
-    if (this.operatorStatus.currentPod[network] > 0) {
-      this.operatorStatus.podSize[network] = BigNumber.from(
-        await contract.getPodOperatorsLength(this.operatorStatus.currentPod[network]),
-      ).toNumber()
+
+    // A flag indicating the success of all contract calls
+    let allCallsSuccessful = true
+
+    const contractCall = async <T>(method: () => Promise<T>, errorMessage: string): Promise<T | null> => {
+      try {
+        return await method()
+      } catch (error: any) {
+        this.networkMonitor.structuredLogError(network, errorMessage + ': ' + error)
+        allCallsSuccessful = false // Mark the flag as false on any error
+        return null
+      }
     }
+
+    const bondedAmount = await contractCall(
+      () => contract.getBondedAmount(this.operatorStatus.address),
+      'Error getting Bonded Amount',
+    )
+
+    if (bondedAmount) {
+      this.operatorStatus.active[network] = !BigNumber.from(bondedAmount).isZero()
+    }
+
+    const bondedPod = await contractCall(
+      () => contract.getBondedPod(this.operatorStatus.address),
+      'Error getting Bonded Pod',
+    )
+
+    if (bondedPod) {
+      this.operatorStatus.currentPod[network] = BigNumber.from(bondedPod).toNumber()
+    }
+
+    const bondedPodIndex = await contractCall(
+      () => contract.getBondedPodIndex(this.operatorStatus.address),
+      'Error getting Bonded Pod Index',
+    )
+
+    if (bondedPodIndex) {
+      this.operatorStatus.podIndex[network] = BigNumber.from(bondedPodIndex).toNumber()
+    }
+
+    if (this.operatorStatus.currentPod[network] > 0) {
+      const podOperatorsLength = await contractCall(
+        () => contract.getPodOperatorsLength(this.operatorStatus.currentPod[network]),
+        'Error getting Pod Operators Length',
+      )
+
+      if (podOperatorsLength) {
+        this.operatorStatus.podSize[network] = BigNumber.from(podOperatorsLength).toNumber()
+      }
+    }
+
+    // Return the final status of all contract calls
+    return allCallsSuccessful
   }
 
   async checkJobStatus(operatorJobHash: string, tags?: (string | number)[]): Promise<void> {

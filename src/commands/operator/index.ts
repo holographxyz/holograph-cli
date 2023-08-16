@@ -346,130 +346,159 @@ export default class Operator extends OperatorJobAwareCommand {
     )
     this.networkMonitor.structuredLog(job.network, `Identified this as a ${interestingTransaction.bloomId} event`, tags)
 
-    // Depending on the event type, perform relevant actions
     try {
       switch (type) {
-        case EventType.CrossChainMessageSent: {
-          try {
-            const crossChainMessageSentEvent: CrossChainMessageSentEvent | null = this.bloomFilters[
-              type
-            ]!.bloomEvent.decode<CrossChainMessageSentEvent>(type, interestingTransaction.log!)
-            if (crossChainMessageSentEvent !== null) {
-              this.networkMonitor.structuredLog(
-                job.network,
-                `Bridge request found for job hash ${crossChainMessageSentEvent.messageHash}`,
-                tags,
-              )
-            }
-          } catch (error: any) {
-            this.networkMonitor.structuredLogError(
-              job.network,
-              this.errorColor(`Decoding CrossChainMessageSentEvent error: `, error),
-              tags,
-            )
-          }
-
+        case EventType.CrossChainMessageSent:
+          await this.handleCrossChainMessageSentEvent(job, type, interestingTransaction, tags)
           break
-        }
-
-        case EventType.AvailableOperatorJob: {
-          try {
-            const availableOperatorJobEvent: AvailableOperatorJobEvent | null = this.bloomFilters[
-              type
-            ]!.bloomEvent.decode<AvailableOperatorJobEvent>(type, interestingTransaction.log!)
-            if (availableOperatorJobEvent !== null) {
-              this.networkMonitor.structuredLog(
-                job.network,
-                `Found a new job ${availableOperatorJobEvent.jobHash}`,
-                tags,
-              )
-              // first update operator details, in case operator was selected for a job, or any data changed
-              this.networkMonitor.structuredLog(job.network, `Updating operator status`, tags)
-              await this.updateOperatorStatus(job.network)
-              // then add operator job to internal list of jobs to monitor and work on
-              this.networkMonitor.structuredLog(job.network, `Adding job to list of available jobs`, tags)
-              await this.decodeOperatorJob(
-                job.network,
-                availableOperatorJobEvent.jobHash,
-                availableOperatorJobEvent.payload,
-                tags,
-              )
-            }
-          } catch (error: any) {
-            this.networkMonitor.structuredLogError(
-              job.network,
-              this.errorColor(`Decoding AvailableOperatorJobEvent error: `, error),
-              tags,
-            )
-          }
-
+        case EventType.AvailableOperatorJob:
+          await this.handleAvailableOperatorJobEvent(job, type, interestingTransaction, tags)
           break
-        }
-
-        case EventType.FinishedOperatorJob: {
-          try {
-            const finishedOperatorJobEvent: FinishedOperatorJobEvent | null = this.bloomFilters[
-              type
-            ]!.bloomEvent.decode<FinishedOperatorJobEvent>(type, interestingTransaction.log!)
-            if (finishedOperatorJobEvent !== null) {
-              this.networkMonitor.structuredLog(
-                job.network,
-                `Operator executed job ${finishedOperatorJobEvent.jobHash}`,
-                tags,
-              )
-              // remove job from operatorJobs if it exists
-              if (finishedOperatorJobEvent.jobHash in this.operatorJobs) {
-                this.networkMonitor.structuredLog(job.network, `Removing job from list of available jobs`, tags)
-                delete this.operatorJobs[finishedOperatorJobEvent.jobHash]
-              }
-
-              // update operator details, in case operator was selected for a job, or any data changed
-              this.networkMonitor.structuredLog(job.network, `Updating operator status`, tags)
-              await this.updateOperatorStatus(job.network)
-            }
-          } catch (error: any) {
-            this.networkMonitor.structuredLogError(
-              job.network,
-              this.errorColor(`Decoding FinishedOperatorJobEvent error: `, error),
-              tags,
-            )
-          }
-
+        case EventType.FinishedOperatorJob:
+          await this.handleFinishedOperatorJobEvent(job, type, interestingTransaction, tags)
           break
-        }
-
-        case EventType.FailedOperatorJob: {
-          try {
-            const failedOperatorJobEvent: FailedOperatorJobEvent | null = this.bloomFilters[
-              type
-            ]!.bloomEvent.decode<FailedOperatorJobEvent>(type, interestingTransaction.log!)
-            if (failedOperatorJobEvent !== null) {
-              this.networkMonitor.structuredLog(
-                job.network,
-                `Operator job finished but with failed code ${failedOperatorJobEvent.jobHash}`,
-                tags,
-              )
-            }
-          } catch (error: any) {
-            this.networkMonitor.structuredLogError(
-              job.network,
-              this.errorColor(`Decoding FailedOperatorJobEvent error: `, error),
-              tags,
-            )
-          }
-
+        case EventType.FailedOperatorJob:
+          await this.handleFailedOperatorJobEvent(job, type, interestingTransaction, tags)
           break
-        }
 
-        default: {
+        default:
           this.networkMonitor.structuredLogError(job.network, `UNKNOWN EVENT`, tags)
-          break
-        }
       }
     } catch (error: any) {
       this.networkMonitor.structuredLogError(
         job.network,
         this.errorColor(`Error processing transaction: `, error),
+        tags,
+      )
+    }
+  }
+
+  async handleCrossChainMessageSentEvent(
+    job: BlockJob,
+    type: EventType,
+    interestingTransaction: InterestingTransaction,
+    tags: (string | number)[],
+  ) {
+    try {
+      const crossChainMessageSentEvent: CrossChainMessageSentEvent | null = this.bloomFilters[
+        type
+      ]!.bloomEvent.decode<CrossChainMessageSentEvent>(type, interestingTransaction.log!)
+      if (crossChainMessageSentEvent !== null) {
+        this.networkMonitor.structuredLog(
+          job.network,
+          `Bridge request found for job hash ${crossChainMessageSentEvent.messageHash}`,
+          tags,
+        )
+      }
+    } catch (error: any) {
+      this.networkMonitor.structuredLogError(
+        job.network,
+        this.errorColor(`Decoding CrossChainMessageSentEvent error: `, error),
+        tags,
+      )
+    }
+  }
+
+  async handleAvailableOperatorJobEvent(
+    job: BlockJob,
+    type: EventType,
+    interestingTransaction: InterestingTransaction,
+    tags: (string | number)[],
+  ) {
+    try {
+      const availableOperatorJobEvent: AvailableOperatorJobEvent | null = this.bloomFilters[
+        type
+      ]!.bloomEvent.decode<AvailableOperatorJobEvent>(type, interestingTransaction.log!)
+
+      if (availableOperatorJobEvent !== null) {
+        this.networkMonitor.structuredLog(job.network, `Found a new job ${availableOperatorJobEvent.jobHash}`, tags)
+
+        // first update operator details, in case operator was selected for a job, or any data changed
+        this.networkMonitor.structuredLog(job.network, `Updating operator status`, tags)
+        const statusUpdateSuccessful = await this.updateOperatorStatus(job.network)
+
+        if (!statusUpdateSuccessful) {
+          this.networkMonitor.structuredLogError(
+            job.network,
+            `Failed to update operator status. Proceeding with last known status for job ${availableOperatorJobEvent.jobHash}`,
+            tags,
+          )
+        }
+
+        // then add operator job to internal list of jobs to monitor and work on
+        this.networkMonitor.structuredLog(job.network, `Adding job to list of available jobs`, tags)
+        await this.decodeOperatorJob(
+          job.network,
+          availableOperatorJobEvent.jobHash,
+          availableOperatorJobEvent.payload,
+          tags,
+        )
+      }
+    } catch (error: any) {
+      this.networkMonitor.structuredLogError(
+        job.network,
+        this.errorColor(`Decoding AvailableOperatorJobEvent error: `, error),
+        tags,
+      )
+    }
+  }
+
+  async handleFinishedOperatorJobEvent(
+    job: BlockJob,
+    type: EventType,
+    interestingTransaction: InterestingTransaction,
+    tags: (string | number)[],
+  ) {
+    try {
+      const finishedOperatorJobEvent: FinishedOperatorJobEvent | null = this.bloomFilters[
+        type
+      ]!.bloomEvent.decode<FinishedOperatorJobEvent>(type, interestingTransaction.log!)
+      if (finishedOperatorJobEvent !== null) {
+        this.networkMonitor.structuredLog(
+          job.network,
+          `Operator executed job ${finishedOperatorJobEvent.jobHash}`,
+          tags,
+        )
+        // remove job from operatorJobs if it exists
+        if (finishedOperatorJobEvent.jobHash in this.operatorJobs) {
+          this.networkMonitor.structuredLog(job.network, `Removing job from list of available jobs`, tags)
+          delete this.operatorJobs[finishedOperatorJobEvent.jobHash]
+        }
+
+        // update operator details, in case operator was selected for a job, or any data changed
+        this.networkMonitor.structuredLog(job.network, `Updating operator status`, tags)
+        await this.updateOperatorStatus(job.network)
+      }
+    } catch (error: any) {
+      this.networkMonitor.structuredLogError(
+        job.network,
+        this.errorColor(`Decoding FinishedOperatorJobEvent error: `, error),
+        tags,
+      )
+    }
+  }
+
+  async handleFailedOperatorJobEvent(
+    job: BlockJob,
+    type: EventType,
+    interestingTransaction: InterestingTransaction,
+    tags: (string | number)[],
+  ) {
+    try {
+      const failedOperatorJobEvent: FailedOperatorJobEvent | null = this.bloomFilters[
+        type
+      ]!.bloomEvent.decode<FailedOperatorJobEvent>(type, interestingTransaction.log!)
+      if (failedOperatorJobEvent !== null) {
+        this.networkMonitor.structuredLog(
+          job.network,
+          `Operator job finished but with failed code ${failedOperatorJobEvent.jobHash}`,
+          tags,
+        )
+      }
+    } catch (error: any) {
+      this.networkMonitor.structuredLogError(
+        job.network,
+        this.errorColor(`Decoding FailedOperatorJobEvent error: `, error),
         tags,
       )
     }
