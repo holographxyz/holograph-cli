@@ -833,6 +833,7 @@ export class NetworkMonitor {
     } else {
       this.debug('exitRouter triggered')
       this.debug(`\nError: ${exitCode}`)
+      console.trace()
     }
   }
 
