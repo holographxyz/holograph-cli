@@ -646,12 +646,23 @@ export default class Operator extends OperatorJobAwareCommand {
   // This function selects the best job based on the provided gas pricing.
   selectJob(jobs: OperatorJob[], gasPricing: GasPricing): OperatorJob | null {
     const compareGas: BigNumber = gasPricing.isEip1559 ? gasPricing.nextBlockFee! : gasPricing.gasPrice!
+
+    let totalGas: BigNumber = BigNumber.from(0)
     for (const job of jobs) {
+      totalGas = totalGas.add(BigNumber.from(job.gasPrice))
       if (BigNumber.from(job.gasPrice).gte(compareGas)) {
         return job
       }
     }
 
+    // Calculate average gas price.
+    const averageGasPrice: BigNumber = jobs.length > 0 ? totalGas.div(jobs.length) : BigNumber.from(0)
+
+    this.log(
+      `None of the jobs in queue can be executed with the current gas pricing. ${
+        jobs.length
+      } jobs in queue. Gas price: ${compareGas.toString()}. Average gas provided: ${averageGasPrice.toString()}`,
+    )
     return null
   }
 
