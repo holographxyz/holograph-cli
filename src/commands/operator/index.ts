@@ -591,13 +591,6 @@ export default class Operator extends OperatorJobAwareCommand {
       this.processingJobsForNetworks[network] = true
       this.log(`Continue job processing for network: ${network}. Current job hash: ${jobHash}`)
 
-      this.log(`NOTE: Deleting job is currently disabled`)
-      // If a specific jobHash is provided, delete it.
-      // NOTE: This logic might be better placed elsewhere.
-      // if (jobHash && this.operatorJobs[jobHash]) {
-      //   delete this.operatorJobs[jobHash]
-      // }
-
       this.log(`Getting gas pricing for network: ${network}`)
       const gasPricing: GasPricing = this.networkMonitor.gasPrices[network]
       if (!gasPricing) {
@@ -613,13 +606,18 @@ export default class Operator extends OperatorJobAwareCommand {
       const sortedJobs = this.sortJobsByPriority(jobs)
 
       this.log(`Selecting job`)
-      const chosenJob = this.selectJob(sortedJobs, gasPricing)
+      const selectedJob = this.selectJob(sortedJobs, gasPricing)
 
-      if (chosenJob) {
-        this.log(`Chosen job: ${chosenJob?.hash}`)
-        const tags = this.operatorJobs[chosenJob.hash]?.tags ?? [this.networkMonitor.randomTag()]
-        this.networkMonitor.structuredLog(network, `Sending job ${chosenJob.hash} for execution`, tags)
-        this.processOperatorJob(network, chosenJob.hash, tags)
+      if (selectedJob) {
+        this.log(`Chosen job: ${selectedJob?.hash}`)
+        const tags = this.operatorJobs[selectedJob.hash]?.tags ?? [this.networkMonitor.randomTag()]
+        this.networkMonitor.structuredLog(network, `Sending job ${selectedJob.hash} for execution`, tags)
+        this.processOperatorJob(network, selectedJob.hash, tags)
+
+        // We can now delete the job hash from the list of jobs being processed
+        if (jobHash && this.operatorJobs[jobHash]) {
+          delete this.operatorJobs[jobHash]
+        }
       } else {
         this.log(`No job selected. Waiting 1 second before trying again.`)
         setTimeout(this.processOperatorJobs.bind(this, network), 1000)
