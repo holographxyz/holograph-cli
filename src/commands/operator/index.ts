@@ -79,15 +79,18 @@ export default class Operator extends OperatorJobAwareCommand {
     ...HealthCheck.flags,
   }
 
+  private processingJobsForNetworks: {[network: string]: boolean} = {}
+  private isJobBeingExecuted: {[jobHash: string]: boolean} = {}
+
   // API Params
   BASE_URL?: string
   apiService!: ApiService
   apiColor = color.keyword('orange')
   errorColor = color.keyword('red')
   bloomFilters!: BloomFilterMap
+  updateBlockHeight!: string
 
   environment!: Environment
-
   legacyBlocks = true
 
   /**
@@ -100,78 +103,98 @@ export default class Operator extends OperatorJobAwareCommand {
    * Command Entry Point
    */
   async run(): Promise<void> {
-    this.log(`Operator command has begun!!!`)
-    const {flags} = await this.parse(Operator)
-    this.BASE_URL = flags.host
-    const enableHealthCheckServer = flags.healthCheck
-    const healthCheckPort = flags.healthCheckPort
-    let updateBlockHeight = flags.updateBlockHeight
-    const syncFlag = flags.sync
-    const processBlockRange = flags['process-block-range']
-    this.legacyBlocks = !processBlockRange
-    const unsafePassword = flags.unsafePassword
+    try {
+      this.log(`Operator command has begun!!!`)
+      const {flags} = await this.parse(Operator)
+      this.BASE_URL = flags.host
+      this.updateBlockHeight = flags.updateBlockHeight
+      const processBlockRange = flags['process-block-range']
+      this.legacyBlocks = !processBlockRange
 
-    this.operatorMode =
-      OperatorMode[
-        (await checkOptionFlag(
-          Object.values(OperatorMode),
-          flags.mode,
-          'Select the mode in which to run the operator',
-        )) as keyof typeof OperatorMode
-      ]
+      this.operatorMode = await this.setOperatorMode(flags.mode)
 
-    this.log(`Operator mode: ${this.operatorMode}`)
+      const {environment, userWallet, configFile} = await this.loadConfigurations(flags.unsafePassword)
+      this.environment = environment
 
-    this.log('Loading user configurations...')
-    const {environment, userWallet, configFile} = await ensureConfigFileIsValid(
-      this.config.configDir,
-      unsafePassword,
-      true,
-    )
-    this.log('User configurations loaded.')
+      if (flags.replay !== '0') {
+        this.log('Replay flag enabled, will not load or save block heights.')
+        this.updateBlockHeight = BlockHeightOptions.DISABLE
+      }
 
-    this.environment = environment
+      await this.authenticateApi()
+      this.initializeNetworkMonitor(flags, userWallet, configFile)
+      await this.manageBlockHeights(flags)
+      this.setApiServiceLogs()
 
-    if (flags.replay !== '0') {
-      this.log('Replay flag enabled, will not load or save block heights.')
-      updateBlockHeight = BlockHeightOptions.DISABLE
+      if (!(await shouldSync(flags.sync, this.networkMonitor.latestBlockHeight))) {
+        this.resetBlockHeights()
+      }
+
+      this.operatorStatus.address = userWallet.address.toLowerCase()
+      this.networkMonitor.exitCallback = this.exitCallback.bind(this)
+
+      await this.startNetworkMonitor(flags)
+      await this.processSavedJobs()
+      this.scheduleJobsProcessing()
+
+      if (flags.healthCheck) {
+        await this.startHealthCheckServer(flags.healthCheckPort || 6000)
+      }
+
+      this.log(`Operator started running successfully.`)
+    } catch (error) {
+      this.handleError('An error occurred in the run method', error)
     }
+  }
 
-    if (
-      this.BASE_URL !== undefined &&
-      updateBlockHeight !== undefined &&
-      updateBlockHeight === BlockHeightOptions.API
-    ) {
+  async loadConfigurations(unsafePassword: any): Promise<{environment: any; userWallet: any; configFile: any}> {
+    this.log('Loading user configurations...')
+    const configurations = await ensureConfigFileIsValid(this.config.configDir, unsafePassword, true)
+    this.log('User configurations loaded.')
+    return configurations
+  }
+
+  async authenticateApi(): Promise<void> {
+    if (this.BASE_URL && this.updateBlockHeight === BlockHeightOptions.API) {
       if (this.environment === Environment.experimental || this.environment === Environment.localhost) {
         this.log(`Skipping API authentication for ${Environment[this.environment]} environment`)
       } else {
         this.log(`Using API for block height track ...`)
-        // Create API Service for GraphQL requests
+        const logger: Logger = {
+          log: this.log,
+          warn: this.warn,
+          debug: this.debug,
+          error: this.error,
+          jsonEnabled: () => false,
+        }
         try {
-          const logger: Logger = {
-            log: this.log,
-            warn: this.warn,
-            debug: this.debug,
-            error: this.error,
-            jsonEnabled: () => false,
-          }
-          this.apiService = new ApiService(this.BASE_URL!, logger)
+          this.apiService = new ApiService(this.BASE_URL, logger)
           await this.apiService.operatorLogin()
+          this.log(this.apiColor(`Successfully authenticated into API ${this.BASE_URL}`))
         } catch (error: any) {
-          this.log('Error: Failed to get Operator Token from API')
-          // NOTE: sample of how to do logs when in production mode
-          this.log(JSON.stringify({...error, stack: error.stack}))
-          this.exit()
+          this.handleError('Failed to get Operator Token from API', error)
         }
-
-        if (this.apiService === undefined) {
-          throw new Error('API service is not defined')
-        }
-
-        this.log(this.apiColor(`Successfully authenticated into API ${flags.host}`))
       }
     }
+  }
 
+  handleError(message: string, error: any): void {
+    this.log(`Error: ${message}`)
+    this.log(JSON.stringify({...error, stack: error.stack}))
+    this.exit()
+  }
+
+  async setOperatorMode(mode: any): Promise<OperatorMode> {
+    return OperatorMode[
+      (await checkOptionFlag(
+        Object.values(OperatorMode),
+        mode,
+        'Select the mode in which to run the operator',
+      )) as keyof typeof OperatorMode
+    ]
+  }
+
+  initializeNetworkMonitor(flags: any, userWallet: any, configFile: any): void {
     this.networkMonitor = new NetworkMonitor({
       enableV2: true,
       parent: this,
@@ -183,18 +206,18 @@ export default class Operator extends OperatorJobAwareCommand {
       lastBlockFilename: 'operator-blocks.json',
       replay: flags.replay,
       apiService: this.apiService,
-      BlockHeightOptions: updateBlockHeight as BlockHeightOptions,
-      processBlockRange: processBlockRange,
+      BlockHeightOptions: this.updateBlockHeight as BlockHeightOptions,
+      processBlockRange: flags['process-block-range'],
     })
-
     this.jobsFile = path.join(this.config.configDir, this.networkMonitor.environment + '.operator-job-details.json')
+  }
 
-    switch (updateBlockHeight) {
+  async manageBlockHeights(flags: any): Promise<void> {
+    switch (this.updateBlockHeight) {
       case BlockHeightOptions.API:
         if (flags.host === undefined) {
           this.errorColor(`--blockHeight flag option API requires the --host flag`)
         }
-
         this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocksHeights(
           BlockHeightProcessType.OPERATOR,
         )
@@ -208,57 +231,66 @@ export default class Operator extends OperatorJobAwareCommand {
         this.networkMonitor.currentBlockHeight = {}
         break
     }
+  }
 
+  setApiServiceLogs(): void {
     if (this.apiService !== undefined) {
       this.apiService.setStructuredLog(this.networkMonitor.structuredLog.bind(this.networkMonitor))
       this.apiService.setStructuredLogError(this.networkMonitor.structuredLogError.bind(this.networkMonitor))
     }
+  }
 
-    if ((await shouldSync(syncFlag, this.networkMonitor.latestBlockHeight)) === false) {
-      this.networkMonitor.latestBlockHeight = {}
-      this.networkMonitor.currentBlockHeight = {}
-    }
+  resetBlockHeights(): void {
+    this.networkMonitor.latestBlockHeight = {}
+    this.networkMonitor.currentBlockHeight = {}
+  }
 
-    this.operatorStatus.address = userWallet.address.toLowerCase()
-
-    this.networkMonitor.exitCallback = this.exitCallback.bind(this)
-
+  async startNetworkMonitor(flags: any): Promise<void> {
     CliUx.ux.action.start(`Starting operator in mode: ${OperatorMode[this.operatorMode]}`)
-    const continuous = flags.replay === '0' // If replay is set, run network monitor stops after catching up to the latest block
+    const continuous = flags.replay === '0'
     await this.networkMonitor.run(continuous, undefined, this.filterBuilder2)
     CliUx.ux.action.stop('🚀')
+  }
 
-    // check if file exists
-    if (await fs.pathExists(this.jobsFile)) {
-      this.log('Saved jobs file exists, parsing it for valid/active jobs.')
-      // if file exists, need to add it to list of jobs to process
-      this.operatorJobs = (await fs.readJson(this.jobsFile)) as {[key: string]: OperatorJob}
-      // need to check each job and make sure it's still valid
-      for (const jobHash of Object.keys(this.operatorJobs)) {
-        this.operatorJobs[jobHash].gasLimit = BigNumber.from(this.operatorJobs[jobHash].gasLimit)
-        this.operatorJobs[jobHash].gasPrice = BigNumber.from(this.operatorJobs[jobHash].gasPrice)
-        this.operatorJobs[jobHash].jobDetails.startTimestamp = BigNumber.from(
-          this.operatorJobs[jobHash].jobDetails.startTimestamp,
-        )
-        // if job is still valid, it will stay in object, otherwise it will be removed
-        // Tags not passed in because they do not exist
-        // Maybe save tags with the job hash so we can pass it back in here
-        await this.checkJobStatus(jobHash)
+  async processSavedJobs(): Promise<void> {
+    try {
+      // Check if file exists
+      if (await fs.pathExists(this.jobsFile)) {
+        this.log('Saved jobs file exists, parsing it for valid/active jobs.')
+        // if file exists, need to add it to list of jobs to process
+        this.operatorJobs = (await fs.readJson(this.jobsFile)) as {[key: string]: OperatorJob}
+
+        // Need to check each job and make sure it's still valid
+        for (const jobHash of Object.keys(this.operatorJobs)) {
+          this.operatorJobs[jobHash].gasLimit = BigNumber.from(this.operatorJobs[jobHash].gasLimit)
+          this.operatorJobs[jobHash].gasPrice = BigNumber.from(this.operatorJobs[jobHash].gasPrice)
+          this.operatorJobs[jobHash].jobDetails.startTimestamp = BigNumber.from(
+            this.operatorJobs[jobHash].jobDetails.startTimestamp,
+          )
+
+          // If job is still valid, it will stay in object, otherwise it will be removed
+          await this.checkJobStatus(jobHash)
+          this.log('Saved jobs parsing completed.')
+        }
+      } else {
+        this.log('Saved jobs file not found (not loaded).')
       }
-    } else {
-      this.log('Saved jobs file not found (not loaded).')
+    } catch (error) {
+      this.handleError('An error occurred while processing saved jobs', error)
     }
+  }
 
+  scheduleJobsProcessing(): void {
     for (const network of this.networkMonitor.networks) {
-      // instantiate all network operator job watchers
-      setTimeout(this.processOperatorJobs.bind(this, network), 60_000)
+      // Instantiate all network operator job watchers
+      setTimeout(this.processOperatorJobs.bind(this, network), 60_000) // Run every 60 seconds
     }
+  }
 
-    // Start health check server on port 6000 or healthCheckPort
+  async startHealthCheckServer(port: number): Promise<void> {
+    // Start health check server
     // Can be used to monitor that the operator is online and running
-    if (enableHealthCheckServer) {
-      await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, healthCheckPort})
-    }
+    await this.config.runHook('healthCheck', {networkMonitor: this.networkMonitor, port})
   }
 
   exitCallback(): void {
@@ -519,83 +551,101 @@ export default class Operator extends OperatorJobAwareCommand {
     }
   }
 
-  // This method is call to cycle through all operator jobs that were previously detected
   processOperatorJobs = (network: string, jobHash?: string): void => {
-    // IF processOperatorJobs has a jobHash, delete it from this.operatorJobs? Why do this here? why not delete it before?
-    if (jobHash !== undefined && jobHash !== '' && jobHash in this.operatorJobs) {
-      delete this.operatorJobs[jobHash]
+    // NOTE: It is possible that with only a 1 second delay before recalling this function via setTimeout
+    // on the same network, it could interupt the current process before it completes
+    //
+    // This lock is put in place to prevent race conditions and / or concurrency issues and ensure that the
+    // current processing is complete before new jobs are processed
+    if (this.processingJobsForNetworks[network]) {
+      this.log(`Previous job processing for network: ${network} still in progress, skipping this cycle.`)
+      return
     }
 
-    const gasPricing: GasPricing = this.networkMonitor.gasPrices[network]
-    let highestGas: BigNumber = BigNumber.from('0')
-    const now: number = Date.now()
-    // update wait times really quickly
-    this.updateJobTimes()
-    // DO LOGIC HERE FOR FINDING VALID JOB
-    const jobs: OperatorJob[] = []
-    // extract jobs for network
-    for (const job of Object.values(this.operatorJobs)) {
-      if (job.network === network) {
-        jobs.push(job)
-      }
-    }
+    try {
+      this.processingJobsForNetworks[network] = true
+      this.log(`Starting job processing for network: ${network}.`)
 
-    // sort jobs based on target time, to prioritize ones that need to be finished first
-    jobs.sort((a: OperatorJob, b: OperatorJob): number => {
-      return a.targetTime - b.targetTime
-    })
-    const candidates: OperatorJob[] = []
-    for (const job of jobs) {
-      // check that time is within scope
-      if (job.targetTime < now) {
-        // add to list of candidates
-        candidates.push(job)
-        // find highest gas candidate first
-        if (BigNumber.from(job.gasPrice).gt(highestGas)) {
-          highestGas = BigNumber.from(job.gasPrice)
-        }
-      }
-    }
-
-    if (candidates.length > 0) {
-      // sort candidates by gas priority
-      // returning highest gas first
-      candidates.sort((a: OperatorJob, b: OperatorJob): number => {
-        return BigNumber.from(b.gasPrice).sub(BigNumber.from(a.gasPrice)).toNumber()
-      })
-      const compareGas: BigNumber = gasPricing.isEip1559 ? gasPricing.nextBlockFee! : gasPricing.gasPrice!
-      let foundCandidate = false
-      for (const candidate of candidates) {
-        if (BigNumber.from(candidate.gasPrice).gte(compareGas)) {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          const tags = this.operatorJobs[candidate.hash].tags ?? [this.networkMonitor.randomTag()]
-          this.networkMonitor.structuredLog(network, `Sending job ${candidate.hash} for execution`, tags)
-          // have a valid job to do right away
-          this.processOperatorJob(network, candidate.hash, tags)
-          foundCandidate = true
-          break
-        }
+      // If a specific jobHash is provided, delete it.
+      // NOTE: This logic might be better placed elsewhere.
+      if (jobHash && this.operatorJobs[jobHash]) {
+        delete this.operatorJobs[jobHash]
       }
 
-      if (!foundCandidate) {
+      const gasPricing: GasPricing = this.networkMonitor.gasPrices[network]
+      if (!gasPricing) {
+        this.networkMonitor.structuredLogError(network, `Missing gas pricing data for network ${network}`)
+        return
+      }
+
+      this.updateJobTimes()
+      const jobs: OperatorJob[] = Object.values(this.operatorJobs).filter(job => job.network === network)
+      const sortedJobs = this.sortJobsByPriority(jobs)
+      const chosenJob = this.selectJob(sortedJobs, gasPricing)
+
+      if (chosenJob) {
+        const tags = this.operatorJobs[chosenJob.hash]?.tags ?? [this.networkMonitor.randomTag()]
+        this.networkMonitor.structuredLog(network, `Sending job ${chosenJob.hash} for execution`, tags)
+        this.processOperatorJob(network, chosenJob.hash, tags)
+      } else {
         setTimeout(this.processOperatorJobs.bind(this, network), 1000)
       }
-    } else {
-      setTimeout(this.processOperatorJobs.bind(this, network), 1000)
+      this.log(`Job processing for network: ${network} completed.`)
+    } catch (error) {
+      this.handleError(`An error occurred while processing jobs for network: ${network}`, error)
+    } finally {
+      this.processingJobsForNetworks[network] = false
     }
+  }
+
+  // This function sorts jobs based on target time and then by gas price.
+  sortJobsByPriority(jobs: OperatorJob[]): OperatorJob[] {
+    const now = Date.now()
+    const validJobs = jobs.filter(job => job.targetTime < now)
+    return validJobs.sort((a, b) => {
+      const timeDiff = a.targetTime - b.targetTime
+      if (timeDiff !== 0) return timeDiff
+      return BigNumber.from(b.gasPrice).sub(BigNumber.from(a.gasPrice)).toNumber()
+    })
+  }
+
+  // This function selects the best job based on the provided gas pricing.
+  selectJob(jobs: OperatorJob[], gasPricing: GasPricing): OperatorJob | null {
+    const compareGas: BigNumber = gasPricing.isEip1559 ? gasPricing.nextBlockFee! : gasPricing.gasPrice!
+    for (const job of jobs) {
+      if (BigNumber.from(job.gasPrice).gte(compareGas)) {
+        return job
+      }
+    }
+    return null
   }
 
   /**
    * Execute the job
    */
   async executeJob(jobHash: string, tags: (string | number)[]): Promise<boolean> {
-    // quickly check that job is still valid
-    await this.checkJobStatus(jobHash, tags)
-    if (jobHash in this.operatorJobs) {
+    try {
+      // Idempotency check
+      if (this.isJobBeingExecuted[jobHash]) {
+        this.log('Job is already being executed', tags)
+
+        return false
+      }
+
+      this.isJobBeingExecuted[jobHash] = true
+
+      // Check job status
+      await this.checkJobStatus(jobHash, tags)
+
+      if (!(jobHash in this.operatorJobs)) {
+        return true
+      }
+
       const job: OperatorJob = this.operatorJobs[jobHash]
       const network: string = job.network
       let operate = this.operatorMode === OperatorMode.auto
+
+      // Operator mode handling
       if (this.operatorMode === OperatorMode.manual) {
         const operatorPrompt: any = await inquirer.prompt([
           {
@@ -608,31 +658,36 @@ export default class Operator extends OperatorJobAwareCommand {
         operate = operatorPrompt.shouldContinue
       }
 
-      if (operate) {
-        const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
-          network,
-          tags,
-          contract: this.networkMonitor.operatorContract,
-          methodName: 'executeJob',
-          args: [job.payload],
-          gasPrice: BigNumber.from(job.gasPrice),
-          gasLimit: BigNumber.from(job.gasLimit).mul(BigNumber.from('2')),
-          canFail: true,
-          waitForReceipt: true,
-          interval: 5000,
-          attempts: 30,
-        })
-        if (receipt !== null && receipt.status === 1) {
-          delete this.operatorJobs[jobHash]
-        }
-
-        return receipt !== null
+      if (!operate) {
+        this.networkMonitor.structuredLog(network, 'Available job will not be executed', tags)
+        return false
       }
 
-      this.networkMonitor.structuredLog(network, 'Available job will not be executed', tags)
-      return false
-    }
+      // Transaction handling
+      const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
+        network,
+        tags,
+        contract: this.networkMonitor.operatorContract,
+        methodName: 'executeJob',
+        args: [job.payload],
+        gasPrice: BigNumber.from(job.gasPrice),
+        gasLimit: BigNumber.from(job.gasLimit).mul(BigNumber.from('2')),
+        canFail: true,
+        waitForReceipt: true,
+        interval: 5000,
+        attempts: 30,
+      })
 
-    return true
+      if (receipt && receipt.status === 1) {
+        delete this.operatorJobs[jobHash]
+      }
+
+      return receipt !== null
+    } catch (error: any) {
+      this.networkMonitor.structuredLogError(`An error occurred while executing job: ${jobHash}`, error)
+      return false
+    } finally {
+      this.isJobBeingExecuted[jobHash] = false
+    }
   }
 }
