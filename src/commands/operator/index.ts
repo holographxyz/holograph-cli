@@ -575,6 +575,8 @@ export default class Operator extends OperatorJobAwareCommand {
 
   processOperatorJobs = (network: string, jobHash?: string): void => {
     this.log(`Starting job processing for network: ${network}.`)
+    this.log(`Current job count: ${Object.keys(this.operatorJobs).length}`)
+
     // NOTE: It is possible that with only a 1 second delay before recalling this function via setTimeout
     // on the same network, it could interupt the current process before it completes
     //
@@ -587,30 +589,39 @@ export default class Operator extends OperatorJobAwareCommand {
 
     try {
       this.processingJobsForNetworks[network] = true
-      this.log(`Continue job processing for network: ${network}.`)
+      this.log(`Continue job processing for network: ${network}. Current job hash: ${jobHash}`)
 
+      this.log(`NOTE: Deleting job is currently disabled`)
       // If a specific jobHash is provided, delete it.
       // NOTE: This logic might be better placed elsewhere.
-      if (jobHash && this.operatorJobs[jobHash]) {
-        delete this.operatorJobs[jobHash]
-      }
+      // if (jobHash && this.operatorJobs[jobHash]) {
+      //   delete this.operatorJobs[jobHash]
+      // }
 
+      this.log(`Getting gas pricing for network: ${network}`)
       const gasPricing: GasPricing = this.networkMonitor.gasPrices[network]
       if (!gasPricing) {
         this.networkMonitor.structuredLogError(network, `Missing gas pricing data for network ${network}`)
         return
       }
 
+      this.log(`Updating job times`)
       this.updateJobTimes()
       const jobs: OperatorJob[] = Object.values(this.operatorJobs).filter(job => job.network === network)
+
+      this.log(`Sorting jobs by priority`)
       const sortedJobs = this.sortJobsByPriority(jobs)
+
+      this.log(`Selecting job`)
       const chosenJob = this.selectJob(sortedJobs, gasPricing)
 
       if (chosenJob) {
+        this.log(`Chosen job: ${chosenJob?.hash}`)
         const tags = this.operatorJobs[chosenJob.hash]?.tags ?? [this.networkMonitor.randomTag()]
         this.networkMonitor.structuredLog(network, `Sending job ${chosenJob.hash} for execution`, tags)
         this.processOperatorJob(network, chosenJob.hash, tags)
       } else {
+        this.log(`No job selected. Waiting 1 second before trying again.`)
         setTimeout(this.processOperatorJobs.bind(this, network), 1000)
       }
 
