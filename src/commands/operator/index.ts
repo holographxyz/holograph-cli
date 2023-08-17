@@ -413,7 +413,7 @@ export default class Operator extends OperatorJobAwareCommand {
       if (availableOperatorJobEvent !== null) {
         this.networkMonitor.structuredLog(job.network, `Found a new job ${availableOperatorJobEvent.jobHash}`, tags)
 
-        // first update operator details, in case operator was selected for a job, or any data changed
+        // First update operator details, in case operator was selected for a job, or any data changed
         this.networkMonitor.structuredLog(job.network, `Updating operator status`, tags)
         const statusUpdateSuccessful = await this.updateOperatorStatus(job.network)
 
@@ -425,7 +425,7 @@ export default class Operator extends OperatorJobAwareCommand {
           )
         }
 
-        // then add operator job to internal list of jobs to monitor and work on
+        // Then add operator job to internal list of jobs to monitor and work on
         this.networkMonitor.structuredLog(job.network, `Adding job to list of available jobs`, tags)
         await this.decodeOperatorJob(
           job.network,

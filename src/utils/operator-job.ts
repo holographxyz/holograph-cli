@@ -128,6 +128,7 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
         tags,
       )
 
+      // Add job to list
       this.operatorJobs[operatorJobHash] = {
         network,
         hash: operatorJobHash,
@@ -138,6 +139,12 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
         jobDetails,
         tags,
       } as OperatorJob
+
+      this.networkMonitor.structuredLog(
+        network,
+        `Added job. Total jobs count: ${Object.keys(this.operatorJobs).length}`,
+        tags,
+      )
 
       return this.operatorJobs[operatorJobHash]
     } catch (error: any) {
@@ -216,17 +223,37 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
     return allCallsSuccessful
   }
 
-  async checkJobStatus(operatorJobHash: string, tags?: (string | number)[]): Promise<void> {
-    if (operatorJobHash !== undefined && operatorJobHash !== '' && operatorJobHash in this.operatorJobs) {
-      const job: OperatorJob = this.operatorJobs[operatorJobHash]
-      if ((await this.decodeOperatorJob(job.network, job.hash, job.payload, tags ?? ([] as string[]))) === undefined) {
+  async checkJobStatus(operatorJobHash: string, tags: (string | number)[] = []): Promise<void> {
+    // First validate input (Network is not known until job is decoded)
+    if (!operatorJobHash || !(operatorJobHash in this.operatorJobs)) {
+      this.networkMonitor.structuredLogError('Unknown', `Invalid job hash provided: ${operatorJobHash}`, tags)
+      return
+    }
+
+    // Fetch job from list
+    this.networkMonitor.structuredLog('Unknown', `Total jobs count: ${Object.keys(this.operatorJobs.length)}`, tags)
+    const job: OperatorJob = this.operatorJobs[operatorJobHash]
+    this.networkMonitor.structuredLog(job.network, `Checking status for job ${job.hash}.`, tags)
+
+    // Then try to decode the job
+    try {
+      const decodedJob = await this.decodeOperatorJob(job.network, job.hash, job.payload, tags)
+
+      // If the job is no longer valid, remove it from the list
+      if (decodedJob === undefined) {
         this.networkMonitor.structuredLogError(
           job.network,
           `Job ${job.hash} is no longer active/valid, removing it from list`,
-          tags ?? ([] as string[]),
+          tags,
         )
         delete this.operatorJobs[job.hash]
       }
+    } catch (error: any) {
+      this.networkMonitor.structuredLogError(
+        job.network,
+        `Error while checking job ${job.hash}: ${error.message}`,
+        tags,
+      )
     }
   }
 }
