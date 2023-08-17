@@ -284,7 +284,7 @@ export default class Operator extends OperatorJobAwareCommand {
   scheduleJobsProcessing(): void {
     for (const network of this.networkMonitor.networks) {
       // Instantiate all network operator job watchers
-      setTimeout(this.processOperatorJobs.bind(this, network), 60_000) // Run every 60 seconds
+      setTimeout(this.processOperatorJobs.bind(this, network), 60_000) // Wait 60 seconds before processing jobs starts
     }
   }
 
@@ -538,16 +538,37 @@ export default class Operator extends OperatorJobAwareCommand {
   }
 
   processOperatorJob = async (network: string, jobHash: string, tags: (string | number)[]): Promise<void> => {
-    // if success then pass back payload hash to remove it from list
-    if (await this.executeJob(jobHash, tags)) {
-      // check job status just in case
+    this.networkMonitor.structuredLog(network, `Beginning to process job with hash: ${jobHash}`, tags)
+
+    const isJobExecutedSuccessfully = await this.executeJob(jobHash, tags)
+
+    if (isJobExecutedSuccessfully) {
+      this.networkMonitor.structuredLog(
+        network,
+        `Job with hash: ${jobHash} was executed successfully. Checking its status...`,
+        tags,
+      )
       await this.checkJobStatus(jobHash, tags)
-      // job was a success
+
+      this.networkMonitor.structuredLog(
+        network,
+        `Reprocessing operator jobs after successful execution of job: ${jobHash}`,
+        tags,
+      )
       this.processOperatorJobs(network, jobHash) // here the jobHash will be deleted
     } else {
-      // check job status just in case
+      this.networkMonitor.structuredLog(
+        network,
+        `Job with hash: ${jobHash} failed to execute. Checking its status...`,
+        tags,
+      )
       await this.checkJobStatus(jobHash, tags)
-      // job failed, gotta try again
+
+      this.networkMonitor.structuredLog(
+        network,
+        `Reprocessing operator jobs after failed execution of job: ${jobHash}`,
+        tags,
+      )
       this.processOperatorJobs(network)
     }
   }
