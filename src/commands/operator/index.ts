@@ -218,6 +218,7 @@ export default class Operator extends OperatorJobAwareCommand {
         if (flags.host === undefined) {
           this.errorColor(`--blockHeight flag option API requires the --host flag`)
         }
+
         this.networkMonitor.latestBlockHeight = await this.networkMonitor.loadLastBlocksHeights(
           BlockHeightProcessType.OPERATOR,
         )
@@ -590,6 +591,7 @@ export default class Operator extends OperatorJobAwareCommand {
       } else {
         setTimeout(this.processOperatorJobs.bind(this, network), 1000)
       }
+
       this.log(`Job processing for network: ${network} completed.`)
     } catch (error) {
       this.handleError(`An error occurred while processing jobs for network: ${network}`, error)
@@ -617,6 +619,7 @@ export default class Operator extends OperatorJobAwareCommand {
         return job
       }
     }
+
     return null
   }
 
