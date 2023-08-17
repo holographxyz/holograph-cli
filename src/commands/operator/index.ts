@@ -605,8 +605,13 @@ export default class Operator extends OperatorJobAwareCommand {
       this.log(`Sorting jobs by priority`)
       const sortedJobs = this.sortJobsByPriority(jobs)
 
-      this.log(`Selecting job`)
-      const selectedJob = this.selectJob(sortedJobs, gasPricing)
+      // this.log(`Selecting job`)
+      // const selectedJob = this.selectJob(sortedJobs, gasPricing)
+      // TEMPORARY: Select the first job in the list
+      let selectedJob: OperatorJob | null = null
+      if (sortedJobs.length > 0) {
+        selectedJob = sortedJobs[0]
+      }
 
       if (selectedJob) {
         this.log(`Chosen job: ${selectedJob?.hash}`)
