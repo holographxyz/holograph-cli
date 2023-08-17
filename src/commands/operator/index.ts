@@ -574,6 +574,7 @@ export default class Operator extends OperatorJobAwareCommand {
   }
 
   processOperatorJobs = (network: string, jobHash?: string): void => {
+    this.log(`Starting job processing for network: ${network}.`)
     // NOTE: It is possible that with only a 1 second delay before recalling this function via setTimeout
     // on the same network, it could interupt the current process before it completes
     //
@@ -586,7 +587,7 @@ export default class Operator extends OperatorJobAwareCommand {
 
     try {
       this.processingJobsForNetworks[network] = true
-      this.log(`Starting job processing for network: ${network}.`)
+      this.log(`Continue job processing for network: ${network}.`)
 
       // If a specific jobHash is provided, delete it.
       // NOTE: This logic might be better placed elsewhere.
@@ -617,6 +618,7 @@ export default class Operator extends OperatorJobAwareCommand {
     } catch (error) {
       this.handleError(`An error occurred while processing jobs for network: ${network}`, error)
     } finally {
+      this.log(`Resetting lock on processOperatorJobs`)
       this.processingJobsForNetworks[network] = false
     }
   }
@@ -648,6 +650,7 @@ export default class Operator extends OperatorJobAwareCommand {
    * Execute the job
    */
   async executeJob(jobHash: string, tags: (string | number)[]): Promise<boolean> {
+    this.log(`Starting execute job`)
     try {
       // Idempotency check
       if (this.isJobBeingExecuted[jobHash]) {
@@ -659,9 +662,11 @@ export default class Operator extends OperatorJobAwareCommand {
       this.isJobBeingExecuted[jobHash] = true
 
       // Check job status
+      this.log(`Checking job status...`)
       await this.checkJobStatus(jobHash, tags)
 
       if (!(jobHash in this.operatorJobs)) {
+        this.log(`Job hash is not in the operator jobs... returning`)
         return true
       }
 
@@ -683,11 +688,12 @@ export default class Operator extends OperatorJobAwareCommand {
       }
 
       if (!operate) {
-        this.networkMonitor.structuredLog(network, 'Available job will not be executed', tags)
+        this.networkMonitor.structuredLog(network, 'Not in mode to execute. Available job will not be executed', tags)
         return false
       }
 
       // Transaction handling
+      this.log(`About to execute the transaction`)
       const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
         network,
         tags,
@@ -703,6 +709,7 @@ export default class Operator extends OperatorJobAwareCommand {
       })
 
       if (receipt && receipt.status === 1) {
+        this.log(`Execution succeeded. Removing job ${jobHash} from the operator jobs queue`)
         delete this.operatorJobs[jobHash]
       }
 
@@ -711,6 +718,8 @@ export default class Operator extends OperatorJobAwareCommand {
       this.networkMonitor.structuredLogError(`An error occurred while executing job: ${jobHash}`, error)
       return false
     } finally {
+      // TODO: We might need to just delete the finished job hashes so they don't build up
+      this.log(`Removing lock on job hash`)
       this.isJobBeingExecuted[jobHash] = false
     }
   }
