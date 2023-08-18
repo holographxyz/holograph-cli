@@ -832,6 +832,8 @@ export class NetworkMonitor {
         if (this.exitCallback !== undefined) {
           this.exitCallback()
         }
+
+        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
         process.exit()
       }
     } else if (exitCode instanceof Error) {
@@ -844,6 +846,7 @@ export class NetworkMonitor {
       console.trace() // This is the trace for the exitRouter call
     }
   }
+
   monitorBuilder: (network: string) => () => void = (network: string): (() => void) => {
     return () => {
       this.blockJobMonitor.bind(this)(network)
