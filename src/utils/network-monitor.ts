@@ -566,10 +566,16 @@ export class NetworkMonitor {
       }, 10_000)
     }
 
-    // Catch all exit events
-    for (const eventType of [`EEXIT`, `SIGINT`, `SIGUSR1`, `SIGUSR2`, `uncaughtException`, `SIGTERM`]) {
+    // Catch signals for graceful shutdown
+    for (const eventType of [`SIGINT`, `SIGUSR1`, `SIGUSR2`, `SIGTERM`]) {
       process.on(eventType, this.exitRouter.bind(this, {exit: true}))
     }
+
+    // Uncaught exceptions: log and then allow the process to exit.
+    process.on('uncaughtException', error => {
+      console.error('Uncaught Exception:', error)
+      this.exitRouter({exit: true}, error.message)
+    })
 
     process.on('exit', this.exitHandler)
   }
@@ -804,7 +810,7 @@ export class NetworkMonitor {
     }
   }
 
-  exitRouter = (options: {[key: string]: boolean | string | number}, exitCode: number | string): void => {
+  exitRouter = (options: {[key: string]: boolean | string | number}, exitCode: number | string | Error): void => {
     /**
      * Before exit, save the block heights to the local db
      */
@@ -826,17 +832,18 @@ export class NetworkMonitor {
         if (this.exitCallback !== undefined) {
           this.exitCallback()
         }
-
-        // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
         process.exit()
       }
+    } else if (exitCode instanceof Error) {
+      // This handles the case where the exitCode is actually an Error object.
+      this.debug(`Uncaught exception: ${exitCode.message}`)
+      console.error(exitCode.stack) // This will print the stack trace of the actual error.
     } else {
       this.debug('exitRouter triggered')
       this.debug(`\nError: ${exitCode}`)
-      console.trace()
+      console.trace() // This is the trace for the exitRouter call
     }
   }
-
   monitorBuilder: (network: string) => () => void = (network: string): (() => void) => {
     return () => {
       this.blockJobMonitor.bind(this)(network)
