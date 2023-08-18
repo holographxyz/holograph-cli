@@ -567,6 +567,7 @@ export default class Operator extends OperatorJobAwareCommand {
         tags,
       )
     }
+
     this.processOperatorJobs(network)
   }
 
