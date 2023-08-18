@@ -740,7 +740,9 @@ export default class Operator extends OperatorJobAwareCommand {
 
       return receipt !== null
     } catch (error: any) {
-      this.networkMonitor.structuredLogError(`An error occurred while executing job: ${jobHash}`, error)
+      // Network might not have been extracted from the job if there was an error so it is unknown
+      console.error('Original Error:', error)
+      this.networkMonitor.structuredLogError('Unknown', `An error occurred while executing job: ${jobHash}`, error)
       return false
     } finally {
       // TODO: We might need to just delete the finished job hashes so they don't build up
