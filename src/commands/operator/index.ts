@@ -545,17 +545,14 @@ export default class Operator extends OperatorJobAwareCommand {
     if (isJobExecutedSuccessfully) {
       this.networkMonitor.structuredLog(
         network,
-        `Job with hash: ${jobHash} was executed successfully. Checking its status...`,
+        `Job with hash: ${jobHash} was executed successfully. Removing it from the list of jobs being processed.`,
         tags,
       )
-      await this.checkJobStatus(jobHash, tags)
 
-      this.networkMonitor.structuredLog(
-        network,
-        `Reprocessing operator jobs after successful execution of job: ${jobHash}`,
-        tags,
-      )
-      this.processOperatorJobs(network, jobHash) // here the jobHash will be deleted
+      // We can now delete the job hash from the list of jobs being processed
+      if (jobHash && this.operatorJobs[jobHash]) {
+        delete this.operatorJobs[jobHash]
+      }
     } else {
       this.networkMonitor.structuredLog(
         network,
@@ -569,8 +566,8 @@ export default class Operator extends OperatorJobAwareCommand {
         `Reprocessing operator jobs after failed execution of job: ${jobHash}`,
         tags,
       )
-      this.processOperatorJobs(network)
     }
+    this.processOperatorJobs(network)
   }
 
   processOperatorJobs = (network: string, jobHash?: string): void => {
@@ -590,11 +587,6 @@ export default class Operator extends OperatorJobAwareCommand {
     try {
       this.processingJobsForNetworks[network] = true
       this.log(`Continue job processing for network: ${network}. Current job hash: ${jobHash}`)
-
-      // Remove the job hash from the list of jobs being executed so it isn't reprocessed multiple times
-      if (jobHash && this.operatorJobs[jobHash]) {
-        delete this.operatorJobs[jobHash]
-      }
 
       this.log(`Getting gas pricing for network: ${network}`)
       const gasPricing: GasPricing = this.networkMonitor.gasPrices[network]
