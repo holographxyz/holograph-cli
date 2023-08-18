@@ -591,6 +591,11 @@ export default class Operator extends OperatorJobAwareCommand {
       this.processingJobsForNetworks[network] = true
       this.log(`Continue job processing for network: ${network}. Current job hash: ${jobHash}`)
 
+      // Remove the job hash from the list of jobs being executed so it isn't reprocessed multiple times
+      if (jobHash && this.operatorJobs[jobHash]) {
+        delete this.operatorJobs[jobHash]
+      }
+
       this.log(`Getting gas pricing for network: ${network}`)
       const gasPricing: GasPricing = this.networkMonitor.gasPrices[network]
       if (!gasPricing) {
@@ -620,11 +625,6 @@ export default class Operator extends OperatorJobAwareCommand {
         const tags = this.operatorJobs[selectedJob.hash]?.tags ?? [this.networkMonitor.randomTag()]
         this.networkMonitor.structuredLog(network, `Sending job ${selectedJob.hash} for execution`, tags)
         this.processOperatorJob(network, selectedJob.hash, tags)
-
-        // We can now delete the job hash from the list of jobs being processed
-        if (jobHash && this.operatorJobs[jobHash]) {
-          delete this.operatorJobs[jobHash]
-        }
       } else {
         this.log(`No job selected. Waiting 1 second before trying again.`)
         setTimeout(this.processOperatorJobs.bind(this, network), 1000)
