@@ -1507,18 +1507,23 @@ export class NetworkMonitor {
     })
   }
 
-  structuredLog(network: string, msg: string, tagId?: string | number | (number | string)[]): void {
+  structuredLog(network: string | undefined, msg: string, tagId?: string | number | (number | string)[]): void {
     const timestamp = new Date(Date.now()).toISOString()
     const timestampColor = color.keyword('green')
+    const parentName = this.parent?.constructor?.name || 'UNKNOWN_COMMAND'
+
+    const networkName = (network ? networks[network]?.name : undefined) || 'UNKNOWN_NETWORK'
+    const networkColor = (network ? this.networkColors[network] : undefined) ?? color.keyword('white')
+
     this.log(
-      `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
-        capitalize(networks[network].name),
-      )}]${cleanTags(tagId)} ${msg}`,
+      `[${timestampColor(timestamp)}] [${parentName}] [${networkColor(capitalize(networkName))}]${cleanTags(
+        tagId,
+      )} ${msg}`,
     )
   }
 
   structuredLogError(
-    network: string,
+    network: string | undefined,
     error: string | Error | AbstractError,
     tagId?: string | number | (number | string)[],
   ): void {
@@ -1536,11 +1541,15 @@ export class NetworkMonitor {
     const timestamp = new Date(Date.now()).toISOString()
     const timestampColor = color.keyword('green')
     const errorColor = color.keyword('red')
+    const parentName = this.parent?.constructor?.name || 'UNKNOWN_COMMAND'
+
+    const networkName = (network ? networks[network]?.name : undefined) || 'UNKNOWN_NETWORK'
+    const networkColor = (network ? this.networkColors[network] : undefined) ?? color.keyword('white')
 
     this.warn(
-      `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
-        capitalize(networks[network].name),
-      )}] [${errorColor('error')}]${cleanTags(tagId)} ${errorMessage}`,
+      `[${timestampColor(timestamp)}] [${parentName}] [${networkColor(capitalize(networkName))}] [${errorColor(
+        'error',
+      )}]${cleanTags(tagId)} ${errorMessage}`,
     )
   }
 

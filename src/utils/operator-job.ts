@@ -226,12 +226,12 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
   async checkJobStatus(operatorJobHash: string, tags: (string | number)[] = []): Promise<void> {
     // First validate input (Network is not known until job is decoded)
     if (!operatorJobHash || !(operatorJobHash in this.operatorJobs)) {
-      this.networkMonitor.structuredLogError('Unknown', `Invalid job hash provided: ${operatorJobHash}`, tags)
+      this.networkMonitor.structuredLogError(undefined, `Invalid job hash provided: ${operatorJobHash}`, tags)
       return
     }
 
     // Fetch job from list
-    this.networkMonitor.structuredLog('Unknown', `Total jobs count: ${Object.keys(this.operatorJobs.length)}`, tags)
+    this.networkMonitor.structuredLog(undefined, `Total jobs count: ${Object.keys(this.operatorJobs).length}`, tags)
     const job: OperatorJob = this.operatorJobs[operatorJobHash]
     this.networkMonitor.structuredLog(job.network, `Checking status for job ${job.hash}.`, tags)
 
