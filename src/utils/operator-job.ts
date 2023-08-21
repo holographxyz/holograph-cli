@@ -150,10 +150,20 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
       fallbackOperators: (value: any) => Array.isArray(value) && value.every((v: any) => typeof v === 'number'),
     }
 
+    // Create a mapping from key names to their expected indices in the rawJobDetails array
+    const keyToIndexMapping: {[key: string]: number} = {
+      pod: 0,
+      blockTimes: 1,
+      operator: 2,
+      startBlock: 3,
+      startTimestamp: 4,
+      fallbackOperators: 5,
+    }
+
     const jobDetails: Partial<OperatorJobDetails> = {}
 
     for (const [key, validator] of Object.entries(validators)) {
-      const index = Number.parseInt(key, 10)
+      const index = keyToIndexMapping[key]
 
       if (!validator(rawJobDetails[index])) {
         throw new Error(`Invalid ${key} value for job ${operatorJobHash}`)

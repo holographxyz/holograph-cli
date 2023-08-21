@@ -283,10 +283,16 @@ export default class Operator extends OperatorJobAwareCommand {
 
   scheduleJobsProcessing(): void {
     for (const network of this.networkMonitor.networks) {
-      // Wait 60 seconds before processing jobs starts
+      // Wait 30 seconds before processing jobs starts
       setTimeout(() => {
         // Then start processing jobs every second
-        setInterval(this.processOperatorJobs.bind(this, network), 1000)
+        setInterval(async () => {
+          try {
+            await this.processOperatorJobs(network)
+          } catch (error) {
+            console.error(`Error processing jobs for network ${network}:`, error)
+          }
+        }, 1000)
       }, 30_000)
     }
   }
@@ -572,7 +578,7 @@ export default class Operator extends OperatorJobAwareCommand {
     }
   }
 
-  processOperatorJobs = (network: string): void => {
+  processOperatorJobs = async (network: string): Promise<void> => {
     const jobCount = Object.keys(this.operatorJobs).length
 
     this.networkMonitor.structuredLog(network, `Starting job processing for network: ${network}.`)
@@ -625,7 +631,7 @@ export default class Operator extends OperatorJobAwareCommand {
         this.networkMonitor.structuredLog(network, `Selected job: ${selectedJob.hash}`)
         const tags = this.operatorJobs[selectedJob.hash]?.tags ?? [this.networkMonitor.randomTag()]
         this.networkMonitor.structuredLog(network, `Sending job ${selectedJob.hash} for execution`, tags)
-        this.processOperatorJob(network, selectedJob.hash, tags)
+        await this.processOperatorJob(network, selectedJob.hash, tags)
       } else {
         this.networkMonitor.structuredLog(network, `No job selected. Will check again in the next interval.`)
       }
