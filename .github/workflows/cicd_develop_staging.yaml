@@ -64,7 +64,7 @@ env:
   operator_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_ARBITRUM_GOERLI_RPC_URL }}
   operator_dev_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_BSC_TESTNET_RPC_URL }}
   operator_dev_mantleTestnet_rpc_url: "https://rpc.testnet.mantle.xyz" #TODO
-  operator_dev_zoraTestnet_rpc_url: "the-zora-rpc-url-here" #TODO
+  operator_dev_zoraTestnet_rpc_url: "https://testnet.rpc.zora.energy" #TODO
   #
   operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
   operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
