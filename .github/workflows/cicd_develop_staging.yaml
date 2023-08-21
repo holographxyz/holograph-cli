@@ -196,7 +196,7 @@ jobs:
           POLYGON_NETWORK: 'mumbai'
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
           MANTLE_NETWORK: 'mantleTestnet'
-          ZORA_NETWORK: 'zoraTestnet'
+          ZORA_NETWORK: 'zoraTestnetGoerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
