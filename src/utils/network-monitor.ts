@@ -2068,6 +2068,7 @@ export class NetworkMonitor {
   // Generic retry function
   async retry<T>(network: string, func: () => Promise<T>, attempts = 10, interval = 5000): Promise<T | null> {
     let result: T | null = null
+    let internalError = null
 
     let i = 0 // declare i outside of loop so it can be used later
     for (i; i < attempts; i++) {
@@ -2077,7 +2078,8 @@ export class NetworkMonitor {
           return result
         }
       } catch (error: any) {
-        this.structuredLogError(network, error.message)
+        internalError = error
+        // this.structuredLog(network, `function ${func.name} failed ${i} of ${attempts}`)
       }
 
       // If we haven't returned by now, it means the function call was unsuccessful.
@@ -2085,7 +2087,10 @@ export class NetworkMonitor {
       await sleep(interval)
     }
 
-    // If we've exited the loop without returning, it means all attempts were unsuccessful.
-    throw new Error(`Maximum attempts reached for ${func.name}, function did not succeed after ${attempts} attempts`)
+    // Log the fact that this retry function has failed after some
+    this.structuredLogError(network, `Maximum attempts reached for ${func.name}, function did not succeed after ${attempts} attempts`)
+
+    // throw error that function that was retried
+    throw internalError
   }
 }

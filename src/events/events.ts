@@ -110,6 +110,51 @@ export function decodeLzPacketEvent(
     }
   }
 
+  // NOTE: This function can be optimized as its currently inefficient
+
+  // This is a fallback for the legacy LayerZeroModule contract address that was updated for all networks
+  const toFind3 = '0x6f484Eacd997D9880205aF22f6a4881ea0e1CCd7'.toLowerCase().slice(2, 42)
+  if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+    for (let i = 0, l = receipt.logs.length; i < l; i++) {
+      const log = receipt.logs[i]
+      if (
+        log.topics[0] === targetEvents.LzPacket &&
+        (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
+      ) {
+        const packetPayload = iface.decodeEventLog(lzPacketEventFragment, log.data, log.topics)[0] as string
+        console.log(`toFind3 packetPayload ${i}:`, packetPayload)
+        if (packetPayload.indexOf(toFind3) > 0) {
+          let index: number = packetPayload.indexOf(toFind3)
+          // address + bytes2 + address
+          index += 40 + 4 + 40
+          return ('0x' + packetPayload.slice(Math.max(0, index))).toLowerCase()
+        }
+      }
+    }
+  }
+
+  // This is a fallback for the legacy LayerZeroModule contract address that was updated for all networks
+  const toFind4 = 'e9e30a0ad0d8af5cf2606ea720052e28d6fcbaaf'.toLowerCase().slice(2, 42)
+  if ('logs' in receipt && receipt.logs !== null && receipt.logs.length > 0) {
+    for (let i = 0, l = receipt.logs.length; i < l; i++) {
+      const log = receipt.logs[i]
+      if (
+        log.topics[0] === targetEvents.LzPacket &&
+        (target === undefined || (target !== undefined && log.address.toLowerCase() === target))
+      ) {
+        const packetPayload = iface.decodeEventLog(lzPacketEventFragment, log.data, log.topics)[0] as string
+        if (packetPayload.indexOf(toFind4) > 0) {
+          let index: number = packetPayload.indexOf(toFind4)
+          // address + bytes2 + address
+          // I subtracted 2 so that the packet payload would be parsed correctly. I believe after this contract was used, it was modified the function name.
+          index += 40 + 4 + 40 - 2
+          const address = packetPayload.slice(Math.max(0, index))
+          return ('0x' + address).toLowerCase()
+        }
+      }
+    }
+  }
+
   return undefined
 }
 
