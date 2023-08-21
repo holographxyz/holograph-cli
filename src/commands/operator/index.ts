@@ -283,8 +283,11 @@ export default class Operator extends OperatorJobAwareCommand {
 
   scheduleJobsProcessing(): void {
     for (const network of this.networkMonitor.networks) {
-      // Instantiate all network operator job watchers
-      setTimeout(this.processOperatorJobs.bind(this, network), 60_000) // Wait 60 seconds before processing jobs starts
+      // Wait 60 seconds before processing jobs starts
+      setTimeout(() => {
+        // Then start processing jobs every second
+        setInterval(this.processOperatorJobs.bind(this, network), 1000)
+      }, 60_000)
     }
   }
 
@@ -567,15 +570,20 @@ export default class Operator extends OperatorJobAwareCommand {
         tags,
       )
     }
-
-    this.processOperatorJobs(network)
   }
 
-  processOperatorJobs = (network: string, jobHash?: string): void => {
+  processOperatorJobs = (network: string): void => {
+    const jobCount = Object.keys(this.operatorJobs).length
     this.log(`Starting job processing for network: ${network}.`)
-    this.log(`Current job count: ${Object.keys(this.operatorJobs).length}`)
 
-    // NOTE: It is possible that with only a 1 second delay before recalling this function via setTimeout
+    if (jobCount === 0) {
+      this.log(`No jobs to process for network: ${network}. We'll check again in 1 second.`)
+      return
+    }
+
+    this.log(`New jobs to process detected. Current job count for ${network}: ${jobCount}`)
+
+    // NOTE: It is possible that with only a 1 second delay before recalling this function via setInterval
     // on the same network, it could interupt the current process before it completes
     //
     // This lock is put in place to prevent race conditions and / or concurrency issues and ensure that the
@@ -587,7 +595,7 @@ export default class Operator extends OperatorJobAwareCommand {
 
     try {
       this.processingJobsForNetworks[network] = true
-      this.log(`Continue job processing for network: ${network}. Current job hash: ${jobHash}`)
+      this.log(`Continue job processing for network: ${network}`)
 
       this.log(`Getting gas pricing for network: ${network}`)
       const gasPricing: GasPricing = this.networkMonitor.gasPrices[network]
@@ -603,24 +611,16 @@ export default class Operator extends OperatorJobAwareCommand {
       this.log(`Sorting jobs by priority`)
       const sortedJobs = this.sortJobsByPriority(jobs)
 
-      // TODO: This is a temporary fix to ensure that the operator is always working on a job
-      // let selectedJob: OperatorJob | null = null
-      // if (sortedJobs.length > 0) {
-      //   selectedJob = sortedJobs[0]
-      // }
-
-      // TODO: This is the original code that selects the best job based on the provided gas pricing.
       this.log(`Selecting job`)
       const selectedJob = this.selectJob(sortedJobs, gasPricing)
 
       if (selectedJob) {
-        this.log(`Chosen job: ${selectedJob?.hash}`)
+        this.log(`Selected job job: ${selectedJob?.hash}`)
         const tags = this.operatorJobs[selectedJob.hash]?.tags ?? [this.networkMonitor.randomTag()]
         this.networkMonitor.structuredLog(network, `Sending job ${selectedJob.hash} for execution`, tags)
         this.processOperatorJob(network, selectedJob.hash, tags)
       } else {
-        this.log(`No job selected. Waiting 1 second before trying again.`)
-        setTimeout(this.processOperatorJobs.bind(this, network), 1000)
+        this.log(`No job selected. Will check again in the next interval.`)
       }
 
       this.log(`Job processing for network: ${network} completed.`)
