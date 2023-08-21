@@ -1,6 +1,5 @@
 import {BigNumber, BigNumberish} from '@ethersproject/bignumber'
 import {Contract} from '@ethersproject/contracts'
-import {formatUnits} from '@ethersproject/units'
 
 import {NetworkMonitor} from './network-monitor'
 import {zeroAddress} from './web3'
@@ -89,48 +88,16 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
     try {
       const contract: Contract = this.networkMonitor.operatorContract.connect(this.networkMonitor.providers[network])
 
-      // Try to fetch job details
-      const rawJobDetails: any[] = await contract.getJobDetails(operatorJobHash)
-
-      // Validate rawJobDetails before processing
-      if (!rawJobDetails || rawJobDetails.length < 6) {
-        throw new Error(`Invalid job details for job ${operatorJobHash}`)
-      }
-
-      const jobDetails: OperatorJobDetails = {
-        pod: rawJobDetails[0] as number,
-        blockTimes: rawJobDetails[1] as number,
-        operator: (rawJobDetails[2] as string).toLowerCase(),
-        startBlock: rawJobDetails[3] as number,
-        startTimestamp: BigNumber.from(rawJobDetails[4]),
-        fallbackOperators: rawJobDetails[5] as number[],
-      } as OperatorJobDetails
-
-      if (jobDetails.startBlock <= 0) {
-        throw new Error(`Invalid startBlock for job ${operatorJobHash}`)
-      }
+      const rawJobDetails = await this.fetchJobDetails(contract, operatorJobHash)
+      const jobDetails = this.validateAndParseJobDetails(rawJobDetails, operatorJobHash)
 
       this.networkMonitor.structuredLog(network, `Decoded valid job ${operatorJobHash}`, tags)
-      this.networkMonitor.structuredLog(network, `Selected operator for job is ${jobDetails.operator}`, tags)
 
       const targetTime: number = this.getTargetTime(network, jobDetails)
 
-      // Extract gasLimit and gasPrice from payload
-      const gasLimit: BigNumber = BigNumber.from('0x' + operatorJobPayload.slice(-128, -64))
-      this.networkMonitor.structuredLog(network, `Job gas limit is ${gasLimit.toNumber()}`, tags)
+      const {gasLimit, gasPrice} = this.extractGasDetailsFromPayload(operatorJobPayload)
 
-      const gasPrice: BigNumber = BigNumber.from('0x' + operatorJobPayload.slice(-64))
-      this.networkMonitor.structuredLog(network, `Job maximum gas price is ${formatUnits(gasPrice, 'gwei')} GWEI`, tags)
-
-      const remainingTime: number = Math.round((targetTime - Date.now()) / 1000)
-      this.networkMonitor.structuredLog(
-        network,
-        `Job can be operated ${remainingTime <= 0 ? 'immediately' : 'in ' + remainingTime + ' seconds'}`,
-        tags,
-      )
-
-      // Add job to list
-      this.operatorJobs[operatorJobHash] = {
+      const operatorJob: OperatorJob = {
         network,
         hash: operatorJobHash,
         payload: operatorJobPayload,
@@ -139,7 +106,9 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
         gasPrice,
         jobDetails,
         tags,
-      } as OperatorJob
+      }
+
+      this.operatorJobs[operatorJobHash] = operatorJob
 
       this.networkMonitor.structuredLog(
         network,
@@ -147,11 +116,67 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
         tags,
       )
 
-      return this.operatorJobs[operatorJobHash]
+      return operatorJob
     } catch (error: any) {
       this.networkMonitor.structuredLogError(network, `Error decoding job ${operatorJobHash}: ${error.message}`, tags)
       return undefined
     }
+  }
+
+  private async fetchJobDetails(contract: Contract, operatorJobHash: string): Promise<any[]> {
+    const rawJobDetails: any[] = await contract.getJobDetails(operatorJobHash)
+    if (!rawJobDetails || rawJobDetails.length < 6) {
+      throw new Error(`Invalid job details for job ${operatorJobHash}`)
+    }
+
+    return rawJobDetails
+  }
+
+  private validateAndParseJobDetails(rawJobDetails: any[], operatorJobHash: string): OperatorJobDetails {
+    if (!rawJobDetails) {
+      throw new Error(`No job details found for job ${operatorJobHash}`)
+    }
+
+    if (rawJobDetails.length < 6) {
+      throw new Error(`Incomplete job details for job ${operatorJobHash}`)
+    }
+
+    const validators = {
+      pod: (value: any) => typeof value === 'number',
+      blockTimes: (value: any) => typeof value === 'number',
+      operator: (value: any) => typeof value === 'string',
+      startBlock: (value: any) => typeof value === 'number' && value > 0,
+      startTimestamp: (value: any) => typeof value === 'string', // assuming it's a string for BigNumber conversion
+      fallbackOperators: (value: any) => Array.isArray(value) && value.every((v: any) => typeof v === 'number'),
+    }
+
+    const jobDetails: Partial<OperatorJobDetails> = {}
+
+    for (const [key, validator] of Object.entries(validators)) {
+      const index = Number.parseInt(key, 10)
+
+      if (!validator(rawJobDetails[index])) {
+        throw new Error(`Invalid ${key} value for job ${operatorJobHash}`)
+      }
+
+      jobDetails[key as keyof OperatorJobDetails] = rawJobDetails[index]
+    }
+
+    return {
+      pod: jobDetails.pod as number,
+      blockTimes: jobDetails.blockTimes as number,
+      operator: (jobDetails.operator as string).toLowerCase(),
+      startBlock: jobDetails.startBlock as number,
+      startTimestamp: BigNumber.from(jobDetails.startTimestamp as string),
+      fallbackOperators: jobDetails.fallbackOperators as number[],
+    }
+  }
+
+  private extractGasDetailsFromPayload(operatorJobPayload: string): {gasLimit: BigNumber; gasPrice: BigNumber} {
+    const gasLimit: BigNumber = BigNumber.from('0x' + operatorJobPayload.slice(-128, -64))
+    const gasPrice: BigNumber = BigNumber.from('0x' + operatorJobPayload.slice(-64))
+
+    return {gasLimit, gasPrice}
   }
 
   updateJobTimes(): void {

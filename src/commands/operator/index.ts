@@ -143,7 +143,7 @@ export default class Operator extends OperatorJobAwareCommand {
 
       this.log(`Operator started running successfully.`)
     } catch (error) {
-      this.handleError('An error occurred in the run method', error)
+      this.handleErrorAndExit('An error occurred in the run method', error)
     }
   }
 
@@ -172,13 +172,13 @@ export default class Operator extends OperatorJobAwareCommand {
           await this.apiService.operatorLogin()
           this.log(this.apiColor(`Successfully authenticated into API ${this.BASE_URL}`))
         } catch (error: any) {
-          this.handleError('Failed to get Operator Token from API', error)
+          this.handleErrorAndExit('Failed to get Operator Token from API', error)
         }
       }
     }
   }
 
-  handleError(message: string, error: any): void {
+  handleErrorAndExit(message: string, error: any): void {
     this.log(`Error: ${message}`)
     this.log(JSON.stringify({...error, stack: error.stack}))
     this.exit()
@@ -277,7 +277,7 @@ export default class Operator extends OperatorJobAwareCommand {
         this.log('Saved jobs file not found (not loaded).')
       }
     } catch (error) {
-      this.handleError('An error occurred while processing saved jobs', error)
+      this.handleErrorAndExit('An error occurred while processing saved jobs', error)
     }
   }
 
@@ -287,7 +287,7 @@ export default class Operator extends OperatorJobAwareCommand {
       setTimeout(() => {
         // Then start processing jobs every second
         setInterval(this.processOperatorJobs.bind(this, network), 1000)
-      }, 20_000)
+      }, 30_000)
     }
   }
 
@@ -574,17 +574,27 @@ export default class Operator extends OperatorJobAwareCommand {
 
   processOperatorJobs = (network: string): void => {
     const jobCount = Object.keys(this.operatorJobs).length
-    this.log(`Starting job processing for network: ${network}.`)
+
+    this.networkMonitor.structuredLog(network, `Starting job processing for network: ${network}.`)
 
     if (jobCount === 0) {
-      this.log(`No jobs to process for network: ${network}. We'll check again in 1 second.`)
+      this.networkMonitor.structuredLog(
+        network,
+        `No jobs to process for network: ${network}. We'll check again in 1 second.`,
+      )
       return
     }
 
-    this.log(`New jobs to process detected. Current job count for ${network}: ${jobCount}`)
+    this.networkMonitor.structuredLog(
+      network,
+      `New jobs to process detected. Current job count for ${network}: ${jobCount}`,
+    )
 
     if (this.processingJobsForNetworks[network]) {
-      this.log(`Previous job processing for network: ${network} still in progress, skipping this cycle.`)
+      this.networkMonitor.structuredLog(
+        network,
+        `Previous job processing for network: ${network} still in progress, skipping this cycle.`,
+      )
       return
     }
 
@@ -592,7 +602,8 @@ export default class Operator extends OperatorJobAwareCommand {
 
     try {
       this.processingJobsForNetworks[network] = true
-      this.log(`Continue job processing for network: ${network}`)
+
+      this.networkMonitor.structuredLog(network, `Continue job processing for network: ${network}`)
 
       const gasPricing: GasPricing = this.networkMonitor.gasPrices[network]
       if (!gasPricing) {
@@ -600,28 +611,32 @@ export default class Operator extends OperatorJobAwareCommand {
         return
       }
 
-      this.log(`Updating job times`)
+      this.networkMonitor.structuredLog(network, `Updating job times`)
       this.updateJobTimes()
       const jobs: OperatorJob[] = Object.values(this.operatorJobs).filter(job => job.network === network)
 
-      this.log(`Sorting jobs by priority`)
+      this.networkMonitor.structuredLog(network, `Sorting jobs by priority`)
       const sortedJobs = this.sortJobsByPriority(jobs)
 
-      this.log(`Selecting job`)
+      this.networkMonitor.structuredLog(network, `Selecting job`)
       selectedJob = this.selectJob(sortedJobs, gasPricing)
 
       if (selectedJob) {
-        this.log(`Selected job: ${selectedJob.hash}`)
+        this.networkMonitor.structuredLog(network, `Selected job: ${selectedJob.hash}`)
         const tags = this.operatorJobs[selectedJob.hash]?.tags ?? [this.networkMonitor.randomTag()]
         this.networkMonitor.structuredLog(network, `Sending job ${selectedJob.hash} for execution`, tags)
         this.processOperatorJob(network, selectedJob.hash, tags)
       } else {
-        this.log(`No job selected. Will check again in the next interval.`)
+        this.networkMonitor.structuredLog(network, `No job selected. Will check again in the next interval.`)
       }
 
-      this.log(`Job processing for network: ${network} completed.`)
+      this.networkMonitor.structuredLog(network, `Job processing for network: ${network} completed.`)
     } catch (error: any) {
-      this.handleError(`An error occurred while processing jobs for network: ${network}`, error)
+      this.networkMonitor.structuredLogError(
+        network,
+        `An error occurred while processing jobs for network: ${network}`,
+        error,
+      )
       // Add the failed job to failed jobs list
       if (selectedJob && selectedJob.hash) {
         this.failedOperatorJobs[selectedJob.hash] = this.operatorJobs[selectedJob.hash]
@@ -638,7 +653,7 @@ export default class Operator extends OperatorJobAwareCommand {
         )
       }
     } finally {
-      this.log(`Resetting lock on processOperatorJobs`)
+      this.networkMonitor.structuredLog(network, `Resetting lock on processOperatorJobs`)
       this.processingJobsForNetworks[network] = false
     }
   }
@@ -669,7 +684,8 @@ export default class Operator extends OperatorJobAwareCommand {
     // Calculate average gas price.
     const averageGasPrice: BigNumber = jobs.length > 0 ? totalGas.div(jobs.length) : BigNumber.from(0)
 
-    this.log(
+    this.networkMonitor.structuredLog(
+      undefined,
       `None of the jobs in queue can be executed with the current gas pricing. ${
         jobs.length
       } jobs in queue. Gas price: ${compareGas.toString()}. Average gas provided: ${averageGasPrice.toString()}`,
@@ -681,28 +697,29 @@ export default class Operator extends OperatorJobAwareCommand {
    * Execute the job
    */
   async executeJob(jobHash: string, tags: (string | number)[]): Promise<boolean> {
-    this.log(`Starting execute job`)
+    this.networkMonitor.structuredLog(undefined, `Starting execute job`, tags)
+    let network: string | undefined
+
     try {
       // Idempotency check
       if (this.isJobBeingExecuted[jobHash]) {
-        this.log('Job is already being executed', tags)
-
+        this.networkMonitor.structuredLog(undefined, 'Job is already being executed', tags)
         return false
       }
 
       this.isJobBeingExecuted[jobHash] = true
 
       // Check job status
-      this.log(`Checking job status...`)
+      this.networkMonitor.structuredLog(undefined, `Checking job status...`, tags)
       await this.checkJobStatus(jobHash, tags)
 
       if (!(jobHash in this.operatorJobs)) {
-        this.log(`Job hash is not in the operator jobs... returning`)
+        this.networkMonitor.structuredLog(undefined, `Job hash is not in the operator jobs... returning`, tags)
         return true
       }
 
       const job: OperatorJob = this.operatorJobs[jobHash]
-      const network: string = job.network
+      network = job.network
       let operate = this.operatorMode === OperatorMode.auto
 
       // Operator mode handling
@@ -724,7 +741,7 @@ export default class Operator extends OperatorJobAwareCommand {
       }
 
       // Transaction handling
-      this.log(`About to execute the transaction`)
+      this.networkMonitor.structuredLog(network, `About to execute the transaction`, tags)
       const receipt: TransactionReceipt | null = await this.networkMonitor.executeTransaction({
         network,
         tags,
@@ -740,19 +757,21 @@ export default class Operator extends OperatorJobAwareCommand {
       })
 
       if (receipt && receipt.status === 1) {
-        this.log(`Execution succeeded. Removing job ${jobHash} from the operator jobs queue`)
+        this.networkMonitor.structuredLog(
+          network,
+          `Execution succeeded. Removing job ${jobHash} from the operator jobs queue`,
+          tags,
+        )
         delete this.operatorJobs[jobHash]
       }
 
       return receipt !== null
     } catch (error: any) {
-      // Network might not have been extracted from the job if there was an error so it is unknown
       console.error('Original Error:', error)
-      this.networkMonitor.structuredLogError(undefined, `An error occurred while executing job: ${jobHash}`, error)
+      this.networkMonitor.structuredLogError(network, `An error occurred while executing job: ${jobHash}`, error)
       return false
     } finally {
-      // TODO: We might need to just delete the finished job hashes so they don't build up
-      this.log(`Removing lock on job hash`)
+      this.networkMonitor.structuredLog(network, `Removing lock on job hash`, tags)
       this.isJobBeingExecuted[jobHash] = false
     }
   }
