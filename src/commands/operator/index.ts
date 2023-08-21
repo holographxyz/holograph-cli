@@ -287,7 +287,7 @@ export default class Operator extends OperatorJobAwareCommand {
       setTimeout(() => {
         // Then start processing jobs every second
         setInterval(this.processOperatorJobs.bind(this, network), 1000)
-      }, 60_000)
+      }, 20_000)
     }
   }
 
