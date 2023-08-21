@@ -2088,7 +2088,10 @@ export class NetworkMonitor {
     }
 
     // Log the fact that this retry function has failed after some
-    this.structuredLogError(network, `Maximum attempts reached for ${func.name}, function did not succeed after ${attempts} attempts`)
+    this.structuredLogError(
+      network,
+      `Maximum attempts reached for ${func.name}, function did not succeed after ${attempts} attempts`,
+    )
 
     // throw error that function that was retried
     throw internalError
