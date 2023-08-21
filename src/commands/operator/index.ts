@@ -583,21 +583,17 @@ export default class Operator extends OperatorJobAwareCommand {
 
     this.log(`New jobs to process detected. Current job count for ${network}: ${jobCount}`)
 
-    // NOTE: It is possible that with only a 1 second delay before recalling this function via setInterval
-    // on the same network, it could interupt the current process before it completes
-    //
-    // This lock is put in place to prevent race conditions and / or concurrency issues and ensure that the
-    // current processing is complete before new jobs are processed
     if (this.processingJobsForNetworks[network]) {
       this.log(`Previous job processing for network: ${network} still in progress, skipping this cycle.`)
       return
     }
 
+    let selectedJob: OperatorJob | null = null
+
     try {
       this.processingJobsForNetworks[network] = true
       this.log(`Continue job processing for network: ${network}`)
 
-      this.log(`Getting gas pricing for network: ${network}`)
       const gasPricing: GasPricing = this.networkMonitor.gasPrices[network]
       if (!gasPricing) {
         this.networkMonitor.structuredLogError(network, `Missing gas pricing data for network ${network}`)
@@ -612,10 +608,10 @@ export default class Operator extends OperatorJobAwareCommand {
       const sortedJobs = this.sortJobsByPriority(jobs)
 
       this.log(`Selecting job`)
-      const selectedJob = this.selectJob(sortedJobs, gasPricing)
+      selectedJob = this.selectJob(sortedJobs, gasPricing)
 
       if (selectedJob) {
-        this.log(`Selected job job: ${selectedJob?.hash}`)
+        this.log(`Selected job: ${selectedJob.hash}`)
         const tags = this.operatorJobs[selectedJob.hash]?.tags ?? [this.networkMonitor.randomTag()]
         this.networkMonitor.structuredLog(network, `Sending job ${selectedJob.hash} for execution`, tags)
         this.processOperatorJob(network, selectedJob.hash, tags)
@@ -624,8 +620,23 @@ export default class Operator extends OperatorJobAwareCommand {
       }
 
       this.log(`Job processing for network: ${network} completed.`)
-    } catch (error) {
+    } catch (error: any) {
       this.handleError(`An error occurred while processing jobs for network: ${network}`, error)
+      // Add the failed job to failed jobs list
+      if (selectedJob && selectedJob.hash) {
+        this.failedOperatorJobs[selectedJob.hash] = this.operatorJobs[selectedJob.hash]
+
+        // Delete the job from the original operatorJobs
+        delete this.operatorJobs[selectedJob.hash]
+
+        this.networkMonitor.structuredLogError(
+          network,
+          `Error processing job ${selectedJob.hash} for network: ${network}. Current failed jobs count: ${
+            Object.keys(this.failedOperatorJobs).length
+          }`,
+          error,
+        )
+      }
     } finally {
       this.log(`Resetting lock on processOperatorJobs`)
       this.processingJobsForNetworks[network] = false

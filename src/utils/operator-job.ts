@@ -45,6 +45,7 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
   }
 
   operatorJobs: {[key: string]: OperatorJob} = {}
+  failedOperatorJobs: {[key: string]: OperatorJob} = {}
 
   getTargetTime(network: string, jobDetails: OperatorJobDetails): number {
     let targetTime: number = new Date(BigNumber.from(jobDetails.startTimestamp).toNumber() * 1000).getTime()
