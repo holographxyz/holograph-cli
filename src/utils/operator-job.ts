@@ -146,7 +146,7 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
       blockTimes: (value: any) => typeof value === 'number',
       operator: (value: any) => typeof value === 'string',
       startBlock: (value: any) => typeof value === 'number' && value > 0,
-      startTimestamp: (value: any) => typeof value === 'string', // assuming it's a string for BigNumber conversion
+      startTimestamp: (value: any) => typeof value === 'string' || typeof value === 'number',
       fallbackOperators: (value: any) => Array.isArray(value) && value.every((v: any) => typeof v === 'number'),
     }
 
