@@ -146,7 +146,9 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
       blockTimes: (value: any) => typeof value === 'number',
       operator: (value: any) => typeof value === 'string',
       startBlock: (value: any) => typeof value === 'number' && value > 0,
-      startTimestamp: (value: any) => typeof value === 'string' || typeof value === 'number',
+      startTimestamp: (value: any) => {
+        return BigNumber.isBigNumber(value)
+      },
       fallbackOperators: (value: any) => Array.isArray(value) && value.every((v: any) => typeof v === 'number'),
     }
 
@@ -166,7 +168,11 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
       const index = keyToIndexMapping[key]
 
       if (!validator(rawJobDetails[index])) {
-        throw new Error(`Invalid ${key} value for job ${operatorJobHash}`)
+        throw new Error(
+          `Invalid ${key} value for job ${operatorJobHash}. Value: ${
+            rawJobDetails[index]
+          }. Type: ${typeof rawJobDetails[index]}`,
+        )
       }
 
       jobDetails[key as keyof OperatorJobDetails] = rawJobDetails[index]
@@ -177,7 +183,7 @@ export abstract class OperatorJobAwareCommand extends HealthCheck {
       blockTimes: jobDetails.blockTimes as number,
       operator: (jobDetails.operator as string).toLowerCase(),
       startBlock: jobDetails.startBlock as number,
-      startTimestamp: BigNumber.from(jobDetails.startTimestamp as string),
+      startTimestamp: jobDetails.startTimestamp!, // We know this is defined because of the validator
       fallbackOperators: jobDetails.fallbackOperators as number[],
     }
   }
