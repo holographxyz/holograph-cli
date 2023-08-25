@@ -1822,7 +1822,7 @@ export class NetworkMonitor {
     const wallet = this.wallets[network]
     const provider = this.providers[network]
     const gasPricing: GasPricing = this.gasPrices[network]
-    let gasPrice: BigNumber | undefined = BigNumber.from(rawTx.gasPrice ?? 0)
+    const gasPrice: BigNumber | undefined = BigNumber.from(rawTx.gasPrice ?? 0)
 
     const prepareTransaction = () => {
       delete rawTx.gasPrice // Remove gasPrice to avoid EIP1559 error
@@ -1832,6 +1832,7 @@ export class NetworkMonitor {
         rawTx.maxPriorityFeePerGas = gasPrice!
         rawTx.maxFeePerGas = gasPrice!
       }
+
       if ('value' in rawTx && rawTx.value!.eq(ZERO)) {
         delete rawTx.value
       }
