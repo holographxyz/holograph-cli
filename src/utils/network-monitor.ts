@@ -60,6 +60,7 @@ import {
 } from '../types/network-monitor'
 import {BlockHeightOptions} from '../flags/update-block-height.flag'
 import {NETWORK_COLORS, zeroAddress} from './web3'
+import {IntrinsicGasTooLowError, KnownTransactionError} from './errors'
 
 export const replayFlag = {
   replay: Flags.string({
@@ -1816,97 +1817,78 @@ export class NetworkMonitor {
     tags = [] as (string | number)[],
     attempts = 10,
     interval = 3000,
+    greedy = false,
   }: SendTransactionParams): Promise<TransactionResponse | null> {
     const wallet = this.wallets[network]
     const provider = this.providers[network]
     const gasPricing: GasPricing = this.gasPrices[network]
-    let gasPrice: BigNumber | undefined
-    const rawTxGasPrice: BigNumber = BigNumber.from(rawTx.gasPrice ?? 0)
+    let gasPrice: BigNumber | undefined = BigNumber.from(rawTx.gasPrice ?? 0)
 
-    // Remove the gasPrice from rawTx to avoid EIP1559 error that type2 tx does not allow for use of gasPrice
-    delete rawTx.gasPrice
+    const prepareTransaction = () => {
+      delete rawTx.gasPrice // Remove gasPrice to avoid EIP1559 error
 
-    // Define function that attempts to send transaction
-    const sendTransactionAttempt = async (): Promise<TransactionResponse> => {
-      let txHash: string | null = null
+      if (gasPricing.isEip1559) {
+        rawTx.type = 2
+        rawTx.maxPriorityFeePerGas = gasPrice!
+        rawTx.maxFeePerGas = gasPrice!
+      }
+      if ('value' in rawTx && rawTx.value!.eq(ZERO)) {
+        delete rawTx.value
+      }
+    }
+
+    const sendTransactionAttempt = async (increaseGasAttempts = 0): Promise<TransactionResponse> => {
+      prepareTransaction()
+
+      const populatedTx = await wallet.populateTransaction(rawTx)
+      const signedTx = await wallet.signTransaction(populatedTx)
+      const txHash = keccak256(signedTx)
+      this.structuredLog(network, 'Attempting to send transaction -> ' + JSON.stringify(populatedTx), tags)
 
       try {
-        // move gas price info around to support EIP-1559
-        if (gasPricing.isEip1559) {
-          if (gasPrice === undefined) {
-            gasPrice = BigNumber.from(rawTxGasPrice)
-          }
-
-          rawTx.type = 2
-          rawTx.maxPriorityFeePerGas = gasPrice!
-          rawTx.maxFeePerGas = gasPrice!
-        }
-
-        if ('value' in rawTx && rawTx.value!.eq(ZERO)) {
-          delete rawTx.value
-        }
-
-        const populatedTx = await wallet.populateTransaction(rawTx)
-        const signedTx = await wallet.signTransaction(populatedTx)
-
-        if (txHash === null) {
-          txHash = keccak256(signedTx)
-        }
-
-        this.structuredLog(network, 'Attempting to send transaction -> ' + JSON.stringify(populatedTx), tags)
-
         const tx = await provider.sendTransaction(signedTx)
+        if (!tx) throw new Error('Failed sending transaction')
 
-        if (tx === null) {
-          throw new Error('Failed sending transaction')
-        } else {
-          this.structuredLog(network, `Transaction sent to mempool ${tx.hash}`, tags)
-          return tx
-        }
+        this.structuredLog(network, `Transaction sent to mempool ${tx.hash}`, tags)
+        return tx
       } catch (error: any) {
         this.structuredLogError(network, `Send transaction failed ${error}`, tags)
-        // Handle the "intrinsic gas too low" error and throw a unique error to prevent retries
+
         if (error.message.includes('intrinsic gas too low')) {
-          throw new Error('IntrinsicGasTooLowError')
-        }
-
-        if (error.message === 'already known' || error.message === 'nonce has already been used') {
-          const tx = await this.getTransaction({
-            transactionHash: txHash!,
-            network,
-            tags,
-            attempts,
-            interval,
-          })
-
-          if (tx === null) {
-            throw error
-          } else {
-            this.structuredLog(
-              network,
-              error.message === 'already known' ? 'Transaction already submitted' : 'Transaction already mined',
-              tags,
-            )
-            return tx
+          if (greedy && increaseGasAttempts < attempts) {
+            // Increase the gas limit by 10% and retry
+            rawTx.gasLimit = rawTx.gasLimit?.mul(110).div(100)
+            return sendTransactionAttempt(increaseGasAttempts + 1)
           }
+
+          throw new IntrinsicGasTooLowError()
+        } else if (error.message === 'already known' || error.message === 'nonce has already been used') {
+          const tx = await this.getTransaction({transactionHash: txHash, network, tags, attempts, interval})
+
+          if (!tx) throw new KnownTransactionError(error.message)
+          return tx
         } else {
           throw error
         }
       }
     }
 
-    // Attempt to send the transaction, with retries
+    // Primary flow with retries
+    // If greedy is true, we will increase the gas limit by 10% and retry
+    // If greedy is false, we will not increase the gas limit and not retry
     try {
       return await this.retry(network, sendTransactionAttempt, attempts, interval)
     } catch (error: any) {
-      // Check for our unique error and log it differently
-      if (error.message === 'IntrinsicGasTooLowError') {
+      if (error instanceof IntrinsicGasTooLowError) {
         this.structuredLogError(network, 'Transaction gas limit too low, not retrying', tags)
-        return null
+        throw error
+      } else if (error instanceof KnownTransactionError) {
+        this.structuredLogError(network, error.message, tags)
+        throw error
+      } else {
+        this.structuredLogError(network, 'Failed submitting transaction', tags)
+        throw error
       }
-
-      this.structuredLogError(network, 'Failed submitting transaction', tags)
-      throw error
     }
   }
 
@@ -2100,24 +2082,32 @@ export class NetworkMonitor {
   // Generic retry function
   async retry<T>(network: string, func: () => Promise<T>, attempts = 10, interval = 5000): Promise<T | null> {
     let result: T | null = null
+    let i = 0
 
-    let i = 0 // declare i outside of loop so it can be used later
-    for (i; i < attempts; i++) {
+    for (; i < attempts; i++) {
       try {
         result = await func()
         if (result !== null) {
           return result
         }
       } catch (error: any) {
-        this.structuredLogError(network, error.message)
+        // Exit immediately if error is IntrinsicGasTooLowError
+        if (error instanceof IntrinsicGasTooLowError) {
+          throw error
+        }
+
+        // Log the error with more context
+        this.structuredLogError(network, `Attempt ${i + 1} failed: ${error.message}`)
       }
 
-      // If we haven't returned by now, it means the function call was unsuccessful.
-      // We sleep for the specified interval before the next attempt.
-      await sleep(interval)
+      // Sleep before the next attempt
+      if (i < attempts - 1) {
+        // To avoid unnecessary sleep after the last failed attempt
+        await sleep(interval)
+      }
     }
 
-    // If we've exited the loop without returning, it means all attempts were unsuccessful.
-    throw new Error(`Maximum attempts reached for ${func.name}, function did not succeed after ${attempts} attempts`)
+    const functionName = func.name || 'Anonymous function'
+    throw new Error(`Maximum attempts reached for ${functionName}. Did not succeed after ${attempts} attempts.`)
   }
 }

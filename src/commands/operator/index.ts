@@ -45,6 +45,7 @@ import {BigNumber} from '@ethersproject/bignumber'
 import {GasPricing} from '../../utils/gas'
 import {checkOptionFlag} from '../../utils/validation'
 import {OperatorJobAwareCommand, OperatorJob} from '../../utils/operator-job'
+import {IntrinsicGasTooLowError} from '../../utils/errors'
 /*
   END NEED TO CHECK
 */
@@ -773,8 +774,17 @@ export default class Operator extends OperatorJobAwareCommand {
 
       return receipt !== null
     } catch (error: any) {
-      console.error('Original Error:', error)
       this.networkMonitor.structuredLogError(network, `An error occurred while executing job: ${jobHash}`, error)
+
+      if (error instanceof IntrinsicGasTooLowError) {
+        this.networkMonitor.structuredLogError(
+          network,
+          `IntrinsicGasTooLowError occurred while executing job: ${jobHash}. The job's gas limit is to low to ever succeed. Removing job from queue.`,
+          error.message,
+        )
+        delete this.operatorJobs[jobHash]
+      }
+
       return false
     } finally {
       this.networkMonitor.structuredLog(network, `Removing lock on job hash`, tags)
