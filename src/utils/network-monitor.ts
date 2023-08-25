@@ -1858,12 +1858,18 @@ export class NetworkMonitor {
         const tx = await provider.sendTransaction(signedTx)
 
         if (tx === null) {
-          throw new Error('Failed submitting transaction')
+          throw new Error('Failed sending transaction')
         } else {
           this.structuredLog(network, `Transaction sent to mempool ${tx.hash}`, tags)
           return tx
         }
       } catch (error: any) {
+        this.structuredLogError(network, `Send transaction failed ${error}`, tags)
+        // Handle the "intrinsic gas too low" error and throw a unique error to prevent retries
+        if (error.message.includes('intrinsic gas too low')) {
+          throw new Error('IntrinsicGasTooLowError')
+        }
+
         if (error.message === 'already known' || error.message === 'nonce has already been used') {
           const tx = await this.getTransaction({
             transactionHash: txHash!,
@@ -1893,6 +1899,12 @@ export class NetworkMonitor {
     try {
       return await this.retry(network, sendTransactionAttempt, attempts, interval)
     } catch (error: any) {
+      // Check for our unique error and log it differently
+      if (error.message === 'IntrinsicGasTooLowError') {
+        this.structuredLogError(network, 'Transaction gas limit too low, not retrying', tags)
+        return null
+      }
+
       this.structuredLogError(network, 'Failed submitting transaction', tags)
       throw error
     }
