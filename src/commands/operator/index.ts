@@ -290,9 +290,11 @@ export default class Operator extends OperatorJobAwareCommand {
     for (const network of this.networkMonitor.networks) {
       // This starts processing jobs after an initial delay (currently set to 0 seconds)
       setTimeout(async () => {
+        // eslint-disable-next-line no-constant-condition
         while (true) {
           try {
             await this.processOperatorJobs(network)
+            // eslint-disable-next-line no-promise-executor-return
             await new Promise(resolve => setTimeout(resolve, 1000)) // Waits for 1 second
           } catch (error) {
             console.error(`Error processing jobs for network ${network}:`, error)
