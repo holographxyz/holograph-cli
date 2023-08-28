@@ -275,6 +275,7 @@ type NetworkMonitorOptions = {
   apiService?: ApiService
   BlockHeightOptions?: BlockHeightOptions
   processBlockRange?: boolean
+  greedy?: boolean
 }
 
 export class NetworkMonitor {
@@ -317,6 +318,7 @@ export class NetworkMonitor {
   lastProcessBlockDone: {[key: string]: number} = {}
   lastBlockJobDone: {[key: string]: number} = {}
   processBlocksByRange: {[key: string]: boolean} = {}
+  greedy = false
   blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
   gasPrices: {[key: string]: GasPricing} = {}
   contracts: Partial<IContracts> = {}
@@ -426,6 +428,11 @@ export class NetworkMonitor {
 
     if (options.verbose !== undefined) {
       this.verbose = options.verbose
+    }
+
+    if (options.greedy !== undefined) {
+      this.log('Greedy mode enabled')
+      this.greedy = options.greedy
     }
 
     if (options.processTransactions !== undefined) {
@@ -1817,7 +1824,6 @@ export class NetworkMonitor {
     tags = [] as (string | number)[],
     attempts = 10,
     interval = 3000,
-    greedy = false,
   }: SendTransactionParams): Promise<TransactionResponse | null> {
     const wallet = this.wallets[network]
     const provider = this.providers[network]
@@ -1856,9 +1862,14 @@ export class NetworkMonitor {
         this.structuredLogError(network, `Send transaction failed ${error}`, tags)
 
         if (error.message.includes('intrinsic gas too low')) {
-          if (greedy && increaseGasAttempts < attempts) {
-            // Increase the gas limit by 10% and retry
-            rawTx.gasLimit = rawTx.gasLimit?.mul(110).div(100)
+          if (this.greedy && increaseGasAttempts < attempts) {
+            this.structuredLog(
+              network,
+              'Gas limit is too low and greedy mode is active. Increasing gas limit by double and retrying',
+              tags,
+            )
+            // Increase the gas limit by double and retry
+            rawTx.gasLimit = rawTx.gasLimit?.mul(200).div(100)
             return sendTransactionAttempt(increaseGasAttempts + 1)
           }
 
@@ -1875,7 +1886,7 @@ export class NetworkMonitor {
     }
 
     // Primary flow with retries
-    // If greedy is true, we will increase the gas limit by 10% and retry
+    // If greedy is true, we will increase the gas limit by double and retry
     // If greedy is false, we will not increase the gas limit and not retry
     try {
       return await this.retry(network, sendTransactionAttempt, attempts, interval)
@@ -2041,7 +2052,6 @@ export class NetworkMonitor {
       tags,
       rawTx,
       attempts,
-
       interval,
     })
     if (tx === null) {

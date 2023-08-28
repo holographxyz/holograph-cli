@@ -72,6 +72,10 @@ export default class Operator extends OperatorJobAwareCommand {
       char: 'h',
       required: false,
     }),
+    greedy: Flags.boolean({
+      description: 'Enable greedy mode',
+      default: false,
+    }),
     ...syncFlag,
     ...blockHeightFlag,
     ...networksFlag,
@@ -80,7 +84,6 @@ export default class Operator extends OperatorJobAwareCommand {
     ...HealthCheck.flags,
   }
 
-  private processingJobsForNetworks: {[network: string]: boolean} = {}
   private isJobBeingExecuted: {[jobHash: string]: boolean} = {}
 
   // API Params
@@ -209,6 +212,7 @@ export default class Operator extends OperatorJobAwareCommand {
       apiService: this.apiService,
       BlockHeightOptions: this.updateBlockHeight as BlockHeightOptions,
       processBlockRange: flags['process-block-range'],
+      greedy: flags.greedy,
     })
     this.jobsFile = path.join(this.config.configDir, this.networkMonitor.environment + '.operator-job-details.json')
   }
@@ -284,17 +288,17 @@ export default class Operator extends OperatorJobAwareCommand {
 
   scheduleJobsProcessing(): void {
     for (const network of this.networkMonitor.networks) {
-      // Wait 30 seconds before processing jobs starts
-      setTimeout(() => {
-        // Then start processing jobs every second
-        setInterval(async () => {
+      // This starts processing jobs after an initial delay (currently set to 0 seconds)
+      setTimeout(async () => {
+        while (true) {
           try {
             await this.processOperatorJobs(network)
+            await new Promise(resolve => setTimeout(resolve, 1000)) // Waits for 1 second
           } catch (error) {
             console.error(`Error processing jobs for network ${network}:`, error)
           }
-        }, 1000)
-      }, 30_000)
+        }
+      }, 0) // You can increase this value for a longer initial delay
     }
   }
 
@@ -582,13 +586,10 @@ export default class Operator extends OperatorJobAwareCommand {
   processOperatorJobs = async (network: string): Promise<void> => {
     const jobCount = Object.keys(this.operatorJobs).length
 
-    this.networkMonitor.structuredLog(network, `Starting job processing for network: ${network}.`)
+    this.debug(`Starting job processing for network: ${network}.`)
 
     if (jobCount === 0) {
-      this.networkMonitor.structuredLog(
-        network,
-        `No jobs to process for network: ${network}. We'll check again in 1 second.`,
-      )
+      this.debug(`No jobs to process for network: ${network}.`)
       return
     }
 
@@ -597,20 +598,10 @@ export default class Operator extends OperatorJobAwareCommand {
       `New jobs to process detected. Current job count for ${network}: ${jobCount}`,
     )
 
-    if (this.processingJobsForNetworks[network]) {
-      this.networkMonitor.structuredLog(
-        network,
-        `Previous job processing for network: ${network} still in progress, skipping this cycle.`,
-      )
-      return
-    }
-
     let selectedJob: OperatorJob | null = null
 
     try {
-      this.processingJobsForNetworks[network] = true
-
-      this.networkMonitor.structuredLog(network, `Continue job processing for network: ${network}`)
+      this.debug(`Continue job processing for network: ${network}`)
 
       const gasPricing: GasPricing = this.networkMonitor.gasPrices[network]
       if (!gasPricing) {
@@ -644,6 +635,7 @@ export default class Operator extends OperatorJobAwareCommand {
         `An error occurred while processing jobs for network: ${network}`,
         error,
       )
+
       // Add the failed job to failed jobs list
       if (selectedJob && selectedJob.hash) {
         this.failedOperatorJobs[selectedJob.hash] = this.operatorJobs[selectedJob.hash]
@@ -659,9 +651,6 @@ export default class Operator extends OperatorJobAwareCommand {
           error,
         )
       }
-    } finally {
-      this.networkMonitor.structuredLog(network, `Resetting lock on processOperatorJobs`)
-      this.processingJobsForNetworks[network] = false
     }
   }
 
