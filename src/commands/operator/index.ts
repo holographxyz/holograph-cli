@@ -73,7 +73,7 @@ export default class Operator extends OperatorJobAwareCommand {
       required: false,
     }),
     greedy: Flags.boolean({
-      description: 'Enable greedy mode',
+      description: 'Enable greedy mode which will retry failed jobs with a higher gas limit in order to execute',
       default: false,
     }),
     ...syncFlag,

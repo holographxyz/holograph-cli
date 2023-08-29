@@ -1844,7 +1844,7 @@ export class NetworkMonitor {
       }
     }
 
-    const sendTransactionAttempt = async (increaseGasAttempts = 0): Promise<TransactionResponse> => {
+    const sendTransactionAttempt = async (): Promise<TransactionResponse> => {
       prepareTransaction()
 
       const populatedTx = await wallet.populateTransaction(rawTx)
@@ -1862,15 +1862,26 @@ export class NetworkMonitor {
         this.structuredLogError(network, `Send transaction failed ${error}`, tags)
 
         if (error.message.includes('intrinsic gas too low')) {
-          if (this.greedy && increaseGasAttempts < attempts) {
+          if (this.greedy) {
             this.structuredLog(
               network,
-              'Gas limit is too low and greedy mode is active. Increasing gas limit by double and retrying',
+              'Gas limit issue detected and greedy mode is active. Estimating required gas limit.',
               tags,
             )
-            // Increase the gas limit by double and retry
-            rawTx.gasLimit = rawTx.gasLimit?.mul(200).div(100)
-            return sendTransactionAttempt(increaseGasAttempts + 1)
+
+            const bufferFactor = BigNumber.from('125').div(100)
+
+            // Create a gas-less version of the transaction for estimating gas.
+            const gaslessTx = {
+              ...rawTx,
+              gasLimit: undefined,
+              maxPriorityFeePerGas: undefined,
+              maxFeePerGas: undefined,
+            }
+
+            const estimatedGasLimit = await provider.estimateGas(gaslessTx)
+            rawTx.gasLimit = estimatedGasLimit.mul(bufferFactor)
+            this.structuredLog(network, `Adjusted gas limit to: ${rawTx.gasLimit}`, tags)
           }
 
           throw new IntrinsicGasTooLowError()
@@ -1886,7 +1897,7 @@ export class NetworkMonitor {
     }
 
     // Primary flow with retries
-    // If greedy is true, we will increase the gas limit by double and retry
+    // If greedy is true, the operator will estimate the required gas limit and retry
     // If greedy is false, we will not increase the gas limit and not retry
     try {
       return await this.retry(network, sendTransactionAttempt, attempts, interval)
@@ -2090,35 +2101,33 @@ export class NetworkMonitor {
     return receipt
   }
 
-  // Generic retry function
+  /**
+   * Retries a function multiple times if it fails.
+   * @param network - The network name.
+   * @param func - The function to retry.
+   * @param attempts - The maximum number of attempts.
+   * @param interval - The interval between retries.
+   */
   async retry<T>(network: string, func: () => Promise<T>, attempts = 10, interval = 5000): Promise<T | null> {
-    let result: T | null = null
-    let i = 0
-
-    for (; i < attempts; i++) {
+    for (let i = 0; i < attempts; i++) {
       try {
-        result = await func()
+        const result = await func()
         if (result !== null) {
           return result
         }
       } catch (error: any) {
-        // Exit immediately if error is IntrinsicGasTooLowError
-        if (error instanceof IntrinsicGasTooLowError) {
+        this.structuredLogError(network, `Attempt ${i + 1} failed: ${error.message}`)
+
+        if (i === attempts - 1) {
+          // If this was the last attempt, throw the error.
           throw error
         }
 
-        // Log the error with more context
-        this.structuredLogError(network, `Attempt ${i + 1} failed: ${error.message}`)
-      }
-
-      // Sleep before the next attempt
-      if (i < attempts - 1) {
-        // To avoid unnecessary sleep after the last failed attempt
+        // Sleep before the next attempt.
         await sleep(interval)
       }
     }
 
-    const functionName = func.name || 'Anonymous function'
-    throw new Error(`Maximum attempts reached for ${functionName}. Did not succeed after ${attempts} attempts.`)
+    throw new Error(`Maximum attempts reached. Did not succeed after ${attempts} attempts.`)
   }
 }
