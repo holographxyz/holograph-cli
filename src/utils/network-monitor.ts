@@ -2128,6 +2128,6 @@ export class NetworkMonitor {
       }
     }
 
-    throw new Error(`Maximum attempts reached. Did not succeed after ${attempts} attempts.`)
+    throw new Error(`Maximum attempts reached for ${func.name}, function did not succeed after ${attempts} attempts`)
   }
 }
