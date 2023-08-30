@@ -28,6 +28,14 @@ export enum EventType {
   HolographableContractEvent = 'HolographableContractEvent',
 }
 
+export enum CrossChainMessageType {
+  UNKNOWN = 'UNKNOWN',
+  ERC721 = 'ERC721',
+  ERC1155 = 'ERC1155',
+  ERC20 = 'ERC20',
+  CONTRACT = 'CONTRACT',
+}
+
 export interface BaseEvent {
   type: EventType
   contract: string
