@@ -45,6 +45,7 @@ import {BlockHeightOptions, blockHeightFlag} from '../../flags/update-block-heig
 import handleTransferERC721Event from '../../handlers/sqs-indexer/handle-transfer-erc721-event'
 import handleFailedOperatorJobEvent from '../../handlers/sqs-indexer/handle-failed-operator-job-event'
 import handleTransferBatchERC1155Event from '../../handlers/sqs-indexer/handle-transfer-batch-erc1155-event'
+import {CrossChainMessageType} from '../../utils/event/event'
 
 dotenv.config()
 
@@ -263,10 +264,86 @@ export default class Indexer extends HealthCheck {
     this.networkMonitor.bloomFilters = Object.values(this.bloomFilters) as BloomFilter[]
   }
 
+  detectCrossChainMessageType(allLogs: Log[]): CrossChainMessageType {
+    const foundLog = allLogs.find(
+      log =>
+        log.topics[0] === this.bloomFilters[EventType.BridgeableContractDeployed]?.bloomValueHashed ||
+        log.topics[0] === this.bloomFilters[EventType.TransferERC721]?.bloomValueHashed,
+    )
+
+    if (foundLog?.topics[0] === this.bloomFilters[EventType.BridgeableContractDeployed]?.bloomValueHashed) {
+      return CrossChainMessageType.CONTRACT
+    }
+
+    if (foundLog?.topics[0] === this.bloomFilters[EventType.TransferERC721]?.bloomValueHashed) {
+      return CrossChainMessageType.ERC721
+    }
+
+    return CrossChainMessageType.UNKNOWN
+  }
+
   async checkSqsServiceAvailability(): Promise<void> {
     this.log('Checking SQS service availability...')
     await SqsService.Instance.healthCheck()
     this.log('SQS service is reachable')
+  }
+
+  /**
+   * Preprocesses a list of transactions to remove duplicates based on a combination of transaction hash and the bloomId.
+   * Specifically, it filters out duplicate entries where the bloomId is 'CrossChainMessageSent'.
+   *
+   * How it works:
+   * 1. Iterates over each transaction.
+   * 2. Creates a unique identifier using the transaction hash and bloomId.
+   * 3. If the bloomId is 'CrossChainMessageSent' and the identifier is already seen, the transaction is skipped.
+   * 4. Otherwise, the transaction is processed: it's added to the groupedByTransactionHashAndBloomId dictionary and the updatedInterestingTransactions array.
+   * 5. The end result is a list of transactions with duplicates (based on the specific criteria) removed.
+   *
+   * @param interestingTransactions - The list of transactions to be preprocessed.
+   * @returns A new list of transactions with duplicates removed based on the described criteria.
+   */
+  preprocessTransactions(interestingTransactions: InterestingTransaction[]): InterestingTransaction[] {
+    const groupedByTransactionHashAndBloomId: {[hash: string]: {[bloomId: string]: any}} = {}
+    const seenCombinations = new Set()
+    const updatedInterestingTransactions: InterestingTransaction[] = []
+
+    for (const item of interestingTransactions) {
+      const {hash} = item.transaction
+      const {bloomId} = item
+      const identifier = `${hash}-${bloomId}`
+
+      const isCrossChainMessageSent = bloomId === 'CrossChainMessageSent'
+
+      // If the current bloomId is "CrossChainMessageSent" and we've seen this combination before, skip the rest of this iteration.
+      if (isCrossChainMessageSent && seenCombinations.has(identifier)) {
+        continue
+      }
+
+      if (isCrossChainMessageSent) {
+        seenCombinations.add(identifier)
+      }
+
+      const {transaction, log, allLogs} = item
+
+      // Initialize or get existing entry
+      const transactionGroup =
+        groupedByTransactionHashAndBloomId[hash] || (groupedByTransactionHashAndBloomId[hash] = {})
+      const bloomGroup =
+        transactionGroup[bloomId] ||
+        (transactionGroup[bloomId] = {
+          transaction,
+          log,
+          allLogs: [],
+        })
+
+      if (allLogs) {
+        bloomGroup.allLogs.push(...allLogs)
+      }
+
+      updatedInterestingTransactions.push(item)
+    }
+
+    return updatedInterestingTransactions
   }
 
   async processTransactions2(job: BlockJob, interestingTransactions: InterestingTransaction[]): Promise<void> {
@@ -275,6 +352,9 @@ export default class Indexer extends HealthCheck {
     if (interestingTransactions.length <= 0) {
       return
     }
+
+    // Filter out duplicate transaction / bloomId combinations (only CrossChainMessageSent is considered for now)
+    interestingTransactions = this.preprocessTransactions(interestingTransactions)
 
     // Map over the transactions to create an array of Promises
     const transactionPromises = interestingTransactions.map(interestingTransaction =>
@@ -503,6 +583,7 @@ export default class Indexer extends HealthCheck {
               this.networkMonitor,
               interestingTransaction.transaction,
               job.network,
+              CrossChainMessageType.ERC721,
               tags,
             )
           }
@@ -533,6 +614,12 @@ export default class Indexer extends HealthCheck {
             const crossChainMessageSentEvent: CrossChainMessageSentEvent | null = this.bloomFilters[
               type
             ]!.bloomEvent.decode<CrossChainMessageSentEvent>(type, interestingTransaction.log!)
+
+            if (!interestingTransaction.allLogs) {
+              throw new Error('CrossChainMessageSentEvent has no allLogs')
+            }
+
+            const crossChainMessageType = this.detectCrossChainMessageType(interestingTransaction.allLogs)
             if (crossChainMessageSentEvent !== null) {
               // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
               await sqsHandleBridgeEvent.call(
@@ -540,6 +627,7 @@ export default class Indexer extends HealthCheck {
                 this.networkMonitor,
                 interestingTransaction.transaction,
                 job.network,
+                crossChainMessageType,
                 tags,
               )
             }
@@ -559,6 +647,13 @@ export default class Indexer extends HealthCheck {
             const availableOperatorJobEvent: AvailableOperatorJobEvent | null = this.bloomFilters[
               type
             ]!.bloomEvent.decode<AvailableOperatorJobEvent>(type, interestingTransaction.log!)
+
+            if (!interestingTransaction.allLogs) {
+              throw new Error('CrossChainMessageSentEvent has no allLogs')
+            }
+
+            const crossChainMessageType = this.detectCrossChainMessageType(interestingTransaction.allLogs)
+
             if (availableOperatorJobEvent !== null) {
               // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
               await sqsHandleAvailableOperatorJobEvent.call(
@@ -566,6 +661,7 @@ export default class Indexer extends HealthCheck {
                 this.networkMonitor,
                 interestingTransaction.transaction,
                 job.network,
+                crossChainMessageType,
                 tags,
               )
             }
@@ -585,6 +681,13 @@ export default class Indexer extends HealthCheck {
             const finishedOperatorJobEvent: FinishedOperatorJobEvent | null = this.bloomFilters[
               type
             ]!.bloomEvent.decode<FinishedOperatorJobEvent>(type, interestingTransaction.log!)
+
+            if (!interestingTransaction.allLogs) {
+              throw new Error('CrossChainMessageSentEvent has no allLogs')
+            }
+
+            const crossChainMessageType = this.detectCrossChainMessageType(interestingTransaction.allLogs)
+
             if (finishedOperatorJobEvent !== null) {
               // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
               await sqsHandleBridgeEvent.call(
@@ -592,6 +695,7 @@ export default class Indexer extends HealthCheck {
                 this.networkMonitor,
                 interestingTransaction.transaction,
                 job.network,
+                crossChainMessageType,
                 tags,
               )
             }

@@ -60,6 +60,7 @@ import {
 } from '../types/network-monitor'
 import {BlockHeightOptions} from '../flags/update-block-height.flag'
 import {NETWORK_COLORS, zeroAddress} from './web3'
+import {IntrinsicGasTooLowError, KnownTransactionError} from './errors'
 
 export const replayFlag = {
   replay: Flags.string({
@@ -274,6 +275,7 @@ type NetworkMonitorOptions = {
   apiService?: ApiService
   BlockHeightOptions?: BlockHeightOptions
   processBlockRange?: boolean
+  greedy?: boolean
 }
 
 export class NetworkMonitor {
@@ -316,6 +318,7 @@ export class NetworkMonitor {
   lastProcessBlockDone: {[key: string]: number} = {}
   lastBlockJobDone: {[key: string]: number} = {}
   processBlocksByRange: {[key: string]: boolean} = {}
+  greedy = false
   blockJobMonitorProcess: {[key: string]: NodeJS.Timer} = {}
   gasPrices: {[key: string]: GasPricing} = {}
   contracts: Partial<IContracts> = {}
@@ -425,6 +428,11 @@ export class NetworkMonitor {
 
     if (options.verbose !== undefined) {
       this.verbose = options.verbose
+    }
+
+    if (options.greedy !== undefined) {
+      this.log('Greedy mode enabled')
+      this.greedy = options.greedy
     }
 
     if (options.processTransactions !== undefined) {
@@ -566,10 +574,16 @@ export class NetworkMonitor {
       }, 10_000)
     }
 
-    // Catch all exit events
-    for (const eventType of [`EEXIT`, `SIGINT`, `SIGUSR1`, `SIGUSR2`, `uncaughtException`, `SIGTERM`]) {
+    // Catch signals for graceful shutdown
+    for (const eventType of [`SIGINT`, `SIGUSR1`, `SIGUSR2`, `SIGTERM`]) {
       process.on(eventType, this.exitRouter.bind(this, {exit: true}))
     }
+
+    // Uncaught exceptions: log and then allow the process to exit.
+    process.on('uncaughtException', error => {
+      console.error('Uncaught Exception:', error)
+      this.exitRouter({exit: true}, error.message)
+    })
 
     process.on('exit', this.exitHandler)
   }
@@ -804,7 +818,7 @@ export class NetworkMonitor {
     }
   }
 
-  exitRouter = (options: {[key: string]: boolean | string | number}, exitCode: number | string): void => {
+  exitRouter = (options: {[key: string]: boolean | string | number}, exitCode: number | string | Error): void => {
     /**
      * Before exit, save the block heights to the local db
      */
@@ -830,9 +844,14 @@ export class NetworkMonitor {
         // eslint-disable-next-line no-process-exit, unicorn/no-process-exit
         process.exit()
       }
+    } else if (exitCode instanceof Error) {
+      // This handles the case where the exitCode is actually an Error object.
+      this.debug(`Uncaught exception: ${exitCode.message}`)
+      console.error(exitCode.stack) // This will print the stack trace of the actual error.
     } else {
       this.debug('exitRouter triggered')
       this.debug(`\nError: ${exitCode}`)
+      console.trace() // This is the trace for the exitRouter call
     }
   }
 
@@ -1496,18 +1515,23 @@ export class NetworkMonitor {
     })
   }
 
-  structuredLog(network: string, msg: string, tagId?: string | number | (number | string)[]): void {
+  structuredLog(network: string | undefined, msg: string, tagId?: string | number | (number | string)[]): void {
     const timestamp = new Date(Date.now()).toISOString()
     const timestampColor = color.keyword('green')
+    const parentName = this.parent?.constructor?.name || 'UNKNOWN_COMMAND'
+
+    const networkName = (network ? networks[network]?.name : undefined) || 'UNKNOWN_NETWORK'
+    const networkColor = (network ? this.networkColors[network] : undefined) ?? color.keyword('white')
+
     this.log(
-      `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
-        capitalize(networks[network].name),
-      )}]${cleanTags(tagId)} ${msg}`,
+      `[${timestampColor(timestamp)}] [${parentName}] [${networkColor(capitalize(networkName))}]${cleanTags(
+        tagId,
+      )} ${msg}`,
     )
   }
 
   structuredLogError(
-    network: string,
+    network: string | undefined,
     error: string | Error | AbstractError,
     tagId?: string | number | (number | string)[],
   ): void {
@@ -1525,11 +1549,15 @@ export class NetworkMonitor {
     const timestamp = new Date(Date.now()).toISOString()
     const timestampColor = color.keyword('green')
     const errorColor = color.keyword('red')
+    const parentName = this.parent?.constructor?.name || 'UNKNOWN_COMMAND'
+
+    const networkName = (network ? networks[network]?.name : undefined) || 'UNKNOWN_NETWORK'
+    const networkColor = (network ? this.networkColors[network] : undefined) ?? color.keyword('white')
 
     this.warn(
-      `[${timestampColor(timestamp)}] [${this.parent.constructor.name}] [${this.networkColors[network](
-        capitalize(networks[network].name),
-      )}] [${errorColor('error')}]${cleanTags(tagId)} ${errorMessage}`,
+      `[${timestampColor(timestamp)}] [${parentName}] [${networkColor(capitalize(networkName))}] [${errorColor(
+        'error',
+      )}]${cleanTags(tagId)} ${errorMessage}`,
     )
   }
 
@@ -1800,81 +1828,90 @@ export class NetworkMonitor {
     const wallet = this.wallets[network]
     const provider = this.providers[network]
     const gasPricing: GasPricing = this.gasPrices[network]
-    let gasPrice: BigNumber | undefined
-    const rawTxGasPrice: BigNumber = BigNumber.from(rawTx.gasPrice ?? 0)
+    const gasPrice: BigNumber | undefined = BigNumber.from(rawTx.gasPrice ?? 0)
 
-    // Remove the gasPrice from rawTx to avoid EIP1559 error that type2 tx does not allow for use of gasPrice
-    delete rawTx.gasPrice
+    const prepareTransaction = () => {
+      delete rawTx.gasPrice // Remove gasPrice to avoid EIP1559 error
 
-    // Define function that attempts to send transaction
+      if (gasPricing.isEip1559) {
+        rawTx.type = 2
+        rawTx.maxPriorityFeePerGas = gasPrice!
+        rawTx.maxFeePerGas = gasPrice!
+      }
+
+      if ('value' in rawTx && rawTx.value!.eq(ZERO)) {
+        delete rawTx.value
+      }
+    }
+
     const sendTransactionAttempt = async (): Promise<TransactionResponse> => {
-      let txHash: string | null = null
+      prepareTransaction()
+
+      const populatedTx = await wallet.populateTransaction(rawTx)
+      const signedTx = await wallet.signTransaction(populatedTx)
+      const txHash = keccak256(signedTx)
+      this.structuredLog(network, 'Attempting to send transaction -> ' + JSON.stringify(populatedTx), tags)
 
       try {
-        // move gas price info around to support EIP-1559
-        if (gasPricing.isEip1559) {
-          if (gasPrice === undefined) {
-            gasPrice = BigNumber.from(rawTxGasPrice)
-          }
-
-          rawTx.type = 2
-          rawTx.maxPriorityFeePerGas = gasPrice!
-          rawTx.maxFeePerGas = gasPrice!
-        }
-
-        if ('value' in rawTx && rawTx.value!.eq(ZERO)) {
-          delete rawTx.value
-        }
-
-        const populatedTx = await wallet.populateTransaction(rawTx)
-        const signedTx = await wallet.signTransaction(populatedTx)
-
-        if (txHash === null) {
-          txHash = keccak256(signedTx)
-        }
-
-        this.structuredLog(network, 'Attempting to send transaction -> ' + JSON.stringify(populatedTx), tags)
-
         const tx = await provider.sendTransaction(signedTx)
+        if (!tx) throw new Error('Failed sending transaction')
 
-        if (tx === null) {
-          throw new Error('Failed submitting transaction')
-        } else {
-          this.structuredLog(network, `Transaction sent to mempool ${tx.hash}`, tags)
-          return tx
-        }
+        this.structuredLog(network, `Transaction sent to mempool ${tx.hash}`, tags)
+        return tx
       } catch (error: any) {
-        if (error.message === 'already known' || error.message === 'nonce has already been used') {
-          const tx = await this.getTransaction({
-            transactionHash: txHash!,
-            network,
-            tags,
-            attempts,
-            interval,
-          })
+        this.structuredLogError(network, `Send transaction failed ${error}`, tags)
 
-          if (tx === null) {
-            throw error
-          } else {
+        if (error.message.includes('intrinsic gas too low')) {
+          if (this.greedy) {
             this.structuredLog(
               network,
-              error.message === 'already known' ? 'Transaction already submitted' : 'Transaction already mined',
+              'Gas limit issue detected and greedy mode is active. Estimating required gas limit.',
               tags,
             )
-            return tx
+
+            const bufferFactor = BigNumber.from('125').div(100)
+
+            // Create a gas-less version of the transaction for estimating gas.
+            const gaslessTx = {
+              ...rawTx,
+              gasLimit: undefined,
+              maxPriorityFeePerGas: undefined,
+              maxFeePerGas: undefined,
+            }
+
+            const estimatedGasLimit = await provider.estimateGas(gaslessTx)
+            rawTx.gasLimit = estimatedGasLimit.mul(bufferFactor)
+            this.structuredLog(network, `Adjusted gas limit to: ${rawTx.gasLimit}`, tags)
           }
+
+          throw new IntrinsicGasTooLowError()
+        } else if (error.message === 'already known' || error.message === 'nonce has already been used') {
+          const tx = await this.getTransaction({transactionHash: txHash, network, tags, attempts, interval})
+
+          if (!tx) throw new KnownTransactionError(error.message)
+          return tx
         } else {
           throw error
         }
       }
     }
 
-    // Attempt to send the transaction, with retries
+    // Primary flow with retries
+    // If greedy is true, the operator will estimate the required gas limit and retry
+    // If greedy is false, we will not increase the gas limit and not retry
     try {
       return await this.retry(network, sendTransactionAttempt, attempts, interval)
     } catch (error: any) {
-      this.structuredLogError(network, 'Failed submitting transaction', tags)
-      throw error
+      if (error instanceof IntrinsicGasTooLowError) {
+        this.structuredLogError(network, 'Transaction gas limit too low, not retrying', tags)
+        throw error
+      } else if (error instanceof KnownTransactionError) {
+        this.structuredLogError(network, error.message, tags)
+        throw error
+      } else {
+        this.structuredLogError(network, 'Failed submitting transaction', tags)
+        throw error
+      }
     }
   }
 
@@ -2026,7 +2063,6 @@ export class NetworkMonitor {
       tags,
       rawTx,
       attempts,
-
       interval,
     })
     if (tx === null) {
@@ -2065,27 +2101,33 @@ export class NetworkMonitor {
     return receipt
   }
 
-  // Generic retry function
+  /**
+   * Retries a function multiple times if it fails.
+   * @param network - The network name.
+   * @param func - The function to retry.
+   * @param attempts - The maximum number of attempts.
+   * @param interval - The interval between retries.
+   */
   async retry<T>(network: string, func: () => Promise<T>, attempts = 10, interval = 5000): Promise<T | null> {
-    let result: T | null = null
-
-    let i = 0 // declare i outside of loop so it can be used later
-    for (i; i < attempts; i++) {
+    for (let i = 0; i < attempts; i++) {
       try {
-        result = await func()
+        const result = await func()
         if (result !== null) {
           return result
         }
       } catch (error: any) {
-        this.structuredLogError(network, error.message)
-      }
+        this.structuredLogError(network, `Attempt ${i + 1} failed: ${error.message}`)
 
-      // If we haven't returned by now, it means the function call was unsuccessful.
-      // We sleep for the specified interval before the next attempt.
-      await sleep(interval)
+        if (i === attempts - 1) {
+          // If this was the last attempt, throw the error.
+          throw error
+        }
+
+        // Sleep before the next attempt.
+        await sleep(interval)
+      }
     }
 
-    // If we've exited the loop without returning, it means all attempts were unsuccessful.
     throw new Error(`Maximum attempts reached for ${func.name}, function did not succeed after ${attempts} attempts`)
   }
 }
