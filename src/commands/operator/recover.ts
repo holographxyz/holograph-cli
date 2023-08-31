@@ -60,6 +60,10 @@ export default class Recover extends OperatorJobAwareCommand {
       options: Object.values(OperatorMode),
       char: 'm',
     }),
+    greedy: Flags.boolean({
+      description: 'Enable greedy mode which will retry failed jobs with a higher gas limit in order to execute',
+      default: false,
+    }),
     'update-db': Flags.boolean({
       description: 'Update the DB with the status of the bridge that was being processed',
       dependsOn: ['host'],
@@ -143,6 +147,7 @@ export default class Recover extends OperatorJobAwareCommand {
       debug: this.debug,
       userWallet,
       verbose: false,
+      greedy: flags.greedy,
     })
 
     if (this.apiService !== undefined) {
