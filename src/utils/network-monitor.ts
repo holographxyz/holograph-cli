@@ -485,7 +485,7 @@ export class NetworkMonitor {
       return false
     })
 
-    // Popluate the networks array with the full network name
+    // Populate the networks array with the full network name
     for (let i = 0, l = options.networks.length; i < l; i++) {
       if (supportedShortNetworks.includes(options.networks[i])) {
         options.networks[i] = getNetworkByShortKey(options.networks[i]).key
@@ -586,6 +586,27 @@ export class NetworkMonitor {
     })
 
     process.on('exit', this.exitHandler)
+  }
+
+  // This function checks the wallet balances of the operator wallet as the command boots up.
+  // If the operator wallet has less than the min gas, then throw an error.
+  // Otherwise, it will continue and process jobs.
+  async checkWalletBalances(address: string, networks: number[]): Promise<void> {
+    const minGasBalance = {
+      polygon: BigNumber.from('2500000000000000'),
+      etherum: BigNumber.from('5400000000000000'),
+      avalanche: BigNumber.from('10000000000000000'),
+      binanceSmartChain: BigNumber.from('740000000000000'),
+      optimism: BigNumber.from('54000000000000'),
+      arbitrumOne: BigNumber.from('100000000000000'),
+    }
+    for (const network of networks) {
+      const networkName = getNetworkByChainId(network).key
+      const balance = await this.providers[networkName].getBalance(address)
+      if (balance.lte(minGasBalance[networkName])) {
+        throw new Error(`Balance for ${networkName} is too low`)
+      }
+    }
   }
 
   async loadLastBlocks(configDir: string): Promise<{[key: string]: number}> {
