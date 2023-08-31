@@ -192,7 +192,8 @@ export default class Recover extends OperatorJobAwareCommand {
 
     this.log(`Number of jobs to resolve: ${txArray.length}`)
 
-    // Check balance for every unique network in txArray
+    // Check balance of operator wallet for every unique network in txArray
+    // If we do not have funds we should not process jobs.
     const uniqueNetworks = txArray
       .filter((value, index, self) => {
         return self.findIndex(v => v.sourceChainId === value.sourceChainId) === index

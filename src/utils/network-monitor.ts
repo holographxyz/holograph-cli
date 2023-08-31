@@ -569,6 +569,9 @@ export class NetworkMonitor {
     process.on('exit', this.exitHandler)
   }
 
+  // This function checks the wallet balances of the operator wallet as the command boots up.
+  // If the operator wallet has less than the min gas, then throw an error.
+  // Otherwise, it will continue and process jobs.
   async checkWalletBalances(address: string, networks: number[]): Promise<void> {
     const minGasBalance = {
       polygon: BigNumber.from('2500000000000000'),
