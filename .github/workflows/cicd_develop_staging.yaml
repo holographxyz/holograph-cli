@@ -51,8 +51,8 @@ env:
   indexer_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_OPTIMISM_GOERLI_RPC_URL }}
   indexer_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_ARBITRUM_GOERLI_RPC_URL }}
   indexer_dev_binanceTestnet_rpc_url: ${{ secrets.INDEXER_DEV_BSC_TESTNET_RPC_URL }}
-  indexer_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  indexer_dev_zoraTestnet_rpc_url: 'https://testnet.rpc.zora.energy'
+  indexer_dev_mantleTestnet_rpc_url: "https://rpc.testnet.mantle.xyz"
+  indexer_dev_zoraTestnet_rpc_url: "https://testnet.rpc.zora.energy"
   #
   indexer_dev_private_key: ${{ secrets.INDEXER_DEV_PRIVATE_KEY }}
   indexer_dev_address: ${{ secrets.INDEXER_DEV_ADDRESS }}
@@ -63,8 +63,8 @@ env:
   operator_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_OPTIMISM_GOERLI_RPC_URL }}
   operator_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_ARBITRUM_GOERLI_RPC_URL }}
   operator_dev_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_BSC_TESTNET_RPC_URL }}
-  operator_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  operator_dev_zoraTestnet_rpc_url: 'https://testnet.rpc.zora.energy'
+  operator_dev_mantleTestnet_rpc_url: "https://rpc.testnet.mantle.xyz"
+  operator_dev_zoraTestnet_rpc_url: "https://testnet.rpc.zora.energy"
   #
   operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
   operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}

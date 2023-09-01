@@ -2021,6 +2021,7 @@ export class NetworkMonitor {
         gasPrice,
         value,
         attempts,
+
         interval,
       })
     }
@@ -2085,7 +2086,6 @@ export class NetworkMonitor {
       tags,
       rawTx,
       attempts,
-
       interval,
     })
     if (tx === null) {
@@ -2132,9 +2132,12 @@ export class NetworkMonitor {
    * @param interval - The interval between retries.
    */
   async retry<T>(network: string, func: () => Promise<T>, attempts = 10, interval = 5000): Promise<T | null> {
-    for (let i = 0; i < attempts; i++) {
+    let result: T | null = null
+
+    let i = 0 // declare i outside of loop so it can be used later
+    for (i; i < attempts; i++) {
       try {
-        const result = await func()
+        result = await func()
         if (result !== null) {
           return result
         }
@@ -2144,10 +2147,11 @@ export class NetworkMonitor {
           throw error
         }
       }
-
+      // Sleep before the next attempt.
       await sleep(interval)
     }
 
+    // If we've exited the loop without returning, it means all attempts were unsuccessful.
     throw new Error(`Maximum attempts reached for ${func.name}, function did not succeed after ${attempts} attempts`)
   }
 }
