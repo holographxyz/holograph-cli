@@ -64,3 +64,8 @@ editor.bbprojectd
 # Deployments
 deployments/*
 !deployments/.gitkeep
+
+# Other files
+
+incomplete_*.json
+*.graphql

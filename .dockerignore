@@ -8,3 +8,6 @@ test
 .husky
 .github
 .env*
+
+incomplete_*.json
+*.graphql

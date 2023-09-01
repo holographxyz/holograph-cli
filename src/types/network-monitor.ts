@@ -33,6 +33,7 @@ export type SendTransactionParams = {
   attempts?: number
   canFail?: boolean
   interval?: number
+  greedy?: boolean
 }
 
 export type PopulateTransactionParams = {
