@@ -2147,6 +2147,7 @@ export class NetworkMonitor {
           throw error
         }
       }
+
       // Sleep before the next attempt.
       await sleep(interval)
     }
