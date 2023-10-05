@@ -592,7 +592,7 @@ export class NetworkMonitor {
   // If the operator wallet has less than the min gas, then throw an error.
   // Otherwise, it will continue and process jobs.
   async checkWalletBalances(address: string, networks: number[]): Promise<void> {
-    const minGasBalance = {
+    const minGasBalance: any = {
       polygon: BigNumber.from('2500000000000000'),
       etherum: BigNumber.from('5400000000000000'),
       avalanche: BigNumber.from('10000000000000000'),
