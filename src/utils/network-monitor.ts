@@ -594,7 +594,7 @@ export class NetworkMonitor {
   async checkWalletBalances(address: string, networks: number[]): Promise<void> {
     const minGasBalance: any = {
       polygon: BigNumber.from('2500000000000000'),
-      etherum: BigNumber.from('5400000000000000'),
+      ethereum: BigNumber.from('5400000000000000'),
       avalanche: BigNumber.from('10000000000000000'),
       binanceSmartChain: BigNumber.from('740000000000000'),
       optimism: BigNumber.from('54000000000000'),
