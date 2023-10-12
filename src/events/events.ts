@@ -74,10 +74,11 @@ export function decodeLzPacketEvent(
   // This is a fallback for the legacy messaging module address that was updated for all networks except for optimism
   const messagingModuleAddresses = [
     providedMessagingModuleAddress,
-    '0xc9264255e1ae0cc80ceadd0056c63dc1caed28ad',
     '0xe9e30a0ad0d8af5cf2606ea720052e28d6fcbaaf',
     '0x6f484eacd997d9880205af22f6a4881ea0e1ccd7',
     '0x803305930c1bbae396d03f496a7bf53ad7fd4303',
+    '0xc9264255e1ae0cc80ceadd0056c63dc1caed28ad',
+    '0x777c19834a1a2ff6353a1e9cfb7c799ed7943a11',
   ]
 
   for (const messagingModuleAddress of messagingModuleAddresses) {
