@@ -43,7 +43,7 @@ env:
   indexer_mainnet_optimism_rpc_url: ${{ secrets.INDEXER_MAINNET_OPTIMISM_RPC_URL }}
   indexer_mainnet_arbitrum_rpc_url: ${{ secrets.INDEXER_MAINNET_ARBITRUM_RPC_URL }}
   indexer_mainnet_binance_rpc_url: ${{ secrets.INDEXER_MAINNET_BINANCE_RPC_URL }}
-  indexer_mainnet_mantle_rpc_url: "http://rpc.mantle.xyz/"
+  indexer_mainnet_mantle_rpc_url: "https://rpc.mantle.xyz/"
   indexer_mainnet_zora_rpc_url: "https://rpc.zora.energy"
   #
   indexer_mainnet_private_key: ${{ secrets.INDEXER_MAINNET_PRIVATE_KEY }}
@@ -55,7 +55,7 @@ env:
   operator_mainnet_optimism_rpc_url: ${{ secrets.OPERATOR_MAINNET_OPTIMISM_RPC_URL }}
   operator_mainnet_arbitrum_rpc_url: ${{ secrets.OPERATOR_MAINNET_ARBITRUM_RPC_URL }}
   operator_mainnet_binance_rpc_url: ${{ secrets.OPERATOR_MAINNET_BINANCE_RPC_URL }}
-  operator_mainnet_mantle_rpc_url: "http://rpc.mantle.xyz/"
+  operator_mainnet_mantle_rpc_url: "https://rpc.mantle.xyz/"
   operator_mainnet_zora_rpc_url: "https://rpc.zora.energy"
   #
   operator_mainnet_private_key: ${{ secrets.OPERATOR_MAINNET_PRIVATE_KEY }}
@@ -71,7 +71,7 @@ env:
   MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.3
   INDEXER_RELEASE_NAME: blondie-indexer-mainnet # format -> [release_name]-indexer-[env]
   #
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.76
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.77
   OPERATOR_RELEASE_NAME: blondie-operator-mainnet # format -> [release_name]-operator-[env]
   #######################################
 
