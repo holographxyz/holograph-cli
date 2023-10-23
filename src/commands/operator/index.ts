@@ -588,10 +588,10 @@ export default class Operator extends OperatorJobAwareCommand {
   processOperatorJobs = async (network: string): Promise<void> => {
     const jobCount = Object.keys(this.operatorJobs).length
 
-    this.networkMonitor.structuredLog(network,`Starting processOperatorJobs`)
+    this.networkMonitor.structuredLog(network, `Starting processOperatorJobs`)
 
     if (jobCount === 0) {
-      this.networkMonitor.structuredLog(network,`No jobs to process`)
+      this.networkMonitor.structuredLog(network, `No jobs to process`)
       return
     }
 
