@@ -108,7 +108,11 @@ export default class Indexer extends HealthCheck {
       updateBlockHeight = BlockHeightOptions.DISABLE
     }
 
-    if (this.environment === Environment.localhost || this.environment === Environment.experimental || updateBlockHeight === 'disable') {
+    if (
+      this.environment === Environment.localhost ||
+      this.environment === Environment.experimental ||
+      updateBlockHeight === 'disable'
+    ) {
       this.log(`Skipping API authentication for ${Environment[this.environment]} environment`)
     } else {
       // Create API Service for GraphQL requests
