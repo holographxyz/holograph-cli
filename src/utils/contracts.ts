@@ -112,4 +112,6 @@ export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
   arbitrumTestnetGoerli: '0x6aB5Ae6822647046626e83ee6dB8187151E1d5ab'.toLowerCase(),
   mantleTestnet: '0x0000000000000000000000000000000000000000'.toLowerCase(),
   mantle: '0x0000000000000000000000000000000000000000'.toLowerCase(),
+  baseTestnetGoerli: '0x6aB5Ae6822647046626e83ee6dB8187151E1d5ab'.toLowerCase(),
+  base: '0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7'.toLowerCase(),
 } as const

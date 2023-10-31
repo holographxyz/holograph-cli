@@ -53,6 +53,7 @@ env:
   indexer_dev_binanceTestnet_rpc_url: ${{ secrets.INDEXER_DEV_BSC_TESTNET_RPC_URL }}
   indexer_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
   indexer_dev_zoraTestnet_rpc_url: 'https://testnet.rpc.zora.energy'
+  indexer_dev_baseTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_BASE_GOERLI_RPC_URL }}
   #
   indexer_dev_private_key: ${{ secrets.INDEXER_DEV_PRIVATE_KEY }}
   indexer_dev_address: ${{ secrets.INDEXER_DEV_ADDRESS }}
@@ -65,6 +66,7 @@ env:
   operator_dev_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_BSC_TESTNET_RPC_URL }}
   operator_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
   operator_dev_zoraTestnet_rpc_url: 'https://testnet.rpc.zora.energy'
+  operator_dev_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_BASE_GOERLI_RPC_URL }}
   #
   operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
   operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
@@ -188,6 +190,7 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           #
           AVALANCHE_NETWORK: 'fuji'
           ETHEREUM_NETWORK: 'goerli'
@@ -197,6 +200,7 @@ jobs:
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
           MANTLE_NETWORK: 'mantleTestnet'
           ZORA_NETWORK: 'zoraTestnetGoerli'
+          BASE_NETWORK: 'baseTestnetGoerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -225,6 +229,7 @@ jobs:
             --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
             --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
+            --set BASE_NETWORK="${BASE_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
@@ -237,6 +242,7 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
             --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
+            --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
             \
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_dev_avalancheTestnet_rpc_url }} \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_dev_polygonTestnet_rpc_url }} \
@@ -246,6 +252,7 @@ jobs:
             --set dev_rpc_config_values.binanceTestnet_rpc_url=${{ env.indexer_dev_binanceTestnet_rpc_url }} \
             --set dev_rpc_config_values.mantleTestnet_rpc_url=${{ env.indexer_dev_mantleTestnet_rpc_url }} \
             --set dev_rpc_config_values.zoraTestnet_rpc_url=${{ env.indexer_dev_zoraTestnet_rpc_url }} \
+            --set dev_rpc_config_values.baseTestnetGoerli_rpc_url=${{ env.indexer_dev_baseTestnetGoerli_rpc_url }} \
             \
             --set dev_rpc_config_values.private_key=${{ env.indexer_dev_private_key }} \
             --set dev_rpc_config_values.address=${{ env.indexer_dev_address }} \
@@ -289,6 +296,10 @@ jobs:
             --set resources.zora.limits.memory=520Mi \
             --set resources.zora.requests.cpu=300m \
             --set resources.zora.requests.memory=500Mi \
+            \
+            --set resources.base.limits.memory=520Mi \
+            --set resources.base.requests.cpu=300m \
+            --set resources.base.requests.memory=500Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -341,6 +352,7 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           #
           AVALANCHE_NETWORK: 'fuji'
           POLYGON_NETWORK: 'mumbai'
@@ -350,6 +362,7 @@ jobs:
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
           MANTLE_NETWORK: 'mantleTestnet'
           ZORA_NETWORK: 'zoraTestnetGoerli'
+          BASE_NETWORK: 'baseTestnetGoerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -380,6 +393,7 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
             --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
+             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
             \
             --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
             --set POLYGON_NETWORK=$POLYGON_NETWORK \
@@ -389,6 +403,7 @@ jobs:
             --set BINANCE_NETWORK=$BINANCE_NETWORK \
             --set MANTLE_NETWORK=$MANTLE_NETWORK \
             --set ZORA_NETWORK=$ZORA_NETWORK \
+            --set BASE_NETWORK=$BASE_NETWORK \
             \
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_dev_avalancheTestnet_rpc_url }} \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_dev_polygonTestnet_rpc_url }} \
@@ -398,6 +413,7 @@ jobs:
             --set dev_rpc_config_values.binanceTestnet_rpc_url=${{ env.operator_dev_binanceTestnet_rpc_url }} \
             --set dev_rpc_config_values.mantleTestnet_rpc_url=${{ env.operator_dev_mantleTestnet_rpc_url }} \
             --set dev_rpc_config_values.zoraTestnet_rpc_url=${{ env.operator_dev_zoraTestnet_rpc_url }} \
+            --set dev_rpc_config_values.baseTestnetGoerli_rpc_url=${{ env.operator_dev_baseTestnetGoerli_rpc_url }} \
             \
             --set dev_rpc_config_values.private_key=${{ env.operator_dev_private_key }} \
             --set dev_rpc_config_values.address=${{ env.operator_dev_address }} \
@@ -436,6 +452,10 @@ jobs:
             --set resources.zora.limits.memory=500Mi \
             --set resources.zora.requests.cpu=100m \
             --set resources.zora.requests.memory=300Mi \
+            \
+            --set resources.base.limits.memory=500Mi \
+            --set resources.base.requests.cpu=100m \
+            --set resources.base.requests.memory=300Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
