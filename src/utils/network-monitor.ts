@@ -353,6 +353,7 @@ export class NetworkMonitor {
     optimismTestnetGoerli: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     arbitrumTestnetGoerli: '0xF5E8A439C599205C1aB06b535DE46681Aed1007a'.toLowerCase(),
     mantleTestnet: '0x0000000000000000000000000000000000000000'.toLowerCase(),
+    baseTestnetGoerli: '0x0000000000000000000000000000000000000000'.toLowerCase(),
 
     ethereum: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
     polygon: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
@@ -361,6 +362,7 @@ export class NetworkMonitor {
     optimism: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
     arbitrumOne: '0xe93685f3bba03016f02bd1828badd6195988d950'.toLowerCase(),
     mantle: '0x0000000000000000000000000000000000000000'.toLowerCase(),
+    base: '0x0000000000000000000000000000000000000000'.toLowerCase(),
   }
 
   needToSubscribe = false
@@ -1411,9 +1413,12 @@ export class NetworkMonitor {
         if (interestingTransactions.length > 0 && this.processTransactions2) {
           await this.processTransactions2.bind(this.parent)(job, interestingTransactions)
         }
+      } else {
+        this.structuredLogError(job.network, `NULL block`, job.block)
       }
     } catch (error: any) {
       // If there is an error in processing the block, log it
+
       this.structuredLogError(job.network, `Error processing block ${error}`, job.block)
     } finally {
       // Regardless of whether the processing succeeded or failed, handle the job
@@ -1421,7 +1426,11 @@ export class NetworkMonitor {
         await this.blockJobHandler(job.network, job)
       } catch (error: any) {
         // Log any error in handling the job
-        this.structuredLogError(job.network, `Error handling block ${error}`, job.block)
+        if (job) {
+          this.structuredLogError(job.network, `Error handling block ${error}`, job.block)
+        } else {
+          this.structuredLogError(undefined, `Error handling block from undefined job ${error}`)
+        }
       }
     }
   }
@@ -1501,7 +1510,11 @@ export class NetworkMonitor {
           await this.blockJobHandler(network, jobs[jobs.length - 1])
         } catch (error: any) {
           // Log any error in handling the job
-          this.structuredLogError(network, `Error handling block ${error}`, jobs[0].block)
+          if (jobs && jobs[0]) {
+            this.structuredLogError(network, `Error handling block ${error}`, jobs[0].block)
+          } else {
+            this.structuredLogError(network, `Error handling block from undefined job ${error}`)
+          }
         }
       }
     }
