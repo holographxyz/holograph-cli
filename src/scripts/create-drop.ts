@@ -71,12 +71,10 @@ require('dotenv').config()
     '0x' + web3.utils.asciiToHex('HolographDropERC721').substring(2).padStart(64, '0'),
     '0xAE27815bCf7ccA7191Cb55a6B86576aeDC462bBB', // holographRegistryProxy
     '0x0000000000000000000000000000000000000000', // erc721TransferHelper
-    '0x0000000000000000000000000000000000000000', // marketFilterAddress (opensea)
     signer.address, // initialOwner
     signer.address, // fundsRecipient
     numOfEditions, // number of editions
     royaltyBps, // percentage of royalties in bps
-    false, // enableOpenSeaRoyaltyRegistry
     salesConfig,
     METADATA_RENDERER_ADDRESS[ENVIRONMENT], // metadataRenderer (using previously deployed contract to save gas)
     metadataRendererInitCode, // metadataRendererInit

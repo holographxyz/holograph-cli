@@ -357,12 +357,10 @@ export default class Contract extends Command {
               '0x' + web3.utils.asciiToHex('HolographDropERC721').substring(2).padStart(64, '0'),
               this.networkMonitor.registryAddress,
               '0x0000000000000000000000000000000000000000', // erc721TransferHelper
-              '0x0000000000000000000000000000000000000000', // marketFilterAddress (opensea)
               userWallet.address, // initialOwner
               userWallet.address, // fundsRecipient
               numOfEditions, // number of editions
               royaltyBps, // percentage of royalties in bps
-              false, // enableOpenSeaRoyaltyRegistry
               salesConfig,
               METADATA_RENDERER_ADDRESS[ENVIRONMENT],
               metadataRendererInitCode, // metadataRendererInit
