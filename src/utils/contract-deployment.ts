@@ -4,7 +4,7 @@ import {supportedShortNetworks} from '@holographxyz/networks'
 import {BigNumber, BigNumberish, BytesLike} from 'ethers'
 import Web3 from 'web3'
 
-import {bytecodes, BytecodeType} from './bytecodes'
+import {BytecodeType, getByteCodes} from './bytecodes'
 import {remove0x, sha3} from './web3'
 import {validateNetwork, validateNonEmptyString, validateTransactionHash} from './validation'
 
@@ -221,7 +221,7 @@ export const create2address = function (deploymentConfig: DeploymentConfig, fact
   const futureAddress: string =
     '0x' +
     sha3(
-      '0xff' + remove0x(factoryAddress) + remove0x(configHash) + remove0x(sha3(bytecodes[BytecodeType.Holographer])),
+      '0xff' + remove0x(factoryAddress) + remove0x(configHash) + remove0x(sha3(getByteCodes(BytecodeType.Holographer))),
     ).slice(26)
   return futureAddress
 }
