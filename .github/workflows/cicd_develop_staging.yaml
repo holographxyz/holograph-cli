@@ -37,10 +37,10 @@ env:
   STG_COMMON_NAMESPACE: develop
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.3
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.4
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.76
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.78
   OPERATOR_RELEASE_NAME: operator-dev # format -> [release_name]-operator-[env]
   #######################################
   #
@@ -53,7 +53,7 @@ env:
   indexer_dev_binanceTestnet_rpc_url: ${{ secrets.INDEXER_DEV_BSC_TESTNET_RPC_URL }}
   indexer_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
   indexer_dev_zoraTestnet_rpc_url: 'https://testnet.rpc.zora.energy'
-  indexer_dev_baseTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_BASE_GOERLI_RPC_URL }}
+  indexer_dev_baseTestnetGoerli_rpc_url: 'https://goerli.base.org'
   #
   indexer_dev_private_key: ${{ secrets.INDEXER_DEV_PRIVATE_KEY }}
   indexer_dev_address: ${{ secrets.INDEXER_DEV_ADDRESS }}
@@ -66,7 +66,7 @@ env:
   operator_dev_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_BSC_TESTNET_RPC_URL }}
   operator_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
   operator_dev_zoraTestnet_rpc_url: 'https://testnet.rpc.zora.energy'
-  operator_dev_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_BASE_GOERLI_RPC_URL }}
+  operator_dev_baseTestnetGoerli_rpc_url: 'https://goerli.base.org'
   #
   operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
   operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
