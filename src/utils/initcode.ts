@@ -13,12 +13,10 @@ export function generateHolographDropERC721InitCode(
   contractType: string, // HolographDropERC721
   registryAddress: string,
   erc721TransferHelper: string,
-  marketFilterAddress: string,
   initialOwner: string,
   fundsRecipient: string,
   numOfEditions: number,
   royaltyBps: number,
-  enableOpenSeaRoyaltyRegistry: boolean,
   salesConfig: any,
   metadataRendererAddress: string,
   metadataRendererInit: any,
@@ -30,17 +28,15 @@ export function generateHolographDropERC721InitCode(
       registryAddress,
       generateInitCode(
         [
-          'tuple(address,address,address,address,uint64,uint16,bool,tuple(uint104,uint32,uint64,uint64,uint64,uint64,bytes32),address,bytes)',
+          'tuple(address,address,address,uint64,uint16,tuple(uint104,uint32,uint64,uint64,uint64,uint64,bytes32),address,bytes)',
         ],
         [
           [
             erc721TransferHelper,
-            marketFilterAddress,
             initialOwner,
             fundsRecipient,
             numOfEditions,
             royaltyBps,
-            enableOpenSeaRoyaltyRegistry,
             salesConfig,
             metadataRendererAddress,
             metadataRendererInit,
@@ -82,17 +78,15 @@ export function generateHolographERC721InitCode(
 //         this.networkMonitor.registryAddress,
 //         generateInitCode(
 //           [
-//             'tuple(address,address,address,address,uint64,uint16,bool,tuple(uint104,uint32,uint64,uint64,uint64,uint64,bytes32),address,bytes)',
+//             'tuple(address,address,address,uint64,uint16,tuple(uint104,uint32,uint64,uint64,uint64,uint64,bytes32),address,bytes)',
 //           ],
 //           [
 //             [
 //               '0x0000000000000000000000000000000000000000', // erc721TransferHelper
-//               '0x0000000000000000000000000000000000000000', // marketFilterAddress (opensea)
 //               userWallet.address, // initialOwner
 //               userWallet.address, // fundsRecipient
 //               numOfEditions, // number of editions
 //               royaltyBps, // percentage of royalties in bps
-//               false, // enableOpenSeaRoyaltyRegistry
 //               salesConfig,
 //               metadataRenderer.address, // metadataRenderer
 //               generateInitCode(['string', 'string', 'string'], [description, imageURI, animationURI]), // metadataRendererInit
