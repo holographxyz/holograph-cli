@@ -45,6 +45,7 @@ env:
   indexer_testnet_binanceTestnet_rpc_url: ${{ secrets.INDEXER_PROD_BSC_TESTNET_RPC_URL }}
   indexer_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
   indexer_testnet_zoraTestnet_rpc_url: 'https://testnet.rpc.zora.energy'
+  indexer_testnet_baseTestnetGoerli_rpc_url: 'https://goerli.base.org'
   #
   indexer_testnet_private_key: ${{ secrets.INDEXER_PROD_PRIVATE_KEY }}
   indexer_testnet_address: ${{ secrets.INDEXER_PROD_ADDRESS }}
@@ -57,6 +58,7 @@ env:
   operator_testnet_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_BSC_TESTNET_RPC_URL }}
   operator_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
   operator_testnet_zoraTestnet_rpc_url: 'https://testnet.rpc.zora.energy'
+  operator_testnet_baseTestnetGoerli_rpc_url: 'https://goerli.base.org'
   #
   operator_testnet_private_key: ${{ secrets.OPERATOR_PROD_PRIVATE_KEY }}
   operator_testnet_address: ${{ secrets.OPERATOR_PROD_ADDRESS }}
@@ -68,10 +70,10 @@ env:
   TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
 
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.3
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.4
   INDEXER_RELEASE_NAME: blondie-indexer-testnet # format -> [release_name]-indexer-[env]
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.76
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.78
   OPERATOR_RELEASE_NAME: blondie-operator-testnet # format -> [release_name]-operator-[env]
   #######################################
 
@@ -195,6 +197,7 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           #
           AVALANCHE_NETWORK: 'fuji'
           ETHEREUM_NETWORK: 'goerli'
@@ -204,6 +207,7 @@ jobs:
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
           MANTLE_NETWORK: 'mantleTestnet'
           ZORA_NETWORK: 'zoraTestnetGoerli'
+          BASE_NETWORK: 'baseTestnetGoerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -232,6 +236,7 @@ jobs:
             --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
             --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
+            --set BASE_NETWORK="${BASE_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
@@ -244,6 +249,7 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
             --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
+            --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
             \
             --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_testnet_avalancheTestnet_rpc_url }} \
             --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_testnet_polygonTestnet_rpc_url }} \
@@ -253,6 +259,7 @@ jobs:
             --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.indexer_testnet_binanceTestnet_rpc_url }} \
             --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.indexer_testnet_mantleTestnet_rpc_url }} \
             --set testnet_rpc_config_values.zoraTestnet_rpc_url=${{ env.indexer_testnet_zoraTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.baseTestnetGoerli_rpc_url=${{ env.indexer_testnet_baseTestnetGoerli_rpc_url }} \
             \
             --set testnet_rpc_config_values.private_key=${{ env.indexer_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.indexer_testnet_address }} \
@@ -296,6 +303,10 @@ jobs:
             --set resources.zora.limits.memory=820Mi \
             --set resources.zora.requests.cpu=500m \
             --set resources.zora.requests.memory=800Mi \
+            \
+             --set resources.base.limits.memory=820Mi \
+            --set resources.base.requests.cpu=500m \
+            --set resources.base.requests.memory=800Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -348,6 +359,7 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           #
           AVALANCHE_NETWORK: 'fuji'
           POLYGON_NETWORK: 'mumbai'
@@ -357,6 +369,7 @@ jobs:
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
           MANTLE_NETWORK: 'mantleTestnet'
           ZORA_NETWORK: 'zoraTestnetGoerli'
+          BASE_NETWORK: 'baseTestnetGoerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -387,6 +400,7 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
             --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
+            --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
             \
             --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
             --set POLYGON_NETWORK=$POLYGON_NETWORK \
@@ -396,6 +410,7 @@ jobs:
             --set BINANCE_NETWORK=$BINANCE_NETWORK \
             --set MANTLE_NETWORK=$MANTLE_NETWORK \
             --set ZORA_NETWORK=$ZORA_NETWORK \
+            --set BASE_NETWORK=$BASE_NETWORK \
             \
             --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_testnet_avalancheTestnet_rpc_url }} \
             --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_testnet_polygonTestnet_rpc_url }} \
@@ -405,6 +420,7 @@ jobs:
             --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.operator_testnet_binanceTestnet_rpc_url }} \
             --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.operator_testnet_mantleTestnet_rpc_url }} \
             --set testnet_rpc_config_values.zoraTestnet_rpc_url=${{ env.operator_testnet_zoraTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.baseTestnetGoerli_rpc_url=${{ env.operator_testnet_baseTestnetGoerli_rpc_url }} \
             \
             --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
@@ -443,6 +459,10 @@ jobs:
             --set resources.zora.limits.memory=550Mi \
             --set resources.zora.requests.cpu=200m \
             --set resources.zora.requests.memory=500Mi \
+            \
+            --set resources.base.limits.memory=550Mi \
+            --set resources.base.requests.cpu=200m \
+            --set resources.base.requests.memory=500Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \

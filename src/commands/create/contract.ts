@@ -6,7 +6,7 @@ import {BytesLike} from '@ethersproject/bytes'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {networks} from '@holographxyz/networks'
 
-import {BytecodeType, bytecodes} from '../../utils/bytecodes'
+import {BytecodeType, getByteCodes} from '../../utils/bytecodes'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {web3, zeroAddress, remove0x, sha3, dropEventsEnabled} from '../../utils/web3'
 import {NetworkMonitor} from '../../utils/network-monitor'
@@ -209,7 +209,7 @@ export default class Contract extends Command {
         contractType = bytecodeType.toString()
 
         contractTypeHash = '0x' + web3.utils.asciiToHex(contractType).slice(2).padStart(64, '0')
-        byteCode = bytecodes[bytecodeType]
+        byteCode = getByteCodes(bytecodeType, targetNetwork)
 
         switch (contractType) {
           case BytecodeType.HolographERC721:

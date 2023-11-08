@@ -1,6 +1,6 @@
 import {Contract, ethers} from 'ethers'
 import {SalesConfiguration} from '../types/drops'
-import {bytecodes} from '../utils/bytecodes'
+import {BytecodeType, getByteCodes} from '../utils/bytecodes'
 import {
   generateHolographDropERC721InitCode,
   generateHolographERC721InitCode,
@@ -93,7 +93,7 @@ require('dotenv').config()
   console.log('Creating deployment config...')
   const chainType = '0x' + networks.avalancheTestnet.holographId.toString(16).padStart(8, '0') // fuji
   const salt = '0x' + web3.utils.randomHex(32).slice(2).padStart(64, '0') // random salt
-  const byteCode = bytecodes.HolographDropERC721
+  const byteCode = getByteCodes(BytecodeType.HolographDropERC721, networks.avalancheTestnet.key)
 
   const configHash = sha3(
     '0x' +
