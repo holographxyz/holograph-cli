@@ -58,7 +58,7 @@ env:
   operator_mainnet_binance_rpc_url: ${{ secrets.OPERATOR_MAINNET_BINANCE_RPC_URL }}
   operator_mainnet_mantle_rpc_url: 'https://rpc.mantle.xyz/'
   operator_mainnet_zora_rpc_url: 'https://rpc.zora.energy'
-  operator_mainnet_base_rpc_url: 'https://mainnet.base.org' # Notice: Operator should currently be disabled on Base
+  operator_mainnet_base_rpc_url:  ${{ secrets.OPERATOR_MAINNET_BASE_RPC_URL }} # Notice: Operator should currently be disabled on Base
   #
   operator_mainnet_private_key: ${{ secrets.OPERATOR_MAINNET_PRIVATE_KEY }}
   operator_mainnet_address: ${{ secrets.OPERATOR_MAINNET_ADDRESS }}
