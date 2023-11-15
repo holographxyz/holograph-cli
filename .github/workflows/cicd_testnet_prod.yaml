@@ -45,7 +45,7 @@ env:
   indexer_testnet_binanceTestnet_rpc_url: ${{ secrets.INDEXER_PROD_BSC_TESTNET_RPC_URL }}
   indexer_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
   indexer_testnet_zoraTestnet_rpc_url: 'https://testnet.rpc.zora.energy'
-  indexer_testnet_baseTestnetGoerli_rpc_url: 'https://goerli.base.org'
+  indexer_testnet_baseTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_BASE_GOERLI_RPC_URL }}
   #
   indexer_testnet_private_key: ${{ secrets.INDEXER_PROD_PRIVATE_KEY }}
   indexer_testnet_address: ${{ secrets.INDEXER_PROD_ADDRESS }}
@@ -73,7 +73,7 @@ env:
   TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.4
   INDEXER_RELEASE_NAME: blondie-indexer-testnet # format -> [release_name]-indexer-[env]
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.78
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.79
   OPERATOR_RELEASE_NAME: blondie-operator-testnet # format -> [release_name]-operator-[env]
   #######################################
 
@@ -259,7 +259,7 @@ jobs:
             --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.indexer_testnet_binanceTestnet_rpc_url }} \
             --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.indexer_testnet_mantleTestnet_rpc_url }} \
             --set testnet_rpc_config_values.zoraTestnet_rpc_url=${{ env.indexer_testnet_zoraTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.baseTestnetGoerli_rpc_url=${{ env.indexer_testnet_baseTestnetGoerli_rpc_url }} \
+            --set testnet_rpc_config_values.baseTestnet_rpc_url=${{ env.indexer_testnet_baseTestnetGoerli_rpc_url }} \
             \
             --set testnet_rpc_config_values.private_key=${{ env.indexer_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.indexer_testnet_address }} \
@@ -420,7 +420,7 @@ jobs:
             --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.operator_testnet_binanceTestnet_rpc_url }} \
             --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.operator_testnet_mantleTestnet_rpc_url }} \
             --set testnet_rpc_config_values.zoraTestnet_rpc_url=${{ env.operator_testnet_zoraTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.baseTestnetGoerli_rpc_url=${{ env.operator_testnet_baseTestnetGoerli_rpc_url }} \
+            --set testnet_rpc_config_values.baseTestnet_rpc_url=${{ env.operator_testnet_baseTestnetGoerli_rpc_url }} \
             \
             --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \

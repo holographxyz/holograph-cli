@@ -40,7 +40,7 @@ env:
   STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.4
   INDEXER_RELEASE_NAME: indexer-dev # format -> [release_name]-indexer-[env]
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.78
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.79
   OPERATOR_RELEASE_NAME: operator-dev # format -> [release_name]-operator-[env]
   #######################################
   #
@@ -66,7 +66,7 @@ env:
   operator_dev_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_BSC_TESTNET_RPC_URL }}
   operator_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
   operator_dev_zoraTestnet_rpc_url: 'https://testnet.rpc.zora.energy'
-  operator_dev_baseTestnetGoerli_rpc_url: 'https://goerli.base.org' # TODO: Operator should currently be disabled on Base
+  operator_dev_baseTestnetGoerli_rpc_url: 'https://goerli.base.org' # Notice: Operator should currently be disabled on Base
   #
   operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
   operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
@@ -252,7 +252,7 @@ jobs:
             --set dev_rpc_config_values.binanceTestnet_rpc_url=${{ env.indexer_dev_binanceTestnet_rpc_url }} \
             --set dev_rpc_config_values.mantleTestnet_rpc_url=${{ env.indexer_dev_mantleTestnet_rpc_url }} \
             --set dev_rpc_config_values.zoraTestnet_rpc_url=${{ env.indexer_dev_zoraTestnet_rpc_url }} \
-            --set dev_rpc_config_values.baseTestnetGoerli_rpc_url=${{ env.indexer_dev_baseTestnetGoerli_rpc_url }} \
+            --set dev_rpc_config_values.baseTestnet_rpc_url=${{ env.indexer_dev_baseTestnetGoerli_rpc_url }} \
             \
             --set dev_rpc_config_values.private_key=${{ env.indexer_dev_private_key }} \
             --set dev_rpc_config_values.address=${{ env.indexer_dev_address }} \
@@ -413,7 +413,7 @@ jobs:
             --set dev_rpc_config_values.binanceTestnet_rpc_url=${{ env.operator_dev_binanceTestnet_rpc_url }} \
             --set dev_rpc_config_values.mantleTestnet_rpc_url=${{ env.operator_dev_mantleTestnet_rpc_url }} \
             --set dev_rpc_config_values.zoraTestnet_rpc_url=${{ env.operator_dev_zoraTestnet_rpc_url }} \
-            --set dev_rpc_config_values.baseTestnetGoerli_rpc_url=${{ env.operator_dev_baseTestnetGoerli_rpc_url }} \
+            --set dev_rpc_config_values.baseTestnet_rpc_url=${{ env.operator_dev_baseTestnetGoerli_rpc_url }} \
             \
             --set dev_rpc_config_values.private_key=${{ env.operator_dev_private_key }} \
             --set dev_rpc_config_values.address=${{ env.operator_dev_address }} \
