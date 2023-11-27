@@ -23,8 +23,8 @@ env:
   STG_HOLOGRAPH_INDEXER_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
   STG_HOLOGRAPH_OPERATOR_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
   #
-  STG_HOLOGRAPH_INDEXER_PASSWORD: "some-new-value" ${{ secrets.DEV_HOLO_INDEXER_PASSWORD }}
-  STG_HOLOGRAPH_OPERATOR_PASSWORD: "some-new-value" ${{ secrets.DEV_HOLO_OPERATOR_PASSWORD }}
+  STG_HOLOGRAPH_INDEXER_PASSWORD: "some-new-value" #${{ secrets.V2_DEV_HOLO_INDEXER_PASSWORD }}
+  STG_HOLOGRAPH_OPERATOR_PASSWORD: "some-new-value" #${{ secrets.V2_DEV_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
   INDEXER_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
