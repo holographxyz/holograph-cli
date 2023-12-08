@@ -71,10 +71,10 @@ env:
   MAINNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/mainnet-indexer-processor'
 
   #######################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.6
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.7
   INDEXER_RELEASE_NAME: blondie-indexer-mainnet # format -> [release_name]-indexer-[env]
   #
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.81
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.82
   OPERATOR_RELEASE_NAME: blondie-operator-mainnet # format -> [release_name]-operator-[env]
   #######################################
 
