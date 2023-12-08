@@ -71,10 +71,10 @@ env:
   TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
 
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.6
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.7
   INDEXER_RELEASE_NAME: blondie-indexer-testnet # format -> [release_name]-indexer-[env]
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.81
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.82
   OPERATOR_RELEASE_NAME: blondie-operator-testnet # format -> [release_name]-operator-[env]
   #######################################
 
