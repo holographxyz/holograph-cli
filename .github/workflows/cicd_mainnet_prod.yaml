@@ -31,6 +31,7 @@ env:
   OPERATOR_HOLO_CONFIG_FILE_DATA: mainnet-config-file
   #
   HOLOGRAPH_ENVIRONMENT: mainnet
+  HOLOGRAPH_ADDRESS: ${{ secrets.MAINNET_HOLOGRAPH_ADDRESS }}
   #
   MAINNET_DOMAIN: 'holograph.xyz'
   #
@@ -70,10 +71,10 @@ env:
   MAINNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/mainnet-indexer-processor'
 
   #######################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.4
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.6
   INDEXER_RELEASE_NAME: blondie-indexer-mainnet # format -> [release_name]-indexer-[env]
   #
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.79
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.81
   OPERATOR_RELEASE_NAME: blondie-operator-mainnet # format -> [release_name]-operator-[env]
   #######################################
 
@@ -320,6 +321,7 @@ jobs:
             --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
             --set ingress.blue_green_deployment=false
+
       - name: Pause for 60 seconds
         shell: bash
         run: |
