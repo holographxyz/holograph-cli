@@ -31,6 +31,7 @@ env:
   OPERATOR_HOLO_CONFIG_FILE_DATA: testnet-config-file
   #
   HOLOGRAPH_ENVIRONMENT: testnet
+  HOLOGRAPH_ADDRESS: ${{ secrets.TESTNET_HOLOGRAPH_ADDRESS }}
   #
   TESTNET_DOMAIN: 'holograph.xyz'
   #
@@ -70,10 +71,10 @@ env:
   TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
 
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.4
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.5
   INDEXER_RELEASE_NAME: blondie-indexer-testnet # format -> [release_name]-indexer-[env]
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.79
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.80
   OPERATOR_RELEASE_NAME: blondie-operator-testnet # format -> [release_name]-operator-[env]
   #######################################
 
@@ -222,6 +223,7 @@ jobs:
             --set HOLO_INDEXER_HOST=${{ env.TESTNET_HOLOGRAPH_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.TESTNET_HOLOGRAPH_INDEXER_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
+            --set HOLOGRAPH_ADDRESS=${{ env.HOLOGRAPH_ADDRESS }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set ENABLE_SYNC=$ENABLE_SYNC \
@@ -320,6 +322,7 @@ jobs:
             --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
             --set ingress.blue_green_deployment=false
+
       - name: Pause for 60 seconds
         shell: bash
         run: |
@@ -384,6 +387,7 @@ jobs:
             --set HOLO_OPERATOR_HOST=${{ env.TESTNET_HOLOGRAPH_OPERATOR_HOST }} \
             --set OPERATOR_API_KEY=${{ env.TESTNET_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
+            --set HOLOGRAPH_ADDRESS=${{ env.HOLOGRAPH_ADDRESS }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set ENABLE_SYNC=$ENABLE_SYNC \
