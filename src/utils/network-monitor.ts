@@ -40,7 +40,7 @@ import {
   getNetworkByChainId,
 } from '@holographxyz/networks'
 
-import {ConfigFile, ConfigNetwork, ConfigNetworks} from './config'
+import {ConfigFile, ConfigNetwork, ConfigNetworks, getBlockProcessingVersion} from './config'
 import {GasPricing, initializeGasPricing, updateGasPricing} from './gas'
 import {capitalize, sleep} from './utils'
 import {CXIP_ERC721_ADDRESSES, ContractMap, HOLOGRAPH_ADDRESSES, IContracts, getABIs} from './contracts'
@@ -56,7 +56,7 @@ import {
   SendTransactionParams,
   TransactionParams,
   WalletParams,
-  InterestingTransaction,
+  InterestingLog,
 } from '../types/network-monitor'
 import {BlockHeightOptions} from '../flags/update-block-height.flag'
 import {NETWORK_COLORS, zeroAddress} from './web3'
@@ -264,9 +264,7 @@ type NetworkMonitorOptions = {
   configFile: ConfigFile
   networks?: string[]
   debug: (...args: string[]) => void
-  enableV2?: boolean
-  processTransactions?: (job: BlockJob, transactions: TransactionResponse[]) => Promise<void>
-  processTransactions2?: (job: BlockJob, transactions: InterestingTransaction[]) => Promise<void>
+  processLogs?: (job: BlockJob, transactions: InterestingLog[]) => Promise<void>
   filters?: TransactionFilter[]
   userWallet?: Wallet
   lastBlockFilename?: string
@@ -279,7 +277,7 @@ type NetworkMonitorOptions = {
 }
 
 export class NetworkMonitor {
-  enableV2 = false
+  blockProcessingVersion = getBlockProcessingVersion()
   verbose = true
   environment: Environment
   parent: ImplementsCommand
@@ -289,8 +287,7 @@ export class NetworkMonitor {
   userWallet?: Wallet
   LAST_BLOCKS_FILE_NAME: string
   filters: TransactionFilter[] = []
-  processTransactions: ((job: BlockJob, transactions: TransactionResponse[]) => Promise<void>) | undefined
-  processTransactions2: ((job: BlockJob, transactions: InterestingTransaction[]) => Promise<void>) | undefined
+  processLogs: ((job: BlockJob, transactions: InterestingLog[]) => Promise<void>) | undefined
   log: (message: string, ...args: any[]) => void
   warn: (message: string, ...args: any[]) => void
   debug: (...args: any[]) => void
@@ -420,12 +417,9 @@ export class NetworkMonitor {
     this.log = this.parent.log.bind(this.parent)
     this.warn = this.parent.warn.bind(this.parent)
     this.debug = options.debug.bind(this.parent)
+
     if (options.filters !== undefined) {
       this.filters = options.filters
-    }
-
-    if (options.enableV2) {
-      this.enableV2 = options.enableV2
     }
 
     if (options.verbose !== undefined) {
@@ -437,12 +431,8 @@ export class NetworkMonitor {
       this.greedy = options.greedy
     }
 
-    if (options.processTransactions !== undefined) {
-      this.processTransactions = options.processTransactions.bind(this.parent)
-    }
-
-    if (options.processTransactions2 !== undefined) {
-      this.processTransactions2 = options.processTransactions2.bind(this.parent)
+    if (options.processLogs !== undefined) {
+      this.processLogs = options.processLogs.bind(this.parent)
     }
 
     if (options.userWallet !== undefined) {
@@ -1015,7 +1005,7 @@ export class NetworkMonitor {
    * @param parent - The parent object that is used as the context for the validation function.
    * @param network - The network where the transaction was executed.
    *
-   * @returns - An InterestingTransaction object if the log passes the filter and the validation function, if provided.
+   * @returns - An InterestingLog object if the log passes the filter and the validation function, if provided.
    * Otherwise, it returns undefined.
    */
   /* eslint-disable-next-line max-params */
@@ -1025,7 +1015,7 @@ export class NetworkMonitor {
     tx: TransactionResponse,
     parent: ImplementsCommand,
     network: string,
-  ): Promise<InterestingTransaction | undefined> {
+  ): Promise<InterestingLog | undefined> {
     const event: Event = filter.bloomEvent
 
     // Check if the first topic of the log matches the signature hash of the event in the filter.
@@ -1034,20 +1024,20 @@ export class NetworkMonitor {
       if (filter.eventValidator) {
         // The validation function is bound to the parent object and called with the network, transaction response, and log.
         if (filter.eventValidator.bind(parent)(network, tx, log)) {
-          // If the log passes the validation function, an InterestingTransaction object is returned.
+          // If the log passes the validation function, an InterestingLog object is returned.
           return {
             bloomId: filter.bloomId,
             transaction: tx,
             log,
-          } as InterestingTransaction
+          } as InterestingLog
         }
       } else {
-        // If no validation function is provided, an InterestingTransaction object is returned as long as the log matches the event in the filter.
+        // If no validation function is provided, an InterestingLog object is returned as long as the log matches the event in the filter.
         return {
           bloomId: filter.bloomId,
           transaction: tx,
           log,
-        } as InterestingTransaction
+        } as InterestingLog
       }
     }
 
@@ -1056,19 +1046,19 @@ export class NetworkMonitor {
   }
 
   /**
-   * Checks if the given log is already included in the list of interesting transactions.
+   * Checks if the given log is already included in the list of interesting logs.
    *
    * @param log - The transaction log to be checked.
-   * @param interestingTransactions - An array of interesting transactions.
+   * @param interestingLogs - An array of interesting logs.
    *
-   * @returns - A boolean indicating whether the log is already included in the interesting transactions.
+   * @returns - A boolean indicating whether the log is already included in the interesting logs array.
    * If it is included, it returns true; otherwise, false.
    */
-  isInterestingTransactionLogAlreadyIncluded(log: Log, interestingTransactions: InterestingTransaction[]): boolean {
-    const interestingTx = interestingTransactions.find(
+  isInterestingLogAlreadyIncluded(log: Log, interestingLogs: InterestingLog[]): boolean {
+    const interestingLog = interestingLogs.find(
       tx => tx.log?.transactionHash === log.transactionHash && tx.log.logIndex === log.logIndex,
     )
-    return interestingTx !== undefined
+    return interestingLog !== undefined
   }
 
   /**
@@ -1091,30 +1081,31 @@ export class NetworkMonitor {
   }
 
   /**
-   * This function filters through transactions and logs to identify and add "interesting" transactions to the interestingTransactions array.
-   * An "interesting" transaction is defined by a specific bloomId, corresponding transaction, log, and all associated logs.
-   * The function applies a set of conditions and validations to identify these transactions.
+   * This function filters through transactions and logs to identify and add "interesting" logs to the interestingLogs array.
+   * An "interesting" log is defined by a specific bloomId, corresponding transaction, log, and all associated logs in the transaction.
+   * The function applies a set of conditions and validations to identify these logs.
    *
    * The bloomFilters are iterated over, and for each filter, every log is evaluated.
    * Logs that do not match the filter event or are already included are skipped.
-   * If the log is validated as interesting by an optional eventValidator, it is added to the interestingTransactions array.
+   * If the log is validated as interesting by an optional eventValidator, it is added to the interestingLogs array.
    * Alternatively, logs that are in the "to be determined" (TBD) list of contracts and are not already included in the tbdLogs are also added.
-   * If no eventValidator is present, the transaction is still added as an interesting transaction.
+   * If no eventValidator is present, the log is still added as an interesting log.
    *
    * @param {BlockJob} job - The block job currently being processed
    * @param {TransactionResponse[]} transactions - An array of transaction objects
-   * @param {Log[]} logs - An array of log objects
-   * @param {InterestingTransaction[]} interestingTransactions - An array to which the new interesting transactions will be added
+   * @param {Log[]} allBlockLogs - An array of all log objects present in the current block
+   * @param {InterestingLog[]} interestingLogs - An array to which the new interesting logs will be added
    * @return {Promise<void>}
    */
-  async filterTransactions2(
+  async filterAndAddInterestingLogs(
     job: BlockJob,
     transactions: TransactionResponse[],
-    logs: Log[],
-    interestingTransactions: InterestingTransaction[],
+    allBlockLogs: Log[],
+    interestingLogs: InterestingLog[],
   ): Promise<void> {
-    const allLogs: {[key: string]: Log[]} = this.createAllLogs(logs)
-    const txMap: {[key: string]: TransactionResponse} = this.createTxMap(transactions)
+    const transactionHashToLogsMap: {[TxHash: string]: Log[]} = this.createTransactionHashToLogsMapping(allBlockLogs)
+    const txHashToTxResponseMap: {[TxHash: string]: TransactionResponse} =
+      this.createTxHashToTxResponseMapping(transactions)
     const tbdLogs: number[] = []
 
     // Iterate over bloomFilters
@@ -1122,12 +1113,12 @@ export class NetworkMonitor {
       const {bloomEvent: event} = filter
 
       // Iterate over logs
-      for (const log of logs) {
+      for (const log of allBlockLogs) {
         // Skip logs that don't match the event or have already been included
         if (
           log.topics.length === 0 ||
           log.topics[0] !== event.sigHash ||
-          this.isInterestingTransactionLogAlreadyIncluded(log, interestingTransactions)
+          this.isInterestingLogAlreadyIncluded(log, interestingLogs)
         ) {
           continue
         }
@@ -1136,14 +1127,14 @@ export class NetworkMonitor {
         const {eventValidator, bloomId} = filter
 
         if (eventValidator) {
-          if (eventValidator!.bind(this.parent)(job.network, txMap[log.transactionHash], log)) {
-            this.pushInterestingTransaction(bloomId, txMap, log, allLogs, interestingTransactions)
+          if (eventValidator!.bind(this.parent)(job.network, txHashToTxResponseMap[log.transactionHash], log)) {
+            this.pushInterestingLog(bloomId, txHashToTxResponseMap, log, transactionHashToLogsMap, interestingLogs)
           } else if (this.tbdCachedContracts.includes(log.address.toLowerCase()) && !tbdLogs.includes(log.logIndex)) {
-            this.pushInterestingTransaction('TBD', txMap, log, allLogs, interestingTransactions)
+            this.pushInterestingLog('TBD', txHashToTxResponseMap, log, transactionHashToLogsMap, interestingLogs)
             tbdLogs.push(log.logIndex)
           }
         } else {
-          this.pushInterestingTransaction(bloomId, txMap, log, allLogs, interestingTransactions)
+          this.pushInterestingLog(bloomId, txHashToTxResponseMap, log, transactionHashToLogsMap, interestingLogs)
         }
       }
     }
@@ -1157,15 +1148,15 @@ export class NetworkMonitor {
    * @param {Log[]} logs - An array of log objects
    * @return {Object} allLogs - An object where each key is a transaction hash and each value is an array of logs for that transaction
    */
-  createAllLogs(logs: Log[]): {[key: string]: Log[]} {
-    const allLogs: {[key: string]: Log[]} = {}
+  createTransactionHashToLogsMapping(logs: Log[]): {[key: string]: Log[]} {
+    const transactionHashToLogsMap: {[key: string]: Log[]} = {}
     for (const log of logs) {
-      if (!(log.transactionHash in allLogs)) {
-        allLogs[log.transactionHash] = this.filterLogsByTx(log.transactionHash, logs)
+      if (!(log.transactionHash in transactionHashToLogsMap)) {
+        transactionHashToLogsMap[log.transactionHash] = this.filterLogsByTx(log.transactionHash, logs)
       }
     }
 
-    return allLogs
+    return transactionHashToLogsMap
   }
 
   /**
@@ -1175,8 +1166,8 @@ export class NetworkMonitor {
    * @param {TransactionResponse[]} transactions - An array of transaction objects
    * @return {Object} txMap - An object where each key is a transaction hash and each value is the corresponding transaction data
    */
-  createTxMap(transactions: TransactionResponse[]): {[key: string]: TransactionResponse} {
-    const txMap: {[key: string]: TransactionResponse} = {}
+  createTxHashToTxResponseMapping(transactions: TransactionResponse[]): {[key: string]: TransactionResponse} {
+    const txMap: {[txHash: string]: TransactionResponse} = {}
     for (const tx of transactions) {
       txMap[tx.hash] = tx
     }
@@ -1185,28 +1176,28 @@ export class NetworkMonitor {
   }
 
   /**
-   * This function adds an interesting transaction to the interestingTransactions array.
-   * An interesting transaction is defined by its bloomId, transaction data, a specific log, and all logs associated with the transaction.
+   * This function adds an interesting log to the interestingLogs array.
+   * An interesting log is defined by its bloomId, transaction data, a specific log, and all logs associated with the transaction.
    *
-   * @param {string} bloomId - The bloom ID of the interesting transaction
-   * @param {Object} txMap - The mapping of transaction hashes to their corresponding transaction data
+   * @param {string} bloomId - The bloom ID of the interesting log
+   * @param {Object} txHashToTxResponseMap - The mapping of transaction hashes to their corresponding transaction data
    * @param {Log} log - A specific log associated with the transaction
-   * @param {Object} allLogs - The mapping of transaction hashes to their corresponding logs
-   * @param {InterestingTransaction[]} interestingTransactions - An array to which the new interesting transaction will be added
+   * @param {Object} transactionHashToLogsMap - The mapping of transaction hashes to their corresponding logs
+   * @param {InterestingLog[]} interestingLogs - An array to which the new interesting log will be added
    */
-  pushInterestingTransaction(
+  pushInterestingLog(
     bloomId: string,
-    txMap: {[key: string]: TransactionResponse},
+    txHashToTxResponseMap: {[txHash: string]: TransactionResponse},
     log: Log,
-    allLogs: {[key: string]: Log[]},
-    interestingTransactions: InterestingTransaction[],
+    transactionHashToLogsMap: {[txHash: string]: Log[]},
+    interestingLogs: InterestingLog[],
   ): void {
-    interestingTransactions.push({
+    interestingLogs.push({
       bloomId,
-      transaction: txMap[log.transactionHash],
+      transaction: txHashToTxResponseMap[log.transactionHash],
       log,
-      allLogs: allLogs[log.transactionHash]!,
-    } as InterestingTransaction)
+      allLogs: transactionHashToLogsMap[log.transactionHash]!,
+    } as InterestingLog)
   }
 
   /**
@@ -1360,9 +1351,9 @@ export class NetworkMonitor {
   }
 
   /**
-   * This method processes a block for a given job. It extracts the transactions
+   * This method processes a block for a given job. It extracts the logs
    * from the block and if they are "interesting", it processes them further.
-   * "Interesting" transactions are those which passed the filter criteria.
+   * "Interesting" logs are those which passed the filter criteria.
    * The method also updates the gas pricing information for recent blocks and
    * handles any error situations gracefully by logging the error.
    *
@@ -1373,7 +1364,7 @@ export class NetworkMonitor {
    * It operates on instance properties.
    */
   async processBlock(job: BlockJob): Promise<void> {
-    const interestingTransactions: InterestingTransaction[] = []
+    const interestingLogs: InterestingLog[] = []
     this.activated[job.network] = true
     this.structuredLogVerbose(job.network, `Getting block 🔍`, job.block)
 
@@ -1405,13 +1396,13 @@ export class NetworkMonitor {
           // If logs are present, sort and filter transactions
           if (logs !== null) {
             logs = this.sortLogs(logs as Log[])
-            await this.filterTransactions2(job, block.transactions, logs as Log[], interestingTransactions)
+            await this.filterAndAddInterestingLogs(job, block.transactions, logs as Log[], interestingLogs)
           }
         }
 
-        // If there are interesting transactions and the processing function is available, process them
-        if (interestingTransactions.length > 0 && this.processTransactions2) {
-          await this.processTransactions2.bind(this.parent)(job, interestingTransactions)
+        // If there are interesting logs and the processing function is available, process them
+        if (interestingLogs.length > 0 && this.processLogs) {
+          await this.processLogs.bind(this.parent)(job, interestingLogs)
         }
       } else {
         this.structuredLogError(job.network, `NULL block`, job.block)
@@ -1440,7 +1431,7 @@ export class NetworkMonitor {
    * are provided, it simply delegates to the block job handler function for the next job.
    *
    * If jobs are provided, it gets all the logs for the range of blocks covered by the jobs, sorts and filters
-   * the transactions contained in the logs, and then processes any 'interesting' transactions.
+   * the transactions contained in the logs, and then processes any 'interesting' logs.
    *
    * In case of any errors during the processing or handling of jobs, the errors are logged.
    *
@@ -1453,7 +1444,7 @@ export class NetworkMonitor {
     if (jobs.length === 0) {
       await this.blockJobHandler(network)
     } else {
-      const interestingTransactions: InterestingTransaction[] = []
+      const interestingLogs: InterestingLog[] = []
       this.activated[network] = true
 
       this.structuredLogVerbose(network, `Getting block range 🔍`, [jobs[0].block, jobs[jobs.length - 1].block])
@@ -1474,12 +1465,12 @@ export class NetworkMonitor {
           })
 
           logs = this.sortLogs(logs as Log[])
-          await this.filterTransactions2(jobs[0], transactions, logs as Log[], interestingTransactions)
+          await this.filterAndAddInterestingLogs(jobs[0], transactions, logs as Log[], interestingLogs)
         }
 
-        // If there are interesting transactions and the processing function is available, process them
-        if (interestingTransactions.length > 0 && this.processTransactions2) {
-          await this.processTransactions2.bind(this.parent)(jobs[0], interestingTransactions)
+        // If there are interesting logs and the processing function is available, process them
+        if (interestingLogs.length > 0 && this.processLogs) {
+          await this.processLogs.bind(this.parent)(jobs[0], interestingLogs)
         }
 
         const job: BlockJob = jobs[jobs.length - 1]

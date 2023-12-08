@@ -193,7 +193,7 @@ export default class Analyze extends Command {
       configFile,
       networks,
       debug: this.debug,
-      processTransactions: this.processTransactions,
+      // processTransactions: this.processTransactions, // TODO: work on it
     })
 
     const blockJobs: {[key: string]: BlockJob[]} = {}

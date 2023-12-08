@@ -36,6 +36,28 @@ export interface ConfigFile {
   user: ConfigUser
 }
 
+export enum BlockProcessingVersion {
+  V1 = 'V1',
+  V2 = 'V2',
+}
+
+export function getBlockProcessingVersion() {
+  const blockProcessingVersionEnv = process.env.BLOCK_PROCESSING_VERSION?.toUpperCase() ?? ''
+
+  if (!(blockProcessingVersionEnv in BlockProcessingVersion)) {
+    console.warn('BLOCK_PROCESSING_VERSION value is not valid, using default version: V2')
+  }
+
+  switch (blockProcessingVersionEnv) {
+    case 'V1':
+      return BlockProcessingVersion.V1
+    case 'V2':
+      return BlockProcessingVersion.V2
+    default:
+      return BlockProcessingVersion.V2
+  }
+}
+
 const localhostConfig: ConfigFile = {
   version: 'beta3',
   networks: {localhost: {providerUrl: 'http://localhost:8545'}, localhost2: {providerUrl: 'http://localhost:9545'}},

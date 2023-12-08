@@ -91,7 +91,7 @@ export type TransactionParams = {
   interval?: number
 }
 
-export interface InterestingTransaction {
+export interface InterestingLog {
   bloomId: string
   transaction: TransactionResponse
   receipt?: TransactionReceipt
