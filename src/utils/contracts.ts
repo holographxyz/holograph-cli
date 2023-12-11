@@ -65,7 +65,7 @@ export const getABIs = async (environment: string): Promise<ContractAbis> => {
   }
 }
 
-const HOLOGRAPH_ADDRESS_ENV = process.env.HOLOGRAPH_ADDRESS?.toLowerCase()
+const HOLOGRAPH_ADDRESS_ENV = process.env.HOLOGRAPH_ADDRESS ? process.env.HOLOGRAPH_ADDRESS.toLowerCase() : undefined
 
 export const HOLOGRAPH_ADDRESSES: {[key in Environment]: string} = {
   [Environment.localhost]: HOLOGRAPH_ADDRESS_ENV ?? '0xa3931469C1D058a98dde3b5AEc4dA002B6ca7446'.toLowerCase(),

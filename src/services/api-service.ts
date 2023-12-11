@@ -28,6 +28,7 @@ const HOLOGRAPH_VERSION_ENV = process.env.HOLOGRAPH_VERSION
 if (!(HOLOGRAPH_VERSION_ENV in HolographVersion)) {
   throw new Error('Provided Holograph Version does not exist!')
 }
+
 class ApiService {
   static readonly holographVersion: HolographVersion = HOLOGRAPH_VERSION_ENV
   logger: Logger
