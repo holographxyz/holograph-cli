@@ -28,7 +28,7 @@ import {
 } from '../../utils/network-monitor'
 import {HealthCheck} from '../../base-commands/healthcheck'
 import {ensureConfigFileIsValid} from '../../utils/config'
-import ApiService from '../../services/api-service'
+import ApiService, {HOLOGRAPH_VERSION_ENV} from '../../services/api-service'
 
 import {shouldSync, syncFlag} from '../../flags/sync.flag'
 import {BlockHeightOptions, blockHeightFlag} from '../../flags/update-block-height.flag'
@@ -108,6 +108,7 @@ export default class Operator extends OperatorJobAwareCommand {
    */
   async run(): Promise<void> {
     try {
+      this.log(`\n👉 Holograph Version: ${HOLOGRAPH_VERSION_ENV}\n`)
       this.log(`Operator command has begun!!!`)
       const {flags} = await this.parse(Operator)
       this.BASE_URL = flags.host

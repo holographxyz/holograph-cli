@@ -32,7 +32,7 @@ import {BlockJob, NetworkMonitor, networksFlag, replayFlag, processBlockRange} f
 import {zeroAddress} from '../../utils/web3'
 import {HealthCheck} from '../../base-commands/healthcheck'
 import {ensureConfigFileIsValid} from '../../utils/config'
-import ApiService from '../../services/api-service'
+import ApiService, {HOLOGRAPH_VERSION_ENV} from '../../services/api-service'
 
 import {
   sqsHandleContractDeployedEvent,
@@ -102,6 +102,8 @@ export default class Indexer extends HealthCheck {
     this.log('User configurations loaded.')
 
     this.environment = environment
+
+    this.log(`\n👉 Holograph Version: ${HOLOGRAPH_VERSION_ENV}\n`)
 
     if (flags.replay !== '0') {
       this.log('Replay flag enabled, will not load or save block heights.')

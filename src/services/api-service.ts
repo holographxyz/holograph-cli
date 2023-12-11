@@ -22,7 +22,7 @@ import {AbstractError} from '../types/errors'
 import {StructuredLogInfo} from '../types/interfaces'
 import {cleanRequest} from '../utils/utils'
 
-const HOLOGRAPH_VERSION_ENV = process.env.HOLOGRAPH_VERSION
+export const HOLOGRAPH_VERSION_ENV = process.env.HOLOGRAPH_VERSION
   ? (process.env.HOLOGRAPH_VERSION.toUpperCase() as HolographVersion)
   : HolographVersion.V1
 if (!(HOLOGRAPH_VERSION_ENV in HolographVersion)) {
@@ -279,6 +279,7 @@ class ApiService {
           process
           blockHeight
           isActive
+          holographVersion
         }
       }
     `
@@ -299,6 +300,7 @@ class ApiService {
           process
           blockHeight
           isActive
+          holographVersion
         }
       }
     `
