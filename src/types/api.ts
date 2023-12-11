@@ -40,6 +40,11 @@ export enum TransactionStatus {
   COMPLETED = 'COMPLETED',
 }
 
+export enum HolographVersion {
+  V1 = 'V1',
+  V2 = 'V2',
+}
+
 export type UpdateCrossChainTransactionStatusInput = Omit<CrossChainTransaction, 'id'>
 export type UpdateCrossChainTransactionStatusInputWithoutData = Omit<CrossChainTransaction, 'id' | 'data'>
 export interface CrossChainTransaction {
@@ -64,6 +69,7 @@ export interface CrossChainTransaction {
   messageAddress?: string
   sourceAddress?: string
   data?: string
+  holographVersion?: HolographVersion
 }
 
 export enum NftStatus {
@@ -101,6 +107,7 @@ export type Nft = {
   tx: string | null
   isDeployed: boolean | null
   tokenId: string | null
+  holographVersion?: HolographVersion
 }
 
 export interface DeployedCollectionsResponse {
@@ -144,6 +151,7 @@ export type Collection = {
   salt: string | null
   status: CollectionStatus
   userId: string
+  holographVersion?: HolographVersion
 }
 
 export type UpdateCollectionInput = {updateCollectionInput: Omit<Collection, 'id'>}
@@ -158,6 +166,7 @@ export type BlockHeight = {
   chainId: number
   blockHeight: bigint
   isActive: boolean | null
+  holographVersion?: HolographVersion
 }
 export interface BlockHeightResponse {
   getAllBlockHeights: BlockHeight[]

@@ -16,12 +16,20 @@ import {
   BlockHeightResponse,
   DeployedCollectionsResponse,
   BlockHeight,
+  HolographVersion,
 } from '../types/api'
 import {AbstractError} from '../types/errors'
 import {StructuredLogInfo} from '../types/interfaces'
 import {cleanRequest} from '../utils/utils'
 
+const HOLOGRAPH_VERSION_ENV = process.env.HOLOGRAPH_VERSION
+  ? (process.env.HOLOGRAPH_VERSION.toUpperCase() as HolographVersion)
+  : HolographVersion.V1
+if (!(HOLOGRAPH_VERSION_ENV in HolographVersion)) {
+  throw new Error('Provided Holograph Version does not exist!')
+}
 class ApiService {
+  static readonly holographVersion: HolographVersion = HOLOGRAPH_VERSION_ENV
   logger: Logger
   client: GraphQLClient
   baseUrl: string
@@ -273,7 +281,7 @@ class ApiService {
         }
       }
     `
-    const input = {getBlockHeight: {chainId, process}}
+    const input = {getBlockHeight: {chainId, process, holographVersion: ApiService.holographVersion}}
     const data: BlockHeightResponse = await this.client.request(query, input)
     return data.getAllBlockHeights
   }
@@ -299,6 +307,7 @@ class ApiService {
         process,
         chainId,
         blockHeight,
+        holographVersion: ApiService.holographVersion,
       },
     }
 
