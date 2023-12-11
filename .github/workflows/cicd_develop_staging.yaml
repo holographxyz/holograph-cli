@@ -39,11 +39,11 @@ env:
   STG_COMMON_NAMESPACE_V2: 'develop-v2'
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.7
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.8
   INDEXER_RELEASE_NAME: 'indexer-dev' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2'
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.82
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.83
   OPERATOR_RELEASE_NAME: 'operator-dev' # format -> [release_name]-operator-[env]
   OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2'
   #######################################
@@ -209,6 +209,7 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }} # notice
+          HOLOGRAPH_VERSION: "V1"
           #
           ENABLE_DEBUG: 'true'
           HEALTHCHECK: 'true'
@@ -251,6 +252,7 @@ jobs:
             --set HOLO_INDEXER_HOST=${{ env.STG_HOLOGRAPH_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
+            --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set ENABLE_SYNC=$ENABLE_SYNC \
@@ -371,6 +373,7 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }} # notice
+          HOLOGRAPH_VERSION: "V1"
           #
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
@@ -413,6 +416,7 @@ jobs:
             --set HOLO_OPERATOR_HOST=${{ env.STG_HOLOGRAPH_OPERATOR_HOST }} \
             --set OPERATOR_API_KEY=${{ env.STG_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
+            --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set ENABLE_SYNC=$ENABLE_SYNC \
@@ -538,6 +542,7 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }} # notice
+          HOLOGRAPH_VERSION: "V2"
           #
           ENABLE_DEBUG: 'true'
           HEALTHCHECK: 'true'
@@ -581,6 +586,7 @@ jobs:
             --set OPERATOR_API_KEY=${{ env.STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             --set HOLOGRAPH_ADDRESS=${{ env.HOLOGRAPH_ADDRESS }} \
+            --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set ENABLE_SYNC=$ENABLE_SYNC \
@@ -689,6 +695,7 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }} # notice
+          HOLOGRAPH_VERSION: "V2"
           #
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
@@ -732,6 +739,7 @@ jobs:
             --set OPERATOR_API_KEY=${{ env.STG_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             --set HOLOGRAPH_ADDRESS=${{ env.HOLOGRAPH_ADDRESS }} \
+            --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set ENABLE_SYNC=$ENABLE_SYNC \
@@ -823,31 +831,32 @@ jobs:
             --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
             --set ingress.blue_green_deployment=false
 
-      - name: -> Info for the new V2 deployments
-        uses: tensor-hq/eksctl-helm-action@main
-        env:
-          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
-          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }}
-          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
-        with:
-          eks_cluster: ${{ env.CLUSTER_NAME }}
-          command: |-
-            echo "------------------------- Last n Helm releases -------------------------"
-            echo "--V2 INDEXER--"
-            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
-            echo "--V2 OPERATOR--"
-            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
-
-            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
-            echo "$DEV_IMAGE_TAG"
-
-            echo "------------------------ Healthchecks ------------------------"
-            sleep 55
-
-            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-
-            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+#TODO - enable it when the v2 deployment are actually deployed
+#      - name: -> Info for the new V2 deployments
+#        uses: tensor-hq/eksctl-helm-action@main
+#        env:
+#          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
+#          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }}
+#          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
+#        with:
+#          eks_cluster: ${{ env.CLUSTER_NAME }}
+#          command: |-
+#            echo "------------------------- Last n Helm releases -------------------------"
+#            echo "--V2 INDEXER--"
+#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
+#            echo "--V2 OPERATOR--"
+#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
+#
+#            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+#            echo "$DEV_IMAGE_TAG"
+#
+#            echo "------------------------ Healthchecks ------------------------"
+#            sleep 55
+#
+#            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+#
+#            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
