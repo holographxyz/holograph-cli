@@ -114,8 +114,7 @@ env:
 on:
   push:
     branches:
-#      - 'develop'
-      - 'feat/enable-v2-deployments'
+      - 'develop'
       # Excluded branches
       - '!testnet'
       - '!main'
@@ -303,41 +302,41 @@ jobs:
             \
             --set autoscaling.enabled=false \
             \
-            --set resources.ethereum.limits.memory=820Mi \
-            --set resources.ethereum.requests.cpu=300m \
-            --set resources.ethereum.requests.memory=800Mi \
+            --set resources.ethereum.limits.memory=520Mi \
+            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.requests.memory=500Mi \
             \
-            --set resources.optimism.limits.memory=520Mi \
-            --set resources.optimism.requests.cpu=300m \
-            --set resources.optimism.requests.memory=500Mi \
+            --set resources.optimism.limits.memory=320Mi \
+            --set resources.optimism.requests.cpu=100m \
+            --set resources.optimism.requests.memory=300Mi \
             \
-            --set resources.arbitrum.limits.memory=520Mi \
-            --set resources.arbitrum.requests.cpu=300m \
-            --set resources.arbitrum.requests.memory=500Mi \
+            --set resources.arbitrum.limits.memory=320Mi \
+            --set resources.arbitrum.requests.cpu=100m \
+            --set resources.arbitrum.requests.memory=300Mi \
             \
             --set resources.polygon.limits.memory=520Mi \
-            --set resources.polygon.requests.cpu=300m \
+            --set resources.polygon.requests.cpu=100m \
             --set resources.polygon.requests.memory=500Mi \
             \
-            --set resources.avalanche.limits.memory=520Mi \
-            --set resources.avalanche.requests.cpu=300m \
-            --set resources.avalanche.requests.memory=500Mi \
+            --set resources.avalanche.limits.memory=320Mi \
+            --set resources.avalanche.requests.cpu=100m \
+            --set resources.avalanche.requests.memory=300Mi \
             \
             --set resources.binance.limits.memory=520Mi \
-            --set resources.binance.requests.cpu=300m \
+            --set resources.binance.requests.cpu=100m \
             --set resources.binance.requests.memory=500Mi \
             \
-            --set resources.mantle.limits.memory=520Mi \
-            --set resources.mantle.requests.cpu=300m \
-            --set resources.mantle.requests.memory=500Mi \
+            --set resources.mantle.limits.memory=320Mi \
+            --set resources.mantle.requests.cpu=100m \
+            --set resources.mantle.requests.memory=300Mi \
             \
-            --set resources.zora.limits.memory=520Mi \
-            --set resources.zora.requests.cpu=300m \
-            --set resources.zora.requests.memory=500Mi \
+            --set resources.zora.limits.memory=320Mi \
+            --set resources.zora.requests.cpu=100m \
+            --set resources.zora.requests.memory=300Mi \
             \
-            --set resources.base.limits.memory=520Mi \
-            --set resources.base.requests.cpu=300m \
-            --set resources.base.requests.memory=500Mi \
+            --set resources.base.limits.memory=320Mi \
+            --set resources.base.requests.cpu=100m \
+            --set resources.base.requests.memory=300Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -461,39 +460,39 @@ jobs:
             \
             --set autoscaling.enabled=false \
             \
-            --set resources.ethereum.limits.memory=800Mi \
+            --set resources.ethereum.limits.memory=550Mi \
             --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=800Mi \
+            --set resources.ethereum.requests.memory=500Mi \
             \
-            --set resources.optimism.limits.memory=500Mi \
+            --set resources.optimism.limits.memory=350Mi \
             --set resources.optimism.requests.cpu=100m \
             --set resources.optimism.requests.memory=300Mi \
             \
-            --set resources.arbitrum.limits.memory=500Mi \
+            --set resources.arbitrum.limits.memory=350Mi \
             --set resources.arbitrum.requests.cpu=100m \
             --set resources.arbitrum.requests.memory=300Mi \
             \
-            --set resources.polygon.limits.memory=500Mi \
+            --set resources.polygon.limits.memory=350Mi \
             --set resources.polygon.requests.cpu=100m \
             --set resources.polygon.requests.memory=300Mi \
             \
-            --set resources.avalanche.limits.memory=500Mi \
+            --set resources.avalanche.limits.memory=350Mi \
             --set resources.avalanche.requests.cpu=100m \
             --set resources.avalanche.requests.memory=300Mi \
             \
-            --set resources.binance.limits.memory=500Mi \
+            --set resources.binance.limits.memory=350Mi \
             --set resources.binance.requests.cpu=100m \
             --set resources.binance.requests.memory=300Mi \
             \
-            --set resources.mantle.limits.memory=500Mi \
+            --set resources.mantle.limits.memory=350Mi \
             --set resources.mantle.requests.cpu=100m \
             --set resources.mantle.requests.memory=300Mi \
             \
-            --set resources.zora.limits.memory=500Mi \
+            --set resources.zora.limits.memory=350Mi \
             --set resources.zora.requests.cpu=100m \
             --set resources.zora.requests.memory=300Mi \
             \
-            --set resources.base.limits.memory=500Mi \
+            --set resources.base.limits.memory=350Mi \
             --set resources.base.requests.cpu=100m \
             --set resources.base.requests.memory=300Mi \
             \
@@ -638,41 +637,41 @@ jobs:
             --set autoscaling.enabled=false \
             --set replicaCount=1 \
             \
-            --set resources.ethereum.limits.memory=820Mi \
-            --set resources.ethereum.requests.cpu=300m \
-            --set resources.ethereum.requests.memory=800Mi \
+            --set resources.ethereum.limits.memory=520Mi \
+            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.requests.memory=500Mi \
             \
-            --set resources.optimism.limits.memory=520Mi \
-            --set resources.optimism.requests.cpu=300m \
-            --set resources.optimism.requests.memory=500Mi \
+            --set resources.optimism.limits.memory=320Mi \
+            --set resources.optimism.requests.cpu=100m \
+            --set resources.optimism.requests.memory=300Mi \
             \
-            --set resources.arbitrum.limits.memory=520Mi \
-            --set resources.arbitrum.requests.cpu=300m \
-            --set resources.arbitrum.requests.memory=500Mi \
+            --set resources.arbitrum.limits.memory=320Mi \
+            --set resources.arbitrum.requests.cpu=100m \
+            --set resources.arbitrum.requests.memory=300Mi \
             \
             --set resources.polygon.limits.memory=520Mi \
-            --set resources.polygon.requests.cpu=300m \
+            --set resources.polygon.requests.cpu=100m \
             --set resources.polygon.requests.memory=500Mi \
             \
-            --set resources.avalanche.limits.memory=520Mi \
-            --set resources.avalanche.requests.cpu=300m \
-            --set resources.avalanche.requests.memory=500Mi \
+            --set resources.avalanche.limits.memory=320Mi \
+            --set resources.avalanche.requests.cpu=100m \
+            --set resources.avalanche.requests.memory=300Mi \
             \
             --set resources.binance.limits.memory=520Mi \
-            --set resources.binance.requests.cpu=300m \
+            --set resources.binance.requests.cpu=100m \
             --set resources.binance.requests.memory=500Mi \
             \
-            --set resources.mantle.limits.memory=520Mi \
-            --set resources.mantle.requests.cpu=300m \
-            --set resources.mantle.requests.memory=500Mi \
+            --set resources.mantle.limits.memory=320Mi \
+            --set resources.mantle.requests.cpu=100m \
+            --set resources.mantle.requests.memory=300Mi \
             \
-            --set resources.zora.limits.memory=520Mi \
-            --set resources.zora.requests.cpu=300m \
-            --set resources.zora.requests.memory=500Mi \
+            --set resources.zora.limits.memory=320Mi \
+            --set resources.zora.requests.cpu=100m \
+            --set resources.zora.requests.memory=300Mi \
             \
-            --set resources.base.limits.memory=520Mi \
-            --set resources.base.requests.cpu=300m \
-            --set resources.base.requests.memory=500Mi \
+            --set resources.base.limits.memory=320Mi \
+            --set resources.base.requests.cpu=100m \
+            --set resources.base.requests.memory=300Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -785,39 +784,39 @@ jobs:
             --set autoscaling.enabled=false \
             --set replicaCount=0 \
             \
-            --set resources.ethereum.limits.memory=800Mi \
+            --set resources.ethereum.limits.memory=550Mi \
             --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=800Mi \
+            --set resources.ethereum.requests.memory=500Mi \
             \
-            --set resources.optimism.limits.memory=500Mi \
+            --set resources.optimism.limits.memory=350Mi \
             --set resources.optimism.requests.cpu=100m \
             --set resources.optimism.requests.memory=300Mi \
             \
-            --set resources.arbitrum.limits.memory=500Mi \
+            --set resources.arbitrum.limits.memory=350Mi \
             --set resources.arbitrum.requests.cpu=100m \
             --set resources.arbitrum.requests.memory=300Mi \
             \
-            --set resources.polygon.limits.memory=500Mi \
+            --set resources.polygon.limits.memory=350Mi \
             --set resources.polygon.requests.cpu=100m \
             --set resources.polygon.requests.memory=300Mi \
             \
-            --set resources.avalanche.limits.memory=500Mi \
+            --set resources.avalanche.limits.memory=350Mi \
             --set resources.avalanche.requests.cpu=100m \
             --set resources.avalanche.requests.memory=300Mi \
             \
-            --set resources.binance.limits.memory=500Mi \
+            --set resources.binance.limits.memory=350Mi \
             --set resources.binance.requests.cpu=100m \
             --set resources.binance.requests.memory=300Mi \
             \
-            --set resources.mantle.limits.memory=500Mi \
+            --set resources.mantle.limits.memory=350Mi \
             --set resources.mantle.requests.cpu=100m \
             --set resources.mantle.requests.memory=300Mi \
             \
-            --set resources.zora.limits.memory=500Mi \
+            --set resources.zora.limits.memory=350Mi \
             --set resources.zora.requests.cpu=100m \
             --set resources.zora.requests.memory=300Mi \
             \
-            --set resources.base.limits.memory=500Mi \
+            --set resources.base.limits.memory=350Mi \
             --set resources.base.requests.cpu=100m \
             --set resources.base.requests.memory=300Mi \
             \
