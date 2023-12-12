@@ -273,8 +273,8 @@ class ApiService {
 
   async getBlockHeights(process: BlockHeightProcessType, chainId?: number): Promise<BlockHeight[]> {
     const query = gql`
-      query GetAllBlockHeights($getBlockHeight: GetAllBlockHeightInput) {
-        getAllBlockHeights(getBlockHeight: $getBlockHeight) {
+      query GetAllBlockHeights($getBlockHeight: GetAllBlockHeightInput, $holographVersion: HolographVersion) {
+        getAllBlockHeights(getBlockHeight: $getBlockHeight, holographVersion: $holographVersion) {
           chainId
           process
           blockHeight
@@ -283,7 +283,7 @@ class ApiService {
         }
       }
     `
-    const input = {getBlockHeight: {chainId, process, holographVersion: ApiService.holographVersion}}
+    const input = {getBlockHeight: {chainId, process}, holographVersion: ApiService.holographVersion}
     const data: BlockHeightResponse = await this.client.request(query, input)
     return data.getAllBlockHeights
   }
@@ -294,8 +294,8 @@ class ApiService {
     blockHeight: number,
   ): Promise<GraphQLClientResponse<T> | undefined> {
     const mutation = gql`
-      mutation SetBlockHeight($createBlockHeightInput: CreateBlockHeightInput!) {
-        setBlockHeight(createBlockHeightInput: $createBlockHeightInput) {
+      mutation SetBlockHeight($createBlockHeightInput: CreateBlockHeightInput!, $holographVersion: HolographVersion) {
+        setBlockHeight(createBlockHeightInput: $createBlockHeightInput, holographVersion: $holographVersion) {
           chainId
           process
           blockHeight
@@ -310,8 +310,8 @@ class ApiService {
         process,
         chainId,
         blockHeight,
-        holographVersion: ApiService.holographVersion,
       },
+      holographVersion: ApiService.holographVersion,
     }
 
     return this.client.rawRequest(mutation, updateBlockHeightInput)
