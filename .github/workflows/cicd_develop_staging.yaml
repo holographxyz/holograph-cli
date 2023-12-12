@@ -205,7 +205,7 @@ jobs:
 
       ###### V1 deployments ######
 
-      - name: -> Deploy V1 INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
+      - name: -> V1 -- Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }} # notice
@@ -302,41 +302,41 @@ jobs:
             \
             --set autoscaling.enabled=false \
             \
-            --set resources.ethereum.limits.memory=820Mi \
-            --set resources.ethereum.requests.cpu=300m \
-            --set resources.ethereum.requests.memory=800Mi \
+            --set resources.ethereum.limits.memory=520Mi \
+            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.requests.memory=500Mi \
             \
-            --set resources.optimism.limits.memory=520Mi \
-            --set resources.optimism.requests.cpu=300m \
-            --set resources.optimism.requests.memory=500Mi \
+            --set resources.optimism.limits.memory=320Mi \
+            --set resources.optimism.requests.cpu=100m \
+            --set resources.optimism.requests.memory=300Mi \
             \
-            --set resources.arbitrum.limits.memory=520Mi \
-            --set resources.arbitrum.requests.cpu=300m \
-            --set resources.arbitrum.requests.memory=500Mi \
+            --set resources.arbitrum.limits.memory=320Mi \
+            --set resources.arbitrum.requests.cpu=100m \
+            --set resources.arbitrum.requests.memory=300Mi \
             \
             --set resources.polygon.limits.memory=520Mi \
-            --set resources.polygon.requests.cpu=300m \
+            --set resources.polygon.requests.cpu=100m \
             --set resources.polygon.requests.memory=500Mi \
             \
-            --set resources.avalanche.limits.memory=520Mi \
-            --set resources.avalanche.requests.cpu=300m \
-            --set resources.avalanche.requests.memory=500Mi \
+            --set resources.avalanche.limits.memory=320Mi \
+            --set resources.avalanche.requests.cpu=100m \
+            --set resources.avalanche.requests.memory=300Mi \
             \
             --set resources.binance.limits.memory=520Mi \
-            --set resources.binance.requests.cpu=300m \
+            --set resources.binance.requests.cpu=100m \
             --set resources.binance.requests.memory=500Mi \
             \
-            --set resources.mantle.limits.memory=520Mi \
-            --set resources.mantle.requests.cpu=300m \
-            --set resources.mantle.requests.memory=500Mi \
+            --set resources.mantle.limits.memory=320Mi \
+            --set resources.mantle.requests.cpu=100m \
+            --set resources.mantle.requests.memory=300Mi \
             \
-            --set resources.zora.limits.memory=520Mi \
-            --set resources.zora.requests.cpu=300m \
-            --set resources.zora.requests.memory=500Mi \
+            --set resources.zora.limits.memory=320Mi \
+            --set resources.zora.requests.cpu=100m \
+            --set resources.zora.requests.memory=300Mi \
             \
-            --set resources.base.limits.memory=520Mi \
-            --set resources.base.requests.cpu=300m \
-            --set resources.base.requests.memory=500Mi \
+            --set resources.base.limits.memory=320Mi \
+            --set resources.base.requests.cpu=100m \
+            --set resources.base.requests.memory=300Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -369,7 +369,7 @@ jobs:
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
       ######
-      - name: -> Deploy V1 OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
+      - name: -> V1 -- Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }} # notice
@@ -460,39 +460,39 @@ jobs:
             \
             --set autoscaling.enabled=false \
             \
-            --set resources.ethereum.limits.memory=800Mi \
+            --set resources.ethereum.limits.memory=550Mi \
             --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=800Mi \
+            --set resources.ethereum.requests.memory=500Mi \
             \
-            --set resources.optimism.limits.memory=500Mi \
+            --set resources.optimism.limits.memory=350Mi \
             --set resources.optimism.requests.cpu=100m \
             --set resources.optimism.requests.memory=300Mi \
             \
-            --set resources.arbitrum.limits.memory=500Mi \
+            --set resources.arbitrum.limits.memory=350Mi \
             --set resources.arbitrum.requests.cpu=100m \
             --set resources.arbitrum.requests.memory=300Mi \
             \
-            --set resources.polygon.limits.memory=500Mi \
+            --set resources.polygon.limits.memory=350Mi \
             --set resources.polygon.requests.cpu=100m \
             --set resources.polygon.requests.memory=300Mi \
             \
-            --set resources.avalanche.limits.memory=500Mi \
+            --set resources.avalanche.limits.memory=350Mi \
             --set resources.avalanche.requests.cpu=100m \
             --set resources.avalanche.requests.memory=300Mi \
             \
-            --set resources.binance.limits.memory=500Mi \
+            --set resources.binance.limits.memory=350Mi \
             --set resources.binance.requests.cpu=100m \
             --set resources.binance.requests.memory=300Mi \
             \
-            --set resources.mantle.limits.memory=500Mi \
+            --set resources.mantle.limits.memory=350Mi \
             --set resources.mantle.requests.cpu=100m \
             --set resources.mantle.requests.memory=300Mi \
             \
-            --set resources.zora.limits.memory=500Mi \
+            --set resources.zora.limits.memory=350Mi \
             --set resources.zora.requests.cpu=100m \
             --set resources.zora.requests.memory=300Mi \
             \
-            --set resources.base.limits.memory=500Mi \
+            --set resources.base.limits.memory=350Mi \
             --set resources.base.requests.cpu=100m \
             --set resources.base.requests.memory=300Mi \
             \
@@ -507,7 +507,7 @@ jobs:
             --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
             --set ingress.blue_green_deployment=false
 
-      - name: -> Info for the new V1 deployments
+      - name: -> V1 -- Info for the new V1 deployments
         uses: tensor-hq/eksctl-helm-action@main
         env:
           INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }}
@@ -538,7 +538,7 @@ jobs:
 
       ###### V2 deployments ######
 
-      - name: -> Deploy V2 INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE_V2 }}]
+      - name: -> V2 -- Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE_V2 }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }} # notice
@@ -635,43 +635,43 @@ jobs:
             --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCount=0 \
+            --set replicaCount=1 \
             \
-            --set resources.ethereum.limits.memory=820Mi \
-            --set resources.ethereum.requests.cpu=300m \
-            --set resources.ethereum.requests.memory=800Mi \
+            --set resources.ethereum.limits.memory=520Mi \
+            --set resources.ethereum.requests.cpu=100m \
+            --set resources.ethereum.requests.memory=500Mi \
             \
-            --set resources.optimism.limits.memory=520Mi \
-            --set resources.optimism.requests.cpu=300m \
-            --set resources.optimism.requests.memory=500Mi \
+            --set resources.optimism.limits.memory=320Mi \
+            --set resources.optimism.requests.cpu=100m \
+            --set resources.optimism.requests.memory=300Mi \
             \
-            --set resources.arbitrum.limits.memory=520Mi \
-            --set resources.arbitrum.requests.cpu=300m \
-            --set resources.arbitrum.requests.memory=500Mi \
+            --set resources.arbitrum.limits.memory=320Mi \
+            --set resources.arbitrum.requests.cpu=100m \
+            --set resources.arbitrum.requests.memory=300Mi \
             \
             --set resources.polygon.limits.memory=520Mi \
-            --set resources.polygon.requests.cpu=300m \
+            --set resources.polygon.requests.cpu=100m \
             --set resources.polygon.requests.memory=500Mi \
             \
-            --set resources.avalanche.limits.memory=520Mi \
-            --set resources.avalanche.requests.cpu=300m \
-            --set resources.avalanche.requests.memory=500Mi \
+            --set resources.avalanche.limits.memory=320Mi \
+            --set resources.avalanche.requests.cpu=100m \
+            --set resources.avalanche.requests.memory=300Mi \
             \
             --set resources.binance.limits.memory=520Mi \
-            --set resources.binance.requests.cpu=300m \
+            --set resources.binance.requests.cpu=100m \
             --set resources.binance.requests.memory=500Mi \
             \
-            --set resources.mantle.limits.memory=520Mi \
-            --set resources.mantle.requests.cpu=300m \
-            --set resources.mantle.requests.memory=500Mi \
+            --set resources.mantle.limits.memory=320Mi \
+            --set resources.mantle.requests.cpu=100m \
+            --set resources.mantle.requests.memory=300Mi \
             \
-            --set resources.zora.limits.memory=520Mi \
-            --set resources.zora.requests.cpu=300m \
-            --set resources.zora.requests.memory=500Mi \
+            --set resources.zora.limits.memory=320Mi \
+            --set resources.zora.requests.cpu=100m \
+            --set resources.zora.requests.memory=300Mi \
             \
-            --set resources.base.limits.memory=520Mi \
-            --set resources.base.requests.cpu=300m \
-            --set resources.base.requests.memory=500Mi \
+            --set resources.base.limits.memory=320Mi \
+            --set resources.base.requests.cpu=100m \
+            --set resources.base.requests.memory=300Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -691,7 +691,7 @@ jobs:
         run: |
           sleep 60
 
-      - name: -> Deploy V2 OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE_V2 }}]
+      - name: -> V2 -- Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE_V2 }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }} # notice
@@ -784,39 +784,39 @@ jobs:
             --set autoscaling.enabled=false \
             --set replicaCount=0 \
             \
-            --set resources.ethereum.limits.memory=800Mi \
+            --set resources.ethereum.limits.memory=550Mi \
             --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=800Mi \
+            --set resources.ethereum.requests.memory=500Mi \
             \
-            --set resources.optimism.limits.memory=500Mi \
+            --set resources.optimism.limits.memory=350Mi \
             --set resources.optimism.requests.cpu=100m \
             --set resources.optimism.requests.memory=300Mi \
             \
-            --set resources.arbitrum.limits.memory=500Mi \
+            --set resources.arbitrum.limits.memory=350Mi \
             --set resources.arbitrum.requests.cpu=100m \
             --set resources.arbitrum.requests.memory=300Mi \
             \
-            --set resources.polygon.limits.memory=500Mi \
+            --set resources.polygon.limits.memory=350Mi \
             --set resources.polygon.requests.cpu=100m \
             --set resources.polygon.requests.memory=300Mi \
             \
-            --set resources.avalanche.limits.memory=500Mi \
+            --set resources.avalanche.limits.memory=350Mi \
             --set resources.avalanche.requests.cpu=100m \
             --set resources.avalanche.requests.memory=300Mi \
             \
-            --set resources.binance.limits.memory=500Mi \
+            --set resources.binance.limits.memory=350Mi \
             --set resources.binance.requests.cpu=100m \
             --set resources.binance.requests.memory=300Mi \
             \
-            --set resources.mantle.limits.memory=500Mi \
+            --set resources.mantle.limits.memory=350Mi \
             --set resources.mantle.requests.cpu=100m \
             --set resources.mantle.requests.memory=300Mi \
             \
-            --set resources.zora.limits.memory=500Mi \
+            --set resources.zora.limits.memory=350Mi \
             --set resources.zora.requests.cpu=100m \
             --set resources.zora.requests.memory=300Mi \
             \
-            --set resources.base.limits.memory=500Mi \
+            --set resources.base.limits.memory=350Mi \
             --set resources.base.requests.cpu=100m \
             --set resources.base.requests.memory=300Mi \
             \
@@ -831,8 +831,7 @@ jobs:
             --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
             --set ingress.blue_green_deployment=false
 
-#TODO - enable it when the v2 deployment are actually deployed
-#      - name: -> Info for the new V2 deployments
+#      - name: -> V2 -- Info for the new V2 deployments
 #        uses: tensor-hq/eksctl-helm-action@main
 #        env:
 #          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
