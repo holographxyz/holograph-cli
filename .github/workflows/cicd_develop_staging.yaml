@@ -109,7 +109,7 @@ env:
   SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
   DEV_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
   DEV_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor'
-  DEV_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor-v2'
+  DEV_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor'
 
 on:
   push:
@@ -782,7 +782,7 @@ jobs:
             --set dev_rpc_config_values.address=${{ env.v2_operator_dev_address }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCount=0 \
+            --set replicaCount=1 \
             \
             --set resources.ethereum.limits.memory=550Mi \
             --set resources.ethereum.requests.cpu=100m \
@@ -831,31 +831,31 @@ jobs:
             --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
             --set ingress.blue_green_deployment=false
 
-#      - name: -> V2 -- Info for the new V2 deployments
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
-#          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }}
-#          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            echo "------------------------- Last n Helm releases -------------------------"
-#            echo "--V2 INDEXER--"
-#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
-#            echo "--V2 OPERATOR--"
-#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
-#
-#            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
-#            echo "$DEV_IMAGE_TAG"
-#
-#            echo "------------------------ Healthchecks ------------------------"
-#            sleep 55
-#
-#            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-#
-#            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+      - name: -> V2 -- Info for the new V2 deployments
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
+          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }}
+          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            echo "------------------------- Last n Helm releases -------------------------"
+            echo "--V2 INDEXER--"
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
+            echo "--V2 OPERATOR--"
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
+
+            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+            echo "$DEV_IMAGE_TAG"
+
+            echo "------------------------ Healthchecks ------------------------"
+            sleep 55
+
+            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+
+            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
