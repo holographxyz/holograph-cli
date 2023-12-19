@@ -7,7 +7,7 @@ export enum PayloadType {
   ERC721 = 'ERC721',
 }
 
-export enum EventName {
+export enum SqsEventName {
   MintNft = 'MintNft',
   BridgePreProcess = 'BridgePreProcess',
   ContractDeployed = 'ContractDeployed',
@@ -18,7 +18,7 @@ export enum EventName {
 
 export type SqsMessageBody = {
   type: PayloadType
-  eventName: EventName
+  eventName: SqsEventName
   eventSignature?: string
   tagId: (string | number)[]
   chainId: number

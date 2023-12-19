@@ -130,6 +130,10 @@ export default class Analyze extends Command {
    * Command Entry Point
    */
   async run(): Promise<void> {
+    // Temporarily disabled: This command is currently inactive pending the development of a new processTransactions function. The previous implementation was not in use.
+    this.log('This command is temporarily disabled!')
+    this.exit()
+
     const {flags} = await this.parse(Analyze)
     const updateApiUrl = flags.updateApiUrl
 

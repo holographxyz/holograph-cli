@@ -5,7 +5,7 @@ import color from '@oclif/color'
 import dotenv from 'dotenv'
 
 import {BlockHeightProcessType, Logger} from '../../types/api'
-import {InterestingLog} from '../../types/network-monitor'
+import {InterestingEvent, InterestingLog} from '../../types/network-monitor'
 import {ContractType} from '../../utils/contract'
 import {
   EventValidator,
@@ -31,7 +31,7 @@ import {
 import {BlockJob, NetworkMonitor, networksFlag, replayFlag, processBlockRange} from '../../utils/network-monitor'
 import {zeroAddress} from '../../utils/web3'
 import {HealthCheck} from '../../base-commands/healthcheck'
-import {ensureConfigFileIsValid} from '../../utils/config'
+import {BlockProcessingVersion, ensureConfigFileIsValid, getBlockProcessingVersion} from '../../utils/config'
 import ApiService, {HOLOGRAPH_VERSION_ENV} from '../../services/api-service'
 
 import {
@@ -45,7 +45,9 @@ import {BlockHeightOptions, blockHeightFlag} from '../../flags/update-block-heig
 import handleTransferERC721Event from '../../handlers/sqs-indexer/handle-transfer-erc721-event'
 import handleFailedOperatorJobEvent from '../../handlers/sqs-indexer/handle-failed-operator-job-event'
 import handleTransferBatchERC1155Event from '../../handlers/sqs-indexer/handle-transfer-batch-erc1155-event'
-import {CrossChainMessageType} from '../../utils/event/event'
+import {CrossChainMessageType, eventMap} from '../../utils/event/event'
+import {ProtocolEvent, protocolEventsMap} from '../../utils/protocol-events-map'
+import {SqsEventName} from '../../types/sqs'
 
 dotenv.config()
 
@@ -148,6 +150,7 @@ export default class Indexer extends HealthCheck {
       networks: flags.networks,
       debug: this.debug,
       processLogs: this.processLogs,
+      processEvents: this.processEvents,
       lastBlockFilename: 'indexer-blocks.json',
       replay: flags.replay,
       apiService: this.apiService,
@@ -256,6 +259,21 @@ export default class Indexer extends HealthCheck {
       }
     }
 
+    // Block processing version V2 needs these filters to categorize transactions into their proper protocol event.
+    const v2BlockProcessingFilters =
+      getBlockProcessingVersion() === BlockProcessingVersion.V1
+        ? {}
+        : {
+            [EventType.PacketReceived]: buildEventFilter(EventType.PacketReceived),
+            [EventType.PacketLZ]: buildEventFilter(EventType.PacketLZ),
+            [EventType.RelayerParams]: buildEventFilter(EventType.RelayerParams),
+            [EventType.AssignJob]: buildEventFilter(EventType.AssignJob),
+            [EventType.EditionInitialized]: buildEventFilter(EventType.EditionInitialized),
+            [EventType.SecondarySaleFees]: buildEventFilter(EventType.SecondarySaleFees),
+            [EventType.MintFeePayout]: buildEventFilter(EventType.MintFeePayout),
+            [EventType.Sale]: buildEventFilter(EventType.Sale),
+          }
+
     this.bloomFilters = {
       [EventType.BridgeableContractDeployed]: buildEventFilter(EventType.BridgeableContractDeployed, factoryAddress),
       [EventType.HolographableContractEvent]: buildEventFilter(EventType.HolographableContractEvent, registryAddress),
@@ -264,6 +282,7 @@ export default class Indexer extends HealthCheck {
       [EventType.FinishedOperatorJob]: buildEventFilter(EventType.FinishedOperatorJob, operatorAddress),
       [EventType.FailedOperatorJob]: buildEventFilter(EventType.FailedOperatorJob, operatorAddress),
       ...tempBloomFilterMap,
+      ...v2BlockProcessingFilters,
     }
 
     this.networkMonitor.bloomFilters = Object.values(this.bloomFilters) as BloomFilter[]
@@ -769,6 +788,209 @@ export default class Indexer extends HealthCheck {
         this.errorColor(`Error processing transaction: `, error),
         tags,
       )
+    }
+  }
+
+  getCrossChainMessageType(eventName: ProtocolEvent) {
+    const eventLogs = new Set(protocolEventsMap[eventName].events)
+
+    if (eventLogs.has(eventMap[EventType.BridgeableContractDeployed])) {
+      return CrossChainMessageType.CONTRACT
+    }
+
+    if (eventLogs.has(eventMap[EventType.TransferERC721])) {
+      return CrossChainMessageType.ERC721
+    }
+
+    return CrossChainMessageType.UNKNOWN
+  }
+
+  async processEvents(job: BlockJob, interestingEvents: InterestingEvent[]) {
+    const startTime = performance.now()
+
+    if (interestingEvents.length <= 0) {
+      return
+    }
+
+    // Map over the transactions to create an array of Promises
+    const promises = interestingEvents.map(interestingEvent => this.processEvent(job, interestingEvent))
+
+    // Use Promise.all to execute all the Promises concurrently
+    await Promise.all(promises)
+
+    const endTime = performance.now()
+    const duration = endTime - startTime
+    this.networkMonitor.structuredLog(job.network, `Processed ${promises.length} events in ${duration}ms`)
+  }
+
+  async processEvent(job: BlockJob, interestingEvent: InterestingEvent) {
+    const tags: (string | number)[] = [
+      interestingEvent.transaction.blockNumber as number,
+      this.networkMonitor.randomTag(),
+    ]
+
+    // Log processing of transaction
+    this.networkMonitor.structuredLog(
+      job.network,
+      `Processing transaction ${interestingEvent.txHash} at block ${interestingEvent.transaction.blockNumber}`,
+      tags,
+    )
+    this.networkMonitor.structuredLog(
+      job.network,
+      `Identified this as a ${interestingEvent.eventName} protocol event`,
+      tags,
+    )
+
+    for (const sqsEvent of interestingEvent.sqsEvents) {
+      this.networkMonitor.structuredLog(job.network, `Handling ${sqsEvent.sqsEventName} sqs event`, tags)
+
+      switch (sqsEvent.sqsEventName) {
+        case SqsEventName.ContractDeployed: {
+          this.cachedContracts[
+            (sqsEvent.decodedEvent as BridgeableContractDeployedEvent).contractAddress.toLowerCase()
+          ] = true
+          // TODO: should optimize SQS logic to not make additional calls since all data is already digested and parsed here
+          try {
+            await sqsHandleContractDeployedEvent.call(
+              this,
+              this.networkMonitor,
+              interestingEvent.transaction,
+              job.network,
+              tags,
+            )
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(
+              job.network,
+              this.errorColor(`Handling BridgeableContractDeployedEvent error: `, error),
+              tags,
+            )
+          }
+
+          break
+        }
+
+        case SqsEventName.MintNft: {
+          const transferERC721Event = sqsEvent.decodedEvent as TransferERC721Event
+          const isNewMint = true
+          try {
+            await handleTransferERC721Event.call(
+              this,
+              this.networkMonitor,
+              interestingEvent.transaction,
+              job.network,
+              transferERC721Event,
+              isNewMint,
+              tags,
+            )
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(
+              job.network,
+              this.errorColor(`Handling BridgeableContractDeployedEvent error: `, error),
+              tags,
+            )
+          }
+
+          break
+        }
+
+        case SqsEventName.TransferERC721: {
+          const transferERC721Event = sqsEvent.decodedEvent as TransferERC721Event
+          const isNewMint = false
+          try {
+            await handleTransferERC721Event.call(
+              this,
+              this.networkMonitor,
+              interestingEvent.transaction,
+              job.network,
+              transferERC721Event,
+              isNewMint,
+              tags,
+            )
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(
+              job.network,
+              this.errorColor(`Handling BridgeableContractDeployedEvent error: `, error),
+              tags,
+            )
+          }
+
+          break
+        }
+
+        case SqsEventName.BridgePreProcess: {
+          try {
+            const crossChainMessageType = this.getCrossChainMessageType(interestingEvent.eventName)
+
+            // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
+            await sqsHandleBridgeEvent.call(
+              this,
+              this.networkMonitor,
+              interestingEvent.transaction,
+              job.network,
+              crossChainMessageType,
+              tags,
+            )
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(
+              job.network,
+              this.errorColor(`Decoding CrossChainMessageSentEvent error: `, error),
+              tags,
+            )
+          }
+
+          break
+        }
+
+        case SqsEventName.AvailableOperatorJob: {
+          try {
+            const crossChainMessageType = this.getCrossChainMessageType(interestingEvent.eventName)
+
+            await sqsHandleAvailableOperatorJobEvent.call(
+              this,
+              this.networkMonitor,
+              interestingEvent.transaction,
+              job.network,
+              crossChainMessageType,
+              tags,
+            )
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(
+              job.network,
+              this.errorColor(`Decoding AvailableOperatorJobEvent error: `, error),
+              tags,
+            )
+          }
+
+          break
+        }
+
+        case SqsEventName.FailedOperatorJob: {
+          try {
+            const failedOperatorJobEvent = sqsEvent.decodedEvent as FailedOperatorJobEvent
+            await handleFailedOperatorJobEvent.call(
+              this,
+              this.networkMonitor,
+              interestingEvent.transaction,
+              job.network,
+              failedOperatorJobEvent,
+              tags,
+            )
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(
+              job.network,
+              this.errorColor(`Decoding FailedOperatorJobEvent error: `, error),
+              tags,
+            )
+          }
+
+          break
+        }
+
+        default: {
+          this.networkMonitor.structuredLogError(job.network, `UNKNOWN EVENT`, tags)
+          break
+        }
+      }
     }
   }
 }
