@@ -45,7 +45,8 @@ env:
   indexer_testnet_arbitrumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_ARBITRUM_GOERLI_RPC_URL }}
   indexer_testnet_binanceTestnet_rpc_url: ${{ secrets.INDEXER_PROD_BSC_TESTNET_RPC_URL }}
   indexer_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  indexer_testnet_zoraTestnet_rpc_url: 'https://testnet.rpc.zora.energy'
+  indexer_testnet_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
+  indexer_testnet_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
   indexer_testnet_baseTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_BASE_GOERLI_RPC_URL }}
   #
   indexer_testnet_private_key: ${{ secrets.INDEXER_PROD_PRIVATE_KEY }}
@@ -58,7 +59,8 @@ env:
   operator_testnet_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_ARBITRUM_GOERLI_RPC_URL }}
   operator_testnet_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_BSC_TESTNET_RPC_URL }}
   operator_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  operator_testnet_zoraTestnet_rpc_url: 'https://testnet.rpc.zora.energy'
+  operator_testnet_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
+  operator_testnet_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
   operator_testnet_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_BASE_GOERLI_RPC_URL }}
   #
   operator_testnet_private_key: ${{ secrets.OPERATOR_PROD_PRIVATE_KEY }}
@@ -71,10 +73,10 @@ env:
   TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
 
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.7
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.9
   INDEXER_RELEASE_NAME: blondie-indexer-testnet # format -> [release_name]-indexer-[env]
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.82
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.84
   OPERATOR_RELEASE_NAME: blondie-operator-testnet # format -> [release_name]-operator-[env]
   #######################################
 
@@ -207,7 +209,7 @@ jobs:
           POLYGON_NETWORK: 'mumbai'
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
           MANTLE_NETWORK: 'mantleTestnet'
-          ZORA_NETWORK: 'zoraTestnetGoerli'
+          ZORA_NETWORK: 'zoraTestnetSepolia'
           BASE_NETWORK: 'baseTestnetGoerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
@@ -259,7 +261,7 @@ jobs:
             --set testnet_rpc_config_values.arbitrumTestnetGoerli_rpc_url=${{ env.indexer_testnet_arbitrumTestnetGoerli_rpc_url }} \
             --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.indexer_testnet_binanceTestnet_rpc_url }} \
             --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.indexer_testnet_mantleTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.zoraTestnet_rpc_url=${{ env.indexer_testnet_zoraTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.indexer_testnet_zoraTestnetSepolia_rpc_url }} \
             --set testnet_rpc_config_values.baseTestnet_rpc_url=${{ env.indexer_testnet_baseTestnetGoerli_rpc_url }} \
             \
             --set testnet_rpc_config_values.private_key=${{ env.indexer_testnet_private_key }} \
@@ -370,7 +372,7 @@ jobs:
           ARBITRUM_NETWORK: 'arbitrumTestnetGoerli'
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
           MANTLE_NETWORK: 'mantleTestnet'
-          ZORA_NETWORK: 'zoraTestnetGoerli'
+          ZORA_NETWORK: 'zoraTestnetSepolia'
           BASE_NETWORK: 'baseTestnetGoerli'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
@@ -421,7 +423,7 @@ jobs:
             --set testnet_rpc_config_values.arbitrumTestnetGoerli_rpc_url=${{ env.operator_testnet_arbitrumTestnetGoerli_rpc_url }} \
             --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.operator_testnet_binanceTestnet_rpc_url }} \
             --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.operator_testnet_mantleTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.zoraTestnet_rpc_url=${{ env.operator_testnet_zoraTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.operator_testnet_zoraTestnetSepolia_rpc_url }} \
             --set testnet_rpc_config_values.baseTestnet_rpc_url=${{ env.operator_testnet_baseTestnetGoerli_rpc_url }} \
             \
             --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
