@@ -248,7 +248,7 @@ jobs:
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
           MANTLE_NETWORK: 'mantleTestnet'
           ZORA_NETWORK: 'zoraTestnetGoerli'
-          BASE_NETWORK: ['baseTestnetGoerli'] #TODO OOOOOOO
+#          BASE_NETWORK: {'baseTestnetGoerli'} #TODO OOOOOOO
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -278,7 +278,7 @@ jobs:
             --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
             --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
-            --set BASE_NETWORK="${BASE_NETWORK}" \
+            --set BASE_NETWORK={baseTestnetGoerli} \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
@@ -592,7 +592,7 @@ jobs:
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
           MANTLE_NETWORK: 'mantleTestnet'
           ZORA_NETWORK: 'zoraTestnetSepolia'
-          BASE_NETWORK: ['baseTestnetGoerli', 'baseTestnetSepolia']  #TODO OOOOOO
+#          BASE_NETWORK: ['baseTestnetGoerli', 'baseTestnetSepolia']  #TODO OOOOOO
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -623,7 +623,7 @@ jobs:
             --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
             --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
-            --set BASE_NETWORK="${BASE_NETWORK}" \
+            --set BASE_NETWORK={baseTestnetGoerli,baseTestnetSepolia} \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
