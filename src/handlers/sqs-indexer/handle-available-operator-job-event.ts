@@ -4,7 +4,7 @@ import {NetworkMonitor} from '../../utils/network-monitor'
 
 import SqsService from '../../services/sqs-service'
 import {networkToChainId} from '../../utils/web3'
-import {EventName, PayloadType, SqsMessageBody} from '../../types/sqs'
+import {SqsEventName, PayloadType, SqsMessageBody} from '../../types/sqs'
 import {CrossChainMessageType} from '../../utils/event/event'
 
 async function handleAvailableOperatorJobEvent(
@@ -18,7 +18,7 @@ async function handleAvailableOperatorJobEvent(
 
   const messageBody: SqsMessageBody = {
     type: PayloadType.HolographProtocol,
-    eventName: EventName.AvailableOperatorJob,
+    eventName: SqsEventName.AvailableOperatorJob,
     tagId: tags,
     chainId: networkToChainId[network],
     holographAddress: networkMonitor.HOLOGRAPH_ADDRESSES[networkMonitor.environment],
