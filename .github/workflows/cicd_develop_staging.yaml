@@ -623,7 +623,7 @@ jobs:
             --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
             --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
-            --set BASE_NETWORK={'baseTestnetGoerli', 'baseTestnetSepolia'} \
+            --set BASE_NETWORK={baseTestnetGoerli, baseTestnetSepolia} \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
@@ -671,7 +671,6 @@ jobs:
             --set replicaCountOptimism=0 \
             --set replicaCountPolygon=0 \
             --set replicaCountZora=0 \
-            \
             \
             --set resources.ethereum.limits.memory=520Mi \
             --set resources.ethereum.requests.cpu=100m \
