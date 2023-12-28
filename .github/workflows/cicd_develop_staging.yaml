@@ -40,7 +40,7 @@ env:
   STG_COMMON_NAMESPACE_V2: 'develop-v2'
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.19
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.20
   INDEXER_RELEASE_NAME: 'indexer-dev' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2'
   #
