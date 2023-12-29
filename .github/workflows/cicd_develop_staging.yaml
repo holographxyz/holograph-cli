@@ -584,14 +584,14 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           #
           AVALANCHE_NETWORK: 'fuji'
-          POLYGON_NETWORK: 'mumbai'
-          BINANCE_NETWORK: 'binanceSmartChainTestnet'
-          MANTLE_NETWORK: 'mantleTestnet'
-          ETHEREUM_NETWORK: '{ethereumTestnetGoerli,ethereumTestnetSepolia}'
-          OPTIMISM_NETWORK: '{optimismTestnetGoerli,optimismTestnetSepolia}'
-          ARBITRUM_NETWORK: '{arbitrumTestnetGoerli,arbitrumTestnetSepolia}'
-          ZORA_NETWORK: '{zoraTestnetGoerli,zoraTestnetSepolia}'
-          BASE_NETWORK: '{baseTestnetGoerli,baseTestnetSepolia}'
+          POLYGON_NETWORK  : 'mumbai'
+          BINANCE_NETWORK  : 'binanceSmartChainTestnet'
+          MANTLE_NETWORK   : 'mantleTestnet'
+          ETHEREUM_NETWORK : '{ethereumTestnetGoerli,ethereumTestnetSepolia}'
+          OPTIMISM_NETWORK : '{optimismTestnetGoerli,optimismTestnetSepolia}'
+          ARBITRUM_NETWORK : '{arbitrumTestnetGoerli,arbitrumTestnetSepolia}'
+          ZORA_NETWORK     : '{zoraTestnetGoerli,zoraTestnetSepolia}'
+          BASE_NETWORK     : '{baseTestnetGoerli,baseTestnetSepolia}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -750,14 +750,14 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           #
           AVALANCHE_NETWORK: 'fuji'
-          POLYGON_NETWORK: 'mumbai'
-          ETHEREUM_NETWORK: 'goerli'
-          OPTIMISM_NETWORK: 'optimismTestnetGoerli'
-          ARBITRUM_NETWORK: '{arbitrumTestnetGoerli,arbitrumTestnetSepolia}'
-          BINANCE_NETWORK: 'binanceSmartChainTestnet'
-          MANTLE_NETWORK: 'mantleTestnet'
-          ZORA_NETWORK: 'zoraTestnetSepolia'
-          BASE_NETWORK: 'baseTestnetGoerli'
+          POLYGON_NETWORK  : 'mumbai'
+          BINANCE_NETWORK  : 'binanceSmartChainTestnet'
+          MANTLE_NETWORK   : 'mantleTestnet'
+          ETHEREUM_NETWORK : '{ethereumTestnetGoerli,ethereumTestnetSepolia}'
+          OPTIMISM_NETWORK : '{optimismTestnetGoerli,optimismTestnetSepolia}'
+          ARBITRUM_NETWORK : '{arbitrumTestnetGoerli,arbitrumTestnetSepolia}'
+          ZORA_NETWORK     : '{zoraTestnetGoerli,zoraTestnetSepolia}'
+          BASE_NETWORK     : '{baseTestnetGoerli,baseTestnetSepolia}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
