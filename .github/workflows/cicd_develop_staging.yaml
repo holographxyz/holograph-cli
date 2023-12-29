@@ -39,7 +39,7 @@ env:
   STG_COMMON_NAMESPACE_V2: 'develop-v2'
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.20
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.21
   INDEXER_RELEASE_NAME: 'kd-indexer-dev' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'kd-indexer-dev-v2'
   #
@@ -623,6 +623,7 @@ jobs:
             --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
             --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
+            --set "BASE_NETWORK={baseTestnetGoerli,baseTestnetSepolia}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
@@ -718,9 +719,7 @@ jobs:
             --set ingress.ingress_name=ing-$RELEASE_NAME-health \
             --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
-            --set ingress.blue_green_deployment=false \
-            \
-            --values .github/base-array.yaml
+            --set ingress.blue_green_deployment=false
 
 #      - name: Pause for 60 seconds
 #        shell: bash
