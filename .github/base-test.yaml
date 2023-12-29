@@ -1,7 +1,0 @@
-base_network:
-  goerli:
-    name: dsfsdfsd #baseTestnetGoerli
-  sepolia:
-    name: takis #baseTestnetSepolia
-  random:
-    name: random
