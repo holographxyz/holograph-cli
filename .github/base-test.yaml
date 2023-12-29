@@ -1,7 +1,7 @@
 base_network:
   goerli:
-    name: baseTestnetGoerli
+    name: dsfsdfsd #baseTestnetGoerli
   sepolia:
-    name: baseTestnetSepolia
+    name: takis #baseTestnetSepolia
   random:
     name: random

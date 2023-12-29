@@ -41,7 +41,7 @@ env:
   #######################################
   STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.43
   INDEXER_RELEASE_NAME: 'kd-indexer-dev' # format -> [release_name]-indexer-[env]
-  INDEXER_RELEASE_NAME_V2: 'kd-indexer-dev-v2'
+  INDEXER_RELEASE_NAME_V2: 'wehappy-indexer-dev-v2'
   #
   STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.86
   OPERATOR_RELEASE_NAME: 'kd-operator-dev' # format -> [release_name]-operator-[env]
