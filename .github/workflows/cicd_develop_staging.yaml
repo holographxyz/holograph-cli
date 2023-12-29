@@ -39,7 +39,7 @@ env:
   STG_COMMON_NAMESPACE_V2: 'develop-v2'
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.54
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.55
   INDEXER_RELEASE_NAME: 'kd-indexer-dev' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'kd-indexer-dev-v2'
   #
@@ -616,13 +616,13 @@ jobs:
             --set MODE=$MODE \
             \
             --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
-            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
-            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
-            --set ARBITRUM_NETWORK="{arbitrumGoerli,arbitrumTestnetSepolia}" \
             --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
             --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
             --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
-            --set ZORA_NETWORK="${ZORA_NETWORK}" \
+            --set ETHEREUM_NETWORK="{goerli,ethereumTestnetSepolia}" \
+            --set OPTIMISM_NETWORK="{optimismGoerli,optimismTestnetSepolia}" \
+            --set ARBITRUM_NETWORK="{arbitrumGoerli,arbitrumTestnetSepolia}" \
+            --set ZORA_NETWORK="{zoraTestnetGoerli,zoraTestnetSepolia}" \
             --set BASE_NETWORK="{baseTestnetGoerli,baseTestnetSepolia}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
