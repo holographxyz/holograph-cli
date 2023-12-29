@@ -1,0 +1,7 @@
+base_network:
+  goerli:
+    name: baseTestnetGoerli
+  sepolia:
+    name: baseTestnetSepolia
+  random:
+    name: random
