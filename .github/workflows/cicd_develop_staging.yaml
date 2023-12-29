@@ -39,7 +39,7 @@ env:
   STG_COMMON_NAMESPACE_V2: 'develop-v2'
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.24
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.25
   INDEXER_RELEASE_NAME: 'kd-indexer-dev' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'kd-indexer-dev-v2'
   #
@@ -592,7 +592,7 @@ jobs:
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
           MANTLE_NETWORK: 'mantleTestnet'
           ZORA_NETWORK: 'zoraTestnetGoerli'
-          #--set "BASE_NETWORK={baseTestnetGoerli,baseTestnetSepolia}" \
+          #--set "BASE_NETWORK={baseTestnetGoerli,baseTestnetSepolia}" \ #TODO
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
