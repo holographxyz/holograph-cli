@@ -40,12 +40,12 @@ env:
   #
   #######################################
   STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.55
-  INDEXER_RELEASE_NAME: 'dem-indexer-dev' # format -> [release_name]-indexer-[env]
-  INDEXER_RELEASE_NAME_V2: 'dem-indexer-dev-v2'
+  INDEXER_RELEASE_NAME: 'indexer-dev' # format -> [release_name]-indexer-[env]
+  INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2'
   #
   STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.94
-  OPERATOR_RELEASE_NAME: 'kd-operator-dev' # format -> [release_name]-operator-[env]
-  OPERATOR_RELEASE_NAME_V2: 'kd-operator-dev-v2'
+  OPERATOR_RELEASE_NAME: 'operator-dev' # format -> [release_name]-operator-[env]
+  OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2'
   #######################################
   #
   # V1 INDEXER DEV rpc endpoints
@@ -124,8 +124,7 @@ env:
 on:
   push:
     branches:
-#      - 'develop'
-      - 'feat/add-sepolia-to-cli'
+      - 'develop'
       # Excluded branches
       - '!testnet'
       - '!main'
