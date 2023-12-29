@@ -585,13 +585,13 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           #
           AVALANCHE_NETWORK: 'fuji'
-          ETHEREUM_NETWORK: 'goerli'
-          OPTIMISM_NETWORK: 'optimismTestnetGoerli'
-          ARBITRUM_NETWORK: 'arbitrumTestnetGoerli'
           POLYGON_NETWORK: 'mumbai'
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
           MANTLE_NETWORK: 'mantleTestnet'
-          ZORA_NETWORK: 'zoraTestnetGoerli'
+          ETHEREUM_NETWORK: '{ethereumTestnetGoerli,ethereumTestnetGoerli}'
+          OPTIMISM_NETWORK: '{optimismTestnetGoerli,optimismTestnetGoerli}'
+          ARBITRUM_NETWORK: '{arbitrumTestnetGoerli,arbitrumTestnetSepolia}'
+          ZORA_NETWORK: '{zoraTestnetGoerli,zoraTestnetSepolia}'
           BASE_NETWORK: '{baseTestnetGoerli,baseTestnetSepolia}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
@@ -619,10 +619,10 @@ jobs:
             --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
             --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
             --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
-            --set ETHEREUM_NETWORK="{goerli,ethereumTestnetSepolia}" \
-            --set OPTIMISM_NETWORK="{optimismGoerli,optimismTestnetSepolia}" \
-            --set ARBITRUM_NETWORK="{arbitrumGoerli,arbitrumTestnetSepolia}" \
-            --set ZORA_NETWORK="{zoraTestnetGoerli,zoraTestnetSepolia}" \
+            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
+            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
+            --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
+            --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
@@ -662,15 +662,15 @@ jobs:
             --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCountArbitrum=0 \
             --set replicaCountAvalanche=0 \
-            --set replicaCountBase=1 \
-            --set replicaCountBinance=0 \
-            --set replicaCountEthereum=1 \
-            --set replicaCountMantle=0 \
-            --set replicaCountOptimism=0 \
             --set replicaCountPolygon=0 \
-            --set replicaCountZora=0 \
+            --set replicaCountBinance=0 \
+            --set replicaCountMantle=0 \
+            --set replicaCountEthereum=0 \
+            --set replicaCountArbitrum=0 \
+            --set replicaCountOptimism=1 \
+            --set replicaCountBase=0 \
+            --set replicaCountZora=1 \
             \
             --set resources.ethereum.limits.memory=520Mi \
             --set resources.ethereum.requests.cpu=100m \
