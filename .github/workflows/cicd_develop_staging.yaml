@@ -666,11 +666,11 @@ jobs:
             --set replicaCountAvalanche=0 \
             --set replicaCountBase=1 \
             --set replicaCountBinance=0 \
-            --set replicaCountEthereum=0 \
+            --set replicaCountEthereum=1 \
             --set replicaCountMantle=0 \
-            --set replicaCountOptimism=0 \
+            --set replicaCountOptimism=1 \
             --set replicaCountPolygon=0 \
-            --set replicaCountZora=0 \
+            --set replicaCountZora=1 \
             \
             --set resources.ethereum.limits.memory=520Mi \
             --set resources.ethereum.requests.cpu=100m \
