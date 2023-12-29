@@ -39,7 +39,7 @@ env:
   STG_COMMON_NAMESPACE_V2: 'develop-v2'
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.38
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.39
   INDEXER_RELEASE_NAME: 'kd-indexer-dev' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'kd-indexer-dev-v2'
   #
