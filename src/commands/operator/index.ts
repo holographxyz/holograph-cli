@@ -5,7 +5,7 @@ import color from '@oclif/color'
 import dotenv from 'dotenv'
 
 import {BlockHeightProcessType, Logger} from '../../types/api'
-import {InterestingTransaction} from '../../types/network-monitor'
+import {InterestingLog} from '../../types/network-monitor'
 import {
   EventType,
   BloomType,
@@ -201,12 +201,11 @@ export default class Operator extends OperatorJobAwareCommand {
 
   initializeNetworkMonitor(flags: any, userWallet: any, configFile: any): void {
     this.networkMonitor = new NetworkMonitor({
-      enableV2: true,
       parent: this,
       configFile,
       networks: flags.networks,
       debug: this.debug,
-      processTransactions2: this.processTransactions2,
+      processLogs: this.processLogs,
       userWallet,
       lastBlockFilename: 'operator-blocks.json',
       replay: flags.replay,
@@ -358,17 +357,15 @@ export default class Operator extends OperatorJobAwareCommand {
     }
   }
 
-  async processTransactions2(job: BlockJob, interestingTransactions: InterestingTransaction[]): Promise<void> {
+  async processLogs(job: BlockJob, interestingLog: InterestingLog[]): Promise<void> {
     const startTime = performance.now()
 
-    if (interestingTransactions.length <= 0) {
+    if (interestingLog.length <= 0) {
       return
     }
 
     // Map over the transactions to create an array of Promises
-    const transactionPromises = interestingTransactions.map(interestingTransaction =>
-      this.processSingleTransaction(interestingTransaction, job),
-    )
+    const transactionPromises = interestingLog.map(interestingLog => this.processSingleTransaction(interestingLog, job))
 
     // Use Promise.all to execute all the Promises concurrently
     await Promise.all(transactionPromises)
@@ -381,34 +378,34 @@ export default class Operator extends OperatorJobAwareCommand {
     )
   }
 
-  async processSingleTransaction(interestingTransaction: InterestingTransaction, job: BlockJob) {
+  async processSingleTransaction(interestingLog: InterestingLog, job: BlockJob) {
     const tags: (string | number)[] = [
-      interestingTransaction.transaction.blockNumber as number,
+      interestingLog.transaction.blockNumber as number,
       this.networkMonitor.randomTag(),
     ]
-    const type: EventType = EventType[interestingTransaction.bloomId as keyof typeof EventType]
+    const type: EventType = EventType[interestingLog.bloomId as keyof typeof EventType]
 
     // Log processing of transaction
     this.networkMonitor.structuredLog(
       job.network,
-      `Processing transaction ${interestingTransaction.transaction.hash} at block ${interestingTransaction.transaction.blockNumber}`,
+      `Processing transaction ${interestingLog.transaction.hash} at block ${interestingLog.transaction.blockNumber}`,
       tags,
     )
-    this.networkMonitor.structuredLog(job.network, `Identified this as a ${interestingTransaction.bloomId} event`, tags)
+    this.networkMonitor.structuredLog(job.network, `Identified this as a ${interestingLog.bloomId} event`, tags)
 
     try {
       switch (type) {
         case EventType.CrossChainMessageSent:
-          await this.handleCrossChainMessageSentEvent(job, type, interestingTransaction, tags)
+          await this.handleCrossChainMessageSentEvent(job, type, interestingLog, tags)
           break
         case EventType.AvailableOperatorJob:
-          await this.handleAvailableOperatorJobEvent(job, type, interestingTransaction, tags)
+          await this.handleAvailableOperatorJobEvent(job, type, interestingLog, tags)
           break
         case EventType.FinishedOperatorJob:
-          await this.handleFinishedOperatorJobEvent(job, type, interestingTransaction, tags)
+          await this.handleFinishedOperatorJobEvent(job, type, interestingLog, tags)
           break
         case EventType.FailedOperatorJob:
-          await this.handleFailedOperatorJobEvent(job, type, interestingTransaction, tags)
+          await this.handleFailedOperatorJobEvent(job, type, interestingLog, tags)
           break
 
         default:
@@ -426,13 +423,13 @@ export default class Operator extends OperatorJobAwareCommand {
   async handleCrossChainMessageSentEvent(
     job: BlockJob,
     type: EventType,
-    interestingTransaction: InterestingTransaction,
+    interestingLog: InterestingLog,
     tags: (string | number)[],
   ) {
     try {
       const crossChainMessageSentEvent: CrossChainMessageSentEvent | null = this.bloomFilters[
         type
-      ]!.bloomEvent.decode<CrossChainMessageSentEvent>(type, interestingTransaction.log!)
+      ]!.bloomEvent.decode<CrossChainMessageSentEvent>(type, interestingLog.log!)
       if (crossChainMessageSentEvent !== null) {
         this.networkMonitor.structuredLog(
           job.network,
@@ -452,13 +449,13 @@ export default class Operator extends OperatorJobAwareCommand {
   async handleAvailableOperatorJobEvent(
     job: BlockJob,
     type: EventType,
-    interestingTransaction: InterestingTransaction,
+    interestingLog: InterestingLog,
     tags: (string | number)[],
   ) {
     try {
       const availableOperatorJobEvent: AvailableOperatorJobEvent | null = this.bloomFilters[
         type
-      ]!.bloomEvent.decode<AvailableOperatorJobEvent>(type, interestingTransaction.log!)
+      ]!.bloomEvent.decode<AvailableOperatorJobEvent>(type, interestingLog.log!)
 
       if (availableOperatorJobEvent !== null) {
         this.networkMonitor.structuredLog(job.network, `Found a new job ${availableOperatorJobEvent.jobHash}`, tags)
@@ -496,13 +493,13 @@ export default class Operator extends OperatorJobAwareCommand {
   async handleFinishedOperatorJobEvent(
     job: BlockJob,
     type: EventType,
-    interestingTransaction: InterestingTransaction,
+    interestingLog: InterestingLog,
     tags: (string | number)[],
   ) {
     try {
       const finishedOperatorJobEvent: FinishedOperatorJobEvent | null = this.bloomFilters[
         type
-      ]!.bloomEvent.decode<FinishedOperatorJobEvent>(type, interestingTransaction.log!)
+      ]!.bloomEvent.decode<FinishedOperatorJobEvent>(type, interestingLog.log!)
       if (finishedOperatorJobEvent !== null) {
         this.networkMonitor.structuredLog(
           job.network,
@@ -531,13 +528,13 @@ export default class Operator extends OperatorJobAwareCommand {
   async handleFailedOperatorJobEvent(
     job: BlockJob,
     type: EventType,
-    interestingTransaction: InterestingTransaction,
+    interestingLog: InterestingLog,
     tags: (string | number)[],
   ) {
     try {
       const failedOperatorJobEvent: FailedOperatorJobEvent | null = this.bloomFilters[
         type
-      ]!.bloomEvent.decode<FailedOperatorJobEvent>(type, interestingTransaction.log!)
+      ]!.bloomEvent.decode<FailedOperatorJobEvent>(type, interestingLog.log!)
       if (failedOperatorJobEvent !== null) {
         this.networkMonitor.structuredLog(
           job.network,
