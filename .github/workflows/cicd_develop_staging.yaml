@@ -375,19 +375,19 @@ jobs:
 #        shell: bash
 #        run: |
 #          sleep 60
-#      #
-#      #
-#      # NOTICE: --- OPERATOR ---
-#      - name: Pull the holograph-operator helm chart version x.x.x from ECR
-#        shell: bash
-#        env:
-#          #
-#          CHART_REPO: holo-operator
-#          CHART_VERSION: ${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}
-#          #
-#          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-#        run: |
-#          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
+      #
+      #
+      # NOTICE: --- OPERATOR ---
+      - name: Pull the holograph-operator helm chart version x.x.x from ECR
+        shell: bash
+        env:
+          #
+          CHART_REPO: holo-operator
+          CHART_VERSION: ${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}
+          #
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
       ######
 #      - name: -> V1 -- Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
 #        uses: tensor-hq/eksctl-helm-action@main
