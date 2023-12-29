@@ -662,7 +662,7 @@ jobs:
             --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCountArbitrum=0 \
+            --set replicaCountArbitrum=1 \
             --set replicaCountAvalanche=0 \
             --set replicaCountBase=1 \
             --set replicaCountBinance=0 \
