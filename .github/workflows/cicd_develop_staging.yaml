@@ -592,7 +592,7 @@ jobs:
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
           MANTLE_NETWORK: 'mantleTestnet'
           ZORA_NETWORK: 'zoraTestnetGoerli'
-          #--set "BASE_NETWORK={baseTestnetGoerli,baseTestnetSepolia}" \ #TODO
+          BASE_NETWORK: '{baseTestnetGoerli,baseTestnetSepolia}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -623,7 +623,7 @@ jobs:
             --set OPTIMISM_NETWORK="{optimismGoerli,optimismTestnetSepolia}" \
             --set ARBITRUM_NETWORK="{arbitrumGoerli,arbitrumTestnetSepolia}" \
             --set ZORA_NETWORK="{zoraTestnetGoerli,zoraTestnetSepolia}" \
-            --set BASE_NETWORK="{baseTestnetGoerli,baseTestnetSepolia}" \
+            --set BASE_NETWORK="${BASE_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
@@ -662,15 +662,15 @@ jobs:
             --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCountArbitrum=1 \
+            --set replicaCountArbitrum=0 \
             --set replicaCountAvalanche=0 \
             --set replicaCountBase=1 \
             --set replicaCountBinance=0 \
             --set replicaCountEthereum=1 \
             --set replicaCountMantle=0 \
-            --set replicaCountOptimism=1 \
+            --set replicaCountOptimism=0 \
             --set replicaCountPolygon=0 \
-            --set replicaCountZora=1 \
+            --set replicaCountZora=0 \
             \
             --set resources.ethereum.limits.memory=520Mi \
             --set resources.ethereum.requests.cpu=100m \
