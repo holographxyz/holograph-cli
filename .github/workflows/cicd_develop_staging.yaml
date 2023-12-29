@@ -43,7 +43,7 @@ env:
   INDEXER_RELEASE_NAME: 'dem-indexer-dev' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'dem-indexer-dev-v2'
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.92
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.93
   OPERATOR_RELEASE_NAME: 'kd-operator-dev' # format -> [release_name]-operator-[env]
   OPERATOR_RELEASE_NAME_V2: 'kd-operator-dev-v2'
   #######################################
