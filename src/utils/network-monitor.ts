@@ -1169,12 +1169,12 @@ export class NetworkMonitor {
    * @param {InterestingTransaction[]} interestingTransactions - An array to which the new interesting transactions will be added
    * @return {void}
    */
-  filterAndAddInterestingTransaction(
+  async filterAndAddInterestingTransaction(
     job: BlockJob,
     transactions: TransactionResponse[],
     allBlockLogs: Log[],
     interestingTransactions: InterestingTransaction[],
-  ): void {
+  ): Promise<void> {
     const transactionHashToLogsMap: {[TxHash: string]: Log[]} = this.createTransactionHashToLogsMapping(allBlockLogs)
     const txHashToTxResponseMap: {[TxHash: string]: TransactionResponse} =
       this.createTxHashToTxResponseMapping(transactions)
@@ -1206,6 +1206,15 @@ export class NetworkMonitor {
           })
 
           if (hasInterestingEvent !== undefined) {
+            // NOTICE: on 'processBlockByRange' the transactions array does not correctly correspond an array of TransactionResponse.
+            const isTransactionResponse = txHashToTxResponseMap[log.transactionHash].blockHash !== undefined
+
+            if (!isTransactionResponse) {
+              txHashToTxResponseMap[log.transactionHash] = await this.providers[job.network].getTransaction(
+                transactionHash,
+              )
+            }
+
             this.pushInterestingTransaction(
               log.transactionHash,
               txHashToTxResponseMap,
@@ -1325,7 +1334,7 @@ export class NetworkMonitor {
   ): void {
     interestingTransaction.push({
       transaction: txHashToTxResponseMap[transactionHash],
-      allLogs: transactionHashToLogsMap[transactionHash]!,
+      allLogs: transactionHashToLogsMap[transactionHash],
     } as InterestingTransaction)
   }
 
@@ -1541,7 +1550,12 @@ export class NetworkMonitor {
               }
 
               case BlockProcessingVersion.V2: {
-                this.filterAndAddInterestingTransaction(job, block.transactions, logs as Log[], interestingTransactions)
+                await this.filterAndAddInterestingTransaction(
+                  job,
+                  block.transactions,
+                  logs as Log[],
+                  interestingTransactions,
+                )
                 break
               }
 
@@ -1601,8 +1615,8 @@ export class NetworkMonitor {
     } else {
       const interestingLogs: InterestingLog[] = [] // NOTICE: process blocks V1
       const interestingTransactions: InterestingTransaction[] = [] // NOTICE: process blocks V2
-      this.activated[network] = true
 
+      this.activated[network] = true
       this.structuredLogVerbose(network, `Getting block range 🔍`, [jobs[0].block, jobs[jobs.length - 1].block])
 
       try {
@@ -1616,6 +1630,7 @@ export class NetworkMonitor {
         // If logs are present, sort and filter transactions
         if (logs !== null) {
           // Grab the transactions from the logs
+          // TODO: this is not a good approach. It should be fixed later. Process block V2 requires a proper TransactionResponse type.
           const transactions: TransactionResponse[] = logs.map(log => {
             return {hash: log.transactionHash, blockNumber: log.blockNumber} as unknown as TransactionResponse
           })
@@ -1634,7 +1649,12 @@ export class NetworkMonitor {
             }
 
             case BlockProcessingVersion.V2: {
-              this.filterAndAddInterestingTransaction(jobs[0], transactions, logs as Log[], interestingTransactions)
+              await this.filterAndAddInterestingTransaction(
+                jobs[0],
+                transactions,
+                logs as Log[],
+                interestingTransactions,
+              )
               break
             }
 
