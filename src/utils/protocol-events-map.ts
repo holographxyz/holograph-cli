@@ -155,7 +155,6 @@ function validateTransaction(
 ): boolean {
   if (protocolEvent.contractMethodName) {
     if (
-      interestingTransaction.transaction &&
       interestingTransaction.transaction.data &&
       interestingTransaction.transaction.data.startsWith(protocolEvent.contractMethodName) === false
     ) {
@@ -171,7 +170,7 @@ function validateTransaction(
         return false
       }
     }
-  } else if (interestingTransaction.transaction && interestingTransaction.transaction.data) {
+  } else if (interestingTransaction.transaction.data) {
     const txMethodId = interestingTransaction.transaction.data.slice(0, 10) // 0x + first 4 bytes (8 digits)
     const methodIds = new Set(Object.values(ContractMethodId) as string[])
     if (methodIds.has(txMethodId)) {
