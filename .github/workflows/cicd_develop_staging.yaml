@@ -126,7 +126,7 @@ on:
   push:
     branches:
 #      - 'develop'
-      - 'fix/the-empty-vars)'
+      - 'fix/the-empty-vars'
       # Excluded branches
       - '!testnet'
       - '!main'
