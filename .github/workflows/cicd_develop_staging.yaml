@@ -31,7 +31,7 @@ env:
   OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
   #
   HOLOGRAPH_ENVIRONMENT: develop
-  HOLOGRAPH_ADDRESS: ${{ secrets.DEV_HOLOGRAPH_ADDRESS }}
+  HOLOGRAPH_ADDRESS: ${{ secrets.DEV_HOLOGRAPH_ADDRESS }} # eg 0xF5a995fB5aF7AFAec65A0DBc6B5A030dEBA123AD , 0xc3e6de98b312821e7b2717a6f73b6f653bef402c
   BLOCK_PROCESSING_VERSION: 'V2'
   #
   STG_DOMAIN: 'holograph.xyz' # needed only for the health checks
@@ -52,26 +52,36 @@ env:
   # V1 INDEXER DEV rpc endpoints
   indexer_dev_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
   indexer_dev_polygonTestnet_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }}
-  indexer_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }}
-  indexer_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_OPTIMISM_GOERLI_RPC_URL }}
-  indexer_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_ARBITRUM_GOERLI_RPC_URL }}
   indexer_dev_binanceTestnet_rpc_url: ${{ secrets.INDEXER_DEV_BSC_TESTNET_RPC_URL }}
   indexer_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
+  indexer_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }}
+  indexer_dev_ethereumTestnetSepolia_rpc_url: 'https://some.random.url'
+  indexer_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_OPTIMISM_GOERLI_RPC_URL }}
+  indexer_dev_optimismTestnetSepolia_rpc_url: 'https://some.random.url'
+  indexer_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_ARBITRUM_GOERLI_RPC_URL }}
+  indexer_dev_arbitrumTestnetSepolia_rpc_url: 'https://some.random.url'
   indexer_dev_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
+  indexer_dev_zoraTestnetSepolia_rpc_url: 'https://some.random.url'
   indexer_dev_baseTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_BASE_GOERLI_RPC_URL }}
+  indexer_dev_baseTestnetSepolia_rpc_url: 'https://some.random.url'
   #
   indexer_dev_private_key: ${{ secrets.INDEXER_DEV_PRIVATE_KEY }}
   indexer_dev_address: ${{ secrets.INDEXER_DEV_ADDRESS }}
   # V1 OPERATOR DEV rpc endpoints
   operator_dev_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_FUJI_RPC_URL }}
   operator_dev_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }}
-  operator_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_GOERLI_RPC_URL }}
-  operator_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_OPTIMISM_GOERLI_RPC_URL }}
-  operator_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_ARBITRUM_GOERLI_RPC_URL }}
   operator_dev_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_BSC_TESTNET_RPC_URL }}
   operator_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
+  operator_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_GOERLI_RPC_URL }}
+  operator_dev_ethereumTestnetSepolia_rpc_url: 'https://some.random.url'
+  operator_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_OPTIMISM_GOERLI_RPC_URL }}
+  operator_dev_optimismTestnetSepolia_rpc_url: 'https://some.random.url'
+  operator_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_ARBITRUM_GOERLI_RPC_URL }}
+  operator_dev_arbitrumTestnetSepolia_rpc_url: 'https://some.random.url'
   operator_dev_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
-  operator_dev_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_BASE_GOERLI_RPC_URL }} # Notice: Operator should currently be disabled on Base
+  operator_dev_zoraTestnetSepolia_rpc_url: 'https://some.random.url'
+  operator_dev_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_BASE_GOERLI_RPC_URL }}
+  operator_dev_baseTestnetSepolia_rpc_url: 'https://some.random.url'
   #
   operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
   operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
@@ -106,9 +116,9 @@ env:
   v2_operator_dev_arbitrumTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_DEV_ARBITRUM_SEPOLIA_RPC_URL }}
   v2_operator_dev_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_BSC_TESTNET_RPC_URL }}
   v2_operator_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  v2_operator_dev_zoraTestnetGoeli_rpc_url: 'https://testnet.rpc.zora.energy'
+  v2_operator_dev_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
   v2_operator_dev_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
-  v2_operator_dev_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_BASE_GOERLI_RPC_URL }} # Notice: Operator should currently be disabled on Base
+  v2_operator_dev_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_BASE_GOERLI_RPC_URL }}
   v2_operator_dev_baseTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_DEV_BASE_SEPOLIA_RPC_URL }}
   #
   v2_operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
@@ -148,7 +158,7 @@ jobs:
       - name: Login to ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
-#
+
       - name: Checkout the code
         uses: actions/checkout@v2
 #
