@@ -40,11 +40,11 @@ env:
   STG_COMMON_NAMESPACE_V2: 'develop-v2'
   #
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.55
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.56
   INDEXER_RELEASE_NAME: 'kd-indexer-dev' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'kd-indexer-dev-v2'
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.94
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.95
   OPERATOR_RELEASE_NAME: 'kd-operator-dev' # format -> [release_name]-operator-[env]
   OPERATOR_RELEASE_NAME_V2: 'kd-operator-dev-v2'
   #######################################
@@ -55,15 +55,10 @@ env:
   indexer_dev_binanceTestnet_rpc_url: ${{ secrets.INDEXER_DEV_BSC_TESTNET_RPC_URL }}
   indexer_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
   indexer_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }}
-  indexer_dev_ethereumTestnetSepolia_rpc_url: 'https://some.random.url'
   indexer_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_OPTIMISM_GOERLI_RPC_URL }}
-  indexer_dev_optimismTestnetSepolia_rpc_url: 'https://some.random.url'
   indexer_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_ARBITRUM_GOERLI_RPC_URL }}
-  indexer_dev_arbitrumTestnetSepolia_rpc_url: 'https://some.random.url'
   indexer_dev_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
-  indexer_dev_zoraTestnetSepolia_rpc_url: 'https://some.random.url'
   indexer_dev_baseTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_BASE_GOERLI_RPC_URL }}
-  indexer_dev_baseTestnetSepolia_rpc_url: 'https://some.random.url'
   #
   indexer_dev_private_key: ${{ secrets.INDEXER_DEV_PRIVATE_KEY }}
   indexer_dev_address: ${{ secrets.INDEXER_DEV_ADDRESS }}
@@ -73,15 +68,10 @@ env:
   operator_dev_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_BSC_TESTNET_RPC_URL }}
   operator_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
   operator_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_GOERLI_RPC_URL }}
-  operator_dev_ethereumTestnetSepolia_rpc_url: 'https://some.random.url'
   operator_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_OPTIMISM_GOERLI_RPC_URL }}
-  operator_dev_optimismTestnetSepolia_rpc_url: 'https://some.random.url'
   operator_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_ARBITRUM_GOERLI_RPC_URL }}
-  operator_dev_arbitrumTestnetSepolia_rpc_url: 'https://some.random.url'
   operator_dev_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
-  operator_dev_zoraTestnetSepolia_rpc_url: 'https://some.random.url'
   operator_dev_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_BASE_GOERLI_RPC_URL }}
-  operator_dev_baseTestnetSepolia_rpc_url: 'https://some.random.url'
   #
   operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
   operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
