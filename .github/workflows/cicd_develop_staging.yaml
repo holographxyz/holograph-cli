@@ -31,7 +31,7 @@ env:
   OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
   #
   HOLOGRAPH_ENVIRONMENT: develop
-  HOLOGRAPH_ADDRESS: ${{ secrets.DEV_HOLOGRAPH_ADDRESS }} # eg 0xF5a995fB5aF7AFAec65A0DBc6B5A030dEBA123AD , 0xc3e6de98b312821e7b2717a6f73b6f653bef402c
+  HOLOGRAPH_ADDRESS: ${{ secrets.DEV_HOLOGRAPH_ADDRESS }}
   BLOCK_PROCESSING_VERSION: 'V2'
   #
   STG_DOMAIN: 'holograph.xyz' # needed only for the health checks
@@ -41,12 +41,12 @@ env:
   #
   #######################################
   STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.56
-  INDEXER_RELEASE_NAME: 'kd-indexer-dev' # format -> [release_name]-indexer-[env]
-  INDEXER_RELEASE_NAME_V2: 'kd-indexer-dev-v2'
+  INDEXER_RELEASE_NAME: 'indexer-dev' # format -> [release_name]-indexer-[env]
+  INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2'
   #
   STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.95
-  OPERATOR_RELEASE_NAME: 'kd-operator-dev' # format -> [release_name]-operator-[env]
-  OPERATOR_RELEASE_NAME_V2: 'kd-operator-dev-v2'
+  OPERATOR_RELEASE_NAME: 'operator-dev' # format -> [release_name]-operator-[env]
+  OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2'
   #######################################
   #
   # V1 INDEXER DEV rpc endpoints
@@ -125,8 +125,7 @@ env:
 on:
   push:
     branches:
-#      - 'develop'
-      - 'fix/the-empty-vars'
+      - 'develop'
       # Excluded branches
       - '!testnet'
       - '!main'
@@ -151,41 +150,41 @@ jobs:
 
       - name: Checkout the code
         uses: actions/checkout@v2
-#
-#      # This is a separate action that sets up buildx runner
-#      - name: Set up Docker Buildx
-#        id: buildx
-#        uses: docker/setup-buildx-action@v2
-#
-#      # So now you can use Actions' own caching!
-#      - name: Cache Docker layers
-#        uses: actions/cache@v2
-#        with:
-#          path: /tmp/.buildx-cache
-#          key: ${{ runner.os }}-single-buildx-${{ github.sha }}
-#          restore-keys: |
-#            ${{ runner.os }}-single-buildx
-#
-#      # And make it available for builds
-#      - name: Build image
-#        uses: docker/build-push-action@v2
-#        with:
-#          context: .
-#          builder: ${{ steps.buildx.outputs.name }}
-#          file: Dockerfile
-#          build-args: AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }}
-#          platforms: linux/amd64
-#          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
-#          cache-from: type=local,src=/tmp/.buildx-cache
-#          cache-to: type=local,dest=/tmp/.buildx-cache-new
-#          push: true # set false to deactivate the push to ECR
-#
-#      # This ugly bit is necessary if you don't want your cache to grow forever until it hits GitHub's limit of 5GB.
-#      # https://github.com/docker/build-push-action/issues/252 & https://github.com/moby/buildkit/issues/1896
-#      - name: Move cache
-#        run: |
-#          rm -rf /tmp/.buildx-cache
-#          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      # This is a separate action that sets up buildx runner
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      # So now you can use Actions' own caching!
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-single-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-single-buildx
+
+      # And make it available for builds
+      - name: Build image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          builder: ${{ steps.buildx.outputs.name }}
+          file: Dockerfile
+          build-args: AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }}
+          platforms: linux/amd64
+          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          push: true # set false to deactivate the push to ECR
+
+      # This ugly bit is necessary if you don't want your cache to grow forever until it hits GitHub's limit of 5GB.
+      # https://github.com/docker/build-push-action/issues/252 & https://github.com/moby/buildkit/issues/1896
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Configure AWS creds to access EKS
         # TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -201,8 +200,7 @@ jobs:
 #          eks_cluster: ${{ env.CLUSTER_NAME }}
 #          command: |-
 #            kubectl create namespace ${{ env.STG_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-      #
-      #
+
       # NOTICE: --- INDEXER ---
       - name: Pull the holograph-indexer helm chart version x.x.x from ECR
         shell: bash
@@ -215,7 +213,7 @@ jobs:
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-      ###### V1 deployments ######
+      # NOTICE: ##### V1 deployments ######
 
       - name: -> V1 -- Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
@@ -314,15 +312,15 @@ jobs:
             --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCountAvalanche=0 \
-            --set replicaCountPolygon=0 \
-            --set replicaCountBinance=0 \
-            --set replicaCountMantle=0 \
-            --set replicaCountEthereum=0 \
-            --set replicaCountArbitrum=0 \
-            --set replicaCountOptimism=0 \
-            --set replicaCountBase=0 \
-            --set replicaCountZora=0 \
+            --set replicaCountAvalanche=1 \
+            --set replicaCountPolygon=1 \
+            --set replicaCountBinance=1 \
+            --set replicaCountMantle=1 \
+            --set replicaCountEthereum=1 \
+            --set replicaCountArbitrum=1 \
+            --set replicaCountOptimism=1 \
+            --set replicaCountBase=1 \
+            --set replicaCountZora=1 \
             \
             --set resources.ethereum.limits.memory=520Mi \
             --set resources.ethereum.requests.cpu=100m \
@@ -373,12 +371,11 @@ jobs:
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
             --set ingress.blue_green_deployment=false
 
-#      - name: Pause for 60 seconds
-#        shell: bash
-#        run: |
-#          sleep 60
-      #
-      #
+      - name: Pause for 60 seconds
+        shell: bash
+        run: |
+          sleep 60
+
       # NOTICE: --- OPERATOR ---
       - name: Pull the holograph-operator helm chart version x.x.x from ECR
         shell: bash
@@ -481,15 +478,15 @@ jobs:
             --set dev_rpc_config_values.address=${{ env.operator_dev_address }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCountAvalanche=0 \
-            --set replicaCountPolygon=0 \
-            --set replicaCountBinance=0 \
-            --set replicaCountMantle=0 \
-            --set replicaCountEthereum=0 \
-            --set replicaCountArbitrum=0 \
-            --set replicaCountOptimism=0 \
-            --set replicaCountBase=0 \
-            --set replicaCountZora=0 \
+            --set replicaCountAvalanche=1 \
+            --set replicaCountPolygon=1 \
+            --set replicaCountBinance=1 \
+            --set replicaCountMantle=1 \
+            --set replicaCountEthereum=1 \
+            --set replicaCountArbitrum=1 \
+            --set replicaCountOptimism=1 \
+            --set replicaCountBase=1 \
+            --set replicaCountZora=1 \
             \
             --set resources.ethereum.limits.memory=550Mi \
             --set resources.ethereum.requests.cpu=100m \
@@ -567,7 +564,7 @@ jobs:
 #            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
 #            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
 
-      ###### V2 deployments ######
+      # NOTICE: ##### V2 deployments ######
 
       - name: -> V2 -- Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE_V2 }}]
         uses: tensor-hq/eksctl-helm-action@main
@@ -672,15 +669,15 @@ jobs:
             --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCountAvalanche=0 \
-            --set replicaCountPolygon=0 \
-            --set replicaCountBinance=0 \
-            --set replicaCountMantle=0 \
-            --set replicaCountEthereum=0 \
-            --set replicaCountArbitrum=0 \
-            --set replicaCountOptimism=0 \
-            --set replicaCountBase=0 \
-            --set replicaCountZora=0 \
+            --set replicaCountAvalanche=1 \
+            --set replicaCountPolygon=1 \
+            --set replicaCountBinance=1 \
+            --set replicaCountMantle=1 \
+            --set replicaCountEthereum=1 \
+            --set replicaCountArbitrum=1 \
+            --set replicaCountOptimism=1 \
+            --set replicaCountBase=1 \
+            --set replicaCountZora=1 \
             \
             --set resources.ethereum.limits.memory=520Mi \
             --set resources.ethereum.requests.cpu=100m \
@@ -731,11 +728,11 @@ jobs:
             --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
             --set ingress.blue_green_deployment=false
 
-#      - name: Pause for 60 seconds
-#        shell: bash
-#        run: |
-#          sleep 60
-#
+      - name: Pause for 60 seconds
+        shell: bash
+        run: |
+          sleep 60
+
       - name: -> V2 -- Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE_V2 }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
@@ -832,15 +829,15 @@ jobs:
             --set dev_rpc_config_values.address=${{ env.v2_operator_dev_address }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCountAvalanche=0 \
-            --set replicaCountPolygon=0 \
-            --set replicaCountBinance=0 \
-            --set replicaCountMantle=0 \
-            --set replicaCountEthereum=0 \
-            --set replicaCountArbitrum=0 \
-            --set replicaCountOptimism=0 \
-            --set replicaCountBase=0 \
-            --set replicaCountZora=0 \
+            --set replicaCountAvalanche=1 \
+            --set replicaCountPolygon=1 \
+            --set replicaCountBinance=1 \
+            --set replicaCountMantle=1 \
+            --set replicaCountEthereum=1 \
+            --set replicaCountArbitrum=1 \
+            --set replicaCountOptimism=1 \
+            --set replicaCountBase=1 \
+            --set replicaCountZora=1 \
             \
             --set resources.ethereum.limits.memory=550Mi \
             --set resources.ethereum.requests.cpu=100m \
