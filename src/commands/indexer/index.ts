@@ -272,6 +272,7 @@ export default class Indexer extends HealthCheck {
             [EventType.SecondarySaleFees]: buildEventFilter(EventType.SecondarySaleFees),
             [EventType.MintFeePayout]: buildEventFilter(EventType.MintFeePayout),
             [EventType.Sale]: buildEventFilter(EventType.Sale),
+            [EventType.TransferERC721]: buildEventFilter(EventType.TransferERC721, undefined, ContractType.ERC721),
           }
 
     this.bloomFilters = {
