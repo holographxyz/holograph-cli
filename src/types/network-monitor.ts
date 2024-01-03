@@ -3,6 +3,7 @@ import {Log, TransactionReceipt, TransactionResponse} from '@ethersproject/abstr
 import {ProtocolEvent} from '../utils/protocol-events-map'
 import {SqsEventName} from './sqs'
 import {DecodedEvent} from '../utils/event'
+import {CrossChainMessageType} from '../utils/event/event'
 
 export type LogsParams = {
   network: string
@@ -109,9 +110,13 @@ export interface InterestingTransaction {
   receipt?: TransactionReceipt
   allLogs: Log[]
 }
+export interface ExtraDataType {
+  crossChainMessageType?: CrossChainMessageType
+}
 export interface SqsEvent {
   sqsEventName: SqsEventName
   decodedEvent: DecodedEvent | null
+  extraData?: ExtraDataType
 }
 export interface InterestingEvent {
   txHash: string

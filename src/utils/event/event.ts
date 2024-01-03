@@ -41,6 +41,7 @@ export enum CrossChainMessageType {
   ERC1155 = 'ERC1155',
   ERC20 = 'ERC20',
   CONTRACT = 'CONTRACT',
+  ERC20_HLG = 'ERC20_HLG',
 }
 
 export interface Event {
@@ -209,9 +210,17 @@ export const decodeHolographableContractEvent = (
       break
   }
 
+  /**
+   * Adjust logIndex to accurately reflect the real event's position:
+   *
+   * - The HolographableContractEvent is emitted after the actual event, introducing a discrepancy in logIndex.
+   * - To compensate, decrement the logIndex by 1 to align with the real event's occurrence.
+   */
+  const realEventLogIndex: number = holographableContractEvent.logIndex - 1
+
   let log: Log = {
     address: holographableContractEvent.contractAddress,
-    logIndex: holographableContractEvent.logIndex,
+    logIndex: realEventLogIndex,
     topics: [realEvent.sigHash],
     data: holographableContractEvent.payload,
   } as unknown as Log

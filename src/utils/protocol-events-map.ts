@@ -1,6 +1,14 @@
-import {InterestingTransaction, SqsEvent} from '../types/network-monitor'
+import {ExtraDataType, InterestingTransaction, SqsEvent} from '../types/network-monitor'
 import {SqsEventName} from '../types/sqs'
-import {Event, EventType, TransferERC721Event, eventMap} from './event'
+import {
+  Event,
+  EventType,
+  HolographableContractEvent,
+  TransferERC721Event,
+  decodeHolographableContractEvent,
+  eventMap,
+} from './event'
+import {CrossChainMessageType} from './event/event'
 import {zeroAddress} from './web3'
 
 interface ProtocolEventInfo {
@@ -18,13 +26,11 @@ export enum ProtocolEvent {
   BatchDeployment = 'BatchDeployment',
   LegacyMintNft = 'LegacyMintNft',
   MoeMintNft = 'MoeMintNft',
-  TransferOwnership = 'TransferOwnership',
-  BridgeOutErc721 = 'BridgeOutErc721',
-  // BridgeOutContract = 'BridgeOutContract',
+  BridgeOut = 'BridgeOut',
   AvailableOperatorJob = 'AvailableOperatorJob',
-  BridgeInErc721 = 'BridgeInErc721',
-  // BridgeInContract = 'BridgeInContract',
+  BridgeIn = 'BridgeIn',
   FailedOperatorJob = 'FailedOperatorJob',
+  TransferErc20OrErc721 = 'TransferErc20OrErc721',
 }
 
 enum ContractMethodId {
@@ -74,19 +80,11 @@ export const protocolEventsMap: {readonly [key in ProtocolEvent]: ProtocolEventI
     validateAndGetSqsEvents: (interestingTransaction: InterestingTransaction) =>
       getSqsEventsFromTx(ProtocolEvent.BatchDeployment, interestingTransaction),
   },
-  [ProtocolEvent.LegacyMintNft]: {
-    name: ProtocolEvent.LegacyMintNft,
-    contractMethodName: ContractMethodId.cxipMint,
-    events: [eventMap[EventType.TransferERC721], eventMap[EventType.HolographableContractEvent]],
-    sqsEventNames: [SqsEventName.MintNft],
-    validateAndGetSqsEvents: (interestingTransaction: InterestingTransaction) =>
-      getSqsEventsFromTx(ProtocolEvent.LegacyMintNft, interestingTransaction),
-  },
   [ProtocolEvent.MoeMintNft]: {
     name: ProtocolEvent.MoeMintNft,
     contractMethodName: ContractMethodId.purchase,
     events: [
-      eventMap[EventType.TransferERC721],
+      // eventMap[EventType.TransferERC721],
       eventMap[EventType.HolographableContractEvent],
       eventMap[EventType.MintFeePayout],
       eventMap[EventType.Sale],
@@ -95,11 +93,23 @@ export const protocolEventsMap: {readonly [key in ProtocolEvent]: ProtocolEventI
     validateAndGetSqsEvents: (interestingTransaction: InterestingTransaction) =>
       getSqsEventsFromTx(ProtocolEvent.MoeMintNft, interestingTransaction),
   },
-  [ProtocolEvent.BridgeOutErc721]: {
-    name: ProtocolEvent.BridgeOutErc721,
+  [ProtocolEvent.LegacyMintNft]: {
+    name: ProtocolEvent.LegacyMintNft,
+    contractMethodName: ContractMethodId.cxipMint,
+    events: [
+      // eventMap[EventType.TransferERC721],
+      eventMap[EventType.HolographableContractEvent],
+    ],
+    sqsEventNames: [SqsEventName.MintNft],
+    validateAndGetSqsEvents: (interestingTransaction: InterestingTransaction) =>
+      getSqsEventsFromTx(ProtocolEvent.LegacyMintNft, interestingTransaction),
+  },
+
+  [ProtocolEvent.BridgeOut]: {
+    name: ProtocolEvent.BridgeOut,
     contractMethodName: ContractMethodId.bridgeOutRequest,
     events: [
-      eventMap[EventType.TransferERC721],
+      // eventMap[EventType.TransferERC721],
       eventMap[EventType.HolographableContractEvent],
       eventMap[EventType.AssignJob],
       eventMap[EventType.RelayerParams],
@@ -109,7 +119,7 @@ export const protocolEventsMap: {readonly [key in ProtocolEvent]: ProtocolEventI
     ],
     sqsEventNames: [SqsEventName.BridgePreProcess],
     validateAndGetSqsEvents: (interestingTransaction: InterestingTransaction) =>
-      getSqsEventsFromTx(ProtocolEvent.BridgeOutErc721, interestingTransaction),
+      getSqsEventsFromTx(ProtocolEvent.BridgeOut, interestingTransaction),
   },
   [ProtocolEvent.AvailableOperatorJob]: {
     name: ProtocolEvent.AvailableOperatorJob,
@@ -127,25 +137,29 @@ export const protocolEventsMap: {readonly [key in ProtocolEvent]: ProtocolEventI
     validateAndGetSqsEvents: (interestingTransaction: InterestingTransaction) =>
       getSqsEventsFromTx(ProtocolEvent.FailedOperatorJob, interestingTransaction),
   },
-  [ProtocolEvent.BridgeInErc721]: {
-    name: ProtocolEvent.BridgeInErc721,
+  [ProtocolEvent.BridgeIn]: {
+    name: ProtocolEvent.BridgeIn,
     contractMethodName: ContractMethodId.executeJob,
     events: [
       eventMap[EventType.FinishedOperatorJob],
-      eventMap[EventType.TransferERC721],
+      // eventMap[EventType.TransferERC721],
       eventMap[EventType.HolographableContractEvent],
     ],
     sqsEventNames: [SqsEventName.BridgePreProcess],
     validateAndGetSqsEvents: (interestingTransaction: InterestingTransaction) =>
-      getSqsEventsFromTx(ProtocolEvent.BridgeInErc721, interestingTransaction),
+      getSqsEventsFromTx(ProtocolEvent.BridgeIn, interestingTransaction),
   },
-  [ProtocolEvent.TransferOwnership]: {
-    name: ProtocolEvent.TransferOwnership,
+  // used for TransferOwnership and TransferHLG
+  [ProtocolEvent.TransferErc20OrErc721]: {
+    name: ProtocolEvent.TransferErc20OrErc721,
     contractMethodName: undefined,
-    events: [eventMap[EventType.TransferERC721], eventMap[EventType.HolographableContractEvent]],
+    events: [
+      // eventMap[EventType.TransferERC721],
+      eventMap[EventType.HolographableContractEvent],
+    ],
     sqsEventNames: [SqsEventName.TransferERC721],
     validateAndGetSqsEvents: (interestingTransaction: InterestingTransaction) =>
-      getSqsEventsFromTx(ProtocolEvent.TransferOwnership, interestingTransaction),
+      getSqsEventsFromTx(ProtocolEvent.TransferErc20OrErc721, interestingTransaction),
   },
 }
 
@@ -191,22 +205,17 @@ function getSqsEventsFromTx(protocolEventName: string, interestingTransaction: I
   }
 
   const sqsEvents: SqsEvent[] = []
-
-  // instead of look for allLogs -> get only the events that are interesting
+  let extraData: ExtraDataType | undefined
 
   for (const log of interestingTransaction.allLogs) {
-    let event = protocolEvent.events.find(event => event.sigHash === log.topics[0])
+    const event = protocolEvent.events.find(event => event.sigHash === log.topics[0])
 
     if (event === undefined) {
       continue
     }
 
-    if (event.type === EventType.TransferERC721 && log.data && log.data !== '0x') {
-      event = eventMap[EventType.TransferERC20]
-    }
-
     let sqsEventName: SqsEventName
-    const decodedEvent = event.decode(event.type, log)
+    let decodedEvent = event.decode(event.type, log)
 
     switch (event.type) {
       case EventType.BridgeableContractDeployed: {
@@ -214,25 +223,57 @@ function getSqsEventsFromTx(protocolEventName: string, interestingTransaction: I
         break
       }
 
-      case EventType.TransferERC721: {
-        if ((protocolEventName as ProtocolEvent) === ProtocolEvent.TransferOwnership) {
-          if ((decodedEvent as TransferERC721Event).from !== zeroAddress) {
-            sqsEventName = SqsEventName.TransferERC721
+      case EventType.HolographableContractEvent: {
+        decodedEvent = decodeHolographableContractEvent(decodedEvent as HolographableContractEvent)
+
+        if (decodedEvent === null) {
+          continue
+        }
+
+        if (
+          (protocolEventName as ProtocolEvent) === ProtocolEvent.BridgeOut ||
+          (protocolEventName as ProtocolEvent) === ProtocolEvent.BridgeIn
+        ) {
+          const extraDataValue = {
+            crossChainMessageType:
+              decodedEvent.type === EventType.TransferERC721
+                ? CrossChainMessageType.ERC721
+                : CrossChainMessageType.ERC20_HLG,
+          }
+
+          /**
+           * Prioritize ERC721 data for NFT bridge transactions:
+           *
+           * - In bridge transactions involving NFTs, both ERC20 and ERC721 holographable events are generated.
+           * - To ensure consistency and accuracy, this check prioritizes the ERC721 data for further processing.
+           */
+          if (extraData === undefined) {
+            extraData = extraDataValue
+          } else if (extraData.crossChainMessageType !== CrossChainMessageType.ERC721) {
+            extraData = extraDataValue
+          }
+
+          continue
+        }
+
+        switch (decodedEvent.type) {
+          case EventType.TransferERC721: {
+            const transferERC721Event = decodedEvent as TransferERC721Event
+            sqsEventName = transferERC721Event.from === zeroAddress ? SqsEventName.MintNft : SqsEventName.TransferERC721
             break
           }
-        } else if (
-          (protocolEventName as ProtocolEvent) !== ProtocolEvent.BridgeInErc721 &&
-          (decodedEvent as TransferERC721Event).from === zeroAddress
-        ) {
-          sqsEventName = SqsEventName.MintNft
-          break
-        }
-        /**
-         * else if (from !== zeroAddress) then bridgeOut transfer
-         * else if (ProtocolEvent.BridgeInErc721 && from === zeroAddress) then bridgeIn transfer
-         */
 
-        continue
+          case EventType.TransferERC20: {
+            sqsEventName = SqsEventName.TransferERC20
+            break
+          }
+
+          default: {
+            continue
+          }
+        }
+
+        break
       }
 
       case EventType.CrossChainMessageSent: {
@@ -264,6 +305,10 @@ function getSqsEventsFromTx(protocolEventName: string, interestingTransaction: I
       sqsEventName,
       decodedEvent,
     })
+  }
+
+  if (extraData !== undefined) {
+    return sqsEvents.map(sqsEvent => ({...sqsEvent, extraData}))
   }
 
   return sqsEvents

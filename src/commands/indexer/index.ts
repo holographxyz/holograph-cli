@@ -5,7 +5,7 @@ import color from '@oclif/color'
 import dotenv from 'dotenv'
 
 import {BlockHeightProcessType, Logger} from '../../types/api'
-import {InterestingEvent, InterestingLog} from '../../types/network-monitor'
+import {ExtraDataType, InterestingEvent, InterestingLog} from '../../types/network-monitor'
 import {ContractType} from '../../utils/contract'
 import {
   EventValidator,
@@ -48,6 +48,7 @@ import handleTransferBatchERC1155Event from '../../handlers/sqs-indexer/handle-t
 import {CrossChainMessageType, eventMap} from '../../utils/event/event'
 import {ProtocolEvent, protocolEventsMap} from '../../utils/protocol-events-map'
 import {SqsEventName} from '../../types/sqs'
+import handleTransferERC20Event from '../../handlers/sqs-indexer/handle-transfer-erc20-event'
 
 dotenv.config()
 
@@ -272,7 +273,12 @@ export default class Indexer extends HealthCheck {
             [EventType.SecondarySaleFees]: buildEventFilter(EventType.SecondarySaleFees),
             [EventType.MintFeePayout]: buildEventFilter(EventType.MintFeePayout),
             [EventType.Sale]: buildEventFilter(EventType.Sale),
-            [EventType.TransferERC721]: buildEventFilter(EventType.TransferERC721, undefined, ContractType.ERC721),
+            // [EventType.TransferERC721]: buildEventFilter(EventType.TransferERC721, undefined, ContractType.ERC721),
+            // [EventType.TransferERC20]: buildEventFilter(
+            //   EventType.TransferERC20,
+            //   '0xcacd19ce1f3a24948ea04b3a66657744069a2f6b',
+            //   ContractType.ERC20,
+            // ),
           }
 
     this.bloomFilters = {
@@ -293,15 +299,33 @@ export default class Indexer extends HealthCheck {
     const foundLog = allLogs.find(
       log =>
         log.topics[0] === this.bloomFilters[EventType.BridgeableContractDeployed]?.bloomValueHashed ||
-        log.topics[0] === this.bloomFilters[EventType.TransferERC721]?.bloomValueHashed,
+        log.topics[0] === this.bloomFilters[EventType.HolographableContractEvent]?.bloomValueHashed,
     )
 
-    if (foundLog?.topics[0] === this.bloomFilters[EventType.BridgeableContractDeployed]?.bloomValueHashed) {
-      return CrossChainMessageType.CONTRACT
-    }
+    if (foundLog !== undefined) {
+      const hashedEventSignature: string = foundLog.topics[0]
 
-    if (foundLog?.topics[0] === this.bloomFilters[EventType.TransferERC721]?.bloomValueHashed) {
-      return CrossChainMessageType.ERC721
+      if (hashedEventSignature === this.bloomFilters[EventType.BridgeableContractDeployed]?.bloomValueHashed) {
+        return CrossChainMessageType.CONTRACT
+      }
+
+      if (hashedEventSignature === this.bloomFilters[EventType.HolographableContractEvent]?.bloomValueHashed) {
+        const holographableContractEvent: HolographableContractEvent | null = this.bloomFilters[
+          EventType.HolographableContractEvent
+        ]!.bloomEvent.decode<HolographableContractEvent>(EventType.HolographableContractEvent, foundLog)
+
+        if (holographableContractEvent !== null) {
+          const decodedEvent: DecodedEvent | null = decodeHolographableContractEvent(holographableContractEvent)
+
+          if (decodedEvent?.type === EventType.TransferERC721) {
+            return CrossChainMessageType.ERC721
+          }
+
+          if (decodedEvent?.type === EventType.TransferERC20) {
+            return CrossChainMessageType.ERC20_HLG
+          }
+        }
+      }
     }
 
     return CrossChainMessageType.UNKNOWN
@@ -450,38 +474,48 @@ export default class Indexer extends HealthCheck {
           if (holographableContractEvent !== null) {
             const decodedEvent: DecodedEvent | null = decodeHolographableContractEvent(holographableContractEvent)
             if (decodedEvent !== null) {
+              // *** START OF TEMP CODE ***
+              // We are adding a temporary filter that skips transfer events inside of bridge-in and bridge-out transactions
+              // A bridge event contains a "TransferERC721" event. Because our process handles a whole event bridge event,
+              // instead of the sub events we have to dedup them. So we make sure that this "TransferERC721" is not part of a bridge event.
+              let isPartOfBridgeTx = false
+              for (const log of interestingLog.allLogs!) {
+                if (
+                  log.topics[0] === this.bloomFilters[EventType.CrossChainMessageSent]!.bloomValueHashed ||
+                  log.topics[0] === this.bloomFilters[EventType.FinishedOperatorJob]!.bloomValueHashed
+                ) {
+                  isPartOfBridgeTx = true
+                  break
+                }
+              }
+
+              if (isPartOfBridgeTx) {
+                break
+              }
+              // *** END OF TEMP CODE ***
+
               switch (decodedEvent.type) {
                 case EventType.TransferERC20:
                   type = EventType.TransferERC20
                   const transferERC20Event: TransferERC20Event = decodedEvent as TransferERC20Event
                   // No need to log ERC20 transfers at the moment
-                  // this.networkMonitor.structuredLog(job.network, 'HandleTransferERC20Event has been called', tags)
+                  this.networkMonitor.structuredLog(job.network, 'HandleTransferERC20Event has been called', tags)
+
+                  await handleTransferERC20Event.call(
+                    this,
+                    this.networkMonitor,
+                    interestingLog.transaction,
+                    job.network,
+                    transferERC20Event,
+                    tags,
+                  )
+
                   break
                 case EventType.TransferERC721:
                   type = EventType.TransferERC721
-                  // *** START OF TEMP CODE ***
-                  // We are adding a temporary filter that skips transfer events inside of bridge-in and bridge-out transactions
-                  // A bridge event contains a "TransferERC721" event. Because our process handles a whole event bridge event,
-                  // instead of the sub events we have to dedup them. So we make sure that this "TransferERC721" is not part of a bridge event.
-                  let isPartOfBridgeTx = false
-                  for (const log of interestingLog.allLogs!) {
-                    if (
-                      log.topics[0] === this.bloomFilters[EventType.CrossChainMessageSent]!.bloomValueHashed ||
-                      log.topics[0] === this.bloomFilters[EventType.FinishedOperatorJob]!.bloomValueHashed
-                    ) {
-                      isPartOfBridgeTx = true
-                      break
-                    }
-                  }
-
-                  if (isPartOfBridgeTx) {
-                    break
-                  }
-                  // *** END OF TEMP CODE ***
-
                   const transferERC721Event: TransferERC721Event = decodedEvent as TransferERC721Event
-
                   let isNewMint = false
+
                   if (transferERC721Event.from === zeroAddress) {
                     isNewMint = true
                     for (const log of interestingLog.allLogs!) {
@@ -515,29 +549,31 @@ export default class Indexer extends HealthCheck {
         case EventType.TransferERC20:
         case EventType.TransferERC721: {
           const testLog = interestingLog.log!
+
+          // *** START OF TEMP CODE ***
+          // We are adding a temporary filter that skips transfer events inside of bridge-in and bridge-out transactions
+          // A bridge event contains a "TransferERC721" event. Because our process handles a whole event bridge event,
+          // instead of the sub events we have to dedup them. So we make sure that this "TransferERC721" is not part of a bridge event.
+          let isPartOfBridgeTx = false
+          for (const log of interestingLog.allLogs!) {
+            if (
+              log.topics[0] === this.bloomFilters[EventType.CrossChainMessageSent]!.bloomValueHashed ||
+              log.topics[0] === this.bloomFilters[EventType.FinishedOperatorJob]!.bloomValueHashed
+            ) {
+              isPartOfBridgeTx = true
+              break
+            }
+          }
+
+          if (isPartOfBridgeTx) {
+            break
+          }
+
+          // *** END OF TEMP CODE ***
+
           if (!testLog.data || testLog.data === '0x') {
             type = EventType.TransferERC721
             // This is ERC721
-            // *** START OF TEMP CODE ***
-            // We are adding a temporary filter that skips transfer events inside of bridge-in and bridge-out transactions
-            // A bridge event contains a "TransferERC721" event. Because our process handles a whole event bridge event,
-            // instead of the sub events we have to dedup them. So we make sure that this "TransferERC721" is not part of a bridge event.
-            let isPartOfBridgeTx = false
-            for (const log of interestingLog.allLogs!) {
-              if (
-                log.topics[0] === this.bloomFilters[EventType.CrossChainMessageSent]!.bloomValueHashed ||
-                log.topics[0] === this.bloomFilters[EventType.FinishedOperatorJob]!.bloomValueHashed
-              ) {
-                isPartOfBridgeTx = true
-                break
-              }
-            }
-
-            if (isPartOfBridgeTx) {
-              break
-            }
-
-            // *** END OF TEMP CODE ***
             try {
               const transferERC721Event: TransferERC721Event | null = this.bloomFilters[
                 type
@@ -581,8 +617,16 @@ export default class Indexer extends HealthCheck {
                 type
               ]!.bloomEvent.decode<TransferERC20Event>(type, interestingLog.log!)
               if (transferERC20Event !== null) {
-                // No need to log ERC20 transfers at the moment
-                // this.networkMonitor.structuredLog(job.network, 'HandleTransferERC20Event has been called', tags)
+                this.networkMonitor.structuredLog(job.network, 'HandleTransferERC20Event has been called', tags)
+
+                await handleTransferERC20Event.call(
+                  this,
+                  this.networkMonitor,
+                  interestingLog.transaction,
+                  job.network,
+                  transferERC20Event,
+                  tags,
+                )
               }
             } catch (error: any) {
               this.networkMonitor.structuredLogError(
@@ -792,15 +836,15 @@ export default class Indexer extends HealthCheck {
     }
   }
 
-  getCrossChainMessageType(eventName: ProtocolEvent) {
+  getCrossChainMessageType(eventName: ProtocolEvent, extraData?: ExtraDataType) {
+    if (extraData !== undefined && extraData.crossChainMessageType !== undefined) {
+      return extraData.crossChainMessageType
+    }
+
     const eventLogs = new Set(protocolEventsMap[eventName].events)
 
     if (eventLogs.has(eventMap[EventType.BridgeableContractDeployed])) {
       return CrossChainMessageType.CONTRACT
-    }
-
-    if (eventLogs.has(eventMap[EventType.TransferERC721])) {
-      return CrossChainMessageType.ERC721
     }
 
     return CrossChainMessageType.UNKNOWN
@@ -918,9 +962,31 @@ export default class Indexer extends HealthCheck {
           break
         }
 
+        case SqsEventName.TransferERC20: {
+          const transferERC20Event = sqsEvent.decodedEvent as TransferERC20Event
+          try {
+            await handleTransferERC20Event.call(
+              this,
+              this.networkMonitor,
+              interestingEvent.transaction,
+              job.network,
+              transferERC20Event,
+              tags,
+            )
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(
+              job.network,
+              this.errorColor(`Handling TransferERC20 error: `, error),
+              tags,
+            )
+          }
+
+          break
+        }
+
         case SqsEventName.BridgePreProcess: {
           try {
-            const crossChainMessageType = this.getCrossChainMessageType(interestingEvent.eventName)
+            const crossChainMessageType = this.getCrossChainMessageType(interestingEvent.eventName, sqsEvent.extraData)
 
             // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
             await sqsHandleBridgeEvent.call(
@@ -934,7 +1000,7 @@ export default class Indexer extends HealthCheck {
           } catch (error: any) {
             this.networkMonitor.structuredLogError(
               job.network,
-              this.errorColor(`Decoding CrossChainMessageSentEvent error: `, error),
+              this.errorColor(`Handling CrossChainMessageSentEvent error: `, error),
               tags,
             )
           }
@@ -944,7 +1010,8 @@ export default class Indexer extends HealthCheck {
 
         case SqsEventName.AvailableOperatorJob: {
           try {
-            const crossChainMessageType = this.getCrossChainMessageType(interestingEvent.eventName)
+            // TODO: it's always Unknown. This field can be safely removed in the future, as it is not utilized by the processor.
+            const crossChainMessageType = this.getCrossChainMessageType(interestingEvent.eventName, sqsEvent.extraData)
 
             await sqsHandleAvailableOperatorJobEvent.call(
               this,
@@ -957,7 +1024,7 @@ export default class Indexer extends HealthCheck {
           } catch (error: any) {
             this.networkMonitor.structuredLogError(
               job.network,
-              this.errorColor(`Decoding AvailableOperatorJobEvent error: `, error),
+              this.errorColor(`Handling AvailableOperatorJobEvent error: `, error),
               tags,
             )
           }
@@ -979,7 +1046,7 @@ export default class Indexer extends HealthCheck {
           } catch (error: any) {
             this.networkMonitor.structuredLogError(
               job.network,
-              this.errorColor(`Decoding FailedOperatorJobEvent error: `, error),
+              this.errorColor(`Handling FailedOperatorJobEvent error: `, error),
               tags,
             )
           }
