@@ -98,7 +98,7 @@ env:
   SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
   TESTNET_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
   TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
-  TESTNET_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor-v2'
+  TESTNET_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
 
   #######################################
   TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.56
@@ -659,15 +659,15 @@ jobs:
             --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCountAvalanche=1 \
-            --set replicaCountPolygon=1 \
-            --set replicaCountBinance=1 \
-            --set replicaCountMantle=1 \
-            --set replicaCountEthereum=1 \
-            --set replicaCountArbitrum=1 \
-            --set replicaCountOptimism=1 \
-            --set replicaCountBase=1 \
-            --set replicaCountZora=1 \
+            --set replicaCountAvalanche=0 \
+            --set replicaCountPolygon=0 \
+            --set replicaCountBinance=0 \
+            --set replicaCountMantle=0 \
+            --set replicaCountEthereum=0 \
+            --set replicaCountArbitrum=0 \
+            --set replicaCountOptimism=0 \
+            --set replicaCountBase=0 \
+            --set replicaCountZora=0 \
             \
             --set resources.ethereum.limits.memory=820Mi \
             --set resources.ethereum.requests.cpu=500m \
@@ -708,7 +708,7 @@ jobs:
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
             --set sqs.SQS_ENDPOINT=${{ env.TESTNET_SQS_ENDPOINT }} \
-            --set sqs.SQS_QUEUE_URL=${{ env.TESTNET_SQS_QUEUE_URL }} \
+            --set sqs.SQS_QUEUE_URL=${{ env.TESTNET_SQS_QUEUE_URL_V2 }} \
             --set sqs.AWS_REGION=us-west-2 \
             \
             --values .github/values_for_prod_alb_ingress.yaml \
@@ -814,15 +814,15 @@ jobs:
             --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCountAvalanche=1 \
-            --set replicaCountPolygon=1 \
-            --set replicaCountBinance=1 \
-            --set replicaCountMantle=1 \
-            --set replicaCountEthereum=1 \
-            --set replicaCountArbitrum=1 \
-            --set replicaCountOptimism=1 \
+            --set replicaCountAvalanche=0 \
+            --set replicaCountPolygon=0 \
+            --set replicaCountBinance=0 \
+            --set replicaCountMantle=0 \
+            --set replicaCountEthereum=0 \
+            --set replicaCountArbitrum=0 \
+            --set replicaCountOptimism=0 \
             --set replicaCountBase=0 \
-            --set replicaCountZora=1 \
+            --set replicaCountZora=0 \
             \
             --set resources.ethereum.limits.memory=800Mi \
             --set resources.ethereum.requests.cpu=250m \

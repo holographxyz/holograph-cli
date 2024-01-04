@@ -98,7 +98,7 @@ env:
   SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
   DEV_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
   DEV_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor'
-  DEV_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor-v2'
+  DEV_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor'
 
   #######################################
   STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.56
