@@ -770,6 +770,7 @@ jobs:
             --set HOLO_OPERATOR_HOST=${{ env.MAINNET_HOLOGRAPH_OPERATOR_HOST }} \
             --set OPERATOR_API_KEY=${{ env.MAINNET_HOLO_OPERATOR_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
+            --set HOLOGRAPH_ADDRESS=${{ env.HOLOGRAPH_ADDRESS }} \
             --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
@@ -869,3 +870,32 @@ jobs:
             --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
             --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
             --set ingress.blue_green_deployment=false
+
+#      - name: -> V2 -- Info for the new V2 deployments
+#        uses: tensor-hq/eksctl-helm-action@main
+#        env:
+#          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
+#          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }}
+#          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
+#        with:
+#          eks_cluster: ${{ env.CLUSTER_NAME }}
+#          command: |-
+#            echo "------------------------- Last n Helm releases -------------------------"
+#            echo "--V2 INDEXER--"
+#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
+#            echo "--V2 OPERATOR--"
+#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
+#
+#            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+#            echo "$DEV_IMAGE_TAG"
+#
+#            echo "------------------------ Healthchecks ------------------------"
+#            sleep 55
+#
+#            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+#
+#            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'

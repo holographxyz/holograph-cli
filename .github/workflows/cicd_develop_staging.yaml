@@ -442,15 +442,15 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
             \
-            --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
-            --set POLYGON_NETWORK=$POLYGON_NETWORK \
-            --set ETHEREUM_NETWORK=$ETHEREUM_NETWORK \
-            --set OPTIMISM_NETWORK=$OPTIMISM_NETWORK \
-            --set ARBITRUM_NETWORK=$ARBITRUM_NETWORK \
-            --set BINANCE_NETWORK=$BINANCE_NETWORK \
-            --set MANTLE_NETWORK=$MANTLE_NETWORK \
-            --set ZORA_NETWORK=$ZORA_NETWORK \
-            --set BASE_NETWORK=$BASE_NETWORK \
+            --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
+            --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
+            --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
+            --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
+            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
+            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
+            --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
+            --set ZORA_NETWORK="${ZORA_NETWORK}" \
+            --set BASE_NETWORK="${BASE_NETWORK}" \
             \
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_dev_avalancheTestnet_rpc_url }} \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_dev_polygonTestnet_rpc_url }} \
@@ -741,14 +741,14 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           #
           AVALANCHE_NETWORK: 'fuji'
-          POLYGON_NETWORK  : 'mumbai'
-          BINANCE_NETWORK  : 'binanceSmartChainTestnet'
-          MANTLE_NETWORK   : 'mantleTestnet'
-          ETHEREUM_NETWORK : '{ethereumTestnetSepolia}'
-          OPTIMISM_NETWORK : '{optimismTestnetSepolia}'
-          ARBITRUM_NETWORK : '{arbitrumTestnetSepolia}'
-          ZORA_NETWORK     : '{zoraTestnetSepolia}'
-          BASE_NETWORK     : '{baseTestnetSepolia}'
+          POLYGON_NETWORK: 'mumbai'
+          BINANCE_NETWORK: 'binanceSmartChainTestnet'
+          MANTLE_NETWORK: 'mantleTestnet'
+          ETHEREUM_NETWORK: '{ethereumTestnetSepolia}'
+          OPTIMISM_NETWORK: '{optimismTestnetSepolia}'
+          ARBITRUM_NETWORK: '{arbitrumTestnetSepolia}'
+          ZORA_NETWORK: '{zoraTestnetSepolia}'
+          BASE_NETWORK: '{baseTestnetSepolia}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
