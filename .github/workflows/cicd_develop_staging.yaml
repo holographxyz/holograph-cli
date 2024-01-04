@@ -39,16 +39,6 @@ env:
   STG_COMMON_NAMESPACE: 'develop'
   STG_COMMON_NAMESPACE_V2: 'develop-v2'
   #
-  #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.56
-  INDEXER_RELEASE_NAME: 'indexer-dev' # format -> [release_name]-indexer-[env]
-  INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2'
-  #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.95
-  OPERATOR_RELEASE_NAME: 'operator-dev' # format -> [release_name]-operator-[env]
-  OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2'
-  #######################################
-  #
   # V1 INDEXER DEV rpc endpoints
   indexer_dev_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
   indexer_dev_polygonTestnet_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }}
@@ -75,22 +65,16 @@ env:
   #
   operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
   operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
-
   #
   # V2 INDEXER DEV rpc endpoints
   v2_indexer_dev_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
   v2_indexer_dev_polygonTestnet_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }}
-  v2_indexer_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }}
   v2_indexer_dev_ethereumTestnetSepolia_rpc_url: ${{ secrets.INDEXER_DEV_ETHEREUM_SEPOLIA_RPC_URL }}
-  v2_indexer_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_OPTIMISM_GOERLI_RPC_URL }}
   v2_indexer_dev_optimismTestnetSepolia_rpc_url: 'https://sepolia.optimism.io'
-  v2_indexer_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_ARBITRUM_GOERLI_RPC_URL }}
   v2_indexer_dev_arbitrumTestnetSepolia_rpc_url: ${{ secrets.INDEXER_DEV_ARBITRUM_SEPOLIA_RPC_URL }}
   v2_indexer_dev_binanceTestnet_rpc_url: ${{ secrets.INDEXER_DEV_BSC_TESTNET_RPC_URL }}
   v2_indexer_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  v2_indexer_dev_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
   v2_indexer_dev_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
-  v2_indexer_dev_baseTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_BASE_GOERLI_RPC_URL }}
   v2_indexer_dev_baseTestnetSepolia_rpc_url: ${{ secrets.INDEXER_DEV_BASE_SEPOLIA_RPC_URL }}
   #
   v2_indexer_dev_private_key: ${{ secrets.INDEXER_DEV_PRIVATE_KEY }}
@@ -98,22 +82,16 @@ env:
   # V2 OPERATOR DEV rpc endpoints
   v2_operator_dev_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_FUJI_RPC_URL }}
   v2_operator_dev_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }}
-  v2_operator_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_GOERLI_RPC_URL }}
   v2_operator_dev_ethereumTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_DEV_ETHEREUM_SEPOLIA_RPC_URL }}
-  v2_operator_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_OPTIMISM_GOERLI_RPC_URL }}
   v2_operator_dev_optimismTestnetSepolia_rpc_url: 'https://sepolia.optimism.io'
-  v2_operator_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_ARBITRUM_GOERLI_RPC_URL }}
   v2_operator_dev_arbitrumTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_DEV_ARBITRUM_SEPOLIA_RPC_URL }}
   v2_operator_dev_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_BSC_TESTNET_RPC_URL }}
   v2_operator_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  v2_operator_dev_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
   v2_operator_dev_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
-  v2_operator_dev_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_BASE_GOERLI_RPC_URL }}
   v2_operator_dev_baseTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_DEV_BASE_SEPOLIA_RPC_URL }}
   #
   v2_operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
   v2_operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
-
   #
   # SQS User [indexer_processor_sqs_user]
   SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
@@ -121,6 +99,16 @@ env:
   DEV_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
   DEV_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor'
   DEV_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor-v2'
+
+  #######################################
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.56
+  INDEXER_RELEASE_NAME: 'indexer-dev' # format -> [release_name]-indexer-[env]
+  INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2'
+  #
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.95
+  OPERATOR_RELEASE_NAME: 'operator-dev' # format -> [release_name]-operator-[env]
+  OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2'
+  #######################################
 
 on:
   push:
@@ -240,14 +228,14 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           #
           AVALANCHE_NETWORK: 'fuji'
-          POLYGON_NETWORK  : 'mumbai'
-          BINANCE_NETWORK  : 'binanceSmartChainTestnet'
-          MANTLE_NETWORK   : 'mantleTestnet'
-          ETHEREUM_NETWORK : '{ethereumTestnetGoerli}'
-          OPTIMISM_NETWORK : '{optimismTestnetGoerli}'
-          ARBITRUM_NETWORK : '{arbitrumTestnetGoerli}'
-          ZORA_NETWORK     : '{zoraTestnetGoerli}'
-          BASE_NETWORK     : '{baseTestnetGoerli}'
+          POLYGON_NETWORK: 'mumbai'
+          BINANCE_NETWORK: 'binanceSmartChainTestnet'
+          MANTLE_NETWORK: 'mantleTestnet'
+          ETHEREUM_NETWORK: '{ethereumTestnetGoerli}'
+          OPTIMISM_NETWORK: '{optimismTestnetGoerli}'
+          ARBITRUM_NETWORK: '{arbitrumTestnetGoerli}'
+          ZORA_NETWORK: '{zoraTestnetGoerli}'
+          BASE_NETWORK: '{baseTestnetGoerli}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -278,7 +266,7 @@ jobs:
             --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
             --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
-            --set BASE_NETWORK="{baseTestnetGoerli}" \
+            --set BASE_NETWORK="${BASE_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
@@ -413,14 +401,14 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           #
           AVALANCHE_NETWORK: 'fuji'
-          POLYGON_NETWORK  : 'mumbai'
-          BINANCE_NETWORK  : 'binanceSmartChainTestnet'
-          MANTLE_NETWORK   : 'mantleTestnet'
-          ETHEREUM_NETWORK : '{ethereumTestnetGoerli}'
-          OPTIMISM_NETWORK : '{optimismTestnetGoerli}'
-          ARBITRUM_NETWORK : '{arbitrumTestnetGoerli}'
-          ZORA_NETWORK     : '{zoraTestnetGoerli}'
-          BASE_NETWORK     : '{baseTestnetGoerli}'
+          POLYGON_NETWORK: 'mumbai'
+          BINANCE_NETWORK: 'binanceSmartChainTestnet'
+          MANTLE_NETWORK: 'mantleTestnet'
+          ETHEREUM_NETWORK: '{ethereumTestnetGoerli}'
+          OPTIMISM_NETWORK: '{optimismTestnetGoerli}'
+          ARBITRUM_NETWORK: '{arbitrumTestnetGoerli}'
+          ZORA_NETWORK: '{zoraTestnetGoerli}'
+          BASE_NETWORK: '{baseTestnetGoerli}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -591,14 +579,14 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           #
           AVALANCHE_NETWORK: 'fuji'
-          POLYGON_NETWORK  : 'mumbai'
-          BINANCE_NETWORK  : 'binanceSmartChainTestnet'
-          MANTLE_NETWORK   : 'mantleTestnet'
-          ETHEREUM_NETWORK : '{ethereumTestnetGoerli,ethereumTestnetSepolia}'
-          OPTIMISM_NETWORK : '{optimismTestnetGoerli,optimismTestnetSepolia}'
-          ARBITRUM_NETWORK : '{arbitrumTestnetGoerli,arbitrumTestnetSepolia}'
-          ZORA_NETWORK     : '{zoraTestnetGoerli,zoraTestnetSepolia}'
-          BASE_NETWORK     : '{baseTestnetGoerli,baseTestnetSepolia}'
+          POLYGON_NETWORK: 'mumbai'
+          BINANCE_NETWORK: 'binanceSmartChainTestnet'
+          MANTLE_NETWORK: 'mantleTestnet'
+          ETHEREUM_NETWORK: '{ethereumTestnetSepolia}'
+          OPTIMISM_NETWORK: '{optimismTestnetSepolia}'
+          ARBITRUM_NETWORK: '{arbitrumTestnetSepolia}'
+          ZORA_NETWORK: '{zoraTestnetSepolia}'
+          BASE_NETWORK: '{baseTestnetSepolia}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -630,7 +618,7 @@ jobs:
             --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
             --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
-            --set BASE_NETWORK="{baseTestnetGoerli,baseTestnetSepolia}" \
+            --set BASE_NETWORK="${BASE_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
@@ -647,17 +635,12 @@ jobs:
             \
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.v2_indexer_dev_avalancheTestnet_rpc_url }} \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.v2_indexer_dev_polygonTestnet_rpc_url }} \
-            --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.v2_indexer_dev_ethereumTestnetGoerli_rpc_url }} \
-            --set dev_rpc_config_values.ethereumTestnetSepolia_rpc_url=${{ env.v2_indexer_dev_ethereumTestnetSepolia_rpc_url }} \
-            --set dev_rpc_config_values.optimismTestnetGoerli_rpc_url=${{ env.v2_indexer_dev_optimismTestnetGoerli_rpc_url }} \
-            --set dev_rpc_config_values.optimismTestnetSepolia_rpc_url=${{ env.v2_indexer_dev_optimismTestnetSepolia_rpc_url }} \
-            --set dev_rpc_config_values.arbitrumTestnetGoerli_rpc_url=${{ env.v2_indexer_dev_arbitrumTestnetGoerli_rpc_url }} \
-            --set dev_rpc_config_values.arbitrumTestnetSepolia_rpc_url=${{ env.v2_indexer_dev_arbitrumTestnetSepolia_rpc_url }} \
             --set dev_rpc_config_values.binanceTestnet_rpc_url=${{ env.v2_indexer_dev_binanceTestnet_rpc_url }} \
             --set dev_rpc_config_values.mantleTestnet_rpc_url=${{ env.v2_indexer_dev_mantleTestnet_rpc_url }} \
-            --set dev_rpc_config_values.zoraTestnetGoerli_rpc_url=${{ env.v2_indexer_dev_zoraTestnetGoerli_rpc_url }} \
+            --set dev_rpc_config_values.ethereumTestnetSepolia_rpc_url=${{ env.v2_indexer_dev_ethereumTestnetSepolia_rpc_url }} \
+            --set dev_rpc_config_values.optimismTestnetSepolia_rpc_url=${{ env.v2_indexer_dev_optimismTestnetSepolia_rpc_url }} \
+            --set dev_rpc_config_values.arbitrumTestnetSepolia_rpc_url=${{ env.v2_indexer_dev_arbitrumTestnetSepolia_rpc_url }} \
             --set dev_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.v2_indexer_dev_zoraTestnetSepolia_rpc_url }} \
-            --set dev_rpc_config_values.baseTestnetGoerli_rpc_url=${{ env.v2_indexer_dev_baseTestnetGoerli_rpc_url }} \
             --set dev_rpc_config_values.baseTestnetSepolia_rpc_url=${{ env.v2_indexer_dev_baseTestnetSepolia_rpc_url }} \
             \
             --set dev_rpc_config_values.private_key=${{ env.v2_indexer_dev_private_key }} \
@@ -761,11 +744,11 @@ jobs:
           POLYGON_NETWORK  : 'mumbai'
           BINANCE_NETWORK  : 'binanceSmartChainTestnet'
           MANTLE_NETWORK   : 'mantleTestnet'
-          ETHEREUM_NETWORK : '{ethereumTestnetGoerli,ethereumTestnetSepolia}'
-          OPTIMISM_NETWORK : '{optimismTestnetGoerli,optimismTestnetSepolia}'
-          ARBITRUM_NETWORK : '{arbitrumTestnetGoerli,arbitrumTestnetSepolia}'
-          ZORA_NETWORK     : '{zoraTestnetGoerli,zoraTestnetSepolia}'
-          BASE_NETWORK     : '{baseTestnetGoerli,baseTestnetSepolia}'
+          ETHEREUM_NETWORK : '{ethereumTestnetSepolia}'
+          OPTIMISM_NETWORK : '{optimismTestnetSepolia}'
+          ARBITRUM_NETWORK : '{arbitrumTestnetSepolia}'
+          ZORA_NETWORK     : '{zoraTestnetSepolia}'
+          BASE_NETWORK     : '{baseTestnetSepolia}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -814,15 +797,10 @@ jobs:
             --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.v2_operator_dev_polygonTestnet_rpc_url }} \
             --set dev_rpc_config_values.binanceTestnet_rpc_url=${{ env.v2_operator_dev_binanceTestnet_rpc_url }} \
             --set dev_rpc_config_values.mantleTestnet_rpc_url=${{ env.v2_operator_dev_mantleTestnet_rpc_url }} \
-            --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.v2_operator_dev_ethereumTestnetGoerli_rpc_url }} \
             --set dev_rpc_config_values.ethereumTestnetSepolia_rpc_url=${{ env.v2_operator_dev_ethereumTestnetSepolia_rpc_url }} \
-            --set dev_rpc_config_values.optimismTestnetGoerli_rpc_url=${{ env.v2_operator_dev_optimismTestnetGoerli_rpc_url }} \
             --set dev_rpc_config_values.optimismTestnetSepolia_rpc_url=${{ env.v2_operator_dev_optimismTestnetSepolia_rpc_url }} \
-            --set dev_rpc_config_values.arbitrumTestnetGoerli_rpc_url=${{ env.v2_operator_dev_arbitrumTestnetGoerli_rpc_url }} \
             --set dev_rpc_config_values.arbitrumTestnetSepolia_rpc_url=${{ env.v2_operator_dev_arbitrumTestnetSepolia_rpc_url }} \
-            --set dev_rpc_config_values.zoraTestnetGoerli_rpc_url=${{ env.v2_operator_dev_zoraTestnetGoerli_rpc_url }} \
             --set dev_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.v2_operator_dev_zoraTestnetSepolia_rpc_url }} \
-            --set dev_rpc_config_values.baseTestnetGoerli_rpc_url=${{ env.v2_operator_dev_baseTestnetGoerli_rpc_url }} \
             --set dev_rpc_config_values.baseTestnetSepolia_rpc_url=${{ env.v2_operator_dev_baseTestnetSepolia_rpc_url }} \
             \
             --set dev_rpc_config_values.private_key=${{ env.v2_operator_dev_private_key }} \
