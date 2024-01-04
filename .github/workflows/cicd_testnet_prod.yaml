@@ -820,7 +820,7 @@ jobs:
             --set replicaCountEthereum=1 \
             --set replicaCountArbitrum=1 \
             --set replicaCountOptimism=1 \
-            --set replicaCountBase=1 \
+            --set replicaCountBase=0 \
             --set replicaCountZora=1 \
             \
             --set resources.ethereum.limits.memory=800Mi \
