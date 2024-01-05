@@ -77,8 +77,8 @@ env:
   v2_indexer_testnet_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
   v2_indexer_testnet_baseTestnetSepolia_rpc_url: ${{ secrets.INDEXER_PROD_BASE_SEPOLIA_RPC_URL }}
   #
-  v2_indexer_testnet_private_key: ${{ secrets.INDEXER_TESTNET_PRIVATE_KEY }}
-  v2_indexer_testnet_address: ${{ secrets.INDEXER_TESTNET_ADDRESS }}
+  v2_indexer_testnet_private_key: ${{ secrets.INDEXER_PROD_PRIVATE_KEY }}
+  v2_indexer_testnet_address: ${{ secrets.INDEXER_PROD_ADDRESS }}
   # V2 OPERATOR TESTNET rpc endpoints
   v2_operator_testnet_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_FUJI_RPC_URL }}
   v2_operator_testnet_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_MUMBAI_RPC_URL }}
@@ -90,8 +90,8 @@ env:
   v2_operator_testnet_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
   v2_operator_testnet_baseTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_PROD_BASE_SEPOLIA_RPC_URL }}
   #
-  v2_operator_testnet_private_key: ${{ secrets.OPERATOR_TESTNET_PRIVATE_KEY }}
-  v2_operator_testnet_address: ${{ secrets.OPERATOR_TESTNET_ADDRESS }}
+  v2_operator_testnet_private_key: ${{ secrets.OPERATOR_PROD_PRIVATE_KEY }}
+  v2_operator_testnet_address: ${{ secrets.OPERATOR_PROD_ADDRESS }}
   #
   # SQS User [indexer_processor_sqs_user]
   SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
