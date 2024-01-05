@@ -67,28 +67,28 @@ env:
   operator_testnet_address: ${{ secrets.OPERATOR_PROD_ADDRESS }}
   #
   # V2 INDEXER TESTNET rpc endpoints
-  v2_indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets. }}
-  v2_indexer_testnet_polygonTestnet_rpc_url: ${{ secrets. }}
-  v2_indexer_testnet_binanceTestnet_rpc_url: ${{ secrets. }}
+  v2_indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
+  v2_indexer_testnet_polygonTestnet_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
+  v2_indexer_testnet_binanceTestnet_rpc_url: ${{ secrets.INDEXER_PROD_BSC_TESTNET_RPC_URL }}
   v2_indexer_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  v2_indexer_testnet_ethereumTestnetSepolia_rpc_url: ${{ secrets. }}
+  v2_indexer_testnet_ethereumTestnetSepolia_rpc_url: ${{ secrets.INDEXER_PROD_SEPOLIA_RPC_URL }}
   v2_indexer_testnet_optimismTestnetSepolia_rpc_url: 'https://sepolia.optimism.io'
-  v2_indexer_testnet_arbitrumTestnetSepolia_rpc_url: ${{ secrets. }}
+  v2_indexer_testnet_arbitrumTestnetSepolia_rpc_url: ${{ secrets.INDEXER_PROD_ARBITRUM_SEPOLIA_RPC_URL }}
   v2_indexer_testnet_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
-  v2_indexer_testnet_baseTestnetSepolia_rpc_url: ${{ secrets. }}
+  v2_indexer_testnet_baseTestnetSepolia_rpc_url: ${{ secrets.INDEXER_PROD_BASE_SEPOLIA_RPC_URL }}
   #
   v2_indexer_testnet_private_key: ${{ secrets.INDEXER_TESTNET_PRIVATE_KEY }}
   v2_indexer_testnet_address: ${{ secrets.INDEXER_TESTNET_ADDRESS }}
   # V2 OPERATOR TESTNET rpc endpoints
-  v2_operator_testnet_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_TESTNET_FUJI_RPC_URL }}
-  v2_operator_testnet_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_TESTNET_MUMBAI_RPC_URL }}
-  v2_operator_testnet_ethereumTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_TESTNET_ETHEREUM_SEPOLIA_RPC_URL }}
-  v2_operator_testnet_optimismTestnetSepolia_rpc_url: 'https://sepolia.optimism.io'
-  v2_operator_testnet_arbitrumTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_TESTNET_ARBITRUM_SEPOLIA_RPC_URL }}
-  v2_operator_testnet_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_TESTNET_BSC_TESTNET_RPC_URL }}
+  v2_operator_testnet_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_FUJI_RPC_URL }}
+  v2_operator_testnet_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_MUMBAI_RPC_URL }}
+  v2_operator_testnet_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_BSC_TESTNET_RPC_URL }}
   v2_operator_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
+  v2_operator_testnet_ethereumTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_PROD_SEPOLIA_RPC_URL }}
+  v2_operator_testnet_optimismTestnetSepolia_rpc_url: 'https://sepolia.optimism.io'
+  v2_operator_testnet_arbitrumTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_PROD_ARBITRUM_SEPOLIA_RPC_URL }}
   v2_operator_testnet_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
-  v2_operator_testnet_baseTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_TESTNET_BASE_SEPOLIA_RPC_URL }}
+  v2_operator_testnet_baseTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_PROD_BASE_SEPOLIA_RPC_URL }}
   #
   v2_operator_testnet_private_key: ${{ secrets.OPERATOR_TESTNET_PRIVATE_KEY }}
   v2_operator_testnet_address: ${{ secrets.OPERATOR_TESTNET_ADDRESS }}
@@ -102,12 +102,12 @@ env:
 
   #######################################
   TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.56
-  INDEXER_RELEASE_NAME: 'blondie-indexer-testnet' # format -> [release_name]-indexer-[env]
-  INDEXER_RELEASE_NAME_V2: 'blondie-indexer-testnet-v2'
+  INDEXER_RELEASE_NAME: 'kd-blondie-indexer-testnet' # format -> [release_name]-indexer-[env]
+  INDEXER_RELEASE_NAME_V2: 'kd-blondie-indexer-testnet-v2'
   #
   TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.95
-  OPERATOR_RELEASE_NAME: 'blondie-operator-testnet' # format -> [release_name]-operator-[env]
-  OPERATOR_RELEASE_NAME_V2: 'blondie-operator-testnet-v2'
+  OPERATOR_RELEASE_NAME: 'kd-blondie-operator-testnet' # format -> [release_name]-operator-[env]
+  OPERATOR_RELEASE_NAME_V2: 'kd-blondie-operator-testnet-v2'
   #######################################
 
 # notice: the trigger
