@@ -84,7 +84,7 @@ export const protocolEventsMap: {readonly [key in ProtocolEvent]: ProtocolEventI
     name: ProtocolEvent.MoeMintNft,
     contractMethodName: ContractMethodId.purchase,
     events: [
-      // eventMap[EventType.TransferERC721],
+      // eventMap[EventType.TransferERC721], // NOTE: transfer checks are skipped for efficiency. Filtering transfer logs is costly, and all relevant data is already available in the HolographableContractEvent.
       eventMap[EventType.HolographableContractEvent],
       eventMap[EventType.MintFeePayout],
       eventMap[EventType.Sale],
@@ -97,7 +97,7 @@ export const protocolEventsMap: {readonly [key in ProtocolEvent]: ProtocolEventI
     name: ProtocolEvent.LegacyMintNft,
     contractMethodName: ContractMethodId.cxipMint,
     events: [
-      // eventMap[EventType.TransferERC721],
+      // eventMap[EventType.TransferERC721], // NOTE: transfer checks are skipped for efficiency. Filtering transfer logs is costly, and all relevant data is already available in the HolographableContractEvent.
       eventMap[EventType.HolographableContractEvent],
     ],
     sqsEventNames: [SqsEventName.MintNft],
@@ -109,7 +109,7 @@ export const protocolEventsMap: {readonly [key in ProtocolEvent]: ProtocolEventI
     name: ProtocolEvent.BridgeOut,
     contractMethodName: ContractMethodId.bridgeOutRequest,
     events: [
-      // eventMap[EventType.TransferERC721],
+      // eventMap[EventType.TransferERC721], // NOTE: transfer checks are skipped for efficiency. Filtering transfer logs is costly, and all relevant data is already available in the HolographableContractEvent.
       eventMap[EventType.HolographableContractEvent],
       eventMap[EventType.AssignJob],
       eventMap[EventType.RelayerParams],
@@ -142,7 +142,7 @@ export const protocolEventsMap: {readonly [key in ProtocolEvent]: ProtocolEventI
     contractMethodName: ContractMethodId.executeJob,
     events: [
       eventMap[EventType.FinishedOperatorJob],
-      // eventMap[EventType.TransferERC721],
+      // eventMap[EventType.TransferERC721], // NOTE: transfer checks are skipped for efficiency. Filtering transfer logs is costly, and all relevant data is already available in the HolographableContractEvent.
       eventMap[EventType.HolographableContractEvent],
     ],
     sqsEventNames: [SqsEventName.BridgePreProcess],
@@ -154,7 +154,7 @@ export const protocolEventsMap: {readonly [key in ProtocolEvent]: ProtocolEventI
     name: ProtocolEvent.TransferErc20OrErc721,
     contractMethodName: undefined,
     events: [
-      // eventMap[EventType.TransferERC721],
+      // eventMap[EventType.TransferERC721], // NOTE: transfer checks are skipped for efficiency. Filtering transfer logs is costly, and all relevant data is already available in the HolographableContractEvent.
       eventMap[EventType.HolographableContractEvent],
     ],
     sqsEventNames: [SqsEventName.TransferERC721],
