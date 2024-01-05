@@ -116,7 +116,8 @@ env:
 on:
   push:
     branches:
-      - 'feat/deploy-testmain-net-v2'
+      - 'deactivated'
+#      - 'feat/deploy-testmain-net-v2'
       # Excluded branches
       - '!develop'
       - '!testnet'

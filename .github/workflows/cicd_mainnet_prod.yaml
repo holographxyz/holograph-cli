@@ -102,34 +102,37 @@ env:
 
   #######################################
   MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.56
-  INDEXER_RELEASE_NAME: 'kd-blondie-indexer-mainnet' # format -> [release_name]-indexer-[env]
-  INDEXER_RELEASE_NAME_V2: 'kd-blondie-indexer-mainnet-v2'
+  #INDEXER_RELEASE_NAME: 'blondie-indexer-mainnet' # format -> [release_name]-indexer-[env] # up to 63 chars
+  #INDEXER_RELEASE_NAME_V2: 'blondie-indexer-mainnet-v2'
+  INDEXER_RELEASE_NAME_V2: 'kd-indexer-mainnet-v2'
   #
   MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.95
-  OPERATOR_RELEASE_NAME: 'kd-blondie-operator-mainnet' # format -> [release_name]-operator-[env]
-  OPERATOR_RELEASE_NAME_V2: 'kd-blondie-operator-mainnet-v2'
+  #OPERATOR_RELEASE_NAME: 'blondie-operator-mainnet' # format -> [release_name]-operator-[env] # up to 63 chars
+  #OPERATOR_RELEASE_NAME_V2: 'blondie-operator-mainnet-v2'
+  OPERATOR_RELEASE_NAME_V2: 'kd-operator-mainnet-v2'
   #######################################
 
 ## notice: the trigger
-#on:
-#  push:
-#    branches:
-#      - 'something'
-#      - 'feat/deploy-testmain-net-v2'
-#      # Excluded branches
-#      - '!develop'
-#      - '!main'
-#      - '!master'
-# notice: the trigger
 on:
-  pull_request:
+  push:
     branches:
-      - 'mainnet'
-    types: [closed]
+#      - 'something'
+      - 'feat/deploy-testmain-net-v2'
+      # Excluded branches
+      - '!develop'
+      - '!testnet'
+      - '!main'
+      - '!master'
+# notice: the trigger
+#on:
+#  pull_request:
+#    branches:
+#      - 'mainnet'
+#    types: [closed]
 
 jobs:
   deploy-to-prod-mainnet:
-    if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
+#    if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
     name: Deploy-to-prod[mainnet]
     runs-on: ubuntu-latest
 
@@ -590,11 +593,11 @@ jobs:
           POLYGON_NETWORK: 'polygon'
           BINANCE_NETWORK: 'binanceSmartChain'
           MANTLE_NETWORK: 'mantle'
-          ETHEREUM_NETWORK: 'ethereum'
-          OPTIMISM_NETWORK: 'optimism'
-          ARBITRUM_NETWORK: 'arbitrumOne'
-          ZORA_NETWORK: 'zora'
-          BASE_NETWORK: 'base'
+          ETHEREUM_NETWORK: '{ethereum}'
+          OPTIMISM_NETWORK: '{optimism}'
+          ARBITRUM_NETWORK: '{arbitrumOne}'
+          ZORA_NETWORK: '{zora}'
+          BASE_NETWORK: '{base}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -641,18 +644,18 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
             \
-            --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.indexer_mainnet_avalanche_rpc_url }} \
-            --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.indexer_mainnet_polygon_rpc_url }} \
-            --set mainnet_rpc_config_values.ethereum_rpc_url=${{ env.indexer_mainnet_ethereum_rpc_url }} \
-            --set mainnet_rpc_config_values.optimism_rpc_url=${{ env.indexer_mainnet_optimism_rpc_url }} \
-            --set mainnet_rpc_config_values.arbitrum_rpc_url=${{ env.indexer_mainnet_arbitrum_rpc_url }} \
-            --set mainnet_rpc_config_values.binance_rpc_url=${{ env.indexer_mainnet_binance_rpc_url }} \
-            --set mainnet_rpc_config_values.mantle_rpc_url=${{ env.indexer_mainnet_mantle_rpc_url }} \
-            --set mainnet_rpc_config_values.zora_rpc_url=${{ env.indexer_mainnet_zora_rpc_url }} \
-            --set mainnet_rpc_config_values.base_rpc_url=${{ env.indexer_mainnet_base_rpc_url }} \
+            --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.v2_indexer_mainnet_avalanche_rpc_url }} \
+            --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.v2_indexer_mainnet_polygon_rpc_url }} \
+            --set mainnet_rpc_config_values.ethereum_rpc_url=${{ env.v2_indexer_mainnet_ethereum_rpc_url }} \
+            --set mainnet_rpc_config_values.optimism_rpc_url=${{ env.v2_indexer_mainnet_optimism_rpc_url }} \
+            --set mainnet_rpc_config_values.arbitrum_rpc_url=${{ env.v2_indexer_mainnet_arbitrum_rpc_url }} \
+            --set mainnet_rpc_config_values.binance_rpc_url=${{ env.v2_indexer_mainnet_binance_rpc_url }} \
+            --set mainnet_rpc_config_values.mantle_rpc_url=${{ env.v2_indexer_mainnet_mantle_rpc_url }} \
+            --set mainnet_rpc_config_values.zora_rpc_url=${{ env.v2_indexer_mainnet_zora_rpc_url }} \
+            --set mainnet_rpc_config_values.base_rpc_url=${{ env.v2_indexer_mainnet_base_rpc_url }} \
             \
-            --set mainnet_rpc_config_values.private_key=${{ env.indexer_mainnet_private_key }} \
-            --set mainnet_rpc_config_values.address=${{ env.indexer_mainnet_address }} \
+            --set mainnet_rpc_config_values.private_key=${{ env.v2_indexer_mainnet_private_key }} \
+            --set mainnet_rpc_config_values.address=${{ env.v2_indexer_mainnet_address }} \
             --set mainnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
@@ -752,11 +755,11 @@ jobs:
           POLYGON_NETWORK: 'matic'
           BINANCE_NETWORK: 'binanceSmartChain'
           MANTLE_NETWORK: 'mantle'
-          ETHEREUM_NETWORK: 'eth'
-          OPTIMISM_NETWORK: 'optimism'
-          ARBITRUM_NETWORK: 'arbitrumOne'
-          ZORA_NETWORK: 'zora'
-          BASE_NETWORK: 'base'
+          ETHEREUM_NETWORK: '{eth}'
+          OPTIMISM_NETWORK: '{optimism}'
+          ARBITRUM_NETWORK: '{arbitrumOne}'
+          ZORA_NETWORK: '{zora}'
+          BASE_NETWORK: '{base}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -801,18 +804,18 @@ jobs:
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
             \
-            --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.operator_mainnet_avalanche_rpc_url }} \
-            --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.operator_mainnet_polygon_rpc_url }} \
-            --set mainnet_rpc_config_values.binance_rpc_url=${{ env.operator_mainnet_binance_rpc_url }} \
-            --set mainnet_rpc_config_values.mantle_rpc_url=${{ env.operator_mainnet_mantle_rpc_url }} \
-            --set mainnet_rpc_config_values.ethereum_rpc_url=${{ env.operator_mainnet_ethereum_rpc_url }} \
-            --set mainnet_rpc_config_values.optimism_rpc_url=${{ env.operator_mainnet_optimism_rpc_url }} \
-            --set mainnet_rpc_config_values.arbitrum_rpc_url=${{ env.operator_mainnet_arbitrum_rpc_url }} \
-            --set mainnet_rpc_config_values.zora_rpc_url=${{ env.operator_mainnet_zora_rpc_url }} \
-            --set mainnet_rpc_config_values.base_rpc_url=${{ env.operator_mainnet_base_rpc_url }} \
+            --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.v2_operator_mainnet_avalanche_rpc_url }} \
+            --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.v2_operator_mainnet_polygon_rpc_url }} \
+            --set mainnet_rpc_config_values.binance_rpc_url=${{ env.v2_operator_mainnet_binance_rpc_url }} \
+            --set mainnet_rpc_config_values.mantle_rpc_url=${{ env.v2_operator_mainnet_mantle_rpc_url }} \
+            --set mainnet_rpc_config_values.ethereum_rpc_url=${{ env.v2_operator_mainnet_ethereum_rpc_url }} \
+            --set mainnet_rpc_config_values.optimism_rpc_url=${{ env.v2_operator_mainnet_optimism_rpc_url }} \
+            --set mainnet_rpc_config_values.arbitrum_rpc_url=${{ env.v2_operator_mainnet_arbitrum_rpc_url }} \
+            --set mainnet_rpc_config_values.zora_rpc_url=${{ env.v2_operator_mainnet_zora_rpc_url }} \
+            --set mainnet_rpc_config_values.base_rpc_url=${{ env.v2_operator_mainnet_base_rpc_url }} \
             \
-            --set mainnet_rpc_config_values.private_key=${{ env.operator_mainnet_private_key }} \
-            --set mainnet_rpc_config_values.address=${{ env.operator_mainnet_address }} \
+            --set mainnet_rpc_config_values.private_key=${{ env.v2_operator_mainnet_private_key }} \
+            --set mainnet_rpc_config_values.address=${{ env.v2_operator_mainnet_address }} \
             \
             --set autoscaling.enabled=false \
             --set replicaCountAvalanche=0 \
