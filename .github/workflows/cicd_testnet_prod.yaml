@@ -102,12 +102,12 @@ env:
 
   #######################################
   TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.56
-#  INDEXER_RELEASE_NAME: 'blondie-indexer-testnet' # format -> [release_name]-indexer-[env]
+#  INDEXER_RELEASE_NAME: 'blondie-indexer-testnet' # format -> [release_name]-indexer-[env] # up to 63 chars
 #  INDEXER_RELEASE_NAME_V2: 'blondie-indexer-testnet-v2'
   INDEXER_RELEASE_NAME_V2: 'kd-indexer-testnet-v2'
   #
   TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.95
-#  OPERATOR_RELEASE_NAME: 'kd-blondie-operator-testnet' # format -> [release_name]-operator-[env]
+#  OPERATOR_RELEASE_NAME: 'kd-blondie-operator-testnet' # format -> [release_name]-operator-[env] # up to 63 chars
 #  OPERATOR_RELEASE_NAME_V2: 'kd-blondie-operator-testnet-v2'
   OPERATOR_RELEASE_NAME_V2: 'kd-operator-testnet-v2'
   #######################################
@@ -643,18 +643,18 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
             \
-            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_testnet_avalancheTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_testnet_polygonTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.indexer_testnet_binanceTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.indexer_testnet_mantleTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.ethereumTestnetSepolia_rpc_url=${{ env.indexer_testnet_ethereumTestnetSepolia_rpc_url }} \
-            --set testnet_rpc_config_values.optimismTestnetSepolia_rpc_url=${{ env.indexer_testnet_optimismTestnetSepolia_rpc_url }} \
-            --set testnet_rpc_config_values.arbitrumTestnetSepolia_rpc_url=${{ env.indexer_testnet_arbitrumTestnetSepolia_rpc_url }} \
-            --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.indexer_testnet_zoraTestnetSepolia_rpc_url }} \
-            --set testnet_rpc_config_values.baseTestnetSepolia_rpc_url=${{ env.indexer_testnet_baseTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.v2_indexer_testnet_avalancheTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.v2_indexer_testnet_polygonTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.v2_indexer_testnet_binanceTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.v2_indexer_testnet_mantleTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.ethereumTestnetSepolia_rpc_url=${{ env.v2_indexer_testnet_ethereumTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.optimismTestnetSepolia_rpc_url=${{ env.v2_indexer_testnet_optimismTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.arbitrumTestnetSepolia_rpc_url=${{ env.v2_indexer_testnet_arbitrumTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.v2_indexer_testnet_zoraTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.baseTestnetSepolia_rpc_url=${{ env.v2_indexer_testnet_baseTestnetSepolia_rpc_url }} \
             \
-            --set testnet_rpc_config_values.private_key=${{ env.indexer_testnet_private_key }} \
-            --set testnet_rpc_config_values.address=${{ env.indexer_testnet_address }} \
+            --set testnet_rpc_config_values.private_key=${{ env.v2_indexer_testnet_private_key }} \
+            --set testnet_rpc_config_values.address=${{ env.v2_indexer_testnet_address }} \
             --set testnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
@@ -803,18 +803,18 @@ jobs:
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
             \
-            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_testnet_avalancheTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_testnet_polygonTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.operator_testnet_binanceTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.operator_testnet_mantleTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.ethereumTestnetSepolia_rpc_url=${{ env.operator_testnet_ethereumTestnetSepolia_rpc_url }} \
-            --set testnet_rpc_config_values.optimismTestnetSepolia_rpc_url=${{ env.operator_testnet_optimismTestnetSepolia_rpc_url }} \
-            --set testnet_rpc_config_values.arbitrumTestnetSepolia_rpc_url=${{ env.operator_testnet_arbitrumTestnetSepolia_rpc_url }} \
-            --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.operator_testnet_zoraTestnetSepolia_rpc_url }} \
-            --set testnet_rpc_config_values.baseTestnetSepolia_rpc_url=${{ env.operator_testnet_baseTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.v2_operator_testnet_avalancheTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.v2_operator_testnet_polygonTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.v2_operator_testnet_binanceTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.v2_operator_testnet_mantleTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.ethereumTestnetSepolia_rpc_url=${{ env.v2_operator_testnet_ethereumTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.optimismTestnetSepolia_rpc_url=${{ env.v2_operator_testnet_optimismTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.arbitrumTestnetSepolia_rpc_url=${{ env.v2_operator_testnet_arbitrumTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.v2_operator_testnet_zoraTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.baseTestnetSepolia_rpc_url=${{ env.v2_operator_testnet_baseTestnetSepolia_rpc_url }} \
             \
-            --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
-            --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
+            --set testnet_rpc_config_values.private_key=${{ env.v2_operator_testnet_private_key }} \
+            --set testnet_rpc_config_values.address=${{ env.v2_operator_testnet_address }} \
             \
             --set autoscaling.enabled=false \
             --set replicaCountAvalanche=0 \
