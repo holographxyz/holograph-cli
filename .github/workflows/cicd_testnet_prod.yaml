@@ -114,7 +114,7 @@ env:
 on:
   push:
     branches:
-      - 'feat/remove-goerli-from-v2'
+      - 'feat/deploy-testmain-net-v2'
       # Excluded branches
       - '!develop'
       - '!testnet'
