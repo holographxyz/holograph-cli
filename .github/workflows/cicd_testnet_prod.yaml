@@ -102,12 +102,14 @@ env:
 
   #######################################
   TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.56
-  INDEXER_RELEASE_NAME: 'kd-blondie-indexer-testnet' # format -> [release_name]-indexer-[env]
-  INDEXER_RELEASE_NAME_V2: 'kd-blondie-indexer-testnet-v2'
+#  INDEXER_RELEASE_NAME: 'blondie-indexer-testnet' # format -> [release_name]-indexer-[env]
+#  INDEXER_RELEASE_NAME_V2: 'blondie-indexer-testnet-v2'
+  INDEXER_RELEASE_NAME_V2: 'kd-indexer-testnet-v2'
   #
   TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.95
-  OPERATOR_RELEASE_NAME: 'kd-blondie-operator-testnet' # format -> [release_name]-operator-[env]
-  OPERATOR_RELEASE_NAME_V2: 'kd-blondie-operator-testnet-v2'
+#  OPERATOR_RELEASE_NAME: 'kd-blondie-operator-testnet' # format -> [release_name]-operator-[env]
+#  OPERATOR_RELEASE_NAME_V2: 'kd-blondie-operator-testnet-v2'
+  OPERATOR_RELEASE_NAME_V2: 'kd-operator-testnet-v2'
   #######################################
 
 # notice: the trigger
