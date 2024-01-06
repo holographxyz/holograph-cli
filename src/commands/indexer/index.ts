@@ -5,7 +5,7 @@ import color from '@oclif/color'
 import dotenv from 'dotenv'
 
 import {BlockHeightProcessType, Logger} from '../../types/api'
-import {InterestingEvent, InterestingLog} from '../../types/network-monitor'
+import {ExtraDataType, InterestingEvent, InterestingLog} from '../../types/network-monitor'
 import {ContractType} from '../../utils/contract'
 import {
   EventValidator,
@@ -48,6 +48,7 @@ import handleTransferBatchERC1155Event from '../../handlers/sqs-indexer/handle-t
 import {CrossChainMessageType, eventMap} from '../../utils/event/event'
 import {ProtocolEvent, protocolEventsMap} from '../../utils/protocol-events-map'
 import {SqsEventName} from '../../types/sqs'
+import handleTransferERC20Event from '../../handlers/sqs-indexer/handle-transfer-erc20-event'
 
 dotenv.config()
 
@@ -272,7 +273,6 @@ export default class Indexer extends HealthCheck {
             [EventType.SecondarySaleFees]: buildEventFilter(EventType.SecondarySaleFees),
             [EventType.MintFeePayout]: buildEventFilter(EventType.MintFeePayout),
             [EventType.Sale]: buildEventFilter(EventType.Sale),
-            [EventType.TransferERC721]: buildEventFilter(EventType.TransferERC721, undefined, ContractType.ERC721),
           }
 
     this.bloomFilters = {
@@ -792,15 +792,15 @@ export default class Indexer extends HealthCheck {
     }
   }
 
-  getCrossChainMessageType(eventName: ProtocolEvent) {
+  getCrossChainMessageType(eventName: ProtocolEvent, extraData?: ExtraDataType) {
+    if (extraData !== undefined && extraData.crossChainMessageType !== undefined) {
+      return extraData.crossChainMessageType
+    }
+
     const eventLogs = new Set(protocolEventsMap[eventName].events)
 
     if (eventLogs.has(eventMap[EventType.BridgeableContractDeployed])) {
       return CrossChainMessageType.CONTRACT
-    }
-
-    if (eventLogs.has(eventMap[EventType.TransferERC721])) {
-      return CrossChainMessageType.ERC721
     }
 
     return CrossChainMessageType.UNKNOWN
@@ -918,9 +918,32 @@ export default class Indexer extends HealthCheck {
           break
         }
 
+        case SqsEventName.TransferERC20: {
+          const transferERC20Event = sqsEvent.decodedEvent as TransferERC20Event
+          try {
+            await handleTransferERC20Event.call(
+              this,
+              this.networkMonitor,
+              interestingEvent.transaction,
+              job.network,
+              transferERC20Event,
+              tags,
+            )
+          } catch (error: any) {
+            this.networkMonitor.structuredLogError(
+              job.network,
+              this.errorColor(`Handling TransferERC20 error: `, error),
+              tags,
+            )
+          }
+
+          break
+        }
+
         case SqsEventName.BridgePreProcess: {
           try {
-            const crossChainMessageType = this.getCrossChainMessageType(interestingEvent.eventName)
+            const crossChainMessageType = this.getCrossChainMessageType(interestingEvent.eventName, sqsEvent.extraData)
+            this.networkMonitor.structuredLog(job.network, `Entity of type ${crossChainMessageType}`, tags)
 
             // should optimize SQS logic to not make additional calls since all data is already digested and parsed here
             await sqsHandleBridgeEvent.call(
@@ -934,7 +957,7 @@ export default class Indexer extends HealthCheck {
           } catch (error: any) {
             this.networkMonitor.structuredLogError(
               job.network,
-              this.errorColor(`Decoding CrossChainMessageSentEvent error: `, error),
+              this.errorColor(`Handling CrossChainMessageSentEvent error: `, error),
               tags,
             )
           }
@@ -944,7 +967,8 @@ export default class Indexer extends HealthCheck {
 
         case SqsEventName.AvailableOperatorJob: {
           try {
-            const crossChainMessageType = this.getCrossChainMessageType(interestingEvent.eventName)
+            // TODO: it's always Unknown. This field can be safely removed in the future, as it is not utilized by the processor.
+            const crossChainMessageType = this.getCrossChainMessageType(interestingEvent.eventName, sqsEvent.extraData)
 
             await sqsHandleAvailableOperatorJobEvent.call(
               this,
@@ -957,7 +981,7 @@ export default class Indexer extends HealthCheck {
           } catch (error: any) {
             this.networkMonitor.structuredLogError(
               job.network,
-              this.errorColor(`Decoding AvailableOperatorJobEvent error: `, error),
+              this.errorColor(`Handling AvailableOperatorJobEvent error: `, error),
               tags,
             )
           }
@@ -979,7 +1003,7 @@ export default class Indexer extends HealthCheck {
           } catch (error: any) {
             this.networkMonitor.structuredLogError(
               job.network,
-              this.errorColor(`Decoding FailedOperatorJobEvent error: `, error),
+              this.errorColor(`Handling FailedOperatorJobEvent error: `, error),
               tags,
             )
           }
