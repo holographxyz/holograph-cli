@@ -547,17 +547,17 @@ jobs:
 #
 #            echo "------------------------ Newly deployed image [same for all clis] ------------------------"
 #            echo "$TESTNET_IMAGE_TAG"
-#
-#            echo "------------------------ Healthchecks ------------------------"
-#            sleep 55
-#
-#            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-#
-#            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+##
+##            echo "------------------------ Healthchecks ------------------------"
+##            sleep 55
+##
+##            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }}
+##            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+##            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+##
+##            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }}
+##            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+##            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
 
       # NOTICE: ##### V2 deployments ######
 
