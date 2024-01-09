@@ -540,17 +540,17 @@ jobs:
 #
 #            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
 #            echo "$DEV_IMAGE_TAG"
-#
-#            echo "------------------------ Healthchecks ------------------------"
-#            sleep 55
-#
-#            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-#
-#            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+##
+##            echo "------------------------ Healthchecks ------------------------"
+##            sleep 55
+##
+##            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+##            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+##            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+##
+##            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+##            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+##            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
 
       # NOTICE: ##### V2 deployments ######
 
@@ -659,7 +659,7 @@ jobs:
             --set replicaCountEthereum=1 \
             --set replicaCountArbitrum=1 \
             --set replicaCountOptimism=1 \
-            --set replicaCountBase=1 \
+            --set replicaCountBase=0 \
             --set replicaCountZora=1 \
             \
             --set resources.ethereum.limits.memory=520Mi \
@@ -814,7 +814,7 @@ jobs:
             --set replicaCountEthereum=1 \
             --set replicaCountArbitrum=1 \
             --set replicaCountOptimism=1 \
-            --set replicaCountBase=1 \
+            --set replicaCountBase=0 \
             --set replicaCountZora=1 \
             \
             --set resources.ethereum.limits.memory=550Mi \
@@ -881,14 +881,14 @@ jobs:
 #
 #            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
 #            echo "$DEV_IMAGE_TAG"
-#
-#            echo "------------------------ Healthchecks ------------------------"
-#            sleep 55
-#
-#            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-#
-#            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+##
+##            echo "------------------------ Healthchecks ------------------------"
+##            sleep 55
+##
+##            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+##            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+##            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+##
+##            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+##            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+##            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
