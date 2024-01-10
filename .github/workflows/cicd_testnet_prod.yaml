@@ -70,7 +70,7 @@ env:
   v2_indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
   v2_indexer_testnet_polygonTestnet_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
   v2_indexer_testnet_ethereumTestnetSepolia_rpc_url: ${{ secrets.INDEXER_TESTNET_ETHEREUM_SEPOLIA_RPC_URL }}
-  v2_indexer_testnet_optimismTestnetSepolia_rpc_url: 'https://sepolia.optimism.io'
+  v2_indexer_testnet_optimismTestnetSepolia_rpc_url: ${{ secrets.INDEXER_TESTNET_OPTIMISM_SEPOLIA_RPC_URL }}
   v2_indexer_testnet_arbitrumTestnetSepolia_rpc_url: ${{ secrets.INDEXER_TESTNET_ARBITRUM_SEPOLIA_RPC_URL }}
   v2_indexer_testnet_binanceTestnet_rpc_url: ${{ secrets.INDEXER_TESTNET_BSC_TESTNET_RPC_URL }}
   v2_indexer_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
@@ -83,7 +83,7 @@ env:
   v2_operator_testnet_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_TESTNET_FUJI_RPC_URL }}
   v2_operator_testnet_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_TESTNET_MUMBAI_RPC_URL }}
   v2_operator_testnet_ethereumTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_TESTNET_ETHEREUM_SEPOLIA_RPC_URL }}
-  v2_operator_testnet_optimismTestnetSepolia_rpc_url: 'https://sepolia.optimism.io'
+  v2_operator_testnet_optimismTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_TESTNET_OPTIMISM_SEPOLIA_RPC_URL }}
   v2_operator_testnet_arbitrumTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_TESTNET_ARBITRUM_SEPOLIA_RPC_URL }}
   v2_operator_testnet_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_TESTNET_BSC_TESTNET_RPC_URL }}
   v2_operator_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
