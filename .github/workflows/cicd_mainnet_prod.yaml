@@ -102,33 +102,38 @@ env:
 
   #######################################
   MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.56
-  INDEXER_RELEASE_NAME: 'blondie-indexer-mainnet' # format -> [release_name]-indexer-[env]
-  INDEXER_RELEASE_NAME_V2: 'blondie-indexer-mainnet-v2'
+#  INDEXER_RELEASE_NAME: 'blondie-indexer-mainnet' # format -> [release_name]-indexer-[env]
+#  INDEXER_RELEASE_NAME_V2: 'blondie-indexer-mainnet-v2'
+  INDEXER_RELEASE_NAME: 'kd-indexer-mainnet' # format -> [release_name]-indexer-[env]
+  INDEXER_RELEASE_NAME_V2: 'kd-indexer-mainnet-v2'
   #
   MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.95
-  OPERATOR_RELEASE_NAME: 'blondie-operator-mainnet' # format -> [release_name]-operator-[env]
-  OPERATOR_RELEASE_NAME_V2: 'blondie-operator-mainnet-v2'
+#  OPERATOR_RELEASE_NAME: 'blondie-operator-mainnet' # format -> [release_name]-operator-[env]
+#  OPERATOR_RELEASE_NAME_V2: 'blondie-operator-mainnet-v2'
+  OPERATOR_RELEASE_NAME: 'kd-operator-mainnet' # format -> [release_name]-operator-[env]
+  OPERATOR_RELEASE_NAME_V2: 'kd-operator-mainnet-v2'
   #######################################
 
 ## notice: the trigger
-#on:
-#  push:
-#    branches:
-#      - 'something'
-#      # Excluded branches
-#      - '!develop'
-#      - '!main'
-#      - '!master'
-# notice: the trigger
 on:
-  pull_request:
+  push:
     branches:
-      - 'mainnet'
-    types: [closed]
+      - 'something'
+      - 'feat/vi-key-address-for-v2'
+      # Excluded branches
+      - '!develop'
+      - '!main'
+      - '!master'
+# notice: the trigger
+#on:
+#  pull_request:
+#    branches:
+#      - 'mainnet'
+#    types: [closed]
 
 jobs:
   deploy-to-prod-mainnet:
-    if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
+#    if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
     name: Deploy-to-prod[mainnet]
     runs-on: ubuntu-latest
 
@@ -146,40 +151,40 @@ jobs:
       - name: Checkout the code
         uses: actions/checkout@v2
 
-      # This is a separate action that sets up buildx runner
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v2
-
-      # So now you can use Actions' own caching!
-      - name: Cache Docker layers
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-single-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-single-buildx
-
-      # And make it available for builds
-      - name: Build image
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          builder: ${{ steps.buildx.outputs.name }}
-          file: Dockerfile
-          build-args: AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }}
-          platforms: linux/amd64
-          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
-          push: true # set false to deactivate the push to ECR
-
-      # This ugly bit is necessary if you don't want your cache to grow forever until it hits GitHub's limit of 5GB.
-      # https://github.com/docker/build-push-action/issues/252 & https://github.com/moby/buildkit/issues/1896
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+#      # This is a separate action that sets up buildx runner
+#      - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v2
+#
+#      # So now you can use Actions' own caching!
+#      - name: Cache Docker layers
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/.buildx-cache
+#          key: ${{ runner.os }}-single-buildx-${{ github.sha }}
+#          restore-keys: |
+#            ${{ runner.os }}-single-buildx
+#
+#      # And make it available for builds
+#      - name: Build image
+#        uses: docker/build-push-action@v2
+#        with:
+#          context: .
+#          builder: ${{ steps.buildx.outputs.name }}
+#          file: Dockerfile
+#          build-args: AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }}
+#          platforms: linux/amd64
+#          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }}
+#          cache-from: type=local,src=/tmp/.buildx-cache
+#          cache-to: type=local,dest=/tmp/.buildx-cache-new
+#          push: true # set false to deactivate the push to ECR
+#
+#      # This ugly bit is necessary if you don't want your cache to grow forever until it hits GitHub's limit of 5GB.
+#      # https://github.com/docker/build-push-action/issues/252 & https://github.com/moby/buildkit/issues/1896
+#      - name: Move cache
+#        run: |
+#          rm -rf /tmp/.buildx-cache
+#          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Configure AWS creds to access EKS
         # TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
@@ -238,11 +243,11 @@ jobs:
           POLYGON_NETWORK: 'polygon'
           BINANCE_NETWORK: 'binanceSmartChain'
           MANTLE_NETWORK: 'mantle'
-          ETHEREUM_NETWORK: 'ethereum'
-          OPTIMISM_NETWORK: 'optimism'
-          ARBITRUM_NETWORK: 'arbitrumOne'
-          ZORA_NETWORK: 'zora'
-          BASE_NETWORK: 'base'
+          ETHEREUM_NETWORK: '{ethereum}'
+          OPTIMISM_NETWORK: '{optimism}'
+          ARBITRUM_NETWORK: '{arbitrumOne}'
+          ZORA_NETWORK: '{zora}'
+          BASE_NETWORK: '{base}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -307,15 +312,15 @@ jobs:
             --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCountAvalanche=1 \
-            --set replicaCountPolygon=1 \
-            --set replicaCountBinance=1 \
-            --set replicaCountMantle=1 \
-            --set replicaCountEthereum=1 \
-            --set replicaCountArbitrum=1 \
-            --set replicaCountOptimism=1 \
-            --set replicaCountBase=1 \
-            --set replicaCountZora=1 \
+            --set replicaCountAvalanche=0 \
+            --set replicaCountPolygon=0 \
+            --set replicaCountBinance=0 \
+            --set replicaCountMantle=0 \
+            --set replicaCountEthereum=0 \
+            --set replicaCountArbitrum=0 \
+            --set replicaCountOptimism=0 \
+            --set replicaCountBase=0 \
+            --set replicaCountZora=0 \
             \
             --set resources.ethereum.limits.memory=2048Mi \
             --set resources.ethereum.requests.cpu=950m \
@@ -359,17 +364,19 @@ jobs:
             --set sqs.SQS_QUEUE_URL=${{ env.MAINNET_SQS_QUEUE_URL }} \
             --set sqs.AWS_REGION=us-west-2 \
             \
-            --values .github/values_for_prod_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
-            --set ingress.blue_green_deployment=false
+            --values ./holo-cli/values-v1-mainnet-iv-key-address.yaml
+#            \
+#            --values .github/values_for_prod_alb_ingress.yaml \
+#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+#            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
+#            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
+#            --set ingress.blue_green_deployment=false
 
-      - name: Pause for 60 seconds
-        shell: bash
-        run: |
-          sleep 60
+#      - name: Pause for 60 seconds
+#        shell: bash
+#        run: |
+#          sleep 60
 
       # NOTICE: --- OPERATOR ---
       - name: Pull the holograph-operator helm chart version x.x.x from ECR
@@ -382,7 +389,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-      ######
+
       - name: -> V1 -- Deploy OPERATOR cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
@@ -411,11 +418,11 @@ jobs:
           POLYGON_NETWORK: 'matic'
           BINANCE_NETWORK: 'binanceSmartChain'
           MANTLE_NETWORK: 'mantle'
-          ETHEREUM_NETWORK: 'eth'
-          OPTIMISM_NETWORK: 'optimism'
-          ARBITRUM_NETWORK: 'arbitrumOne'
-          ZORA_NETWORK: 'zora'
-          BASE_NETWORK: 'base'
+          ETHEREUM_NETWORK: '{eth}'
+          OPTIMISM_NETWORK: '{optimism}'
+          ARBITRUM_NETWORK: '{arbitrumOne}'
+          ZORA_NETWORK: '{zora}'
+          BASE_NETWORK: '{base}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -473,15 +480,15 @@ jobs:
             --set mainnet_rpc_config_values.address=${{ env.operator_mainnet_address }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCountAvalanche=1 \
-            --set replicaCountPolygon=1 \
-            --set replicaCountBinance=1 \
-            --set replicaCountMantle=1 \
-            --set replicaCountEthereum=1 \
-            --set replicaCountArbitrum=1 \
-            --set replicaCountOptimism=1 \
+            --set replicaCountAvalanche=0 \
+            --set replicaCountPolygon=0 \
+            --set replicaCountBinance=0 \
+            --set replicaCountMantle=0 \
+            --set replicaCountEthereum=0 \
+            --set replicaCountArbitrum=0 \
+            --set replicaCountOptimism=0 \
             --set replicaCountBase=0 \
-            --set replicaCountZora=1 \
+            --set replicaCountZora=0 \
             \
             --set resources.ethereum.limits.memory=1024Mi \
             --set resources.ethereum.requests.cpu=300m \
@@ -523,12 +530,13 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             \
-            --values .github/values_for_prod_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-            --set ingress.blue_green_deployment=false
+            --values ./holo-cli/values-v1-mainnet-iv-key-address.yaml
+#            --values .github/values_for_prod_alb_ingress.yaml \
+#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+#            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
+#            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
+#            --set ingress.blue_green_deployment=false
 
 #      - name: -> Info for the new deployments
 #        uses: tensor-hq/eksctl-helm-action@main
@@ -589,11 +597,11 @@ jobs:
           POLYGON_NETWORK: 'polygon'
           BINANCE_NETWORK: 'binanceSmartChain'
           MANTLE_NETWORK: 'mantle'
-          ETHEREUM_NETWORK: 'ethereum'
-          OPTIMISM_NETWORK: 'optimism'
-          ARBITRUM_NETWORK: 'arbitrumOne'
-          ZORA_NETWORK: 'zora'
-          BASE_NETWORK: 'base'
+          ETHEREUM_NETWORK: '{ethereum}'
+          OPTIMISM_NETWORK: '{optimism}'
+          ARBITRUM_NETWORK: '{arbitrumOne}'
+          ZORA_NETWORK: '{zora}'
+          BASE_NETWORK: '{base}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -711,17 +719,18 @@ jobs:
             --set sqs.SQS_QUEUE_URL=${{ env.MAINNET_SQS_QUEUE_URL_V2 }} \
             --set sqs.AWS_REGION=us-west-2 \
             \
-            --values .github/values_for_prod_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
-            --set ingress.blue_green_deployment=false
+            --values ./holo-cli/values-v2-mainnet-iv-key-address.yaml
+#            --values .github/values_for_prod_alb_ingress.yaml \
+#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+#            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
+#            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
+#            --set ingress.blue_green_deployment=false
 
-      - name: Pause for 60 seconds
-        shell: bash
-        run: |
-          sleep 60
+#      - name: Pause for 60 seconds
+#        shell: bash
+#        run: |
+#          sleep 60
 
       - name: -> V2 -- Deploy OPERATOR cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
@@ -751,11 +760,11 @@ jobs:
           POLYGON_NETWORK: 'matic'
           BINANCE_NETWORK: 'binanceSmartChain'
           MANTLE_NETWORK: 'mantle'
-          ETHEREUM_NETWORK: 'eth'
-          OPTIMISM_NETWORK: 'optimism'
-          ARBITRUM_NETWORK: 'arbitrumOne'
-          ZORA_NETWORK: 'zora'
-          BASE_NETWORK: 'base'
+          ETHEREUM_NETWORK: '{eth}'
+          OPTIMISM_NETWORK: '{optimism}'
+          ARBITRUM_NETWORK: '{arbitrumOne}'
+          ZORA_NETWORK: '{zora}'
+          BASE_NETWORK: '{base}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -864,12 +873,13 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             \
-            --values .github/values_for_prod_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-            --set ingress.blue_green_deployment=false
+            --values ./holo-cli/values-v2-mainnet-iv-key-address.yaml
+#            --values .github/values_for_prod_alb_ingress.yaml \
+#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+#            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
+#            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
+#            --set ingress.blue_green_deployment=false
 
 #      - name: -> V2 -- Info for the new V2 deployments
 #        uses: tensor-hq/eksctl-helm-action@main
