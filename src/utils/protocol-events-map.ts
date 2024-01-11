@@ -287,6 +287,10 @@ function getSqsEventsFromTx(protocolEventName: string, interestingTransaction: I
       }
 
       case EventType.FinishedOperatorJob: {
+        if (protocolEvent.name === ProtocolEvent.FailedOperatorJob) {
+          continue
+        }
+
         sqsEventName = SqsEventName.BridgePreProcess
         break
       }
