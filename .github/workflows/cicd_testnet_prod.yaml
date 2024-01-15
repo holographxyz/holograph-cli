@@ -119,7 +119,7 @@ on:
   push:
     branches:
       - 'something'
-      - 'feat/vi-key-address-for-v2'
+#      - 'feat/vi-key-address-for-v2'
       # Excluded branches
       - '!develop'
       - '!main'
@@ -213,8 +213,6 @@ jobs:
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
           helm pull --untar oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-          ls -la
-          ls -la holo-indexer
 
       # NOTICE: ##### V1 deployments ######
 
