@@ -90,8 +90,8 @@ env:
   v2_operator_mainnet_zora_rpc_url: 'https://rpc.zora.energy'
   v2_operator_mainnet_base_rpc_url: ${{ secrets.OPERATOR_MAINNET_BASE_RPC_URL }} # Notice: Operator should currently be disabled on Base
   #
-  v2_operator_mainnet_private_key: ${{ secrets.OPERATOR_MAINNET_PRIVATE_KEY }}
-  v2_operator_mainnet_address: ${{ secrets.OPERATOR_MAINNET_ADDRESS }}
+  v2_operator_mainnet_private_key: ${{ secrets.V2_OPERATOR_MAINNET_PRIVATE_KEY }} # TODO
+  v2_operator_mainnet_address: ${{ secrets.V2_OPERATOR_MAINNET_ADDRESS }} # TODO
   #
   # SQS User [indexer_processor_sqs_user]
   SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
@@ -104,14 +104,14 @@ env:
   MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.56
 #  INDEXER_RELEASE_NAME: 'blondie-indexer-mainnet' # format -> [release_name]-indexer-[env]
 #  INDEXER_RELEASE_NAME_V2: 'blondie-indexer-mainnet-v2'
-  INDEXER_RELEASE_NAME: 'kd-indexer-mainnet' # format -> [release_name]-indexer-[env]
-  INDEXER_RELEASE_NAME_V2: 'kd-indexer-mainnet-v2'
+  INDEXER_RELEASE_NAME: 'iv-indexer-mainnet' # format -> [release_name]-indexer-[env]
+  INDEXER_RELEASE_NAME_V2: 'iv-indexer-mainnet-v2'
   #
   MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.95
 #  OPERATOR_RELEASE_NAME: 'blondie-operator-mainnet' # format -> [release_name]-operator-[env]
 #  OPERATOR_RELEASE_NAME_V2: 'blondie-operator-mainnet-v2'
-  OPERATOR_RELEASE_NAME: 'kd-operator-mainnet' # format -> [release_name]-operator-[env]
-  OPERATOR_RELEASE_NAME_V2: 'kd-operator-mainnet-v2'
+  OPERATOR_RELEASE_NAME: 'iv-operator-mainnet' # format -> [release_name]-operator-[env]
+  OPERATOR_RELEASE_NAME_V2: 'iv-operator-mainnet-v2'
   #######################################
 
 ## notice: the trigger
@@ -119,7 +119,7 @@ on:
   push:
     branches:
       - 'something'
-      - 'feat/vi-key-address-for-v2'
+#      - 'feat/vi-key-address-for-v2'
       # Excluded branches
       - '!develop'
       - '!main'
@@ -364,7 +364,7 @@ jobs:
             --set sqs.SQS_QUEUE_URL=${{ env.MAINNET_SQS_QUEUE_URL }} \
             --set sqs.AWS_REGION=us-west-2 \
             \
-            --values ./holo-cli/values-v1-mainnet-iv-key-address.yaml
+            --values ./holo-cli/values-v1-mainnet-iv.yaml
 #            \
 #            --values .github/values_for_prod_alb_ingress.yaml \
 #            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
@@ -530,7 +530,7 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             \
-            --values ./holo-cli/values-v1-mainnet-iv-key-address.yaml
+            --values ./holo-cli/values-v1-mainnet-iv.yaml
 #            --values .github/values_for_prod_alb_ingress.yaml \
 #            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
 #            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
@@ -658,8 +658,8 @@ jobs:
             --set mainnet_rpc_config_values.zora_rpc_url=${{ env.indexer_mainnet_zora_rpc_url }} \
             --set mainnet_rpc_config_values.base_rpc_url=${{ env.indexer_mainnet_base_rpc_url }} \
             \
-            --set mainnet_rpc_config_values.private_key=${{ env.indexer_mainnet_private_key }} \
-            --set mainnet_rpc_config_values.address=${{ env.indexer_mainnet_address }} \
+            --set mainnet_rpc_config_values.private_key=${{ env.v2_indexer_mainnet_private_key }} \
+            --set mainnet_rpc_config_values.address=${{ env.v2_indexer_mainnet_address }} \
             --set mainnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
@@ -719,7 +719,7 @@ jobs:
             --set sqs.SQS_QUEUE_URL=${{ env.MAINNET_SQS_QUEUE_URL_V2 }} \
             --set sqs.AWS_REGION=us-west-2 \
             \
-            --values ./holo-cli/values-v2-mainnet-iv-key-address.yaml
+            --values ./holo-cli/values-v2-mainnet-iv.yaml
 #            --values .github/values_for_prod_alb_ingress.yaml \
 #            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
 #            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
@@ -819,8 +819,8 @@ jobs:
             --set mainnet_rpc_config_values.zora_rpc_url=${{ env.operator_mainnet_zora_rpc_url }} \
             --set mainnet_rpc_config_values.base_rpc_url=${{ env.operator_mainnet_base_rpc_url }} \
             \
-            --set mainnet_rpc_config_values.private_key=${{ env.operator_mainnet_private_key }} \
-            --set mainnet_rpc_config_values.address=${{ env.operator_mainnet_address }} \
+            --set mainnet_rpc_config_values.private_key=${{ env.v2_operator_mainnet_private_key }} \
+            --set mainnet_rpc_config_values.address=${{ env.v2_operator_mainnet_address }} \
             \
             --set autoscaling.enabled=false \
             --set replicaCountAvalanche=0 \
@@ -873,7 +873,7 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             \
-            --values ./holo-cli/values-v2-mainnet-iv-key-address.yaml
+            --values ./holo-cli/values-v2-mainnet-iv.yaml
 #            --values .github/values_for_prod_alb_ingress.yaml \
 #            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
 #            --set ingress.ingress_name=ing-$RELEASE_NAME-health \

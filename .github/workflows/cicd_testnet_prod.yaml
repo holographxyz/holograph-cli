@@ -90,8 +90,8 @@ env:
   v2_operator_testnet_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
   v2_operator_testnet_baseTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_TESTNET_BASE_SEPOLIA_RPC_URL }}
   #
-  v2_operator_testnet_private_key: ${{ secrets.OPERATOR_TESTNET_PRIVATE_KEY }}
-  v2_operator_testnet_address: ${{ secrets.OPERATOR_TESTNET_ADDRESS }}
+  v2_operator_testnet_private_key: ${{ secrets.V2_OPERATOR_TESTNET_PRIVATE_KEY }} # TODO
+  v2_operator_testnet_address: ${{ secrets.V2_OPERATOR_TESTNET_ADDRESS }} # TODO
   #
   # SQS User [indexer_processor_sqs_user]
   SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
@@ -101,17 +101,17 @@ env:
   TESTNET_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
 
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.56
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.60
 #  INDEXER_RELEASE_NAME: 'blondie-indexer-testnet' # format -> [release_name]-indexer-[env]
 #  INDEXER_RELEASE_NAME_V2: 'blondie-indexer-testnet-v2'
-  INDEXER_RELEASE_NAME: 'kd-indexer-testnet' # format -> [release_name]-indexer-[env]
-  INDEXER_RELEASE_NAME_V2: 'kd-indexer-testnet-v2'
+  INDEXER_RELEASE_NAME: 'iv-indexer-testnet' # format -> [release_name]-indexer-[env]
+  INDEXER_RELEASE_NAME_V2: 'iv-indexer-testnet-v2'
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.95
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.99
 #  OPERATOR_RELEASE_NAME: 'blondie-operator-testnet' # format -> [release_name]-operator-[env]
 #  OPERATOR_RELEASE_NAME_V2: 'blondie-operator-testnet-v2'
-  OPERATOR_RELEASE_NAME: 'kd-operator-testnet' # format -> [release_name]-operator-[env]
-  OPERATOR_RELEASE_NAME_V2: 'kd-operator-testnet-v2'
+  OPERATOR_RELEASE_NAME: 'iv-operator-testnet' # format -> [release_name]-operator-[env]
+  OPERATOR_RELEASE_NAME_V2: 'iv-operator-testnet-v2'
   #######################################
 
 # notice: the trigger
@@ -364,7 +364,7 @@ jobs:
             --set sqs.SQS_QUEUE_URL=${{ env.TESTNET_SQS_QUEUE_URL }} \
             --set sqs.AWS_REGION=us-west-2 \
             \
-            --values ./holo-cli/values-v1-testnet-iv-key-address.yaml
+            --values ./holo-cli/values-v1-testnet-iv.yaml
 #            \
 #            --values .github/values_for_prod_alb_ingress.yaml \
 #            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
@@ -530,7 +530,7 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             \
-            --values ./holo-cli/values-v1-testnet-iv-key-address.yaml
+            --values ./holo-cli/values-v1-testnet-iv.yaml
 #            --values .github/values_for_prod_alb_ingress.yaml \
 #            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
 #            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
@@ -658,8 +658,8 @@ jobs:
             --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.indexer_testnet_zoraTestnetSepolia_rpc_url }} \
             --set testnet_rpc_config_values.baseTestnetSepolia_rpc_url=${{ env.indexer_testnet_baseTestnetSepolia_rpc_url }} \
             \
-            --set testnet_rpc_config_values.private_key=${{ env.indexer_testnet_private_key }} \
-            --set testnet_rpc_config_values.address=${{ env.indexer_testnet_address }} \
+            --set testnet_rpc_config_values.private_key=${{ env.v2_indexer_testnet_private_key }} \
+            --set testnet_rpc_config_values.address=${{ env.v2_indexer_testnet_address }} \
             --set testnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
@@ -719,7 +719,7 @@ jobs:
             --set sqs.SQS_QUEUE_URL=${{ env.TESTNET_SQS_QUEUE_URL_V2 }} \
             --set sqs.AWS_REGION=us-west-2 \
             \
-            --values ./holo-cli/values-v2-testnet-iv-key-address.yaml
+            --values ./holo-cli/values-v2-testnet-iv.yaml
 #            --values .github/values_for_prod_alb_ingress.yaml \
 #            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
 #            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
@@ -819,8 +819,8 @@ jobs:
             --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.operator_testnet_zoraTestnetSepolia_rpc_url }} \
             --set testnet_rpc_config_values.baseTestnetSepolia_rpc_url=${{ env.operator_testnet_baseTestnetSepolia_rpc_url }} \
             \
-            --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
-            --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
+            --set testnet_rpc_config_values.private_key=${{ env.v2_operator_testnet_private_key }} \
+            --set testnet_rpc_config_values.address=${{ env.v2_operator_testnet_address }} \
             \
             --set autoscaling.enabled=false \
             --set replicaCountAvalanche=0 \
@@ -873,7 +873,7 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             \
-            --values ./holo-cli/values-v2-testnet-iv-key-address.yaml
+            --values ./holo-cli/values-v2-testnet-iv.yaml
 #            --values .github/values_for_prod_alb_ingress.yaml \
 #            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
 #            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
