@@ -90,8 +90,8 @@ env:
   v2_operator_testnet_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
   v2_operator_testnet_baseTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_TESTNET_BASE_SEPOLIA_RPC_URL }}
   #
-  v2_operator_testnet_private_key: ${{ secrets.V2_OPERATOR_TESTNET_PRIVATE_KEY }} # TODO
-  v2_operator_testnet_address: ${{ secrets.V2_OPERATOR_TESTNET_ADDRESS }} # TODO
+  v2_operator_testnet_private_key: ${{ secrets.V2_OPERATOR_TESTNET_PRIVATE_KEY }}
+  v2_operator_testnet_address: ${{ secrets.V2_OPERATOR_TESTNET_ADDRESS }}
   #
   # SQS User [indexer_processor_sqs_user]
   SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
@@ -212,8 +212,6 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull --untar oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-          ls -la
-          ls -la holo-indexer-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }}
 
       # NOTICE: ##### V1 deployments ######
 
@@ -366,7 +364,7 @@ jobs:
             --set sqs.SQS_QUEUE_URL=${{ env.TESTNET_SQS_QUEUE_URL }} \
             --set sqs.AWS_REGION=us-west-2 \
             \
-            --values ./holo-indexer-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }}/values-v1-testnet-iv.yaml
+            --values ./holo-indexer/values-v1-testnet-iv.yaml
 #            \
 #            --values .github/values_for_prod_alb_ingress.yaml \
 #            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
@@ -390,7 +388,7 @@ jobs:
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
+          helm pull --untar oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
       - name: -> V1 -- Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
@@ -532,7 +530,7 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             \
-            --values ./holo-cli/values-v1-testnet-iv.yaml
+            --values ./holo-operator/values-v1-testnet-iv.yaml
 #            --values .github/values_for_prod_alb_ingress.yaml \
 #            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
 #            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
@@ -721,7 +719,7 @@ jobs:
             --set sqs.SQS_QUEUE_URL=${{ env.TESTNET_SQS_QUEUE_URL_V2 }} \
             --set sqs.AWS_REGION=us-west-2 \
             \
-            --values ./holo-cli/values-v2-testnet-iv.yaml
+            --values ./holo-indexer/values-v2-testnet-iv.yaml
 #            --values .github/values_for_prod_alb_ingress.yaml \
 #            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
 #            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
@@ -875,7 +873,7 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             \
-            --values ./holo-cli/values-v2-testnet-iv.yaml
+            --values ./holo-operator/values-v2-testnet-iv.yaml
 #            --values .github/values_for_prod_alb_ingress.yaml \
 #            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
 #            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
