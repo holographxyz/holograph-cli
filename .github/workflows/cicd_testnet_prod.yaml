@@ -37,7 +37,7 @@ env:
   TESTNET_DOMAIN: 'holograph.xyz' # needed only for the health checks
   #
   TESTNET_COMMON_NAMESPACE: 'testnet'
-  MAINNET_COMMON_NAMESPACE_V2: 'testnet-v2'
+  TESTNET_COMMON_NAMESPACE_V2: 'testnet-v2'
   #
   # V1 INDEXER TESTNET rpc endpoints
   indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
@@ -573,10 +573,10 @@ jobs:
 
       # NOTICE: ##### V2 deployments ######
 
-      - name: -> V2 -- Deploy INDEXER cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
+      - name: -> V2 -- Deploy INDEXER cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE_V2 }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }} # notice
+          RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }} # notice
           HOLOGRAPH_VERSION: "V2"
           #
           ENABLE_DEBUG: 'true'
@@ -611,7 +611,7 @@ jobs:
           command: |-
             helm upgrade --install $RELEASE_NAME \
             holo-indexer-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
-            -n ${{ env.TESTNET_COMMON_NAMESPACE }} \
+            -n ${{ env.TESTNET_COMMON_NAMESPACE_V2 }} \
             \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
@@ -736,10 +736,10 @@ jobs:
 #        run: |
 #          sleep 60
 
-      - name: -> V2 -- Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
+      - name: -> V2 -- Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE_V2 }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }} # notice
+          RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }} # notice
           HOLOGRAPH_VERSION: "V2"
           #
           ENABLE_DEBUG: 'true'
@@ -774,7 +774,7 @@ jobs:
           command: |-
             helm upgrade --install $RELEASE_NAME \
             holo-operator-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
-            -n ${{ env.TESTNET_COMMON_NAMESPACE }} \
+            -n ${{ env.TESTNET_COMMON_NAMESPACE_V2 }} \
             \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
