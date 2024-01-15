@@ -391,6 +391,7 @@ jobs:
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
+          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
           helm pull --untar oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
       - name: -> V1 -- Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
