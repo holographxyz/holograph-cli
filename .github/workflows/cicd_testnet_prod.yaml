@@ -211,6 +211,7 @@ jobs:
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
+          helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
           helm pull --untar oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
           ls -la
           ls -la holo-indexer
