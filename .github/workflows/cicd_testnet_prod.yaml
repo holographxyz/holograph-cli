@@ -77,8 +77,8 @@ env:
   v2_indexer_testnet_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
   v2_indexer_testnet_baseTestnetSepolia_rpc_url: ${{ secrets.INDEXER_TESTNET_BASE_SEPOLIA_RPC_URL }}
   #
-  v2_indexer_testnet_private_key: ${{ secrets.INDEXER_TESTNET_PRIVATE_KEY }}
-  v2_indexer_testnet_address: ${{ secrets.INDEXER_TESTNET_ADDRESS }}
+  v2_indexer_testnet_private_key: ${{ secrets.V2_INDEXER_TESTNET_PRIVATE_KEY }}
+  v2_indexer_testnet_address: ${{ secrets.V2_INDEXER_TESTNET_ADDRESS }}
   # V2 OPERATOR TESTNET rpc endpoints
   v2_operator_testnet_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_TESTNET_FUJI_RPC_URL }}
   v2_operator_testnet_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_TESTNET_MUMBAI_RPC_URL }}
