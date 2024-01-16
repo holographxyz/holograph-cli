@@ -25,6 +25,7 @@ env:
   #
   MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.MAINNET_HOLO_INDEXER_PASSWORD }}
   MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.MAINNET_HOLO_OPERATOR_PASSWORD }}
+  V2_MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.V2_MAINNET_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
   INDEXER_HOLO_CONFIG_FILE_DATA: mainnet-config-file
@@ -119,7 +120,7 @@ on:
   push:
     branches:
       - 'something'
-      - 'feat/vi-key-address-for-v2'
+#      - 'feat/vi-key-address-for-v2'
       # Excluded branches
       - '!develop'
       - '!main'
@@ -777,7 +778,7 @@ jobs:
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
-            --set holo_operator_password=${{ env.MAINNET_HOLO_OPERATOR_PASSWORD }} \
+            --set holo_operator_password=${{ env.V2_MAINNET_HOLO_OPERATOR_PASSWORD }} \
             --set HOLO_OPERATOR_HOST=${{ env.MAINNET_HOLOGRAPH_OPERATOR_HOST }} \
             --set OPERATOR_API_KEY=${{ env.MAINNET_HOLO_OPERATOR_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \

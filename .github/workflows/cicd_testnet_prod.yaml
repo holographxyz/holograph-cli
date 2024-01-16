@@ -25,6 +25,7 @@ env:
   #
   TESTNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
   TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
+  V2_TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.V2_TESTNET_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
   INDEXER_HOLO_CONFIG_FILE_DATA: testnet-config-file
@@ -777,7 +778,7 @@ jobs:
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
-            --set holo_operator_password=${{ env.TESTNET_HOLO_OPERATOR_PASSWORD }} \
+            --set holo_operator_password=${{ env.V2_TESTNET_HOLO_OPERATOR_PASSWORD }} \
             --set HOLO_OPERATOR_HOST=${{ env.TESTNET_HOLOGRAPH_OPERATOR_HOST }} \
             --set OPERATOR_API_KEY=${{ env.TESTNET_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
