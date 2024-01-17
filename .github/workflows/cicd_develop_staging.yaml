@@ -101,7 +101,7 @@ env:
   DEV_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor'
 
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.61
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.62
 #  INDEXER_RELEASE_NAME: 'indexer-dev' # format -> [release_name]-indexer-[env]
 #  INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2'
   INDEXER_RELEASE_NAME: 'testindexer-dev' # format -> [release_name]-indexer-[env]
