@@ -1,5 +1,9 @@
 import {BigNumber, Contract, PopulatedTransaction} from 'ethers'
 import {Log, TransactionReceipt, TransactionResponse} from '@ethersproject/abstract-provider'
+import {ProtocolEvent} from '../utils/protocol-events-map'
+import {SqsEventName} from './sqs'
+import {DecodedEvent} from '../utils/event'
+import {CrossChainMessageType} from '../utils/event/event'
 
 export type LogsParams = {
   network: string
@@ -91,10 +95,34 @@ export type TransactionParams = {
   interval?: number
 }
 
-export interface InterestingTransaction {
+// NOTICE: blockProcessingVersion V1
+export interface InterestingLog {
   bloomId: string
   transaction: TransactionResponse
   receipt?: TransactionReceipt
   log?: Log
   allLogs?: Log[]
+}
+
+// NOTICE: blockProcessingVersion V2
+export interface InterestingTransaction {
+  transaction: TransactionResponse
+  receipt?: TransactionReceipt
+  allLogs: Log[]
+}
+export interface ExtraDataType {
+  crossChainMessageType?: CrossChainMessageType
+}
+export interface SqsEvent {
+  sqsEventName: SqsEventName
+  decodedEvent: DecodedEvent | null
+  extraData?: ExtraDataType
+}
+export interface InterestingEvent {
+  txHash: string
+  transaction: TransactionResponse
+  eventName: ProtocolEvent // MoeMintNft, legacyCollectionDeploy
+  sqsEvents: SqsEvent[]
+  allLogs: Log[]
+  logs?: Log[]
 }

@@ -2,7 +2,7 @@ import {TransactionResponse} from '@ethersproject/abstract-provider'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import SqsService from '../../services/sqs-service'
 import {networkToChainId, remove0x} from '../../utils/web3'
-import {EventName, PayloadType, SqsMessageBody} from '../../types/sqs'
+import {SqsEventName, PayloadType, SqsMessageBody} from '../../types/sqs'
 import {TransferERC721Event} from '../../utils/event'
 
 async function handleTransferERC721Event(
@@ -17,7 +17,7 @@ async function handleTransferERC721Event(
 
   const messageBody: SqsMessageBody = {
     type: PayloadType.ERC721,
-    eventName: isNewMint ? EventName.MintNft : EventName.TransferERC721,
+    eventName: isNewMint ? SqsEventName.MintNft : SqsEventName.TransferERC721,
     eventSignature: 'Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId)',
     tagId: tags,
     chainId: networkToChainId[network],

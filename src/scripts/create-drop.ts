@@ -1,6 +1,6 @@
 import {Contract, ethers} from 'ethers'
 import {SalesConfiguration} from '../types/drops'
-import {bytecodes} from '../utils/bytecodes'
+import {BytecodeType, getByteCodes} from '../utils/bytecodes'
 import {
   generateHolographDropERC721InitCode,
   generateHolographERC721InitCode,
@@ -71,12 +71,10 @@ require('dotenv').config()
     '0x' + web3.utils.asciiToHex('HolographDropERC721').substring(2).padStart(64, '0'),
     '0xAE27815bCf7ccA7191Cb55a6B86576aeDC462bBB', // holographRegistryProxy
     '0x0000000000000000000000000000000000000000', // erc721TransferHelper
-    '0x0000000000000000000000000000000000000000', // marketFilterAddress (opensea)
     signer.address, // initialOwner
     signer.address, // fundsRecipient
     numOfEditions, // number of editions
     royaltyBps, // percentage of royalties in bps
-    false, // enableOpenSeaRoyaltyRegistry
     salesConfig,
     METADATA_RENDERER_ADDRESS[ENVIRONMENT], // metadataRenderer (using previously deployed contract to save gas)
     metadataRendererInitCode, // metadataRendererInit
@@ -95,7 +93,7 @@ require('dotenv').config()
   console.log('Creating deployment config...')
   const chainType = '0x' + networks.avalancheTestnet.holographId.toString(16).padStart(8, '0') // fuji
   const salt = '0x' + web3.utils.randomHex(32).slice(2).padStart(64, '0') // random salt
-  const byteCode = bytecodes.HolographDropERC721
+  const byteCode = getByteCodes(BytecodeType.HolographDropERC721, networks.avalancheTestnet.key)
 
   const configHash = sha3(
     '0x' +
