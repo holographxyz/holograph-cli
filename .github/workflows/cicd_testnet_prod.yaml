@@ -640,15 +640,15 @@ jobs:
             --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCountAvalanche=0 \
-            --set replicaCountPolygon=0 \
-            --set replicaCountBinance=0 \
-            --set replicaCountMantle=0 \
-            --set replicaCountEthereum=0 \
-            --set replicaCountArbitrum=0 \
-            --set replicaCountOptimism=0 \
-            --set replicaCountBase=0 \
-            --set replicaCountZora=0 \
+            --set replicaCountAvalanche=1 \
+            --set replicaCountPolygon=1 \
+            --set replicaCountBinance=1 \
+            --set replicaCountMantle=1 \
+            --set replicaCountEthereum= \
+            --set replicaCountArbitrum=1 \
+            --set replicaCountOptimism=1 \
+            --set replicaCountBase=1 \
+            --set replicaCountZora=1 \
             \
             --set resources.ethereum.limits.memory=800Mi \
             --set resources.ethereum.requests.cpu=500m \
@@ -790,15 +790,15 @@ jobs:
             --set testnet_rpc_config_values.address=${{ env.v2_operator_testnet_address }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCountAvalanche=0 \
-            --set replicaCountPolygon=0 \
-            --set replicaCountBinance=0 \
-            --set replicaCountMantle=0 \
-            --set replicaCountEthereum=0 \
-            --set replicaCountArbitrum=0 \
-            --set replicaCountOptimism=0 \
-            --set replicaCountBase=0 \
-            --set replicaCountZora=0 \
+            --set replicaCountAvalanche=1 \
+            --set replicaCountPolygon=1 \
+            --set replicaCountBinance=1 \
+            --set replicaCountMantle=1 \
+            --set replicaCountEthereum=1 \
+            --set replicaCountArbitrum=1 \
+            --set replicaCountOptimism=1 \
+            --set replicaCountBase=1 \
+            --set replicaCountZora=1 \
             \
             --set resources.ethereum.limits.memory=800Mi \
             --set resources.ethereum.requests.cpu=250m \
