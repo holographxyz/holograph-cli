@@ -25,6 +25,7 @@ env:
   #
   TESTNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
   TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
+  V2_TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.V2_TESTNET_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
   INDEXER_HOLO_CONFIG_FILE_DATA: testnet-config-file
@@ -37,7 +38,7 @@ env:
   TESTNET_DOMAIN: 'holograph.xyz' # needed only for the health checks
   #
   TESTNET_COMMON_NAMESPACE: 'testnet'
-  MAINNET_COMMON_NAMESPACE_V2: 'testnet-v2'
+  TESTNET_COMMON_NAMESPACE_V2: 'testnet-v2'
   #
   # V1 INDEXER TESTNET rpc endpoints
   indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
@@ -77,8 +78,8 @@ env:
   v2_indexer_testnet_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
   v2_indexer_testnet_baseTestnetSepolia_rpc_url: ${{ secrets.INDEXER_TESTNET_BASE_SEPOLIA_RPC_URL }}
   #
-  v2_indexer_testnet_private_key: ${{ secrets.INDEXER_TESTNET_PRIVATE_KEY }}
-  v2_indexer_testnet_address: ${{ secrets.INDEXER_TESTNET_ADDRESS }}
+  v2_indexer_testnet_private_key: ${{ secrets.V2_INDEXER_TESTNET_PRIVATE_KEY }}
+  v2_indexer_testnet_address: ${{ secrets.V2_INDEXER_TESTNET_ADDRESS }}
   # V2 OPERATOR TESTNET rpc endpoints
   v2_operator_testnet_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_TESTNET_FUJI_RPC_URL }}
   v2_operator_testnet_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_TESTNET_MUMBAI_RPC_URL }}
@@ -90,8 +91,8 @@ env:
   v2_operator_testnet_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
   v2_operator_testnet_baseTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_TESTNET_BASE_SEPOLIA_RPC_URL }}
   #
-  v2_operator_testnet_private_key: ${{ secrets.OPERATOR_TESTNET_PRIVATE_KEY }}
-  v2_operator_testnet_address: ${{ secrets.OPERATOR_TESTNET_ADDRESS }}
+  v2_operator_testnet_private_key: ${{ secrets.V2_OPERATOR_TESTNET_PRIVATE_KEY }}
+  v2_operator_testnet_address: ${{ secrets.V2_OPERATOR_TESTNET_ADDRESS }}
   #
   # SQS User [indexer_processor_sqs_user]
   SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
@@ -101,11 +102,11 @@ env:
   TESTNET_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
 
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.59
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.64
   INDEXER_RELEASE_NAME: 'blondie-indexer-testnet' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'blondie-indexer-testnet-v2'
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.97
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.0
   OPERATOR_RELEASE_NAME: 'blondie-operator-testnet' # format -> [release_name]-operator-[env]
   OPERATOR_RELEASE_NAME_V2: 'blondie-operator-testnet-v2'
   #######################################
@@ -207,6 +208,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
+          helm pull --untar oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
       # NOTICE: ##### V1 deployments ######
 
@@ -317,39 +319,39 @@ jobs:
             --set replicaCountBase=1 \
             --set replicaCountZora=1 \
             \
-            --set resources.ethereum.limits.memory=820Mi \
+            --set resources.ethereum.limits.memory=800Mi \
             --set resources.ethereum.requests.cpu=500m \
             --set resources.ethereum.requests.memory=800Mi \
             \
-            --set resources.optimism.limits.memory=820Mi \
+            --set resources.optimism.limits.memory=800Mi \
             --set resources.optimism.requests.cpu=500m \
             --set resources.optimism.requests.memory=800Mi \
             \
-            --set resources.arbitrum.limits.memory=820Mi \
+            --set resources.arbitrum.limits.memory=800Mi \
             --set resources.arbitrum.requests.cpu=500m \
             --set resources.arbitrum.requests.memory=800Mi \
             \
-            --set resources.polygon.limits.memory=820Mi \
+            --set resources.polygon.limits.memory=800Mi \
             --set resources.polygon.requests.cpu=500m \
             --set resources.polygon.requests.memory=800Mi \
             \
-            --set resources.avalanche.limits.memory=820Mi \
+            --set resources.avalanche.limits.memory=800Mi \
             --set resources.avalanche.requests.cpu=500m \
             --set resources.avalanche.requests.memory=800Mi \
             \
-            --set resources.binance.limits.memory=820Mi \
+            --set resources.binance.limits.memory=800Mi \
             --set resources.binance.requests.cpu=500m \
             --set resources.binance.requests.memory=800Mi \
             \
-            --set resources.mantle.limits.memory=820Mi \
+            --set resources.mantle.limits.memory=800Mi \
             --set resources.mantle.requests.cpu=500m \
             --set resources.mantle.requests.memory=800Mi \
             \
-            --set resources.zora.limits.memory=820Mi \
+            --set resources.zora.limits.memory=800Mi \
             --set resources.zora.requests.cpu=500m \
             --set resources.zora.requests.memory=800Mi \
             \
-             --set resources.base.limits.memory=820Mi \
+            --set resources.base.limits.memory=800Mi \
             --set resources.base.requests.cpu=500m \
             --set resources.base.requests.memory=800Mi \
             \
@@ -357,14 +359,9 @@ jobs:
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
             --set sqs.SQS_ENDPOINT=${{ env.TESTNET_SQS_ENDPOINT }} \
             --set sqs.SQS_QUEUE_URL=${{ env.TESTNET_SQS_QUEUE_URL }} \
-            --set sqs.AWS_REGION=us-west-2
-#            \ #deleteme
-#            --values .github/values_for_prod_alb_ingress.yaml \
-#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-#            --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
-#            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
-#            --set ingress.blue_green_deployment=false
+            --set sqs.AWS_REGION=us-west-2 \
+            \
+            --values ./holo-indexer/values-v1-testnet-iv.yaml
 
       - name: Pause for 60 seconds
         shell: bash
@@ -382,6 +379,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
+          helm pull --untar oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
       - name: -> V1 -- Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
@@ -487,7 +485,7 @@ jobs:
             --set resources.ethereum.requests.cpu=250m \
             --set resources.ethereum.requests.memory=800Mi \
             \
-            --set resources.optimism.limits.memory=550Mi \
+            --set resources.optimism.limits.memory=500Mi \
             --set resources.optimism.requests.cpu=200m \
             --set resources.optimism.requests.memory=500Mi \
             \
@@ -495,47 +493,41 @@ jobs:
             --set resources.arbitrum.requests.cpu=200m \
             --set resources.arbitrum.requests.memory=500Mi \
             \
-            --set resources.polygon.limits.memory=550Mi \
+            --set resources.polygon.limits.memory=500Mi \
             --set resources.polygon.requests.cpu=200m \
             --set resources.polygon.requests.memory=500Mi \
             \
-            --set resources.avalanche.limits.memory=550Mi \
+            --set resources.avalanche.limits.memory=500Mi \
             --set resources.avalanche.requests.cpu=200m \
             --set resources.avalanche.requests.memory=500Mi \
             \
-            --set resources.binance.limits.memory=550Mi \
+            --set resources.binance.limits.memory=500Mi \
             --set resources.binance.requests.cpu=200m \
             --set resources.binance.requests.memory=500Mi \
             \
-            --set resources.mantle.limits.memory=550Mi \
+            --set resources.mantle.limits.memory=500Mi \
             --set resources.mantle.requests.cpu=200m \
             --set resources.mantle.requests.memory=500Mi \
             \
-            --set resources.zora.limits.memory=550Mi \
+            --set resources.zora.limits.memory=500Mi \
             --set resources.zora.requests.cpu=200m \
             --set resources.zora.requests.memory=500Mi \
             \
-            --set resources.base.limits.memory=550Mi \
+            --set resources.base.limits.memory=500Mi \
             --set resources.base.requests.cpu=200m \
             --set resources.base.requests.memory=500Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
-            --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }}
-#            \ #deleteme
-#            --values .github/values_for_prod_alb_ingress.yaml \
-#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-#            --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
-#            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-#            --set ingress.blue_green_deployment=false
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
+            \
+            --values ./holo-operator/values-v1-testnet-iv.yaml
 
 #      - name: -> V1 -- Info for the new V1 deployments
 #        uses: tensor-hq/eksctl-helm-action@main
 #        env:
 #          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }}
 #          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
-#          LB_URL: 'https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com'
 #        with:
 #          eks_cluster: ${{ env.CLUSTER_NAME }}
 #          command: |-
@@ -547,24 +539,13 @@ jobs:
 #
 #            echo "------------------------ Newly deployed image [same for all clis] ------------------------"
 #            echo "$TESTNET_IMAGE_TAG"
-##
-##            echo "------------------------ Healthchecks ------------------------"
-##            sleep 55
-##
-##            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }}
-##            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-##            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-##
-##            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }}
-##            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-##            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
 
       # NOTICE: ##### V2 deployments ######
 
-      - name: -> V2 -- Deploy INDEXER cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
+      - name: -> V2 -- Deploy INDEXER cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE_V2 }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }} # notice
+          RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }} # notice
           HOLOGRAPH_VERSION: "V2"
           #
           ENABLE_DEBUG: 'true'
@@ -599,7 +580,7 @@ jobs:
           command: |-
             helm upgrade --install $RELEASE_NAME \
             holo-indexer-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
-            -n ${{ env.TESTNET_COMMON_NAMESPACE }} \
+            -n ${{ env.TESTNET_COMMON_NAMESPACE_V2 }} \
             \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
@@ -640,18 +621,18 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
             \
-            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_testnet_avalancheTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_testnet_polygonTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.indexer_testnet_binanceTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.indexer_testnet_mantleTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.ethereumTestnetSepolia_rpc_url=${{ env.indexer_testnet_ethereumTestnetSepolia_rpc_url }} \
-            --set testnet_rpc_config_values.optimismTestnetSepolia_rpc_url=${{ env.indexer_testnet_optimismTestnetSepolia_rpc_url }} \
-            --set testnet_rpc_config_values.arbitrumTestnetSepolia_rpc_url=${{ env.indexer_testnet_arbitrumTestnetSepolia_rpc_url }} \
-            --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.indexer_testnet_zoraTestnetSepolia_rpc_url }} \
-            --set testnet_rpc_config_values.baseTestnetSepolia_rpc_url=${{ env.indexer_testnet_baseTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.v2_indexer_testnet_avalancheTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.v2_indexer_testnet_polygonTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.v2_indexer_testnet_binanceTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.v2_indexer_testnet_mantleTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.ethereumTestnetSepolia_rpc_url=${{ env.v2_indexer_testnet_ethereumTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.optimismTestnetSepolia_rpc_url=${{ env.v2_indexer_testnet_optimismTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.arbitrumTestnetSepolia_rpc_url=${{ env.v2_indexer_testnet_arbitrumTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.v2_indexer_testnet_zoraTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.baseTestnetSepolia_rpc_url=${{ env.v2_indexer_testnet_baseTestnetSepolia_rpc_url }} \
             \
-            --set testnet_rpc_config_values.private_key=${{ env.indexer_testnet_private_key }} \
-            --set testnet_rpc_config_values.address=${{ env.indexer_testnet_address }} \
+            --set testnet_rpc_config_values.private_key=${{ env.v2_indexer_testnet_private_key }} \
+            --set testnet_rpc_config_values.address=${{ env.v2_indexer_testnet_address }} \
             --set testnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
@@ -659,25 +640,25 @@ jobs:
             --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCountAvalanche=0 \
-            --set replicaCountPolygon=0 \
-            --set replicaCountBinance=0 \
-            --set replicaCountMantle=0 \
-            --set replicaCountEthereum=0 \
-            --set replicaCountArbitrum=0 \
-            --set replicaCountOptimism=0 \
-            --set replicaCountBase=0 \
-            --set replicaCountZora=0 \
+            --set replicaCountAvalanche=1 \
+            --set replicaCountPolygon=1 \
+            --set replicaCountBinance=1 \
+            --set replicaCountMantle=1 \
+            --set replicaCountEthereum= \
+            --set replicaCountArbitrum=1 \
+            --set replicaCountOptimism=1 \
+            --set replicaCountBase=1 \
+            --set replicaCountZora=1 \
             \
-            --set resources.ethereum.limits.memory=820Mi \
+            --set resources.ethereum.limits.memory=800Mi \
             --set resources.ethereum.requests.cpu=500m \
             --set resources.ethereum.requests.memory=800Mi \
             \
-            --set resources.optimism.limits.memory=820Mi \
+            --set resources.optimism.limits.memory=800Mi \
             --set resources.optimism.requests.cpu=500m \
             --set resources.optimism.requests.memory=800Mi \
             \
-            --set resources.arbitrum.limits.memory=820Mi \
+            --set resources.arbitrum.limits.memory=800Mi \
             --set resources.arbitrum.requests.cpu=500m \
             --set resources.arbitrum.requests.memory=800Mi \
             \
@@ -685,23 +666,23 @@ jobs:
             --set resources.polygon.requests.cpu=500m \
             --set resources.polygon.requests.memory=800Mi \
             \
-            --set resources.avalanche.limits.memory=820Mi \
+            --set resources.avalanche.limits.memory=800Mi \
             --set resources.avalanche.requests.cpu=500m \
             --set resources.avalanche.requests.memory=800Mi \
             \
-            --set resources.binance.limits.memory=820Mi \
+            --set resources.binance.limits.memory=800Mi \
             --set resources.binance.requests.cpu=500m \
             --set resources.binance.requests.memory=800Mi \
             \
-            --set resources.mantle.limits.memory=820Mi \
+            --set resources.mantle.limits.memory=800Mi \
             --set resources.mantle.requests.cpu=500m \
             --set resources.mantle.requests.memory=800Mi \
             \
-            --set resources.zora.limits.memory=820Mi \
+            --set resources.zora.limits.memory=800Mi \
             --set resources.zora.requests.cpu=500m \
             --set resources.zora.requests.memory=800Mi \
             \
-             --set resources.base.limits.memory=820Mi \
+             --set resources.base.limits.memory=800Mi \
             --set resources.base.requests.cpu=500m \
             --set resources.base.requests.memory=800Mi \
             \
@@ -709,24 +690,19 @@ jobs:
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
             --set sqs.SQS_ENDPOINT=${{ env.TESTNET_SQS_ENDPOINT }} \
             --set sqs.SQS_QUEUE_URL=${{ env.TESTNET_SQS_QUEUE_URL_V2 }} \
-            --set sqs.AWS_REGION=us-west-2
-#            \ #deleteme
-#            --values .github/values_for_prod_alb_ingress.yaml \
-#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-#            --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
-#            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
-#            --set ingress.blue_green_deployment=false
+            --set sqs.AWS_REGION=us-west-2 \
+            \
+            --values ./holo-indexer/values-v2-testnet-iv.yaml
 
       - name: Pause for 60 seconds
         shell: bash
         run: |
           sleep 60
 
-      - name: -> V2 -- Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
+      - name: -> V2 -- Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE_V2 }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }} # notice
+          RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }} # notice
           HOLOGRAPH_VERSION: "V2"
           #
           ENABLE_DEBUG: 'true'
@@ -761,12 +737,12 @@ jobs:
           command: |-
             helm upgrade --install $RELEASE_NAME \
             holo-operator-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
-            -n ${{ env.TESTNET_COMMON_NAMESPACE }} \
+            -n ${{ env.TESTNET_COMMON_NAMESPACE_V2 }} \
             \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
-            --set holo_operator_password=${{ env.TESTNET_HOLO_OPERATOR_PASSWORD }} \
+            --set holo_operator_password=${{ env.V2_TESTNET_HOLO_OPERATOR_PASSWORD }} \
             --set HOLO_OPERATOR_HOST=${{ env.TESTNET_HOLOGRAPH_OPERATOR_HOST }} \
             --set OPERATOR_API_KEY=${{ env.TESTNET_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
@@ -800,35 +776,35 @@ jobs:
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
             \
-            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_testnet_avalancheTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_testnet_polygonTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.operator_testnet_binanceTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.operator_testnet_mantleTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.ethereumTestnetSepolia_rpc_url=${{ env.operator_testnet_ethereumTestnetSepolia_rpc_url }} \
-            --set testnet_rpc_config_values.optimismTestnetSepolia_rpc_url=${{ env.operator_testnet_optimismTestnetSepolia_rpc_url }} \
-            --set testnet_rpc_config_values.arbitrumTestnetSepolia_rpc_url=${{ env.operator_testnet_arbitrumTestnetSepolia_rpc_url }} \
-            --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.operator_testnet_zoraTestnetSepolia_rpc_url }} \
-            --set testnet_rpc_config_values.baseTestnetSepolia_rpc_url=${{ env.operator_testnet_baseTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.v2_operator_testnet_avalancheTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.v2_operator_testnet_polygonTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.v2_operator_testnet_binanceTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.v2_operator_testnet_mantleTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.ethereumTestnetSepolia_rpc_url=${{ env.v2_operator_testnet_ethereumTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.optimismTestnetSepolia_rpc_url=${{ env.v2_operator_testnet_optimismTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.arbitrumTestnetSepolia_rpc_url=${{ env.v2_operator_testnet_arbitrumTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.v2_operator_testnet_zoraTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.baseTestnetSepolia_rpc_url=${{ env.v2_operator_testnet_baseTestnetSepolia_rpc_url }} \
             \
-            --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
-            --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
+            --set testnet_rpc_config_values.private_key=${{ env.v2_operator_testnet_private_key }} \
+            --set testnet_rpc_config_values.address=${{ env.v2_operator_testnet_address }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCountAvalanche=0 \
-            --set replicaCountPolygon=0 \
-            --set replicaCountBinance=0 \
-            --set replicaCountMantle=0 \
-            --set replicaCountEthereum=0 \
-            --set replicaCountArbitrum=0 \
-            --set replicaCountOptimism=0 \
-            --set replicaCountBase=0 \
-            --set replicaCountZora=0 \
+            --set replicaCountAvalanche=1 \
+            --set replicaCountPolygon=1 \
+            --set replicaCountBinance=1 \
+            --set replicaCountMantle=1 \
+            --set replicaCountEthereum=1 \
+            --set replicaCountArbitrum=1 \
+            --set replicaCountOptimism=1 \
+            --set replicaCountBase=1 \
+            --set replicaCountZora=1 \
             \
             --set resources.ethereum.limits.memory=800Mi \
             --set resources.ethereum.requests.cpu=250m \
             --set resources.ethereum.requests.memory=800Mi \
             \
-            --set resources.optimism.limits.memory=550Mi \
+            --set resources.optimism.limits.memory=500Mi \
             --set resources.optimism.requests.cpu=200m \
             --set resources.optimism.requests.memory=500Mi \
             \
@@ -836,66 +812,49 @@ jobs:
             --set resources.arbitrum.requests.cpu=200m \
             --set resources.arbitrum.requests.memory=500Mi \
             \
-            --set resources.polygon.limits.memory=550Mi \
+            --set resources.polygon.limits.memory=500Mi \
             --set resources.polygon.requests.cpu=200m \
             --set resources.polygon.requests.memory=500Mi \
             \
-            --set resources.avalanche.limits.memory=550Mi \
+            --set resources.avalanche.limits.memory=500Mi \
             --set resources.avalanche.requests.cpu=200m \
             --set resources.avalanche.requests.memory=500Mi \
             \
-            --set resources.binance.limits.memory=550Mi \
+            --set resources.binance.limits.memory=500Mi \
             --set resources.binance.requests.cpu=200m \
             --set resources.binance.requests.memory=500Mi \
             \
-            --set resources.mantle.limits.memory=550Mi \
+            --set resources.mantle.limits.memory=500Mi \
             --set resources.mantle.requests.cpu=200m \
             --set resources.mantle.requests.memory=500Mi \
             \
-            --set resources.zora.limits.memory=550Mi \
+            --set resources.zora.limits.memory=500Mi \
             --set resources.zora.requests.cpu=200m \
             --set resources.zora.requests.memory=500Mi \
             \
-            --set resources.base.limits.memory=550Mi \
+            --set resources.base.limits.memory=500Mi \
             --set resources.base.requests.cpu=200m \
             --set resources.base.requests.memory=500Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
-            --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }}
-#            \ #deleteme
-#            --values .github/values_for_prod_alb_ingress.yaml \
-#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-#            --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
-#            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-#            --set ingress.blue_green_deployment=false
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
+            \
+            --values ./holo-operator/values-v2-testnet-iv.yaml
 
 #      - name: -> V2 -- Info for the new V2 deployments
 #        uses: tensor-hq/eksctl-helm-action@main
 #        env:
 #          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
 #          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }}
-#          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
 #        with:
 #          eks_cluster: ${{ env.CLUSTER_NAME }}
 #          command: |-
 #            echo "------------------------- Last n Helm releases -------------------------"
 #            echo "--V2 INDEXER--"
-#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
+#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.TESTNET_COMMON_NAMESPACE_V2 }} --max 3
 #            echo "--V2 OPERATOR--"
-#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
+#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.TESTNET_COMMON_NAMESPACE_V2 }} --max 3
 #
 #            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
 #            echo "$TESTNET_IMAGE_TAG"
-##
-##            echo "------------------------ Healthchecks ------------------------"
-##            sleep 55
-##
-##            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-##            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-##            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-##
-##            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-##            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-##            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
