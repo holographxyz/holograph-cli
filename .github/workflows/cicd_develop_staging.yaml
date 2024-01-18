@@ -310,41 +310,41 @@ jobs:
             --set replicaCountBase=1 \
             --set replicaCountZora=1 \
             \
-            --set resources.ethereum.limits.memory=520Mi \
+            --set resources.ethereum.limits.memory=820Mi \
             --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=500Mi \
+            --set resources.ethereum.requests.memory=800Mi \
             \
-            --set resources.optimism.limits.memory=320Mi \
+            --set resources.optimism.limits.memory=620Mi \
             --set resources.optimism.requests.cpu=100m \
-            --set resources.optimism.requests.memory=300Mi \
+            --set resources.optimism.requests.memory=600Mi \
             \
-            --set resources.arbitrum.limits.memory=320Mi \
+            --set resources.arbitrum.limits.memory=620Mi \
             --set resources.arbitrum.requests.cpu=100m \
-            --set resources.arbitrum.requests.memory=300Mi \
+            --set resources.arbitrum.requests.memory=600Mi \
             \
-            --set resources.polygon.limits.memory=520Mi \
+            --set resources.polygon.limits.memory=620Mi \
             --set resources.polygon.requests.cpu=100m \
-            --set resources.polygon.requests.memory=500Mi \
+            --set resources.polygon.requests.memory=600Mi \
             \
-            --set resources.avalanche.limits.memory=320Mi \
+            --set resources.avalanche.limits.memory=620Mi \
             --set resources.avalanche.requests.cpu=100m \
-            --set resources.avalanche.requests.memory=300Mi \
+            --set resources.avalanche.requests.memory=600Mi \
             \
-            --set resources.binance.limits.memory=520Mi \
+            --set resources.binance.limits.memory=620Mi \
             --set resources.binance.requests.cpu=100m \
-            --set resources.binance.requests.memory=500Mi \
+            --set resources.binance.requests.memory=600Mi \
             \
-            --set resources.mantle.limits.memory=320Mi \
+            --set resources.mantle.limits.memory=620Mi \
             --set resources.mantle.requests.cpu=100m \
-            --set resources.mantle.requests.memory=300Mi \
+            --set resources.mantle.requests.memory=600Mi \
             \
-            --set resources.zora.limits.memory=320Mi \
+            --set resources.zora.limits.memory=620Mi \
             --set resources.zora.requests.cpu=100m \
-            --set resources.zora.requests.memory=300Mi \
+            --set resources.zora.requests.memory=600Mi \
             \
-            --set resources.base.limits.memory=320Mi \
+            --set resources.base.limits.memory=620Mi \
             --set resources.base.requests.cpu=100m \
-            --set resources.base.requests.memory=300Mi \
+            --set resources.base.requests.memory=600Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -509,23 +509,22 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}
 
-#      - name: -> V1 -- Info for the new V1 deployments
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }}
-#          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
-#          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            echo "------------------------- Last n Helm releases -------------------------"
-#            echo "--INDEXER--"
-#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
-#            echo "--OPERATOR--"
-#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
-#
-#            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
-#            echo "$DEV_IMAGE_TAG"
+      - name: -> V1 -- Info for the new V1 deployments
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }}
+          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            echo "------------------------- Last n Helm releases -------------------------"
+            echo "--INDEXER--"
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
+            echo "--OPERATOR--"
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
+
+            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+            echo "$DEV_IMAGE_TAG"
 
       # NOTICE: ##### V2 deployments ######
 
@@ -637,41 +636,41 @@ jobs:
             --set replicaCountBase=0 \
             --set replicaCountZora=1 \
             \
-            --set resources.ethereum.limits.memory=520Mi \
+            --set resources.ethereum.limits.memory=620Mi \
             --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=500Mi \
+            --set resources.ethereum.requests.memory=600Mi \
             \
-            --set resources.optimism.limits.memory=320Mi \
+            --set resources.optimism.limits.memory=620Mi \
             --set resources.optimism.requests.cpu=100m \
-            --set resources.optimism.requests.memory=300Mi \
+            --set resources.optimism.requests.memory=600Mi \
             \
-            --set resources.arbitrum.limits.memory=320Mi \
+            --set resources.arbitrum.limits.memory=620Mi \
             --set resources.arbitrum.requests.cpu=100m \
-            --set resources.arbitrum.requests.memory=300Mi \
+            --set resources.arbitrum.requests.memory=600Mi \
             \
-            --set resources.polygon.limits.memory=520Mi \
+            --set resources.polygon.limits.memory=620Mi \
             --set resources.polygon.requests.cpu=100m \
-            --set resources.polygon.requests.memory=500Mi \
+            --set resources.polygon.requests.memory=600Mi \
             \
-            --set resources.avalanche.limits.memory=320Mi \
+            --set resources.avalanche.limits.memory=620Mi \
             --set resources.avalanche.requests.cpu=100m \
-            --set resources.avalanche.requests.memory=300Mi \
+            --set resources.avalanche.requests.memory=600Mi \
             \
-            --set resources.binance.limits.memory=520Mi \
+            --set resources.binance.limits.memory=620Mi \
             --set resources.binance.requests.cpu=100m \
-            --set resources.binance.requests.memory=500Mi \
+            --set resources.binance.requests.memory=600Mi \
             \
-            --set resources.mantle.limits.memory=320Mi \
+            --set resources.mantle.limits.memory=620Mi \
             --set resources.mantle.requests.cpu=100m \
-            --set resources.mantle.requests.memory=300Mi \
+            --set resources.mantle.requests.memory=600Mi \
             \
-            --set resources.zora.limits.memory=320Mi \
+            --set resources.zora.limits.memory=620Mi \
             --set resources.zora.requests.cpu=100m \
-            --set resources.zora.requests.memory=300Mi \
+            --set resources.zora.requests.memory=600Mi \
             \
-            --set resources.base.limits.memory=320Mi \
+            --set resources.base.limits.memory=620Mi \
             --set resources.base.requests.cpu=100m \
-            --set resources.base.requests.memory=300Mi \
+            --set resources.base.requests.memory=600Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -825,20 +824,19 @@ jobs:
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}
 
-#      - name: -> V2 -- Info for the new V2 deployments
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
-#          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }}
-#          LB_URL: 'https://staging-alb-1490082055.us-west-2.elb.amazonaws.com'
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            echo "------------------------- Last n Helm releases -------------------------"
-#            echo "--V2 INDEXER--"
-#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
-#            echo "--V2 OPERATOR--"
-#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
-#
-#            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
-#            echo "$DEV_IMAGE_TAG"
+      - name: -> V2 -- Info for the new V2 deployments
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
+          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }}
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            echo "------------------------- Last n Helm releases -------------------------"
+            echo "--V2 INDEXER--"
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
+            echo "--V2 OPERATOR--"
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
+
+            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+            echo "$DEV_IMAGE_TAG"
