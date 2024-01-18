@@ -101,11 +101,11 @@ env:
   MAINNET_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/mainnet-indexer-processor'
 
   #######################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.56
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.59
   INDEXER_RELEASE_NAME: 'blondie-indexer-mainnet' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'blondie-indexer-mainnet-v2'
   #
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.95
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.97
   OPERATOR_RELEASE_NAME: 'blondie-operator-mainnet' # format -> [release_name]-operator-[env]
   OPERATOR_RELEASE_NAME_V2: 'blondie-operator-mainnet-v2'
   #######################################
@@ -238,11 +238,11 @@ jobs:
           POLYGON_NETWORK: 'polygon'
           BINANCE_NETWORK: 'binanceSmartChain'
           MANTLE_NETWORK: 'mantle'
-          ETHEREUM_NETWORK: 'ethereum'
-          OPTIMISM_NETWORK: 'optimism'
-          ARBITRUM_NETWORK: 'arbitrumOne'
-          ZORA_NETWORK: 'zora'
-          BASE_NETWORK: 'base'
+          ETHEREUM_NETWORK: '{ethereum}'
+          OPTIMISM_NETWORK: '{optimism}'
+          ARBITRUM_NETWORK: '{arbitrumOne}'
+          ZORA_NETWORK: '{zora}'
+          BASE_NETWORK: '{base}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -357,14 +357,14 @@ jobs:
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
             --set sqs.SQS_ENDPOINT=${{ env.MAINNET_SQS_ENDPOINT }} \
             --set sqs.SQS_QUEUE_URL=${{ env.MAINNET_SQS_QUEUE_URL }} \
-            --set sqs.AWS_REGION=us-west-2 \
-            \
-            --values .github/values_for_prod_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
-            --set ingress.blue_green_deployment=false
+            --set sqs.AWS_REGION=us-west-2
+#            \ #deleteme
+#            --values .github/values_for_prod_alb_ingress.yaml \
+#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+#            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
+#            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
+#            --set ingress.blue_green_deployment=false
 
       - name: Pause for 60 seconds
         shell: bash
@@ -382,7 +382,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-      ######
+
       - name: -> V1 -- Deploy OPERATOR cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
@@ -411,11 +411,11 @@ jobs:
           POLYGON_NETWORK: 'matic'
           BINANCE_NETWORK: 'binanceSmartChain'
           MANTLE_NETWORK: 'mantle'
-          ETHEREUM_NETWORK: 'eth'
-          OPTIMISM_NETWORK: 'optimism'
-          ARBITRUM_NETWORK: 'arbitrumOne'
-          ZORA_NETWORK: 'zora'
-          BASE_NETWORK: 'base'
+          ETHEREUM_NETWORK: '{eth}'
+          OPTIMISM_NETWORK: '{optimism}'
+          ARBITRUM_NETWORK: '{arbitrumOne}'
+          ZORA_NETWORK: '{zora}'
+          BASE_NETWORK: '{base}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -521,14 +521,14 @@ jobs:
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
-            --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
-            \
-            --values .github/values_for_prod_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-            --set ingress.blue_green_deployment=false
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }}
+#            \ #deleteme
+#            --values .github/values_for_prod_alb_ingress.yaml \
+#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+#            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
+#            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
+#            --set ingress.blue_green_deployment=false
 
 #      - name: -> Info for the new deployments
 #        uses: tensor-hq/eksctl-helm-action@main
@@ -547,17 +547,17 @@ jobs:
 #
 #            echo "------------------------ Newly deployed image [same for all clis] ------------------------ "
 #            echo "$MAINNET_IMAGE_TAG"
-#
-#            echo "------------------------ Healthchecks ------------------------"
-#            sleep 55
-#
-#            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-#
-#            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+##
+##            echo "------------------------ Healthchecks ------------------------"
+##            sleep 55
+##
+##            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }}
+##            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+##            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+##
+##            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }}
+##            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+##            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
 
       # NOTICE: ##### V2 deployments ######
 
@@ -589,11 +589,11 @@ jobs:
           POLYGON_NETWORK: 'polygon'
           BINANCE_NETWORK: 'binanceSmartChain'
           MANTLE_NETWORK: 'mantle'
-          ETHEREUM_NETWORK: 'ethereum'
-          OPTIMISM_NETWORK: 'optimism'
-          ARBITRUM_NETWORK: 'arbitrumOne'
-          ZORA_NETWORK: 'zora'
-          BASE_NETWORK: 'base'
+          ETHEREUM_NETWORK: '{ethereum}'
+          OPTIMISM_NETWORK: '{optimism}'
+          ARBITRUM_NETWORK: '{arbitrumOne}'
+          ZORA_NETWORK: '{zora}'
+          BASE_NETWORK: '{base}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -709,14 +709,14 @@ jobs:
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
             --set sqs.SQS_ENDPOINT=${{ env.MAINNET_SQS_ENDPOINT }} \
             --set sqs.SQS_QUEUE_URL=${{ env.MAINNET_SQS_QUEUE_URL_V2 }} \
-            --set sqs.AWS_REGION=us-west-2 \
-            \
-            --values .github/values_for_prod_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
-            --set ingress.blue_green_deployment=false
+            --set sqs.AWS_REGION=us-west-2
+#            \ #deleteme
+#            --values .github/values_for_prod_alb_ingress.yaml \
+#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+#            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
+#            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
+#            --set ingress.blue_green_deployment=false
 
       - name: Pause for 60 seconds
         shell: bash
@@ -751,11 +751,11 @@ jobs:
           POLYGON_NETWORK: 'matic'
           BINANCE_NETWORK: 'binanceSmartChain'
           MANTLE_NETWORK: 'mantle'
-          ETHEREUM_NETWORK: 'eth'
-          OPTIMISM_NETWORK: 'optimism'
-          ARBITRUM_NETWORK: 'arbitrumOne'
-          ZORA_NETWORK: 'zora'
-          BASE_NETWORK: 'base'
+          ETHEREUM_NETWORK: '{eth}'
+          OPTIMISM_NETWORK: '{optimism}'
+          ARBITRUM_NETWORK: '{arbitrumOne}'
+          ZORA_NETWORK: '{zora}'
+          BASE_NETWORK: '{base}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -862,14 +862,14 @@ jobs:
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
-            --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
-            \
-            --values .github/values_for_prod_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-            --set ingress.blue_green_deployment=false
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }}
+#            \ #deleteme
+#            --values .github/values_for_prod_alb_ingress.yaml \
+#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+#            --set ingress.host=$RELEASE_NAME-health.${{ env.MAINNET_DOMAIN }} \
+#            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
+#            --set ingress.blue_green_deployment=false
 
 #      - name: -> V2 -- Info for the new V2 deployments
 #        uses: tensor-hq/eksctl-helm-action@main
@@ -887,15 +887,15 @@ jobs:
 #            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
 #
 #            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
-#            echo "$DEV_IMAGE_TAG"
-#
-#            echo "------------------------ Healthchecks ------------------------"
-#            sleep 55
-#
-#            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-#
-#            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+#            echo "$MAINNET_IMAGE_TAG"
+##
+##            echo "------------------------ Healthchecks ------------------------"
+##            sleep 55
+##
+##            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+##            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+##            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+##
+##            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+##            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+##            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'

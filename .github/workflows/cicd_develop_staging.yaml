@@ -101,11 +101,11 @@ env:
   DEV_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor'
 
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.56
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.59
   INDEXER_RELEASE_NAME: 'indexer-dev' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2'
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.95
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.0.97
   OPERATOR_RELEASE_NAME: 'operator-dev' # format -> [release_name]-operator-[env]
   OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2'
   #######################################
@@ -310,54 +310,47 @@ jobs:
             --set replicaCountBase=1 \
             --set replicaCountZora=1 \
             \
-            --set resources.ethereum.limits.memory=520Mi \
+            --set resources.ethereum.limits.memory=820Mi \
             --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=500Mi \
+            --set resources.ethereum.requests.memory=800Mi \
             \
-            --set resources.optimism.limits.memory=320Mi \
+            --set resources.optimism.limits.memory=620Mi \
             --set resources.optimism.requests.cpu=100m \
-            --set resources.optimism.requests.memory=300Mi \
+            --set resources.optimism.requests.memory=600Mi \
             \
-            --set resources.arbitrum.limits.memory=320Mi \
+            --set resources.arbitrum.limits.memory=620Mi \
             --set resources.arbitrum.requests.cpu=100m \
-            --set resources.arbitrum.requests.memory=300Mi \
+            --set resources.arbitrum.requests.memory=600Mi \
             \
-            --set resources.polygon.limits.memory=520Mi \
+            --set resources.polygon.limits.memory=620Mi \
             --set resources.polygon.requests.cpu=100m \
-            --set resources.polygon.requests.memory=500Mi \
+            --set resources.polygon.requests.memory=600Mi \
             \
-            --set resources.avalanche.limits.memory=320Mi \
+            --set resources.avalanche.limits.memory=620Mi \
             --set resources.avalanche.requests.cpu=100m \
-            --set resources.avalanche.requests.memory=300Mi \
+            --set resources.avalanche.requests.memory=600Mi \
             \
-            --set resources.binance.limits.memory=520Mi \
+            --set resources.binance.limits.memory=620Mi \
             --set resources.binance.requests.cpu=100m \
-            --set resources.binance.requests.memory=500Mi \
+            --set resources.binance.requests.memory=600Mi \
             \
-            --set resources.mantle.limits.memory=320Mi \
+            --set resources.mantle.limits.memory=620Mi \
             --set resources.mantle.requests.cpu=100m \
-            --set resources.mantle.requests.memory=300Mi \
+            --set resources.mantle.requests.memory=600Mi \
             \
-            --set resources.zora.limits.memory=320Mi \
+            --set resources.zora.limits.memory=620Mi \
             --set resources.zora.requests.cpu=100m \
-            --set resources.zora.requests.memory=300Mi \
+            --set resources.zora.requests.memory=600Mi \
             \
-            --set resources.base.limits.memory=320Mi \
+            --set resources.base.limits.memory=620Mi \
             --set resources.base.requests.cpu=100m \
-            --set resources.base.requests.memory=300Mi \
+            --set resources.base.requests.memory=600Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
             --set sqs.SQS_ENDPOINT=${{ env.DEV_SQS_ENDPOINT }} \
             --set sqs.SQS_QUEUE_URL=${{ env.DEV_SQS_QUEUE_URL }} \
-            --set sqs.AWS_REGION=us-west-2 \
-            \
-            --values .github/values_for_stg_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
-            --set ingress.blue_green_deployment=false
+            --set sqs.AWS_REGION=us-west-2
 
       - name: Pause for 60 seconds
         shell: bash
@@ -375,7 +368,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-      ######
+
       - name: -> V1 -- Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
@@ -514,14 +507,7 @@ jobs:
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
-            --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }} \
-            \
-            --values .github/values_for_stg_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-            --set ingress.blue_green_deployment=false
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}
 
 #      - name: -> V1 -- Info for the new V1 deployments
 #        uses: tensor-hq/eksctl-helm-action@main
@@ -662,54 +648,47 @@ jobs:
             --set replicaCountBase=0 \
             --set replicaCountZora=1 \
             \
-            --set resources.ethereum.limits.memory=520Mi \
+            --set resources.ethereum.limits.memory=620Mi \
             --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=500Mi \
+            --set resources.ethereum.requests.memory=600Mi \
             \
-            --set resources.optimism.limits.memory=320Mi \
+            --set resources.optimism.limits.memory=620Mi \
             --set resources.optimism.requests.cpu=100m \
-            --set resources.optimism.requests.memory=300Mi \
+            --set resources.optimism.requests.memory=600Mi \
             \
-            --set resources.arbitrum.limits.memory=320Mi \
+            --set resources.arbitrum.limits.memory=620Mi \
             --set resources.arbitrum.requests.cpu=100m \
-            --set resources.arbitrum.requests.memory=300Mi \
+            --set resources.arbitrum.requests.memory=600Mi \
             \
-            --set resources.polygon.limits.memory=520Mi \
+            --set resources.polygon.limits.memory=620Mi \
             --set resources.polygon.requests.cpu=100m \
-            --set resources.polygon.requests.memory=500Mi \
+            --set resources.polygon.requests.memory=600Mi \
             \
-            --set resources.avalanche.limits.memory=320Mi \
+            --set resources.avalanche.limits.memory=620Mi \
             --set resources.avalanche.requests.cpu=100m \
-            --set resources.avalanche.requests.memory=300Mi \
+            --set resources.avalanche.requests.memory=600Mi \
             \
-            --set resources.binance.limits.memory=520Mi \
+            --set resources.binance.limits.memory=620Mi \
             --set resources.binance.requests.cpu=100m \
-            --set resources.binance.requests.memory=500Mi \
+            --set resources.binance.requests.memory=600Mi \
             \
-            --set resources.mantle.limits.memory=320Mi \
+            --set resources.mantle.limits.memory=620Mi \
             --set resources.mantle.requests.cpu=100m \
-            --set resources.mantle.requests.memory=300Mi \
+            --set resources.mantle.requests.memory=600Mi \
             \
-            --set resources.zora.limits.memory=320Mi \
+            --set resources.zora.limits.memory=620Mi \
             --set resources.zora.requests.cpu=100m \
-            --set resources.zora.requests.memory=300Mi \
+            --set resources.zora.requests.memory=600Mi \
             \
-            --set resources.base.limits.memory=320Mi \
+            --set resources.base.limits.memory=620Mi \
             --set resources.base.requests.cpu=100m \
-            --set resources.base.requests.memory=300Mi \
+            --set resources.base.requests.memory=600Mi \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
             --set sqs.SQS_ENDPOINT=${{ env.DEV_SQS_ENDPOINT }} \
             --set sqs.SQS_QUEUE_URL=${{ env.DEV_SQS_QUEUE_URL_V2 }} \
-            --set sqs.AWS_REGION=us-west-2 \
-            \
-            --values .github/values_for_stg_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
-            --set ingress.blue_green_deployment=false
+            --set sqs.AWS_REGION=us-west-2
 
       - name: Pause for 60 seconds
         shell: bash
@@ -855,14 +834,7 @@ jobs:
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
-            --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }} \
-            \
-            --values .github/values_for_stg_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.STG_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-            --set ingress.blue_green_deployment=false
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}
 
 #      - name: -> V2 -- Info for the new V2 deployments
 #        uses: tensor-hq/eksctl-helm-action@main

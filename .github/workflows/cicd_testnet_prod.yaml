@@ -67,10 +67,10 @@ env:
   operator_testnet_address: ${{ secrets.OPERATOR_PROD_ADDRESS }}
   #
   # V2 INDEXER TESTNET rpc endpoints
-  v2_indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
-  v2_indexer_testnet_polygonTestnet_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }}
+  v2_indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
+  v2_indexer_testnet_polygonTestnet_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
   v2_indexer_testnet_ethereumTestnetSepolia_rpc_url: ${{ secrets.INDEXER_TESTNET_ETHEREUM_SEPOLIA_RPC_URL }}
-  v2_indexer_testnet_optimismTestnetSepolia_rpc_url: 'https://sepolia.optimism.io'
+  v2_indexer_testnet_optimismTestnetSepolia_rpc_url: ${{ secrets.INDEXER_TESTNET_OPTIMISM_SEPOLIA_RPC_URL }}
   v2_indexer_testnet_arbitrumTestnetSepolia_rpc_url: ${{ secrets.INDEXER_TESTNET_ARBITRUM_SEPOLIA_RPC_URL }}
   v2_indexer_testnet_binanceTestnet_rpc_url: ${{ secrets.INDEXER_TESTNET_BSC_TESTNET_RPC_URL }}
   v2_indexer_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
@@ -83,7 +83,7 @@ env:
   v2_operator_testnet_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_TESTNET_FUJI_RPC_URL }}
   v2_operator_testnet_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_TESTNET_MUMBAI_RPC_URL }}
   v2_operator_testnet_ethereumTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_TESTNET_ETHEREUM_SEPOLIA_RPC_URL }}
-  v2_operator_testnet_optimismTestnetSepolia_rpc_url: 'https://sepolia.optimism.io'
+  v2_operator_testnet_optimismTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_TESTNET_OPTIMISM_SEPOLIA_RPC_URL }}
   v2_operator_testnet_arbitrumTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_TESTNET_ARBITRUM_SEPOLIA_RPC_URL }}
   v2_operator_testnet_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_TESTNET_BSC_TESTNET_RPC_URL }}
   v2_operator_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
@@ -101,11 +101,11 @@ env:
   TESTNET_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
 
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.56
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.59
   INDEXER_RELEASE_NAME: 'blondie-indexer-testnet' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'blondie-indexer-testnet-v2'
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.95
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.97
   OPERATOR_RELEASE_NAME: 'blondie-operator-testnet' # format -> [release_name]-operator-[env]
   OPERATOR_RELEASE_NAME_V2: 'blondie-operator-testnet-v2'
   #######################################
@@ -357,14 +357,14 @@ jobs:
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
             --set sqs.SQS_ENDPOINT=${{ env.TESTNET_SQS_ENDPOINT }} \
             --set sqs.SQS_QUEUE_URL=${{ env.TESTNET_SQS_QUEUE_URL }} \
-            --set sqs.AWS_REGION=us-west-2 \
-            \
-            --values .github/values_for_prod_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
-            --set ingress.blue_green_deployment=false
+            --set sqs.AWS_REGION=us-west-2
+#            \ #deleteme
+#            --values .github/values_for_prod_alb_ingress.yaml \
+#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+#            --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
+#            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
+#            --set ingress.blue_green_deployment=false
 
       - name: Pause for 60 seconds
         shell: bash
@@ -382,7 +382,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-      ######
+
       - name: -> V1 -- Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
@@ -480,7 +480,7 @@ jobs:
             --set replicaCountEthereum=1 \
             --set replicaCountArbitrum=1 \
             --set replicaCountOptimism=1 \
-            --set replicaCountBase=1 \
+            --set replicaCountBase=0 \
             --set replicaCountZora=1 \
             \
             --set resources.ethereum.limits.memory=800Mi \
@@ -521,14 +521,14 @@ jobs:
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
-            --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
-            \
-            --values .github/values_for_prod_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-            --set ingress.blue_green_deployment=false
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }}
+#            \ #deleteme
+#            --values .github/values_for_prod_alb_ingress.yaml \
+#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+#            --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
+#            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
+#            --set ingress.blue_green_deployment=false
 
 #      - name: -> V1 -- Info for the new V1 deployments
 #        uses: tensor-hq/eksctl-helm-action@main
@@ -709,14 +709,14 @@ jobs:
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
             --set sqs.SQS_ENDPOINT=${{ env.TESTNET_SQS_ENDPOINT }} \
             --set sqs.SQS_QUEUE_URL=${{ env.TESTNET_SQS_QUEUE_URL_V2 }} \
-            --set sqs.AWS_REGION=us-west-2 \
-            \
-            --values .github/values_for_prod_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
-            --set ingress.blue_green_deployment=false
+            --set sqs.AWS_REGION=us-west-2
+#            \ #deleteme
+#            --values .github/values_for_prod_alb_ingress.yaml \
+#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+#            --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
+#            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
+#            --set ingress.blue_green_deployment=false
 
       - name: Pause for 60 seconds
         shell: bash
@@ -862,14 +862,14 @@ jobs:
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
-            --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
-            \
-            --values .github/values_for_prod_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-            --set ingress.blue_green_deployment=false
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }}
+#            \ #deleteme
+#            --values .github/values_for_prod_alb_ingress.yaml \
+#            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
+#            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
+#            --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
+#            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
+#            --set ingress.blue_green_deployment=false
 
 #      - name: -> V2 -- Info for the new V2 deployments
 #        uses: tensor-hq/eksctl-helm-action@main
@@ -887,15 +887,15 @@ jobs:
 #            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
 #
 #            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
-#            echo "$DEV_IMAGE_TAG"
-#
-#            echo "------------------------ Healthchecks ------------------------"
-#            sleep 55
-#
-#            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-#
-#            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
-#            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-#            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+#            echo "$TESTNET_IMAGE_TAG"
+##
+##            echo "------------------------ Healthchecks ------------------------"
+##            sleep 55
+##
+##            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+##            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+##            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+##
+##            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.STG_DOMAIN }}
+##            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
+##            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
