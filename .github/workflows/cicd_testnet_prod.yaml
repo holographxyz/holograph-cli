@@ -48,7 +48,7 @@ env:
   indexer_testnet_arbitrumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_ARBITRUM_GOERLI_RPC_URL }}
   indexer_testnet_binanceTestnet_rpc_url: ${{ secrets.INDEXER_PROD_BSC_TESTNET_RPC_URL }}
   indexer_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  indexer_testnet_zoraTestnet_rpc_url: 'https://testnet.rpc.zora.energy'
+  indexer_testnet_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
   indexer_testnet_baseTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_BASE_GOERLI_RPC_URL }}
   #
   indexer_testnet_private_key: ${{ secrets.INDEXER_PROD_PRIVATE_KEY }}
@@ -61,7 +61,7 @@ env:
   operator_testnet_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_ARBITRUM_GOERLI_RPC_URL }}
   operator_testnet_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_BSC_TESTNET_RPC_URL }}
   operator_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  operator_testnet_zoraTestnet_rpc_url: 'https://testnet.rpc.zora.energy'
+  operator_testnet_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
   operator_testnet_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_BASE_GOERLI_RPC_URL }}
   #
   operator_testnet_private_key: ${{ secrets.OPERATOR_PROD_PRIVATE_KEY }}
