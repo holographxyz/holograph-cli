@@ -37,9 +37,6 @@ env:
   #
   TESTNET_DOMAIN: 'holograph.xyz' # needed only for the health checks
   #
-  TESTNET_COMMON_NAMESPACE: 'testnet'
-  TESTNET_COMMON_NAMESPACE_V2: 'testnet-v2'
-  #
   # V1 INDEXER TESTNET rpc endpoints
   indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
   indexer_testnet_polygonTestnet_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
@@ -100,7 +97,9 @@ env:
   TESTNET_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
   TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
   TESTNET_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
-
+  #
+  TESTNET_COMMON_NAMESPACE: 'testnet'
+  TESTNET_COMMON_NAMESPACE_V2: 'testnet-v2'
   #######################################
   TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.68
   INDEXER_RELEASE_NAME: 'blondie-indexer-testnet' # format -> [release_name]-indexer-[env]
