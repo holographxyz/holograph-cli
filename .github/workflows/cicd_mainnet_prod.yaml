@@ -102,11 +102,11 @@ env:
   MAINNET_COMMON_NAMESPACE_V2: 'mainnet-v2'
   #######################################
   MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.68
-  INDEXER_RELEASE_NAME: 'blondie-indexer-mainnet' # format -> [release_name]-indexer-[env]
+#  INDEXER_RELEASE_NAME: 'blondie-indexer-mainnet' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'blondie-indexer-mainnet-v2'
   #
   MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.1
-  OPERATOR_RELEASE_NAME: 'blondie-operator-mainnet' # format -> [release_name]-operator-[env]
+#  OPERATOR_RELEASE_NAME: 'blondie-operator-mainnet' # format -> [release_name]-operator-[env]
   OPERATOR_RELEASE_NAME_V2: 'blondie-operator-mainnet-v2'
   #######################################
 
@@ -211,125 +211,125 @@ jobs:
 
       # NOTICE: ##### V1 deployments ######
 
-      - name: -> V1 -- Deploy INDEXER cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
-        uses: tensor-hq/eksctl-helm-action@main
-        env:
-          RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }} # notice
-          HOLOGRAPH_VERSION: "V1"
-          #
-          ENABLE_DEBUG: 'true'
-          HEALTHCHECK: 'true'
-          MODE: 'auto'
-          ENABLE_UNSAFE: 'true'
-          ENABLE_SYNC: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
-          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
-          #
-          ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
-          ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE_mantle: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE_zora: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
-          #
-          AVALANCHE_NETWORK: 'avalanche'
-          POLYGON_NETWORK: 'polygon'
-          BINANCE_NETWORK: 'binanceSmartChain'
-          MANTLE_NETWORK: 'mantle'
-          ETHEREUM_NETWORK: '{ethereum}'
-          OPTIMISM_NETWORK: '{optimism}'
-          ARBITRUM_NETWORK: '{arbitrumOne}'
-          ZORA_NETWORK: '{zora}'
-          BASE_NETWORK: '{base}'
-        with:
-          eks_cluster: ${{ env.CLUSTER_NAME }}
-          command: |-
-            helm upgrade --install $RELEASE_NAME \
-            holo-indexer-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
-            -n ${{ env.MAINNET_COMMON_NAMESPACE }} \
-            \
-            --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
-            --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
-            --set holo_indexer_password=${{ env.MAINNET_HOLO_INDEXER_PASSWORD }} \
-            --set HOLO_INDEXER_HOST=${{ env.MAINNET_HOLOGRAPH_INDEXER_HOST }} \
-            --set OPERATOR_API_KEY=${{ env.MAINNET_HOLO_INDEXER_OPERATOR_API_KEY }} \
-            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
-            --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
-            --set BLOCK_PROCESSING_VERSION=${{ env.BLOCK_PROCESSING_VERSION }} \
-            \
-            --set ENABLE_DEBUG=$ENABLE_DEBUG \
-            --set ENABLE_SYNC=$ENABLE_SYNC \
-            --set HEALTHCHECK=$HEALTHCHECK \
-            --set MODE=$MODE \
-            \
-            --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
-            --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
-            --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
-            --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
-            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
-            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
-            --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
-            --set ZORA_NETWORK="${ZORA_NETWORK}" \
-            --set BASE_NETWORK="${BASE_NETWORK}" \
-            \
-            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
-            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
-            \
-            --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
-            --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
-            --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
-            --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
-            --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
-            --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
-            --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
-            --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
-            --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
-            \
-            --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.indexer_mainnet_avalanche_rpc_url }} \
-            --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.indexer_mainnet_polygon_rpc_url }} \
-            --set mainnet_rpc_config_values.ethereum_rpc_url=${{ env.indexer_mainnet_ethereum_rpc_url }} \
-            --set mainnet_rpc_config_values.optimism_rpc_url=${{ env.indexer_mainnet_optimism_rpc_url }} \
-            --set mainnet_rpc_config_values.arbitrum_rpc_url=${{ env.indexer_mainnet_arbitrum_rpc_url }} \
-            --set mainnet_rpc_config_values.binance_rpc_url=${{ env.indexer_mainnet_binance_rpc_url }} \
-            --set mainnet_rpc_config_values.mantle_rpc_url=${{ env.indexer_mainnet_mantle_rpc_url }} \
-            --set mainnet_rpc_config_values.zora_rpc_url=${{ env.indexer_mainnet_zora_rpc_url }} \
-            --set mainnet_rpc_config_values.base_rpc_url=${{ env.indexer_mainnet_base_rpc_url }} \
-            \
-            --set mainnet_rpc_config_values.private_key=${{ env.indexer_mainnet_private_key }} \
-            --set mainnet_rpc_config_values.address=${{ env.indexer_mainnet_address }} \
-            --set mainnet_rpc_config_values.version="beta3" \
-            \
-            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-            --set datadog_tags.service=$RELEASE_NAME \
-            --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
-            \
-            --set autoscaling.enabled=false \
-            --set replicaCountAvalanche=1 \
-            --set replicaCountPolygon=1 \
-            --set replicaCountBinance=1 \
-            --set replicaCountMantle=1 \
-            --set replicaCountEthereum=1 \
-            --set replicaCountArbitrum=1 \
-            --set replicaCountOptimism=1 \
-            --set replicaCountBase=0 \
-            --set replicaCountZora=1 \
-            \
-            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
-            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
-            --set sqs.SQS_ENDPOINT=${{ env.MAINNET_SQS_ENDPOINT }} \
-            --set sqs.SQS_QUEUE_URL=${{ env.MAINNET_SQS_QUEUE_URL }} \
-            --set sqs.AWS_REGION=us-west-2 \
-            \
-            --values ./holo-indexer/values-v1-mainnet-iv.yaml
+#      - name: -> V1 -- Deploy INDEXER cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
+#        uses: tensor-hq/eksctl-helm-action@main
+#        env:
+#          RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }} # notice
+#          HOLOGRAPH_VERSION: "V1"
+#          #
+#          ENABLE_DEBUG: 'true'
+#          HEALTHCHECK: 'true'
+#          MODE: 'auto'
+#          ENABLE_UNSAFE: 'true'
+#          ENABLE_SYNC: 'true'
+#          ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
+#          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
+#          #
+#          ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
+#          ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
+#          ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
+#          ENABLE_PROCESS_BLOCK_RANGE_mantle: 'true'
+#          ENABLE_PROCESS_BLOCK_RANGE_zora: 'true'
+#          ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
+#          ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
+#          ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
+#          ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
+#          #
+#          AVALANCHE_NETWORK: 'avalanche'
+#          POLYGON_NETWORK: 'polygon'
+#          BINANCE_NETWORK: 'binanceSmartChain'
+#          MANTLE_NETWORK: 'mantle'
+#          ETHEREUM_NETWORK: '{ethereum}'
+#          OPTIMISM_NETWORK: '{optimism}'
+#          ARBITRUM_NETWORK: '{arbitrumOne}'
+#          ZORA_NETWORK: '{zora}'
+#          BASE_NETWORK: '{base}'
+#        with:
+#          eks_cluster: ${{ env.CLUSTER_NAME }}
+#          command: |-
+#            helm upgrade --install $RELEASE_NAME \
+#            holo-indexer-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
+#            -n ${{ env.MAINNET_COMMON_NAMESPACE }} \
+#            \
+#            --set image.repository=${{ env.ECR_REPOSITORY }} \
+#            --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
+#            --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
+#            --set holo_indexer_password=${{ env.MAINNET_HOLO_INDEXER_PASSWORD }} \
+#            --set HOLO_INDEXER_HOST=${{ env.MAINNET_HOLOGRAPH_INDEXER_HOST }} \
+#            --set OPERATOR_API_KEY=${{ env.MAINNET_HOLO_INDEXER_OPERATOR_API_KEY }} \
+#            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
+#            --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
+#            --set BLOCK_PROCESSING_VERSION=${{ env.BLOCK_PROCESSING_VERSION }} \
+#            \
+#            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+#            --set ENABLE_SYNC=$ENABLE_SYNC \
+#            --set HEALTHCHECK=$HEALTHCHECK \
+#            --set MODE=$MODE \
+#            \
+#            --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
+#            --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
+#            --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
+#            --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
+#            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
+#            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
+#            --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
+#            --set ZORA_NETWORK="${ZORA_NETWORK}" \
+#            --set BASE_NETWORK="${BASE_NETWORK}" \
+#            \
+#            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+#            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
+#            \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
+#            \
+#            --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.indexer_mainnet_avalanche_rpc_url }} \
+#            --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.indexer_mainnet_polygon_rpc_url }} \
+#            --set mainnet_rpc_config_values.ethereum_rpc_url=${{ env.indexer_mainnet_ethereum_rpc_url }} \
+#            --set mainnet_rpc_config_values.optimism_rpc_url=${{ env.indexer_mainnet_optimism_rpc_url }} \
+#            --set mainnet_rpc_config_values.arbitrum_rpc_url=${{ env.indexer_mainnet_arbitrum_rpc_url }} \
+#            --set mainnet_rpc_config_values.binance_rpc_url=${{ env.indexer_mainnet_binance_rpc_url }} \
+#            --set mainnet_rpc_config_values.mantle_rpc_url=${{ env.indexer_mainnet_mantle_rpc_url }} \
+#            --set mainnet_rpc_config_values.zora_rpc_url=${{ env.indexer_mainnet_zora_rpc_url }} \
+#            --set mainnet_rpc_config_values.base_rpc_url=${{ env.indexer_mainnet_base_rpc_url }} \
+#            \
+#            --set mainnet_rpc_config_values.private_key=${{ env.indexer_mainnet_private_key }} \
+#            --set mainnet_rpc_config_values.address=${{ env.indexer_mainnet_address }} \
+#            --set mainnet_rpc_config_values.version="beta3" \
+#            \
+#            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+#            --set datadog_tags.service=$RELEASE_NAME \
+#            --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
+#            \
+#            --set autoscaling.enabled=false \
+#            --set replicaCountAvalanche=1 \
+#            --set replicaCountPolygon=1 \
+#            --set replicaCountBinance=1 \
+#            --set replicaCountMantle=1 \
+#            --set replicaCountEthereum=1 \
+#            --set replicaCountArbitrum=1 \
+#            --set replicaCountOptimism=1 \
+#            --set replicaCountBase=0 \
+#            --set replicaCountZora=1 \
+#            \
+#            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
+#            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
+#            --set sqs.SQS_ENDPOINT=${{ env.MAINNET_SQS_ENDPOINT }} \
+#            --set sqs.SQS_QUEUE_URL=${{ env.MAINNET_SQS_QUEUE_URL }} \
+#            --set sqs.AWS_REGION=us-west-2 \
+#            \
+#            --values ./holo-indexer/values-v1-mainnet-iv.yaml
 
-      - name: Pause for 60 seconds
-        shell: bash
-        run: |
-          sleep 60
+#      - name: Pause for 60 seconds
+#        shell: bash
+#        run: |
+#          sleep 60
 
       # NOTICE: --- OPERATOR ---
       - name: Pull the holograph-operator helm chart version x.x.x from ECR
@@ -344,111 +344,111 @@ jobs:
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
           helm pull --untar oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-      - name: -> V1 -- Deploy OPERATOR cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
-        uses: tensor-hq/eksctl-helm-action@main
-        env:
-          RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }} # notice
-          HOLOGRAPH_VERSION: "V1"
-          #
-          ENABLE_DEBUG: 'true'
-          ENABLE_SYNC: 'true'
-          HEALTHCHECK: 'true'
-          MODE: 'auto'
-          ENABLE_UNSAFE: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
-          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
-          #
-          ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
-          ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE_mantle: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE_zora: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
-          #
-          AVALANCHE_NETWORK: 'avax'
-          POLYGON_NETWORK: 'matic'
-          BINANCE_NETWORK: 'binanceSmartChain'
-          MANTLE_NETWORK: 'mantle'
-          ETHEREUM_NETWORK: '{eth}'
-          OPTIMISM_NETWORK: '{optimism}'
-          ARBITRUM_NETWORK: '{arbitrumOne}'
-          ZORA_NETWORK: '{zora}'
-          BASE_NETWORK: '{base}'
-        with:
-          eks_cluster: ${{ env.CLUSTER_NAME }}
-          command: |-
-            helm upgrade --install $RELEASE_NAME \
-            holo-operator-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
-            -n ${{ env.MAINNET_COMMON_NAMESPACE }} \
-            \
-            --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
-            --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
-            --set holo_operator_password=${{ env.MAINNET_HOLO_OPERATOR_PASSWORD }} \
-            --set HOLO_OPERATOR_HOST=${{ env.MAINNET_HOLOGRAPH_OPERATOR_HOST }} \
-            --set OPERATOR_API_KEY=${{ env.MAINNET_HOLO_OPERATOR_OPERATOR_API_KEY }} \
-            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
-            --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
-            \
-            --set ENABLE_DEBUG=$ENABLE_DEBUG \
-            --set ENABLE_SYNC=$ENABLE_SYNC \
-            --set HEALTHCHECK=$HEALTHCHECK \
-            --set MODE=$MODE \
-            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
-            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
-            \
-            --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
-            --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
-            --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
-            --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
-            --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
-            --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
-            --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
-            --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
-            --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
-            \
-            --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
-            --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
-            --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
-            --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
-            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
-            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
-            --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
-            --set ZORA_NETWORK="${ZORA_NETWORK}" \
-            --set BASE_NETWORK="${BASE_NETWORK}" \
-            \
-            --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.operator_mainnet_avalanche_rpc_url }} \
-            --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.operator_mainnet_polygon_rpc_url }} \
-            --set mainnet_rpc_config_values.binance_rpc_url=${{ env.operator_mainnet_binance_rpc_url }} \
-            --set mainnet_rpc_config_values.mantle_rpc_url=${{ env.operator_mainnet_mantle_rpc_url }} \
-            --set mainnet_rpc_config_values.ethereum_rpc_url=${{ env.operator_mainnet_ethereum_rpc_url }} \
-            --set mainnet_rpc_config_values.optimism_rpc_url=${{ env.operator_mainnet_optimism_rpc_url }} \
-            --set mainnet_rpc_config_values.arbitrum_rpc_url=${{ env.operator_mainnet_arbitrum_rpc_url }} \
-            --set mainnet_rpc_config_values.zora_rpc_url=${{ env.operator_mainnet_zora_rpc_url }} \
-            --set mainnet_rpc_config_values.base_rpc_url=${{ env.operator_mainnet_base_rpc_url }} \
-            \
-            --set mainnet_rpc_config_values.private_key=${{ env.operator_mainnet_private_key }} \
-            --set mainnet_rpc_config_values.address=${{ env.operator_mainnet_address }} \
-            \
-            --set autoscaling.enabled=false \
-            --set replicaCountAvalanche=1 \
-            --set replicaCountPolygon=1 \
-            --set replicaCountBinance=1 \
-            --set replicaCountMantle=1 \
-            --set replicaCountEthereum=1 \
-            --set replicaCountArbitrum=1 \
-            --set replicaCountOptimism=1 \
-            --set replicaCountBase=0 \
-            --set replicaCountZora=1 \
-            \
-            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-            --set datadog_tags.service=$RELEASE_NAME \
-            --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
-            \
-            --values ./holo-operator/values-v1-mainnet-iv.yaml
+#      - name: -> V1 -- Deploy OPERATOR cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
+#        uses: tensor-hq/eksctl-helm-action@main
+#        env:
+#          RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }} # notice
+#          HOLOGRAPH_VERSION: "V1"
+#          #
+#          ENABLE_DEBUG: 'true'
+#          ENABLE_SYNC: 'true'
+#          HEALTHCHECK: 'true'
+#          MODE: 'auto'
+#          ENABLE_UNSAFE: 'true'
+#          ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
+#          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
+#          #
+#          ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
+#          ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
+#          ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
+#          ENABLE_PROCESS_BLOCK_RANGE_mantle: 'true'
+#          ENABLE_PROCESS_BLOCK_RANGE_zora: 'true'
+#          ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
+#          ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
+#          ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
+#          ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
+#          #
+#          AVALANCHE_NETWORK: 'avax'
+#          POLYGON_NETWORK: 'matic'
+#          BINANCE_NETWORK: 'binanceSmartChain'
+#          MANTLE_NETWORK: 'mantle'
+#          ETHEREUM_NETWORK: '{eth}'
+#          OPTIMISM_NETWORK: '{optimism}'
+#          ARBITRUM_NETWORK: '{arbitrumOne}'
+#          ZORA_NETWORK: '{zora}'
+#          BASE_NETWORK: '{base}'
+#        with:
+#          eks_cluster: ${{ env.CLUSTER_NAME }}
+#          command: |-
+#            helm upgrade --install $RELEASE_NAME \
+#            holo-operator-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
+#            -n ${{ env.MAINNET_COMMON_NAMESPACE }} \
+#            \
+#            --set image.repository=${{ env.ECR_REPOSITORY }} \
+#            --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
+#            --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
+#            --set holo_operator_password=${{ env.MAINNET_HOLO_OPERATOR_PASSWORD }} \
+#            --set HOLO_OPERATOR_HOST=${{ env.MAINNET_HOLOGRAPH_OPERATOR_HOST }} \
+#            --set OPERATOR_API_KEY=${{ env.MAINNET_HOLO_OPERATOR_OPERATOR_API_KEY }} \
+#            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
+#            --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
+#            \
+#            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+#            --set ENABLE_SYNC=$ENABLE_SYNC \
+#            --set HEALTHCHECK=$HEALTHCHECK \
+#            --set MODE=$MODE \
+#            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+#            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
+#            \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
+#            --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
+#            \
+#            --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
+#            --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
+#            --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
+#            --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
+#            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
+#            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
+#            --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
+#            --set ZORA_NETWORK="${ZORA_NETWORK}" \
+#            --set BASE_NETWORK="${BASE_NETWORK}" \
+#            \
+#            --set mainnet_rpc_config_values.avalanche_rpc_url=${{ env.operator_mainnet_avalanche_rpc_url }} \
+#            --set mainnet_rpc_config_values.polygon_rpc_url=${{ env.operator_mainnet_polygon_rpc_url }} \
+#            --set mainnet_rpc_config_values.binance_rpc_url=${{ env.operator_mainnet_binance_rpc_url }} \
+#            --set mainnet_rpc_config_values.mantle_rpc_url=${{ env.operator_mainnet_mantle_rpc_url }} \
+#            --set mainnet_rpc_config_values.ethereum_rpc_url=${{ env.operator_mainnet_ethereum_rpc_url }} \
+#            --set mainnet_rpc_config_values.optimism_rpc_url=${{ env.operator_mainnet_optimism_rpc_url }} \
+#            --set mainnet_rpc_config_values.arbitrum_rpc_url=${{ env.operator_mainnet_arbitrum_rpc_url }} \
+#            --set mainnet_rpc_config_values.zora_rpc_url=${{ env.operator_mainnet_zora_rpc_url }} \
+#            --set mainnet_rpc_config_values.base_rpc_url=${{ env.operator_mainnet_base_rpc_url }} \
+#            \
+#            --set mainnet_rpc_config_values.private_key=${{ env.operator_mainnet_private_key }} \
+#            --set mainnet_rpc_config_values.address=${{ env.operator_mainnet_address }} \
+#            \
+#            --set autoscaling.enabled=false \
+#            --set replicaCountAvalanche=1 \
+#            --set replicaCountPolygon=1 \
+#            --set replicaCountBinance=1 \
+#            --set replicaCountMantle=1 \
+#            --set replicaCountEthereum=1 \
+#            --set replicaCountArbitrum=1 \
+#            --set replicaCountOptimism=1 \
+#            --set replicaCountBase=0 \
+#            --set replicaCountZora=1 \
+#            \
+#            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+#            --set datadog_tags.service=$RELEASE_NAME \
+#            --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
+#            \
+#            --values ./holo-operator/values-v1-mainnet-iv.yaml
 
 #      - name: -> V1 -- Info for the new V1 deployments
 #        uses: tensor-hq/eksctl-helm-action@main
