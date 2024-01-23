@@ -36,9 +36,6 @@ env:
   #
   STG_DOMAIN: 'holograph.xyz' # needed only for the health checks
   #
-  STG_COMMON_NAMESPACE: 'develop'
-  STG_COMMON_NAMESPACE_V2: 'develop-v2'
-  #
   # V1 INDEXER DEV rpc endpoints
   indexer_dev_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
   indexer_dev_polygonTestnet_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }}
@@ -99,13 +96,15 @@ env:
   DEV_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
   DEV_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor'
   DEV_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor'
-
+  #
+  STG_COMMON_NAMESPACE: 'develop'
+  STG_COMMON_NAMESPACE_V2: 'develop-v2'
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.64
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.68
   INDEXER_RELEASE_NAME: 'indexer-dev' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2'
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.1.0
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.1.1
   OPERATOR_RELEASE_NAME: 'operator-dev' # format -> [release_name]-operator-[env]
   OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2'
   #######################################
@@ -310,42 +309,6 @@ jobs:
             --set replicaCountBase=1 \
             --set replicaCountZora=1 \
             \
-            --set resources.ethereum.limits.memory=820Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=800Mi \
-            \
-            --set resources.optimism.limits.memory=620Mi \
-            --set resources.optimism.requests.cpu=100m \
-            --set resources.optimism.requests.memory=600Mi \
-            \
-            --set resources.arbitrum.limits.memory=620Mi \
-            --set resources.arbitrum.requests.cpu=100m \
-            --set resources.arbitrum.requests.memory=600Mi \
-            \
-            --set resources.polygon.limits.memory=620Mi \
-            --set resources.polygon.requests.cpu=100m \
-            --set resources.polygon.requests.memory=600Mi \
-            \
-            --set resources.avalanche.limits.memory=620Mi \
-            --set resources.avalanche.requests.cpu=100m \
-            --set resources.avalanche.requests.memory=600Mi \
-            \
-            --set resources.binance.limits.memory=620Mi \
-            --set resources.binance.requests.cpu=100m \
-            --set resources.binance.requests.memory=600Mi \
-            \
-            --set resources.mantle.limits.memory=620Mi \
-            --set resources.mantle.requests.cpu=100m \
-            --set resources.mantle.requests.memory=600Mi \
-            \
-            --set resources.zora.limits.memory=620Mi \
-            --set resources.zora.requests.cpu=100m \
-            --set resources.zora.requests.memory=600Mi \
-            \
-            --set resources.base.limits.memory=620Mi \
-            --set resources.base.requests.cpu=100m \
-            --set resources.base.requests.memory=600Mi \
-            \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
             --set sqs.SQS_ENDPOINT=${{ env.DEV_SQS_ENDPOINT }} \
@@ -468,42 +431,6 @@ jobs:
             --set replicaCountOptimism=1 \
             --set replicaCountBase=1 \
             --set replicaCountZora=1 \
-            \
-            --set resources.ethereum.limits.memory=550Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=500Mi \
-            \
-            --set resources.optimism.limits.memory=350Mi \
-            --set resources.optimism.requests.cpu=100m \
-            --set resources.optimism.requests.memory=300Mi \
-            \
-            --set resources.arbitrum.limits.memory=350Mi \
-            --set resources.arbitrum.requests.cpu=100m \
-            --set resources.arbitrum.requests.memory=300Mi \
-            \
-            --set resources.polygon.limits.memory=350Mi \
-            --set resources.polygon.requests.cpu=100m \
-            --set resources.polygon.requests.memory=300Mi \
-            \
-            --set resources.avalanche.limits.memory=350Mi \
-            --set resources.avalanche.requests.cpu=100m \
-            --set resources.avalanche.requests.memory=300Mi \
-            \
-            --set resources.binance.limits.memory=350Mi \
-            --set resources.binance.requests.cpu=100m \
-            --set resources.binance.requests.memory=300Mi \
-            \
-            --set resources.mantle.limits.memory=350Mi \
-            --set resources.mantle.requests.cpu=100m \
-            --set resources.mantle.requests.memory=300Mi \
-            \
-            --set resources.zora.limits.memory=350Mi \
-            --set resources.zora.requests.cpu=100m \
-            --set resources.zora.requests.memory=300Mi \
-            \
-            --set resources.base.limits.memory=350Mi \
-            --set resources.base.requests.cpu=100m \
-            --set resources.base.requests.memory=300Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
@@ -636,42 +563,6 @@ jobs:
             --set replicaCountBase=0 \
             --set replicaCountZora=1 \
             \
-            --set resources.ethereum.limits.memory=620Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=600Mi \
-            \
-            --set resources.optimism.limits.memory=620Mi \
-            --set resources.optimism.requests.cpu=100m \
-            --set resources.optimism.requests.memory=600Mi \
-            \
-            --set resources.arbitrum.limits.memory=620Mi \
-            --set resources.arbitrum.requests.cpu=100m \
-            --set resources.arbitrum.requests.memory=600Mi \
-            \
-            --set resources.polygon.limits.memory=620Mi \
-            --set resources.polygon.requests.cpu=100m \
-            --set resources.polygon.requests.memory=600Mi \
-            \
-            --set resources.avalanche.limits.memory=620Mi \
-            --set resources.avalanche.requests.cpu=100m \
-            --set resources.avalanche.requests.memory=600Mi \
-            \
-            --set resources.binance.limits.memory=620Mi \
-            --set resources.binance.requests.cpu=100m \
-            --set resources.binance.requests.memory=600Mi \
-            \
-            --set resources.mantle.limits.memory=620Mi \
-            --set resources.mantle.requests.cpu=100m \
-            --set resources.mantle.requests.memory=600Mi \
-            \
-            --set resources.zora.limits.memory=620Mi \
-            --set resources.zora.requests.cpu=100m \
-            --set resources.zora.requests.memory=600Mi \
-            \
-            --set resources.base.limits.memory=620Mi \
-            --set resources.base.requests.cpu=100m \
-            --set resources.base.requests.memory=600Mi \
-            \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
             --set sqs.SQS_ENDPOINT=${{ env.DEV_SQS_ENDPOINT }} \
@@ -783,42 +674,6 @@ jobs:
             --set replicaCountOptimism=1 \
             --set replicaCountBase=0 \
             --set replicaCountZora=1 \
-            \
-            --set resources.ethereum.limits.memory=550Mi \
-            --set resources.ethereum.requests.cpu=100m \
-            --set resources.ethereum.requests.memory=500Mi \
-            \
-            --set resources.optimism.limits.memory=350Mi \
-            --set resources.optimism.requests.cpu=100m \
-            --set resources.optimism.requests.memory=300Mi \
-            \
-            --set resources.arbitrum.limits.memory=350Mi \
-            --set resources.arbitrum.requests.cpu=100m \
-            --set resources.arbitrum.requests.memory=300Mi \
-            \
-            --set resources.polygon.limits.memory=350Mi \
-            --set resources.polygon.requests.cpu=100m \
-            --set resources.polygon.requests.memory=300Mi \
-            \
-            --set resources.avalanche.limits.memory=350Mi \
-            --set resources.avalanche.requests.cpu=100m \
-            --set resources.avalanche.requests.memory=300Mi \
-            \
-            --set resources.binance.limits.memory=350Mi \
-            --set resources.binance.requests.cpu=100m \
-            --set resources.binance.requests.memory=300Mi \
-            \
-            --set resources.mantle.limits.memory=350Mi \
-            --set resources.mantle.requests.cpu=100m \
-            --set resources.mantle.requests.memory=300Mi \
-            \
-            --set resources.zora.limits.memory=350Mi \
-            --set resources.zora.requests.cpu=100m \
-            --set resources.zora.requests.memory=300Mi \
-            \
-            --set resources.base.limits.memory=350Mi \
-            --set resources.base.requests.cpu=100m \
-            --set resources.base.requests.memory=300Mi \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
