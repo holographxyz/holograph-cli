@@ -1,29 +1,35 @@
 import {TransactionResponse} from '@ethersproject/abstract-provider'
-
+import {NetworkMonitor} from '../../utils/network-monitor'
 import SqsService from '../../services/sqs-service'
 import {networkToChainId} from '../../utils/web3'
-import {NetworkMonitor} from '../../utils/network-monitor'
 import {SqsEventName, PayloadType, SqsMessageBody} from '../../types/sqs'
-import {CrossChainMessageType} from '../../utils/event/event'
+import {TransferERC20Event} from '../../utils/event'
 
-async function handleBridgeEvents(
+async function handleTransferERC20Event(
   networkMonitor: NetworkMonitor,
   transaction: TransactionResponse,
   network: string,
-  crossChainMessageType: CrossChainMessageType,
+  event: TransferERC20Event,
   tags: (string | number)[],
 ): Promise<void> {
+  const {from, to, value, contract: contractAddress, logIndex} = event
+
   const messageBody: SqsMessageBody = {
-    type: PayloadType.HolographProtocol,
-    eventName: SqsEventName.BridgePreProcess,
+    type: PayloadType.ERC20,
+    eventName: SqsEventName.TransferERC20,
+    eventSignature: 'Transfer (address indexed from, address indexed to, uint256 value)',
     tagId: tags,
     chainId: networkToChainId[network],
     holographAddress: networkMonitor.HOLOGRAPH_ADDRESSES[networkMonitor.environment],
     environment: networkMonitor.environment,
     payload: {
       tx: transaction.hash,
+      logIndex,
       blockNum: Number(transaction.blockNumber),
-      crossChainMessageType,
+      from,
+      to,
+      contractAddress,
+      value: value.toString(),
     },
   }
 
@@ -38,4 +44,4 @@ async function handleBridgeEvents(
   networkMonitor.structuredLog(network, `Response: ${JSON.stringify(response)}`, tags)
 }
 
-export default handleBridgeEvents
+export default handleTransferERC20Event

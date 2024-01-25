@@ -60,7 +60,7 @@
     "@ethersproject/units": "^5.7.0",
     "@ethersproject/wallet": "^5.7.0",
     "@holographxyz/environment": "0.1.10",
-    "@holographxyz/networks": "^0.1.36",
+    "@holographxyz/networks": "^0.2.0",
     "@oclif/color": "^1.0.11",
     "@oclif/core": "1.20.4",
     "@oclif/plugin-help": "^5.2.18",

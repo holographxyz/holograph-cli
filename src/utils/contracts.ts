@@ -65,12 +65,14 @@ export const getABIs = async (environment: string): Promise<ContractAbis> => {
   }
 }
 
+const HOLOGRAPH_ADDRESS_ENV = process.env.HOLOGRAPH_ADDRESS ? process.env.HOLOGRAPH_ADDRESS.toLowerCase() : undefined
+
 export const HOLOGRAPH_ADDRESSES: {[key in Environment]: string} = {
-  [Environment.localhost]: '0xa3931469C1D058a98dde3b5AEc4dA002B6ca7446'.toLowerCase(),
-  [Environment.experimental]: '0x199728d88a68856868f50FC259F01Bb4D2672Da9'.toLowerCase(),
-  [Environment.develop]: '0x8dd0A4D129f03F1251574E545ad258dE26cD5e97'.toLowerCase(),
-  [Environment.testnet]: '0x6429b42da2a06aA1C46710509fC96E846F46181e'.toLowerCase(),
-  [Environment.mainnet]: '0x6429b42da2a06aA1C46710509fC96E846F46181e'.toLowerCase(),
+  [Environment.localhost]: HOLOGRAPH_ADDRESS_ENV ?? '0xa3931469C1D058a98dde3b5AEc4dA002B6ca7446'.toLowerCase(),
+  [Environment.experimental]: HOLOGRAPH_ADDRESS_ENV ?? '0x199728d88a68856868f50FC259F01Bb4D2672Da9'.toLowerCase(),
+  [Environment.develop]: HOLOGRAPH_ADDRESS_ENV ?? '0x8dd0A4D129f03F1251574E545ad258dE26cD5e97'.toLowerCase(),
+  [Environment.testnet]: HOLOGRAPH_ADDRESS_ENV ?? '0x6429b42da2a06aA1C46710509fC96E846F46181e'.toLowerCase(),
+  [Environment.mainnet]: HOLOGRAPH_ADDRESS_ENV ?? '0x6429b42da2a06aA1C46710509fC96E846F46181e'.toLowerCase(),
 }
 
 export const FAUCET_ADDRESSES: {[key in Environment]: string} = {
@@ -112,4 +114,6 @@ export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
   arbitrumTestnetGoerli: '0x6aB5Ae6822647046626e83ee6dB8187151E1d5ab'.toLowerCase(),
   mantleTestnet: '0x0000000000000000000000000000000000000000'.toLowerCase(),
   mantle: '0x0000000000000000000000000000000000000000'.toLowerCase(),
+  baseTestnetGoerli: '0x6aB5Ae6822647046626e83ee6dB8187151E1d5ab'.toLowerCase(),
+  base: '0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7'.toLowerCase(),
 } as const

@@ -10,7 +10,7 @@ export enum EventType {
   UNKNOWN = 'UNKNOWN',
   TBD = 'TBD',
   TransferERC20 = 'TransferERC20',
-  HolographableTransferERC20 = 'HolographableTransferERC20',
+  HolographableTransferERC20 = 'HolographableTransferERC20', // TODO: what event is this?
   TransferERC721 = 'TransferERC721',
   HolographableTransferERC721 = 'HolographableTransferERC721',
   TransferSingleERC1155 = 'TransferSingleERC1155',
@@ -26,6 +26,13 @@ export enum EventType {
   V1PacketLZ = 'V1PacketLZ',
   TestLzEvent = 'TestLzEvent',
   HolographableContractEvent = 'HolographableContractEvent',
+  MintFeePayout = 'MintFeePayout',
+  Sale = 'Sale',
+  SecondarySaleFees = 'SecondarySaleFees',
+  EditionInitialized = 'EditionInitialized',
+  RelayerParams = 'RelayerParams',
+  AssignJob = 'AssignJob',
+  PacketReceived = 'PacketReceived',
 }
 
 export enum CrossChainMessageType {
@@ -34,6 +41,18 @@ export enum CrossChainMessageType {
   ERC1155 = 'ERC1155',
   ERC20 = 'ERC20',
   CONTRACT = 'CONTRACT',
+  ERC20_HLG = 'ERC20_HLG',
+}
+
+export interface Event {
+  type: EventType
+  sigHash: string
+  customSigHash?: string
+  name: string
+  eventName: string
+  event: string
+  fragment: EventFragment
+  decode: EventDecoder
 }
 
 export interface BaseEvent {
@@ -98,6 +117,49 @@ export interface FailedOperatorJobEvent extends BaseEvent {
   jobHash: string
 }
 
+export interface MintFeePayout extends BaseEvent {
+  mintFeeAmount: BigNumber
+  mintFeeRecipient: string
+  success: boolean
+}
+
+export interface Sale extends BaseEvent {
+  to: string
+  quantity: BigNumber
+  pricePerToken: BigNumber
+  firstPurchasedTokenId: BigNumber
+}
+
+export interface SecondarySaleFees extends BaseEvent {
+  tokenId: BigNumber
+  recipients: string[]
+  bps: BigNumber[]
+}
+
+export interface EditionInitialized extends BaseEvent {
+  target: string
+  description: string
+  imageURI: string
+  string: string
+}
+
+export interface RelayerParams extends BaseEvent {
+  adapterParams: string // bytes
+  outboundProofType: BigNumber
+}
+
+export interface AssignJob extends BaseEvent {
+  totalFee: BigNumber
+}
+
+export interface PacketReceived extends BaseEvent {
+  srcChainId: BigNumber
+  srcAddress: string // bytes
+  dstAddress: string
+  nonce: BigNumber
+  payloadHash: string // bytes32
+}
+
 export type DecodedEvent =
   | HolographableContractEvent
   | TransferERC20Event
@@ -112,6 +174,13 @@ export type DecodedEvent =
 
 export type EventDecoder = <T extends DecodedEvent>(type: EventType, log: Log) => T | null
 
+type EventMap = {[key in keyof typeof EventType]: Event}
+
+/**
+ * This event is emitted alongside TransferERC20, TransferERC721, and Transfer ERC1155 events. Its payload provides information about the accompanying event. Use this function to decode HolographableContractEvent and identify the actual event it corresponds to.
+ * @param holographableContractEvent
+ * @returns DecodedEvent | null
+ */
 export const decodeHolographableContractEvent = (
   holographableContractEvent: HolographableContractEvent,
 ): DecodedEvent | null => {
@@ -140,9 +209,18 @@ export const decodeHolographableContractEvent = (
       realEvent = eventMap[EventType.HolographableTransferBatchERC1155]
       break
   }
+
+  /**
+   * Adjust logIndex to accurately reflect the real event's position:
+   *
+   * - The HolographableContractEvent is emitted after the actual event, introducing a discrepancy in logIndex.
+   * - To compensate, decrement the logIndex by 1 to align with the real event's occurrence.
+   */
+  const realEventLogIndex: number = holographableContractEvent.logIndex - 1
+
   let log: Log = {
     address: holographableContractEvent.contractAddress,
-    logIndex: holographableContractEvent.logIndex,
+    logIndex: realEventLogIndex,
     topics: [realEvent.sigHash],
     data: holographableContractEvent.payload,
   } as unknown as Log
@@ -324,17 +402,6 @@ export const decodeKnownEvent = <T extends DecodedEvent>(
   return output
 }
 
-export interface Event {
-  type: EventType
-  sigHash: string
-  customSigHash?: string
-  name: string
-  eventName: string
-  event: string
-  fragment: EventFragment
-  decode: EventDecoder
-}
-
 export const eventBuilder = (eventType: EventType, event: string, customSig?: string): Event => {
   const fragment: EventFragment = EventFragment.from(event)
   return {
@@ -350,8 +417,6 @@ export const eventBuilder = (eventType: EventType, event: string, customSig?: st
     },
   } as Event
 }
-
-type EventMap = {[key in keyof typeof EventType]: Event}
 
 export const eventMap: EventMap = {
   [EventType.UNKNOWN]: {} as unknown as Event,
@@ -418,5 +483,30 @@ export const eventMap: EventMap = {
   [EventType.TestLzEvent]: eventBuilder(
     EventType.TestLzEvent,
     'LzEvent(uint16 _dstChainId, bytes _destination, bytes _payload)',
+  ),
+  [EventType.MintFeePayout]: eventBuilder(
+    EventType.MintFeePayout,
+    'MintFeePayout(uint256 mintFeeAmount, address mintFeeRecipient, bool success)',
+  ),
+  [EventType.Sale]: eventBuilder(
+    EventType.Sale,
+    'Sale(address indexed to, uint256 indexed quantity, uint256 indexed pricePerToken, uint256 firstPurchasedTokenId)',
+  ),
+  [EventType.SecondarySaleFees]: eventBuilder(
+    EventType.SecondarySaleFees,
+    'SecondarySaleFees(uint256 tokenId, address[] recipients, uint256[] bps)',
+  ),
+  [EventType.EditionInitialized]: eventBuilder(
+    EventType.EditionInitialized,
+    ' EditionInitialized(address indexed target, string description, string imageURI, string animationURI)',
+  ),
+  [EventType.AssignJob]: eventBuilder(EventType.AssignJob, 'AssignJob (uint256 totalFee)'),
+  [EventType.RelayerParams]: eventBuilder(
+    EventType.RelayerParams,
+    'RelayerParams (bytes adapterParams, uint16 outboundProofType)',
+  ),
+  [EventType.PacketReceived]: eventBuilder(
+    EventType.PacketReceived,
+    'PacketReceived (uint16 indexed srcChainId, bytes indexed srcAddress, address dstAddress, uint64 nonce, bytes32 payloadHash)',
   ),
 }

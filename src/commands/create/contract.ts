@@ -6,7 +6,7 @@ import {BytesLike} from '@ethersproject/bytes'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
 import {networks} from '@holographxyz/networks'
 
-import {BytecodeType, bytecodes} from '../../utils/bytecodes'
+import {BytecodeType, getByteCodes} from '../../utils/bytecodes'
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {web3, zeroAddress, remove0x, sha3, dropEventsEnabled} from '../../utils/web3'
 import {NetworkMonitor} from '../../utils/network-monitor'
@@ -209,7 +209,7 @@ export default class Contract extends Command {
         contractType = bytecodeType.toString()
 
         contractTypeHash = '0x' + web3.utils.asciiToHex(contractType).slice(2).padStart(64, '0')
-        byteCode = bytecodes[bytecodeType]
+        byteCode = getByteCodes(bytecodeType, targetNetwork)
 
         switch (contractType) {
           case BytecodeType.HolographERC721:
@@ -357,12 +357,10 @@ export default class Contract extends Command {
               '0x' + web3.utils.asciiToHex('HolographDropERC721').substring(2).padStart(64, '0'),
               this.networkMonitor.registryAddress,
               '0x0000000000000000000000000000000000000000', // erc721TransferHelper
-              '0x0000000000000000000000000000000000000000', // marketFilterAddress (opensea)
               userWallet.address, // initialOwner
               userWallet.address, // fundsRecipient
               numOfEditions, // number of editions
               royaltyBps, // percentage of royalties in bps
-              false, // enableOpenSeaRoyaltyRegistry
               salesConfig,
               METADATA_RENDERER_ADDRESS[ENVIRONMENT],
               metadataRendererInitCode, // metadataRendererInit

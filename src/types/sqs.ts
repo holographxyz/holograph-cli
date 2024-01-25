@@ -7,18 +7,19 @@ export enum PayloadType {
   ERC721 = 'ERC721',
 }
 
-export enum EventName {
+export enum SqsEventName {
   MintNft = 'MintNft',
   BridgePreProcess = 'BridgePreProcess',
   ContractDeployed = 'ContractDeployed',
   AvailableOperatorJob = 'AvailableOperatorJob',
   TransferERC721 = 'TransferERC721',
   FailedOperatorJob = 'FailedOperatorJob',
+  TransferERC20 = 'TransferERC20',
 }
 
 export type SqsMessageBody = {
   type: PayloadType
-  eventName: EventName
+  eventName: SqsEventName
   eventSignature?: string
   tagId: (string | number)[]
   chainId: number
@@ -30,6 +31,7 @@ export type SqsMessageBody = {
     | BridgeEventPayload
     | TransferEventPayload
     | FailedOperatorJobPayload
+    | TransferERC20Payload
 }
 
 export type MintEventPayload = {
@@ -65,4 +67,14 @@ export type FailedOperatorJobPayload = {
   tx: string
   blockNum: number
   jobHash: string
+}
+
+export type TransferERC20Payload = {
+  tx: string
+  logIndex: number
+  blockNum: number
+  from: string
+  to: string
+  contractAddress: string
+  value: string
 }

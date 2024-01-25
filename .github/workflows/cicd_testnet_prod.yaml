@@ -25,54 +25,89 @@ env:
   #
   TESTNET_HOLO_INDEXER_PASSWORD: ${{ secrets.STG_HOLO_INDEXER_PASSWORD }}
   TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.PROD_HOLO_OPERATOR_PASSWORD }}
+  V2_TESTNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.V2_TESTNET_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
   INDEXER_HOLO_CONFIG_FILE_DATA: testnet-config-file
   OPERATOR_HOLO_CONFIG_FILE_DATA: testnet-config-file
   #
   HOLOGRAPH_ENVIRONMENT: testnet
+  HOLOGRAPH_ADDRESS: ${{ secrets.TESTNET_HOLOGRAPH_ADDRESS }}
+  BLOCK_PROCESSING_VERSION: 'V2'
   #
-  TESTNET_DOMAIN: 'holograph.xyz'
+  TESTNET_DOMAIN: 'holograph.xyz' # needed only for the health checks
   #
-  TESTNET_COMMON_NAMESPACE: testnet # NOTICE <---
-  #
-  # INDEXER TESTNET rpc endpoints
+  # V1 INDEXER TESTNET rpc endpoints
   indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
   indexer_testnet_polygonTestnet_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
   indexer_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_GOERLI_RPC_URL }}
   indexer_testnet_optimismTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_OPTIMISM_GOERLI_RPC_URL }}
   indexer_testnet_arbitrumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_ARBITRUM_GOERLI_RPC_URL }}
   indexer_testnet_binanceTestnet_rpc_url: ${{ secrets.INDEXER_PROD_BSC_TESTNET_RPC_URL }}
-  indexer_testnet_mantleTestnet_rpc_url: "https://rpc.testnet.mantle.xyz"
-  indexer_testnet_zoraTestnet_rpc_url: "https://testnet.rpc.zora.energy"
+  indexer_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
+  indexer_testnet_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
+  indexer_testnet_baseTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_BASE_GOERLI_RPC_URL }}
   #
   indexer_testnet_private_key: ${{ secrets.INDEXER_PROD_PRIVATE_KEY }}
   indexer_testnet_address: ${{ secrets.INDEXER_PROD_ADDRESS }}
-  # OPERATOR TESTNET rpc endpoints
+  # V1 OPERATOR TESTNET rpc endpoints
   operator_testnet_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_FUJI_RPC_URL }}
   operator_testnet_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_MUMBAI_RPC_URL }}
   operator_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_GOERLI_RPC_URL }}
   operator_testnet_optimismTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_OPTIMISM_GOERLI_RPC_URL }}
   operator_testnet_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_ARBITRUM_GOERLI_RPC_URL }}
   operator_testnet_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_BSC_TESTNET_RPC_URL }}
-  operator_testnet_mantleTestnet_rpc_url: "https://rpc.testnet.mantle.xyz"
-  operator_testnet_zoraTestnet_rpc_url: "https://testnet.rpc.zora.energy"
+  operator_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
+  operator_testnet_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
+  operator_testnet_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_BASE_GOERLI_RPC_URL }}
   #
   operator_testnet_private_key: ${{ secrets.OPERATOR_PROD_PRIVATE_KEY }}
   operator_testnet_address: ${{ secrets.OPERATOR_PROD_ADDRESS }}
+  #
+  # V2 INDEXER TESTNET rpc endpoints
+  v2_indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
+  v2_indexer_testnet_polygonTestnet_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
+  v2_indexer_testnet_ethereumTestnetSepolia_rpc_url: ${{ secrets.INDEXER_TESTNET_ETHEREUM_SEPOLIA_RPC_URL }}
+  v2_indexer_testnet_optimismTestnetSepolia_rpc_url: ${{ secrets.INDEXER_TESTNET_OPTIMISM_SEPOLIA_RPC_URL }}
+  v2_indexer_testnet_arbitrumTestnetSepolia_rpc_url: ${{ secrets.INDEXER_TESTNET_ARBITRUM_SEPOLIA_RPC_URL }}
+  v2_indexer_testnet_binanceTestnet_rpc_url: ${{ secrets.INDEXER_TESTNET_BSC_TESTNET_RPC_URL }}
+  v2_indexer_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
+  v2_indexer_testnet_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
+  v2_indexer_testnet_baseTestnetSepolia_rpc_url: ${{ secrets.INDEXER_TESTNET_BASE_SEPOLIA_RPC_URL }}
+  #
+  v2_indexer_testnet_private_key: ${{ secrets.V2_INDEXER_TESTNET_PRIVATE_KEY }}
+  v2_indexer_testnet_address: ${{ secrets.V2_INDEXER_TESTNET_ADDRESS }}
+  # V2 OPERATOR TESTNET rpc endpoints
+  v2_operator_testnet_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_TESTNET_FUJI_RPC_URL }}
+  v2_operator_testnet_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_TESTNET_MUMBAI_RPC_URL }}
+  v2_operator_testnet_ethereumTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_TESTNET_ETHEREUM_SEPOLIA_RPC_URL }}
+  v2_operator_testnet_optimismTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_TESTNET_OPTIMISM_SEPOLIA_RPC_URL }}
+  v2_operator_testnet_arbitrumTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_TESTNET_ARBITRUM_SEPOLIA_RPC_URL }}
+  v2_operator_testnet_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_TESTNET_BSC_TESTNET_RPC_URL }}
+  v2_operator_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
+  v2_operator_testnet_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
+  v2_operator_testnet_baseTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_TESTNET_BASE_SEPOLIA_RPC_URL }}
+  #
+  v2_operator_testnet_private_key: ${{ secrets.V2_OPERATOR_TESTNET_PRIVATE_KEY }}
+  v2_operator_testnet_address: ${{ secrets.V2_OPERATOR_TESTNET_ADDRESS }}
   #
   # SQS User [indexer_processor_sqs_user]
   SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
   SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
   TESTNET_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
   TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
-
-  #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.3
-  INDEXER_RELEASE_NAME: blondie-indexer-testnet # format -> [release_name]-indexer-[env]
+  TESTNET_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.0.76
-  OPERATOR_RELEASE_NAME: blondie-operator-testnet # format -> [release_name]-operator-[env]
+  TESTNET_COMMON_NAMESPACE: 'testnet'
+  TESTNET_COMMON_NAMESPACE_V2: 'testnet-v2'
+  #######################################
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.68
+  INDEXER_RELEASE_NAME: 'blondie-indexer-testnet' # format -> [release_name]-indexer-[env]
+  INDEXER_RELEASE_NAME_V2: 'blondie-indexer-testnet-v2'
+  #
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.1
+  OPERATOR_RELEASE_NAME: 'blondie-operator-testnet' # format -> [release_name]-operator-[env]
+  OPERATOR_RELEASE_NAME_V2: 'blondie-operator-testnet-v2'
   #######################################
 
 # notice: the trigger
@@ -154,14 +189,13 @@ jobs:
           aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Create ns [${{ env.TESTNET_COMMON_NAMESPACE }}]
-        uses: tensor-hq/eksctl-helm-action@main
-        with:
-          eks_cluster: ${{ env.CLUSTER_NAME }}
-          command: |-
-            kubectl create namespace ${{ env.TESTNET_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-      #
-      #
+#      - name: Create ns [${{ env.TESTNET_COMMON_NAMESPACE }}]
+#        uses: tensor-hq/eksctl-helm-action@main
+#        with:
+#          eks_cluster: ${{ env.CLUSTER_NAME }}
+#          command: |-
+#            kubectl create namespace ${{ env.TESTNET_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
       # NOTICE: --- INDEXER ---
       - name: Pull the holograph-indexer helm chart version x.x.x from ECR
         shell: bash
@@ -173,11 +207,15 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-      ######
-      - name: -> Deploy INDEXER cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
+          helm pull --untar oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
+
+      # NOTICE: ##### V1 deployments ######
+
+      - name: -> V1 -- Deploy INDEXER cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }} # notice
+          HOLOGRAPH_VERSION: "V1"
           #
           ENABLE_DEBUG: 'true'
           HEALTHCHECK: 'true'
@@ -195,15 +233,17 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           #
           AVALANCHE_NETWORK: 'fuji'
-          ETHEREUM_NETWORK: 'goerli'
-          OPTIMISM_NETWORK: 'optimismTestnetGoerli'
-          ARBITRUM_NETWORK: 'arbitrumTestnetGoerli'
           POLYGON_NETWORK: 'mumbai'
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
           MANTLE_NETWORK: 'mantleTestnet'
-          ZORA_NETWORK: 'zoraTestnetGoerli'
+          ETHEREUM_NETWORK: '{ethereumTestnetGoerli}'
+          OPTIMISM_NETWORK: '{optimismTestnetGoerli}'
+          ARBITRUM_NETWORK: '{arbitrumTestnetGoerli}'
+          ZORA_NETWORK: '{zoraTestnetGoerli}'
+          BASE_NETWORK: '{baseTestnetGoerli}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -218,6 +258,8 @@ jobs:
             --set HOLO_INDEXER_HOST=${{ env.TESTNET_HOLOGRAPH_INDEXER_HOST }} \
             --set OPERATOR_API_KEY=${{ env.TESTNET_HOLOGRAPH_INDEXER_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
+            --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
+            --set BLOCK_PROCESSING_VERSION=${{ env.BLOCK_PROCESSING_VERSION }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set ENABLE_SYNC=$ENABLE_SYNC \
@@ -225,13 +267,14 @@ jobs:
             --set MODE=$MODE \
             \
             --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
-            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
-            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
-            --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
             --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
             --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
             --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
+            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
+            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
+            --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
+            --set BASE_NETWORK="${BASE_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
@@ -244,15 +287,17 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
             --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
+            --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
             \
             --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_testnet_avalancheTestnet_rpc_url }} \
             --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_testnet_polygonTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.indexer_testnet_binanceTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.indexer_testnet_mantleTestnet_rpc_url }} \
             --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.indexer_testnet_ethereumTestnetGoerli_rpc_url }} \
             --set testnet_rpc_config_values.optimismTestnetGoerli_rpc_url=${{ env.indexer_testnet_optimismTestnetGoerli_rpc_url }} \
             --set testnet_rpc_config_values.arbitrumTestnetGoerli_rpc_url=${{ env.indexer_testnet_arbitrumTestnetGoerli_rpc_url }} \
-            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.indexer_testnet_binanceTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.indexer_testnet_mantleTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.zoraTestnet_rpc_url=${{ env.indexer_testnet_zoraTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.zoraTestnetGoerli_rpc_url=${{ env.indexer_testnet_zoraTestnetGoerli_rpc_url }} \
+            --set testnet_rpc_config_values.baseTestnetGoerli_rpc_url=${{ env.indexer_testnet_baseTestnetGoerli_rpc_url }} \
             \
             --set testnet_rpc_config_values.private_key=${{ env.indexer_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.indexer_testnet_address }} \
@@ -263,39 +308,15 @@ jobs:
             --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCount=1 \
-            \
-            --set resources.ethereum.limits.memory=820Mi \
-            --set resources.ethereum.requests.cpu=500m \
-            --set resources.ethereum.requests.memory=800Mi \
-            \
-            --set resources.optimism.limits.memory=820Mi \
-            --set resources.optimism.requests.cpu=500m \
-            --set resources.optimism.requests.memory=800Mi \
-            \
-            --set resources.arbitrum.limits.memory=820Mi \
-            --set resources.arbitrum.requests.cpu=500m \
-            --set resources.arbitrum.requests.memory=800Mi \
-            \
-            --set resources.polygon.limits.memory=820Mi \
-            --set resources.polygon.requests.cpu=500m \
-            --set resources.polygon.requests.memory=800Mi \
-            \
-            --set resources.avalanche.limits.memory=820Mi \
-            --set resources.avalanche.requests.cpu=500m \
-            --set resources.avalanche.requests.memory=800Mi \
-            \
-            --set resources.binance.limits.memory=820Mi \
-            --set resources.binance.requests.cpu=500m \
-            --set resources.binance.requests.memory=800Mi \
-            \
-            --set resources.mantle.limits.memory=820Mi \
-            --set resources.mantle.requests.cpu=500m \
-            --set resources.mantle.requests.memory=800Mi \
-            \
-            --set resources.zora.limits.memory=820Mi \
-            --set resources.zora.requests.cpu=500m \
-            --set resources.zora.requests.memory=800Mi \
+            --set replicaCountAvalanche=1 \
+            --set replicaCountPolygon=1 \
+            --set replicaCountBinance=1 \
+            --set replicaCountMantle=1 \
+            --set replicaCountEthereum=1 \
+            --set replicaCountArbitrum=1 \
+            --set replicaCountOptimism=1 \
+            --set replicaCountBase=1 \
+            --set replicaCountZora=1 \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
@@ -303,18 +324,13 @@ jobs:
             --set sqs.SQS_QUEUE_URL=${{ env.TESTNET_SQS_QUEUE_URL }} \
             --set sqs.AWS_REGION=us-west-2 \
             \
-            --values .github/values_for_prod_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-indexer \
-            --set ingress.blue_green_deployment=false
+            --values ./holo-indexer/values-v1-testnet-iv.yaml
+
       - name: Pause for 60 seconds
         shell: bash
         run: |
           sleep 60
-      #
-      #
+
       # NOTICE: --- OPERATOR ---
       - name: Pull the holograph-operator helm chart version x.x.x from ECR
         shell: bash
@@ -326,11 +342,13 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-      ######
-      - name: -> Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
+          helm pull --untar oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
+
+      - name: -> V1 -- Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }} # notice
+          HOLOGRAPH_VERSION: "V1"
           #
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
@@ -348,15 +366,17 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           #
           AVALANCHE_NETWORK: 'fuji'
           POLYGON_NETWORK: 'mumbai'
-          ETHEREUM_NETWORK: 'goerli'
-          OPTIMISM_NETWORK: 'optimismTestnetGoerli'
-          ARBITRUM_NETWORK: 'arbitrumTestnetGoerli'
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
           MANTLE_NETWORK: 'mantleTestnet'
-          ZORA_NETWORK: 'zoraTestnetGoerli'
+          ETHEREUM_NETWORK: '{ethereumTestnetGoerli}'
+          OPTIMISM_NETWORK: '{optimismTestnetGoerli}'
+          ARBITRUM_NETWORK: '{arbitrumTestnetGoerli}'
+          ZORA_NETWORK: '{zoraTestnetGoerli}'
+          BASE_NETWORK: '{baseTestnetGoerli}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -371,6 +391,7 @@ jobs:
             --set HOLO_OPERATOR_HOST=${{ env.TESTNET_HOLOGRAPH_OPERATOR_HOST }} \
             --set OPERATOR_API_KEY=${{ env.TESTNET_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY }} \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
+            --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
             --set ENABLE_SYNC=$ENABLE_SYNC \
@@ -387,99 +408,308 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
             --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
+            --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
             \
-            --set AVALANCHE_NETWORK=$AVALANCHE_NETWORK \
-            --set POLYGON_NETWORK=$POLYGON_NETWORK \
-            --set ETHEREUM_NETWORK=$ETHEREUM_NETWORK \
-            --set OPTIMISM_NETWORK=$OPTIMISM_NETWORK \
-            --set ARBITRUM_NETWORK=$ARBITRUM_NETWORK \
-            --set BINANCE_NETWORK=$BINANCE_NETWORK \
-            --set MANTLE_NETWORK=$MANTLE_NETWORK \
-            --set ZORA_NETWORK=$ZORA_NETWORK \
+            --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
+            --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
+            --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
+            --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
+            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
+            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
+            --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
+            --set ZORA_NETWORK="${ZORA_NETWORK}" \
+            --set BASE_NETWORK="${BASE_NETWORK}" \
             \
             --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_testnet_avalancheTestnet_rpc_url }} \
             --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_testnet_polygonTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.operator_testnet_binanceTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.operator_testnet_mantleTestnet_rpc_url }} \
             --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.operator_testnet_ethereumTestnetGoerli_rpc_url }} \
             --set testnet_rpc_config_values.optimismTestnetGoerli_rpc_url=${{ env.operator_testnet_optimismTestnetGoerli_rpc_url }} \
             --set testnet_rpc_config_values.arbitrumTestnetGoerli_rpc_url=${{ env.operator_testnet_arbitrumTestnetGoerli_rpc_url }} \
-            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.operator_testnet_binanceTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.operator_testnet_mantleTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.zoraTestnet_rpc_url=${{ env.operator_testnet_zoraTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.zoraTestnetGoerli_rpc_url=${{ env.operator_testnet_zoraTestnetGoerli_rpc_url }} \
+            --set testnet_rpc_config_values.baseTestnetGoerli_rpc_url=${{ env.operator_testnet_baseTestnetGoerli_rpc_url }} \
             \
             --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
             --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
             \
             --set autoscaling.enabled=false \
-            --set replicaCount=1 \
-            \
-            --set resources.ethereum.limits.memory=800Mi \
-            --set resources.ethereum.requests.cpu=250m \
-            --set resources.ethereum.requests.memory=800Mi \
-            \
-            --set resources.optimism.limits.memory=550Mi \
-            --set resources.optimism.requests.cpu=200m \
-            --set resources.optimism.requests.memory=500Mi \
-            \
-            --set resources.arbitrum.limits.memory=500Mi \
-            --set resources.arbitrum.requests.cpu=200m \
-            --set resources.arbitrum.requests.memory=500Mi \
-            \
-            --set resources.polygon.limits.memory=550Mi \
-            --set resources.polygon.requests.cpu=200m \
-            --set resources.polygon.requests.memory=500Mi \
-            \
-            --set resources.avalanche.limits.memory=550Mi \
-            --set resources.avalanche.requests.cpu=200m \
-            --set resources.avalanche.requests.memory=500Mi \
-            \
-            --set resources.binance.limits.memory=550Mi \
-            --set resources.binance.requests.cpu=200m \
-            --set resources.binance.requests.memory=500Mi \
-            \
-            --set resources.mantle.limits.memory=550Mi \
-            --set resources.mantle.requests.cpu=200m \
-            --set resources.mantle.requests.memory=500Mi \
-            \
-            --set resources.zora.limits.memory=550Mi \
-            --set resources.zora.requests.cpu=200m \
-            --set resources.zora.requests.memory=500Mi \
+            --set replicaCountAvalanche=1 \
+            --set replicaCountPolygon=1 \
+            --set replicaCountBinance=1 \
+            --set replicaCountMantle=1 \
+            --set replicaCountEthereum=1 \
+            --set replicaCountArbitrum=1 \
+            --set replicaCountOptimism=1 \
+            --set replicaCountBase=0 \
+            --set replicaCountZora=1 \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
             --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
             \
-            --values .github/values_for_prod_alb_ingress.yaml \
-            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"='${{ env.ALB_CERT_ARN }}' \
-            --set ingress.ingress_name=ing-$RELEASE_NAME-health \
-            --set ingress.host=$RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }} \
-            --set ingress.target_svc_name=$RELEASE_NAME-holo-operator \
-            --set ingress.blue_green_deployment=false
+            --values ./holo-operator/values-v1-testnet-iv.yaml
 
-      - name: -> Info for the new deployments
+#      - name: -> V1 -- Info for the new V1 deployments
+#        uses: tensor-hq/eksctl-helm-action@main
+#        env:
+#          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }}
+#          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
+#        with:
+#          eks_cluster: ${{ env.CLUSTER_NAME }}
+#          command: |-
+#            echo "------------------------- Last n Helm releases -------------------------"
+#            echo "--INDEXER--"
+#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.TESTNET_COMMON_NAMESPACE }} --max 3
+#            echo "--OPERATOR--"
+#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.TESTNET_COMMON_NAMESPACE }} --max 3
+#
+#            echo "------------------------ Newly deployed image [same for all clis] ------------------------"
+#            echo "$TESTNET_IMAGE_TAG"
+
+      # NOTICE: ##### V2 deployments ######
+
+      - name: -> V2 -- Deploy INDEXER cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE_V2 }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
-          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }}
-          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
-          LB_URL: 'https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com'
+          RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }} # notice
+          HOLOGRAPH_VERSION: "V2"
+          #
+          ENABLE_DEBUG: 'true'
+          HEALTHCHECK: 'true'
+          MODE: 'auto'
+          ENABLE_UNSAFE: 'false'
+          ENABLE_SYNC: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
+          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
+          #
+          ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
+          ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_mantle: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_zora: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
+          #
+          AVALANCHE_NETWORK: 'fuji'
+          POLYGON_NETWORK: 'mumbai'
+          BINANCE_NETWORK: 'binanceSmartChainTestnet'
+          MANTLE_NETWORK: 'mantleTestnet'
+          ETHEREUM_NETWORK: '{ethereumTestnetSepolia}'
+          OPTIMISM_NETWORK: '{optimismTestnetSepolia}'
+          ARBITRUM_NETWORK: '{arbitrumTestnetSepolia}'
+          ZORA_NETWORK: '{zoraTestnetSepolia}'
+          BASE_NETWORK: '{baseTestnetSepolia}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
-            echo "------------------------- Last n Helm releases -------------------------"
-            echo "--INDEXER--"
-            helm history $INDEXER_RELEASE_NAME  -n ${{ env.TESTNET_COMMON_NAMESPACE }} --max 3
-            echo "--OPERATOR--"
-            helm history $OPERATOR_RELEASE_NAME -n ${{ env.TESTNET_COMMON_NAMESPACE }} --max 3
+            helm upgrade --install $RELEASE_NAME \
+            holo-indexer-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
+            -n ${{ env.TESTNET_COMMON_NAMESPACE_V2 }} \
+            \
+            --set image.repository=${{ env.ECR_REPOSITORY }} \
+            --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
+            --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
+            --set holo_indexer_password=${{ env.TESTNET_HOLO_INDEXER_PASSWORD }} \
+            --set HOLO_INDEXER_HOST=${{ env.TESTNET_HOLOGRAPH_INDEXER_HOST }} \
+            --set OPERATOR_API_KEY=${{ env.TESTNET_HOLOGRAPH_INDEXER_OPERATOR_API_KEY }} \
+            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
+            --set HOLOGRAPH_ADDRESS=${{ env.HOLOGRAPH_ADDRESS }} \
+            --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
+            --set BLOCK_PROCESSING_VERSION=${{ env.BLOCK_PROCESSING_VERSION }} \
+            \
+            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set ENABLE_SYNC=$ENABLE_SYNC \
+            --set HEALTHCHECK=$HEALTHCHECK \
+            --set MODE=$MODE \
+            \
+            --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
+            --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
+            --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
+            --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
+            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
+            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
+            --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
+            --set ZORA_NETWORK="${ZORA_NETWORK}" \
+            --set BASE_NETWORK="${BASE_NETWORK}" \
+            \
+            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
+            \
+            --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
+            --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
+            --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
+            --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
+            --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
+            --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
+            --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
+            --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
+            --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
+            \
+            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.v2_indexer_testnet_avalancheTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.v2_indexer_testnet_polygonTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.v2_indexer_testnet_binanceTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.v2_indexer_testnet_mantleTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.ethereumTestnetSepolia_rpc_url=${{ env.v2_indexer_testnet_ethereumTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.optimismTestnetSepolia_rpc_url=${{ env.v2_indexer_testnet_optimismTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.arbitrumTestnetSepolia_rpc_url=${{ env.v2_indexer_testnet_arbitrumTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.v2_indexer_testnet_zoraTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.baseTestnetSepolia_rpc_url=${{ env.v2_indexer_testnet_baseTestnetSepolia_rpc_url }} \
+            \
+            --set testnet_rpc_config_values.private_key=${{ env.v2_indexer_testnet_private_key }} \
+            --set testnet_rpc_config_values.address=${{ env.v2_indexer_testnet_address }} \
+            --set testnet_rpc_config_values.version="beta3" \
+            \
+            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.service=$RELEASE_NAME \
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
+            \
+            --set autoscaling.enabled=false \
+            --set replicaCountAvalanche=1 \
+            --set replicaCountPolygon=1 \
+            --set replicaCountBinance=1 \
+            --set replicaCountMantle=1 \
+            --set replicaCountEthereum=1 \
+            --set replicaCountArbitrum=1 \
+            --set replicaCountOptimism=1 \
+            --set replicaCountBase=1 \
+            --set replicaCountZora=1 \
+            \
+            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
+            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
+            --set sqs.SQS_ENDPOINT=${{ env.TESTNET_SQS_ENDPOINT }} \
+            --set sqs.SQS_QUEUE_URL=${{ env.TESTNET_SQS_QUEUE_URL_V2 }} \
+            --set sqs.AWS_REGION=us-west-2 \
+            \
+            --values ./holo-indexer/values-v2-testnet-iv.yaml
 
-            echo "------------------------ Newly deployed image [same for all clis] ------------------------"
-            echo "$TESTNET_IMAGE_TAG"
+      - name: Pause for 60 seconds
+        shell: bash
+        run: |
+          sleep 60
 
-            echo "------------------------ Healthchecks ------------------------"
-            sleep 55
+      - name: -> V2 -- Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE_V2 }}]
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }} # notice
+          HOLOGRAPH_VERSION: "V2"
+          #
+          ENABLE_DEBUG: 'true'
+          ENABLE_SYNC: 'true'
+          HEALTHCHECK: 'true'
+          MODE: 'auto'
+          ENABLE_UNSAFE: 'false'
+          ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
+          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
+          #
+          ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
+          ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_mantle: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_zora: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
+          #
+          AVALANCHE_NETWORK: 'fuji'
+          POLYGON_NETWORK: 'mumbai'
+          BINANCE_NETWORK: 'binanceSmartChainTestnet'
+          MANTLE_NETWORK: 'mantleTestnet'
+          ETHEREUM_NETWORK: '{ethereumTestnetSepolia}'
+          OPTIMISM_NETWORK: '{optimismTestnetSepolia}'
+          ARBITRUM_NETWORK: '{arbitrumTestnetSepolia}'
+          ZORA_NETWORK: '{zoraTestnetSepolia}'
+          BASE_NETWORK: '{baseTestnetSepolia}'
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            helm upgrade --install $RELEASE_NAME \
+            holo-operator-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
+            -n ${{ env.TESTNET_COMMON_NAMESPACE_V2 }} \
+            \
+            --set image.repository=${{ env.ECR_REPOSITORY }} \
+            --set image.image_tag=${{ env.TESTNET_IMAGE_TAG }} \
+            --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
+            --set holo_operator_password=${{ env.V2_TESTNET_HOLO_OPERATOR_PASSWORD }} \
+            --set HOLO_OPERATOR_HOST=${{ env.TESTNET_HOLOGRAPH_OPERATOR_HOST }} \
+            --set OPERATOR_API_KEY=${{ env.TESTNET_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY }} \
+            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
+            --set HOLOGRAPH_ADDRESS=${{ env.HOLOGRAPH_ADDRESS }} \
+            --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
+            \
+            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set ENABLE_SYNC=$ENABLE_SYNC \
+            --set HEALTHCHECK=$HEALTHCHECK \
+            --set MODE=$MODE \
+            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
+            \
+            --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
+            --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
+            --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
+            --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
+            --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
+            --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
+            --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
+            --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
+            --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
+            \
+            --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
+            --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
+            --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
+            --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
+            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
+            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
+            --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
+            --set ZORA_NETWORK="${ZORA_NETWORK}" \
+            --set BASE_NETWORK="${BASE_NETWORK}" \
+            \
+            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.v2_operator_testnet_avalancheTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.v2_operator_testnet_polygonTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.v2_operator_testnet_binanceTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.v2_operator_testnet_mantleTestnet_rpc_url }} \
+            --set testnet_rpc_config_values.ethereumTestnetSepolia_rpc_url=${{ env.v2_operator_testnet_ethereumTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.optimismTestnetSepolia_rpc_url=${{ env.v2_operator_testnet_optimismTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.arbitrumTestnetSepolia_rpc_url=${{ env.v2_operator_testnet_arbitrumTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.v2_operator_testnet_zoraTestnetSepolia_rpc_url }} \
+            --set testnet_rpc_config_values.baseTestnetSepolia_rpc_url=${{ env.v2_operator_testnet_baseTestnetSepolia_rpc_url }} \
+            \
+            --set testnet_rpc_config_values.private_key=${{ env.v2_operator_testnet_private_key }} \
+            --set testnet_rpc_config_values.address=${{ env.v2_operator_testnet_address }} \
+            \
+            --set autoscaling.enabled=false \
+            --set replicaCountAvalanche=1 \
+            --set replicaCountPolygon=1 \
+            --set replicaCountBinance=1 \
+            --set replicaCountMantle=1 \
+            --set replicaCountEthereum=1 \
+            --set replicaCountArbitrum=1 \
+            --set replicaCountOptimism=1 \
+            --set replicaCountBase=1 \
+            --set replicaCountZora=1 \
+            \
+            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.service=$RELEASE_NAME \
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
+            \
+            --values ./holo-operator/values-v2-testnet-iv.yaml
 
-            ENDPOINT=$INDEXER_RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }}
-            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
-
-            ENDPOINT=$OPERATOR_RELEASE_NAME-health.${{ env.TESTNET_DOMAIN }}
-            echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/healthcheck"
-            curl -k -H "Host: $ENDPOINT" $LB_URL/healthcheck | jq '.status'
+#      - name: -> V2 -- Info for the new V2 deployments
+#        uses: tensor-hq/eksctl-helm-action@main
+#        env:
+#          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
+#          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }}
+#        with:
+#          eks_cluster: ${{ env.CLUSTER_NAME }}
+#          command: |-
+#            echo "------------------------- Last n Helm releases -------------------------"
+#            echo "--V2 INDEXER--"
+#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.TESTNET_COMMON_NAMESPACE_V2 }} --max 3
+#            echo "--V2 OPERATOR--"
+#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.TESTNET_COMMON_NAMESPACE_V2 }} --max 3
+#
+#            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+#            echo "$TESTNET_IMAGE_TAG"

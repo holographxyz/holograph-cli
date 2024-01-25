@@ -2,7 +2,7 @@ import {TransactionResponse} from '@ethersproject/abstract-provider'
 import {NetworkMonitor} from '../../utils/network-monitor'
 import SqsService from '../../services/sqs-service'
 import {networkToChainId} from '../../utils/web3'
-import {EventName, PayloadType, SqsMessageBody} from '../../types/sqs'
+import {SqsEventName, PayloadType, SqsMessageBody} from '../../types/sqs'
 
 async function handleContractDeployedEvent(
   networkMonitor: NetworkMonitor,
@@ -12,7 +12,7 @@ async function handleContractDeployedEvent(
 ): Promise<void> {
   const messageBody: SqsMessageBody = {
     type: PayloadType.HolographProtocol,
-    eventName: EventName.ContractDeployed,
+    eventName: SqsEventName.ContractDeployed,
     eventSignature: 'BridgeableContractDeployed(address indexed contractAddress, bytes32 indexed hash)',
     tagId: tags,
     chainId: networkToChainId[network],
