@@ -15,10 +15,9 @@ env:
   #
   AWS_KEY_ID: ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
-  ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }}
   #
-  STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
-  STG_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
+#  STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
+#  STG_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
   STG_HOLOGRAPH_INDEXER_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
   STG_HOLOGRAPH_OPERATOR_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
@@ -37,30 +36,30 @@ env:
   STG_DOMAIN: 'holograph.xyz' # needed only for the health checks
   #
   # V1 INDEXER DEV rpc endpoints
-  indexer_dev_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
-  indexer_dev_polygonTestnet_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }}
-  indexer_dev_binanceTestnet_rpc_url: ${{ secrets.INDEXER_DEV_BSC_TESTNET_RPC_URL }}
-  indexer_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  indexer_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }}
-  indexer_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_OPTIMISM_GOERLI_RPC_URL }}
-  indexer_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_ARBITRUM_GOERLI_RPC_URL }}
-  indexer_dev_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
-  indexer_dev_baseTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_BASE_GOERLI_RPC_URL }}
+#  indexer_dev_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
+#  indexer_dev_polygonTestnet_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }}
+#  indexer_dev_binanceTestnet_rpc_url: ${{ secrets.INDEXER_DEV_BSC_TESTNET_RPC_URL }}
+#  indexer_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
+#  indexer_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }}
+#  indexer_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_OPTIMISM_GOERLI_RPC_URL }}
+#  indexer_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_ARBITRUM_GOERLI_RPC_URL }}
+#  indexer_dev_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
+#  indexer_dev_baseTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_BASE_GOERLI_RPC_URL }}
   #
-  indexer_dev_private_key: ${{ secrets.INDEXER_DEV_PRIVATE_KEY }}
+#  indexer_dev_private_key: ${{ secrets.INDEXER_DEV_PRIVATE_KEY }}
   indexer_dev_address: ${{ secrets.INDEXER_DEV_ADDRESS }}
   # V1 OPERATOR DEV rpc endpoints
-  operator_dev_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_FUJI_RPC_URL }}
-  operator_dev_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }}
-  operator_dev_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_BSC_TESTNET_RPC_URL }}
-  operator_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  operator_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_GOERLI_RPC_URL }}
-  operator_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_OPTIMISM_GOERLI_RPC_URL }}
-  operator_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_ARBITRUM_GOERLI_RPC_URL }}
-  operator_dev_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
-  operator_dev_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_BASE_GOERLI_RPC_URL }}
+#  operator_dev_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_FUJI_RPC_URL }}
+#  operator_dev_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }}
+#  operator_dev_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_BSC_TESTNET_RPC_URL }}
+#  operator_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
+#  operator_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_GOERLI_RPC_URL }}
+#  operator_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_OPTIMISM_GOERLI_RPC_URL }}
+#  operator_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_ARBITRUM_GOERLI_RPC_URL }}
+#  operator_dev_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
+#  operator_dev_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_BASE_GOERLI_RPC_URL }}
   #
-  operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
+#  operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
   operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
   #
   # V2 INDEXER DEV rpc endpoints
@@ -91,10 +90,10 @@ env:
   v2_operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
   #
   # SQS User [indexer_processor_sqs_user]
-  SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
-  SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
-  DEV_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
-  DEV_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor'
+#  SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
+#  SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
+#  DEV_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
+#  DEV_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor'
   DEV_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor'
   #
   STG_COMMON_NAMESPACE: 'develop'
@@ -130,6 +129,16 @@ jobs:
         with:
           role-to-assume: ${{ env.IAM_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get secrets from AWS Secrets Manager
+        uses: aws-actions/aws-secretsmanager-get-secrets@v1
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          secret-ids:
+            DEV_INDEXER_V1
+            DEV_OPERATOR_V1
+            COMMON
+          parse-json-secrets: true # to be able to get the json k/v pairs
 
       - name: Login to ECR
         id: login-ecr
@@ -247,7 +256,7 @@ jobs:
             --set config_file_data=${{ env.INDEXER_HOLOGRAPH_CONFIG_FILE_DATA }} \
             --set holo_indexer_password=${{ env.STG_HOLOGRAPH_INDEXER_PASSWORD }} \
             --set HOLO_INDEXER_HOST=${{ env.STG_HOLOGRAPH_INDEXER_HOST }} \
-            --set OPERATOR_API_KEY=${{ env.STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY }} \
+            --set OPERATOR_API_KEY=$DEV_INDEXER_V1_OPERATOR_API_KEY \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
             --set BLOCK_PROCESSING_VERSION=${{ env.BLOCK_PROCESSING_VERSION }} \
@@ -280,17 +289,17 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
             \
-            --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_dev_avalancheTestnet_rpc_url }} \
-            --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_dev_polygonTestnet_rpc_url }} \
-            --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.indexer_dev_ethereumTestnetGoerli_rpc_url }} \
-            --set dev_rpc_config_values.optimismTestnetGoerli_rpc_url=${{ env.indexer_dev_optimismTestnetGoerli_rpc_url }} \
-            --set dev_rpc_config_values.arbitrumTestnetGoerli_rpc_url=${{ env.indexer_dev_arbitrumTestnetGoerli_rpc_url }} \
-            --set dev_rpc_config_values.binanceTestnet_rpc_url=${{ env.indexer_dev_binanceTestnet_rpc_url }} \
-            --set dev_rpc_config_values.mantleTestnet_rpc_url=${{ env.indexer_dev_mantleTestnet_rpc_url }} \
-            --set dev_rpc_config_values.zoraTestnetGoerli_rpc_url=${{ env.indexer_dev_zoraTestnetGoerli_rpc_url }} \
-            --set dev_rpc_config_values.baseTestnetGoerli_rpc_url=${{ env.indexer_dev_baseTestnetGoerli_rpc_url }} \
+            --set dev_rpc_config_values.avalancheTestnet_rpc_url=$DEV_INDEXER_V1_AVALANCHE_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.polygonTestnet_rpc_url=$DEV_INDEXER_V1_POLYGON_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=$DEV_INDEXER_V1_ETHEREUM_TESTNET_GOERLI_RPC_URL \
+            --set dev_rpc_config_values.optimismTestnetGoerli_rpc_url=$DEV_INDEXER_V1_OPTIMISM_TESTNET_GOERLI_RPC_URL \
+            --set dev_rpc_config_values.arbitrumTestnetGoerli_rpc_url=$DEV_INDEXER_V1_ARBITRUM_TESTNET_GOERLI_RPC_URL \
+            --set dev_rpc_config_values.binanceTestnet_rpc_url=$DEV_INDEXER_V1_BINANCE_SMART_CHAIN_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.mantleTestnet_rpc_url=$DEV_INDEXER_V1_MANTLE_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.zoraTestnetGoerli_rpc_url=$DEV_INDEXER_V1_ZORA_TESTNET_GOERLI_RPC_URL \
+            --set dev_rpc_config_values.baseTestnetGoerli_rpc_url=$DEV_INDEXER_V1_BASE_TESTNET_GOERLI_RPC_URL \
             \
-            --set dev_rpc_config_values.private_key=${{ env.indexer_dev_private_key }} \
+            --set dev_rpc_config_values.private_key=$DEV_INDEXER_V1_PRIVATE_KEY \
             --set dev_rpc_config_values.address=${{ env.indexer_dev_address }} \
             --set dev_rpc_config_values.version="beta3" \
             \
@@ -309,11 +318,11 @@ jobs:
             --set replicaCountBase=1 \
             --set replicaCountZora=1 \
             \
-            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
-            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
-            --set sqs.SQS_ENDPOINT=${{ env.DEV_SQS_ENDPOINT }} \
-            --set sqs.SQS_QUEUE_URL=${{ env.DEV_SQS_QUEUE_URL }} \
-            --set sqs.AWS_REGION=us-west-2
+            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=$COMMON_AWS_ACCESS_KEY_ID_SQS \
+            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=$COMMON_AWS_SECRET_ACCESS_KEY_SQS \
+            --set sqs.SQS_ENDPOINT=$COMMON_SQS_ENDPOINT \
+            --set sqs.SQS_QUEUE_URL=$COMMON_SQS_QUEUE_URL \
+            --set sqs.AWS_REGION=$COMMON_AWS_REGION
 
       - name: Pause for 60 seconds
         shell: bash
@@ -377,7 +386,7 @@ jobs:
             --set config_file_data=${{ env.OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.STG_HOLOGRAPH_OPERATOR_PASSWORD }} \
             --set HOLO_OPERATOR_HOST=${{ env.STG_HOLOGRAPH_OPERATOR_HOST }} \
-            --set OPERATOR_API_KEY=${{ env.STG_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY }} \
+            --set OPERATOR_API_KEY=$DEV_OPERATOR_V1_OPERATOR_API_KEY \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
             \
@@ -408,17 +417,17 @@ jobs:
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
             \
-            --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_dev_avalancheTestnet_rpc_url }} \
-            --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_dev_polygonTestnet_rpc_url }} \
-            --set dev_rpc_config_values.binanceTestnet_rpc_url=${{ env.operator_dev_binanceTestnet_rpc_url }} \
-            --set dev_rpc_config_values.mantleTestnet_rpc_url=${{ env.operator_dev_mantleTestnet_rpc_url }} \
-            --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.operator_dev_ethereumTestnetGoerli_rpc_url }} \
-            --set dev_rpc_config_values.optimismTestnetGoerli_rpc_url=${{ env.operator_dev_optimismTestnetGoerli_rpc_url }} \
-            --set dev_rpc_config_values.arbitrumTestnetGoerli_rpc_url=${{ env.operator_dev_arbitrumTestnetGoerli_rpc_url }} \
-            --set dev_rpc_config_values.zoraTestnetGoerli_rpc_url=${{ env.operator_dev_zoraTestnetGoerli_rpc_url }} \
-            --set dev_rpc_config_values.baseTestnetGoerli_rpc_url=${{ env.operator_dev_baseTestnetGoerli_rpc_url }} \
+            --set dev_rpc_config_values.avalancheTestnet_rpc_url=$DEV_OPERATOR_V1_AVALANCHE_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.polygonTestnet_rpc_url=$DEV_OPERATOR_V1_POLYGON_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.binanceTestnet_rpc_url=$DEV_OPERATOR_V1_BINANCE_SMART_CHAIN_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.mantleTestnet_rpc_url=$DEV_OPERATOR_V1_MANTLE_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=$DEV_OPERATOR_V1_ETHEREUM_TESTNET_GOERLI_RPC_URL \
+            --set dev_rpc_config_values.optimismTestnetGoerli_rpc_url=$DEV_OPERATOR_V1_OPTIMISM_TESTNET_GOERLI_RPC_URL \
+            --set dev_rpc_config_values.arbitrumTestnetGoerli_rpc_url=$DEV_OPERATOR_V1_ARBITRUM_TESTNET_GOERLI_RPC_URL \
+            --set dev_rpc_config_values.zoraTestnetGoerli_rpc_url=$DEV_OPERATOR_V1_ZORA_TESTNET_GOERLI_RPC_URL \
+            --set dev_rpc_config_values.baseTestnetGoerli_rpc_url=$DEV_OPERATOR_V1_BASE_TESTNET_GOERLI_RPC_URL \
             \
-            --set dev_rpc_config_values.private_key=${{ env.operator_dev_private_key }} \
+            --set dev_rpc_config_values.private_key=$DEV_OPERATOR_V1_PRIVATE_KEY \
             --set dev_rpc_config_values.address=${{ env.operator_dev_address }} \
             \
             --set autoscaling.enabled=false \
