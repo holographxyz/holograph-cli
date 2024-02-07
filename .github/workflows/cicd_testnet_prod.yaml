@@ -15,7 +15,6 @@ env:
   #
   AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
-  ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }} # TIP: the 2 CERTs are separated with \, in Github secret
   #
   TESTNET_HOLOGRAPH_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO - create new gh secret for TESTNET. should be different from staging????
   TESTNET_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
@@ -38,30 +37,30 @@ env:
   TESTNET_DOMAIN: 'holograph.xyz' # needed only for the health checks
   #
   # V1 INDEXER TESTNET rpc endpoints
-  indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
-  indexer_testnet_polygonTestnet_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
-  indexer_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_GOERLI_RPC_URL }}
-  indexer_testnet_optimismTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_OPTIMISM_GOERLI_RPC_URL }}
-  indexer_testnet_arbitrumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_ARBITRUM_GOERLI_RPC_URL }}
-  indexer_testnet_binanceTestnet_rpc_url: ${{ secrets.INDEXER_PROD_BSC_TESTNET_RPC_URL }}
-  indexer_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  indexer_testnet_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
-  indexer_testnet_baseTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_BASE_GOERLI_RPC_URL }}
+#  indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
+#  indexer_testnet_polygonTestnet_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
+#  indexer_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_GOERLI_RPC_URL }}
+#  indexer_testnet_optimismTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_OPTIMISM_GOERLI_RPC_URL }}
+#  indexer_testnet_arbitrumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_ARBITRUM_GOERLI_RPC_URL }}
+#  indexer_testnet_binanceTestnet_rpc_url: ${{ secrets.INDEXER_PROD_BSC_TESTNET_RPC_URL }}
+#  indexer_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
+#  indexer_testnet_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
+#  indexer_testnet_baseTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_BASE_GOERLI_RPC_URL }}
   #
-  indexer_testnet_private_key: ${{ secrets.INDEXER_PROD_PRIVATE_KEY }}
+#  indexer_testnet_private_key: ${{ secrets.INDEXER_PROD_PRIVATE_KEY }}
   indexer_testnet_address: ${{ secrets.INDEXER_PROD_ADDRESS }}
   # V1 OPERATOR TESTNET rpc endpoints
-  operator_testnet_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_FUJI_RPC_URL }}
-  operator_testnet_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_MUMBAI_RPC_URL }}
-  operator_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_GOERLI_RPC_URL }}
-  operator_testnet_optimismTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_OPTIMISM_GOERLI_RPC_URL }}
-  operator_testnet_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_ARBITRUM_GOERLI_RPC_URL }}
-  operator_testnet_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_BSC_TESTNET_RPC_URL }}
-  operator_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  operator_testnet_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
-  operator_testnet_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_BASE_GOERLI_RPC_URL }}
+#  operator_testnet_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_FUJI_RPC_URL }}
+#  operator_testnet_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_MUMBAI_RPC_URL }}
+#  operator_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_GOERLI_RPC_URL }}
+#  operator_testnet_optimismTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_OPTIMISM_GOERLI_RPC_URL }}
+#  operator_testnet_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_ARBITRUM_GOERLI_RPC_URL }}
+#  operator_testnet_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_BSC_TESTNET_RPC_URL }}
+#  operator_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
+#  operator_testnet_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
+#  operator_testnet_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_BASE_GOERLI_RPC_URL }}
   #
-  operator_testnet_private_key: ${{ secrets.OPERATOR_PROD_PRIVATE_KEY }}
+#  operator_testnet_private_key: ${{ secrets.OPERATOR_PROD_PRIVATE_KEY }}
   operator_testnet_address: ${{ secrets.OPERATOR_PROD_ADDRESS }}
   #
   # V2 INDEXER TESTNET rpc endpoints
@@ -138,6 +137,16 @@ jobs:
         with:
           role-to-assume: ${{ env.IAM_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get secrets from AWS Secrets Manager
+        uses: aws-actions/aws-secretsmanager-get-secrets@v1
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          secret-ids:
+            TESTNET_INDEXER_V1
+            TESTNET_OPERATOR_V1
+            COMMON
+          parse-json-secrets: true # to be able to get the json k/v pairs
 
       - name: Login to ECR
         id: login-ecr
@@ -256,7 +265,7 @@ jobs:
             --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
             --set holo_indexer_password=${{ env.TESTNET_HOLO_INDEXER_PASSWORD }} \
             --set HOLO_INDEXER_HOST=${{ env.TESTNET_HOLOGRAPH_INDEXER_HOST }} \
-            --set OPERATOR_API_KEY=${{ env.TESTNET_HOLOGRAPH_INDEXER_OPERATOR_API_KEY }} \
+            --set OPERATOR_API_KEY=$TESTNET_INDEXER_V1_OPERATOR_API_KEY \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
             --set BLOCK_PROCESSING_VERSION=${{ env.BLOCK_PROCESSING_VERSION }} \
@@ -289,17 +298,17 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
             \
-            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.indexer_testnet_avalancheTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.indexer_testnet_polygonTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.indexer_testnet_binanceTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.indexer_testnet_mantleTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.indexer_testnet_ethereumTestnetGoerli_rpc_url }} \
-            --set testnet_rpc_config_values.optimismTestnetGoerli_rpc_url=${{ env.indexer_testnet_optimismTestnetGoerli_rpc_url }} \
-            --set testnet_rpc_config_values.arbitrumTestnetGoerli_rpc_url=${{ env.indexer_testnet_arbitrumTestnetGoerli_rpc_url }} \
-            --set testnet_rpc_config_values.zoraTestnetGoerli_rpc_url=${{ env.indexer_testnet_zoraTestnetGoerli_rpc_url }} \
-            --set testnet_rpc_config_values.baseTestnetGoerli_rpc_url=${{ env.indexer_testnet_baseTestnetGoerli_rpc_url }} \
+            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=$TESTNET_INDEXER_V1_AVALANCHE_TESTNET_RPC_URL \
+            --set testnet_rpc_config_values.polygonTestnet_rpc_url=$TESTNET_INDEXER_V1_POLYGON_TESTNET_RPC_URL \
+            --set testnet_rpc_config_values.binanceTestnet_rpc_url=$TESTNET_INDEXER_V1_BINANCE_SMART_CHAIN_TESTNET_RPC_URL \
+            --set testnet_rpc_config_values.mantleTestnet_rpc_url=$TESTNET_INDEXER_V1_MANTLE_TESTNET_RPC_URL \
+            --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=$TESTNET_INDEXER_V1_ETHEREUM_TESTNET_GOERLI_RPC_URL \
+            --set testnet_rpc_config_values.optimismTestnetGoerli_rpc_url=$TESTNET_INDEXER_V1_OPTIMISM_TESTNET_GOERLI_RPC_URL \
+            --set testnet_rpc_config_values.arbitrumTestnetGoerli_rpc_url=$TESTNET_INDEXER_V1_ARBITRUM_TESTNET_GOERLI_RPC_URL \
+            --set testnet_rpc_config_values.zoraTestnetGoerli_rpc_url=$TESTNET_INDEXER_V1_ZORA_TESTNET_GOERLI_RPC_URL \
+            --set testnet_rpc_config_values.baseTestnetGoerli_rpc_url=$TESTNET_INDEXER_V1_BASE_TESTNET_GOERLI_RPC_URL \
             \
-            --set testnet_rpc_config_values.private_key=${{ env.indexer_testnet_private_key }} \
+            --set testnet_rpc_config_values.private_key=$TESTNET_INDEXER_V1_PRIVATE_KEY \
             --set testnet_rpc_config_values.address=${{ env.indexer_testnet_address }} \
             --set testnet_rpc_config_values.version="beta3" \
             \
@@ -318,11 +327,11 @@ jobs:
             --set replicaCountBase=1 \
             --set replicaCountZora=1 \
             \
-            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
-            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
-            --set sqs.SQS_ENDPOINT=${{ env.TESTNET_SQS_ENDPOINT }} \
-            --set sqs.SQS_QUEUE_URL=${{ env.TESTNET_SQS_QUEUE_URL }} \
-            --set sqs.AWS_REGION=us-west-2 \
+            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=$COMMON_AWS_ACCESS_KEY_ID_SQS \
+            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=$COMMON_AWS_SECRET_ACCESS_KEY_SQS \
+            --set sqs.SQS_ENDPOINT=$TESTNET_INDEXER_V1_SQS_ENDPOINT \
+            --set sqs.SQS_QUEUE_URL=$TESTNET_INDEXER_V1_SQS_QUEUE_URL \
+            --set sqs.AWS_REGION=$COMMON_AWS_REGION \
             \
             --values ./holo-indexer/values-v1-testnet-iv.yaml
 
@@ -389,7 +398,7 @@ jobs:
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.TESTNET_HOLO_OPERATOR_PASSWORD }} \
             --set HOLO_OPERATOR_HOST=${{ env.TESTNET_HOLOGRAPH_OPERATOR_HOST }} \
-            --set OPERATOR_API_KEY=${{ env.TESTNET_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY }} \
+            --set OPERATOR_API_KEY=$TESTNET_OPERATOR_V1_OPERATOR_API_KEY \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
             \
@@ -420,17 +429,17 @@ jobs:
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
             \
-            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=${{ env.operator_testnet_avalancheTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.polygonTestnet_rpc_url=${{ env.operator_testnet_polygonTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.binanceTestnet_rpc_url=${{ env.operator_testnet_binanceTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.mantleTestnet_rpc_url=${{ env.operator_testnet_mantleTestnet_rpc_url }} \
-            --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=${{ env.operator_testnet_ethereumTestnetGoerli_rpc_url }} \
-            --set testnet_rpc_config_values.optimismTestnetGoerli_rpc_url=${{ env.operator_testnet_optimismTestnetGoerli_rpc_url }} \
-            --set testnet_rpc_config_values.arbitrumTestnetGoerli_rpc_url=${{ env.operator_testnet_arbitrumTestnetGoerli_rpc_url }} \
-            --set testnet_rpc_config_values.zoraTestnetGoerli_rpc_url=${{ env.operator_testnet_zoraTestnetGoerli_rpc_url }} \
-            --set testnet_rpc_config_values.baseTestnetGoerli_rpc_url=${{ env.operator_testnet_baseTestnetGoerli_rpc_url }} \
+            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=$TESTNET_OPERATOR_V1_AVALANCHE_TESTNET_RPC_URL \
+            --set testnet_rpc_config_values.polygonTestnet_rpc_url=$TESTNET_OPERATOR_V1_POLYGON_TESTNET_RPC_URL \
+            --set testnet_rpc_config_values.binanceTestnet_rpc_url=$TESTNET_OPERATOR_V1_BINANCE_SMART_CHAIN_TESTNET_RPC_URL \
+            --set testnet_rpc_config_values.mantleTestnet_rpc_url=$TESTNET_OPERATOR_V1_MANTLE_TESTNET_RPC_URL \
+            --set testnet_rpc_config_values.ethereumTestnetGoerli_rpc_url=$TESTNET_OPERATOR_V1_ETHEREUM_TESTNET_GOERLI_RPC_URL \
+            --set testnet_rpc_config_values.optimismTestnetGoerli_rpc_url=$TESTNET_OPERATOR_V1_OPTIMISM_TESTNET_GOERLI_RPC_URL \
+            --set testnet_rpc_config_values.arbitrumTestnetGoerli_rpc_url=$TESTNET_OPERATOR_V1_ARBITRUM_TESTNET_GOERLI_RPC_URL \
+            --set testnet_rpc_config_values.zoraTestnetGoerli_rpc_url=$TESTNET_OPERATOR_V1_ZORA_TESTNET_GOERLI_RPC_URL \
+            --set testnet_rpc_config_values.baseTestnetGoerli_rpc_url=$TESTNET_OPERATOR_V1_BASE_TESTNET_GOERLI_RPC_URL \
             \
-            --set testnet_rpc_config_values.private_key=${{ env.operator_testnet_private_key }} \
+            --set testnet_rpc_config_values.private_key=$TESTNET_OPERATOR_V1_PRIVATE_KEY \
             --set testnet_rpc_config_values.address=${{ env.operator_testnet_address }} \
             \
             --set autoscaling.enabled=false \
