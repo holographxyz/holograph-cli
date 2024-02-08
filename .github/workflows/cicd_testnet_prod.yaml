@@ -94,7 +94,7 @@ env:
   SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
   SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
   TESTNET_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
-  TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
+#  TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
   TESTNET_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
   #
   TESTNET_COMMON_NAMESPACE: 'testnet'
