@@ -142,7 +142,7 @@ jobs:
         uses: aws-actions/aws-secretsmanager-get-secrets@v1
         with:
           aws-region: ${{ env.AWS_REGION }}
-          secret-ids:
+          secret-ids: |
             TESTNET_INDEXER_V1
             TESTNET_OPERATOR_V1
             COMMON

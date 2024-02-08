@@ -142,7 +142,7 @@ jobs:
         uses: aws-actions/aws-secretsmanager-get-secrets@v1
         with:
           aws-region: ${{ env.AWS_REGION }}
-          secret-ids:
+          secret-ids: |
             MAINNET_INDEXER_V1
             MAINNET_OPERATOR_V1
             COMMON
