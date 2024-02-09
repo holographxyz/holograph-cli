@@ -16,8 +16,8 @@ env:
   AWS_KEY_ID: ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
   #
-#  STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
-#  STG_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
+  STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
+  STG_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
   #
   STG_HOLOGRAPH_INDEXER_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
   STG_HOLOGRAPH_OPERATOR_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
@@ -90,9 +90,9 @@ env:
   v2_operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
   #
   # SQS User [indexer_processor_sqs_user]
-#  SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
-#  SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
-#  DEV_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
+  SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
+  SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
+  DEV_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
 #  DEV_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor'
   DEV_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor'
   #
@@ -134,7 +134,7 @@ jobs:
         uses: aws-actions/aws-secretsmanager-get-secrets@v1
         with:
           aws-region: ${{ env.AWS_REGION }}
-          secret-ids:
+          secret-ids: |
             DEV_INDEXER_V1
             DEV_OPERATOR_V1
             COMMON
@@ -320,8 +320,8 @@ jobs:
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=$COMMON_AWS_ACCESS_KEY_ID_SQS \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=$COMMON_AWS_SECRET_ACCESS_KEY_SQS \
-            --set sqs.SQS_ENDPOINT=$COMMON_SQS_ENDPOINT \
-            --set sqs.SQS_QUEUE_URL=$COMMON_SQS_QUEUE_URL \
+            --set sqs.SQS_ENDPOINT=$DEV_INDEXER_V1_SQS_ENDPOINT \
+            --set sqs.SQS_QUEUE_URL=$DEV_INDEXER_V1_SQS_QUEUE_URL \
             --set sqs.AWS_REGION=$COMMON_AWS_REGION
 
       - name: Pause for 60 seconds
