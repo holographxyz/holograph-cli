@@ -47,7 +47,7 @@ env:
 #  indexer_dev_baseTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_BASE_GOERLI_RPC_URL }}
   #
 #  indexer_dev_private_key: ${{ secrets.INDEXER_DEV_PRIVATE_KEY }}
-  indexer_dev_address: ${{ secrets.INDEXER_DEV_ADDRESS }}
+#  indexer_dev_address: ${{ secrets.INDEXER_DEV_ADDRESS }}
   # V1 OPERATOR DEV rpc endpoints
 #  operator_dev_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_FUJI_RPC_URL }}
 #  operator_dev_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }}
@@ -60,7 +60,7 @@ env:
 #  operator_dev_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_BASE_GOERLI_RPC_URL }}
   #
 #  operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
-  operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
+#  operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
   #
   # V2 INDEXER DEV rpc endpoints
   v2_indexer_dev_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
@@ -134,7 +134,7 @@ jobs:
         uses: aws-actions/aws-secretsmanager-get-secrets@v1
         with:
           aws-region: ${{ env.AWS_REGION }}
-          secret-ids:
+          secret-ids: |
             DEV_INDEXER_V1
             DEV_OPERATOR_V1
             COMMON

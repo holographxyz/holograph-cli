@@ -15,7 +15,6 @@ env:
   #
   AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
-  ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }} # TIP: the 2 CERTs are separated with \, in Github secret
   #
   TESTNET_HOLOGRAPH_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }} #TODO - create new gh secret for TESTNET. should be different from staging????
   TESTNET_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
@@ -38,31 +37,31 @@ env:
   TESTNET_DOMAIN: 'holograph.xyz' # needed only for the health checks
   #
   # V1 INDEXER TESTNET rpc endpoints
-  indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
-  indexer_testnet_polygonTestnet_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
-  indexer_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_GOERLI_RPC_URL }}
-  indexer_testnet_optimismTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_OPTIMISM_GOERLI_RPC_URL }}
-  indexer_testnet_arbitrumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_ARBITRUM_GOERLI_RPC_URL }}
-  indexer_testnet_binanceTestnet_rpc_url: ${{ secrets.INDEXER_PROD_BSC_TESTNET_RPC_URL }}
-  indexer_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  indexer_testnet_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
-  indexer_testnet_baseTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_BASE_GOERLI_RPC_URL }}
+#  indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
+#  indexer_testnet_polygonTestnet_rpc_url: ${{ secrets.INDEXER_PROD_MUMBAI_RPC_URL }}
+#  indexer_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_GOERLI_RPC_URL }}
+#  indexer_testnet_optimismTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_OPTIMISM_GOERLI_RPC_URL }}
+#  indexer_testnet_arbitrumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_ARBITRUM_GOERLI_RPC_URL }}
+#  indexer_testnet_binanceTestnet_rpc_url: ${{ secrets.INDEXER_PROD_BSC_TESTNET_RPC_URL }}
+#  indexer_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
+#  indexer_testnet_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
+#  indexer_testnet_baseTestnetGoerli_rpc_url: ${{ secrets.INDEXER_PROD_BASE_GOERLI_RPC_URL }}
   #
-  indexer_testnet_private_key: ${{ secrets.INDEXER_PROD_PRIVATE_KEY }}
-  indexer_testnet_address: ${{ secrets.INDEXER_PROD_ADDRESS }}
+#  indexer_testnet_private_key: ${{ secrets.INDEXER_PROD_PRIVATE_KEY }}
+#  indexer_testnet_address: ${{ secrets.INDEXER_PROD_ADDRESS }}
   # V1 OPERATOR TESTNET rpc endpoints
-  operator_testnet_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_FUJI_RPC_URL }}
-  operator_testnet_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_MUMBAI_RPC_URL }}
-  operator_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_GOERLI_RPC_URL }}
-  operator_testnet_optimismTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_OPTIMISM_GOERLI_RPC_URL }}
-  operator_testnet_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_ARBITRUM_GOERLI_RPC_URL }}
-  operator_testnet_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_BSC_TESTNET_RPC_URL }}
-  operator_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  operator_testnet_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
-  operator_testnet_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_BASE_GOERLI_RPC_URL }}
+#  operator_testnet_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_FUJI_RPC_URL }}
+#  operator_testnet_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_MUMBAI_RPC_URL }}
+#  operator_testnet_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_GOERLI_RPC_URL }}
+#  operator_testnet_optimismTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_OPTIMISM_GOERLI_RPC_URL }}
+#  operator_testnet_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_ARBITRUM_GOERLI_RPC_URL }}
+#  operator_testnet_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_PROD_BSC_TESTNET_RPC_URL }}
+#  operator_testnet_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
+#  operator_testnet_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
+#  operator_testnet_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_PROD_BASE_GOERLI_RPC_URL }}
   #
-  operator_testnet_private_key: ${{ secrets.OPERATOR_PROD_PRIVATE_KEY }}
-  operator_testnet_address: ${{ secrets.OPERATOR_PROD_ADDRESS }}
+#  operator_testnet_private_key: ${{ secrets.OPERATOR_PROD_PRIVATE_KEY }}
+#  operator_testnet_address: ${{ secrets.OPERATOR_PROD_ADDRESS }}
   #
   # V2 INDEXER TESTNET rpc endpoints
   v2_indexer_testnet_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_PROD_FUJI_RPC_URL }}
@@ -95,7 +94,7 @@ env:
   SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
   SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
   TESTNET_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
-  TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
+#  TESTNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
   TESTNET_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/testnet-indexer-processor'
   #
 #  TESTNET_COMMON_NAMESPACE: 'testnet'
@@ -138,6 +137,16 @@ jobs:
         with:
           role-to-assume: ${{ env.IAM_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get secrets from AWS Secrets Manager
+        uses: aws-actions/aws-secretsmanager-get-secrets@v1
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          secret-ids: |
+            TESTNET_INDEXER_V1
+            TESTNET_OPERATOR_V1
+            COMMON
+          parse-json-secrets: true # to be able to get the json k/v pairs
 
       - name: Login to ECR
         id: login-ecr
