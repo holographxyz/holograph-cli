@@ -15,7 +15,6 @@ env:
   #
   AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
-  ALB_CERT_ARN: ${{ secrets.PROD_ALB_CERT_ARN_FOR_HOLOGRAPH_XYZ }} # TIP: the 2 CERTs are separated with \, in Github secret
   #
   MAINNET_HOLO_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_MAINNET_OPERATOR_API_KEY }}
   MAINNET_HOLO_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_OPERATOR_MAINNET_OPERATOR_API_KEY}}
@@ -38,30 +37,30 @@ env:
   MAINNET_DOMAIN: 'holograph.xyz' # needed only for the health checks
   #
   # V1 INDEXER MAINNET rpc endpoints
-  indexer_mainnet_avalanche_rpc_url: ${{ secrets.INDEXER_MAINNET_AVALANCHE_RPC_URL }}
-  indexer_mainnet_polygon_rpc_url: ${{ secrets.INDEXER_MAINNET_POLYGON_RPC_URL }}
-  indexer_mainnet_ethereum_rpc_url: ${{ secrets.INDEXER_MAINNET_ETHEREUM_RPC_URL }}
-  indexer_mainnet_optimism_rpc_url: ${{ secrets.INDEXER_MAINNET_OPTIMISM_RPC_URL }}
-  indexer_mainnet_arbitrum_rpc_url: ${{ secrets.INDEXER_MAINNET_ARBITRUM_RPC_URL }}
-  indexer_mainnet_binance_rpc_url: ${{ secrets.INDEXER_MAINNET_BINANCE_RPC_URL }}
-  indexer_mainnet_mantle_rpc_url: 'https://rpc.mantle.xyz/'
-  indexer_mainnet_zora_rpc_url: 'https://rpc.zora.energy'
-  indexer_mainnet_base_rpc_url: ${{ secrets.INDEXER_MAINNET_BASE_RPC_URL }}
+#  indexer_mainnet_avalanche_rpc_url: ${{ secrets.INDEXER_MAINNET_AVALANCHE_RPC_URL }}
+#  indexer_mainnet_polygon_rpc_url: ${{ secrets.INDEXER_MAINNET_POLYGON_RPC_URL }}
+#  indexer_mainnet_ethereum_rpc_url: ${{ secrets.INDEXER_MAINNET_ETHEREUM_RPC_URL }}
+#  indexer_mainnet_optimism_rpc_url: ${{ secrets.INDEXER_MAINNET_OPTIMISM_RPC_URL }}
+#  indexer_mainnet_arbitrum_rpc_url: ${{ secrets.INDEXER_MAINNET_ARBITRUM_RPC_URL }}
+#  indexer_mainnet_binance_rpc_url: ${{ secrets.INDEXER_MAINNET_BINANCE_RPC_URL }}
+#  indexer_mainnet_mantle_rpc_url: 'https://rpc.mantle.xyz/'
+#  indexer_mainnet_zora_rpc_url: 'https://rpc.zora.energy'
+#  indexer_mainnet_base_rpc_url: ${{ secrets.INDEXER_MAINNET_BASE_RPC_URL }}
   #
-  indexer_mainnet_private_key: ${{ secrets.INDEXER_MAINNET_PRIVATE_KEY }}
+#  indexer_mainnet_private_key: ${{ secrets.INDEXER_MAINNET_PRIVATE_KEY }}
   indexer_mainnet_address: ${{ secrets.INDEXER_MAINNET_ADDRESS }}
   # V1 OPERATOR MAINNET rpc endpoints
-  operator_mainnet_avalanche_rpc_url: ${{ secrets.OPERATOR_MAINNET_AVALANCHE_RPC_URL }}
-  operator_mainnet_polygon_rpc_url: ${{ secrets.OPERATOR_MAINNET_POLYGON_RPC_URL }}
-  operator_mainnet_ethereum_rpc_url: ${{ secrets.OPERATOR_MAINNET_ETHEREUM_RPC_URL }}
-  operator_mainnet_optimism_rpc_url: ${{ secrets.OPERATOR_MAINNET_OPTIMISM_RPC_URL }}
-  operator_mainnet_arbitrum_rpc_url: ${{ secrets.OPERATOR_MAINNET_ARBITRUM_RPC_URL }}
-  operator_mainnet_binance_rpc_url: ${{ secrets.OPERATOR_MAINNET_BINANCE_RPC_URL }}
-  operator_mainnet_mantle_rpc_url: 'https://rpc.mantle.xyz/'
-  operator_mainnet_zora_rpc_url: 'https://rpc.zora.energy'
-  operator_mainnet_base_rpc_url: ${{ secrets.OPERATOR_MAINNET_BASE_RPC_URL }} # Notice: Operator should currently be disabled on Base
+#  operator_mainnet_avalanche_rpc_url: ${{ secrets.OPERATOR_MAINNET_AVALANCHE_RPC_URL }}
+#  operator_mainnet_polygon_rpc_url: ${{ secrets.OPERATOR_MAINNET_POLYGON_RPC_URL }}
+#  operator_mainnet_ethereum_rpc_url: ${{ secrets.OPERATOR_MAINNET_ETHEREUM_RPC_URL }}
+#  operator_mainnet_optimism_rpc_url: ${{ secrets.OPERATOR_MAINNET_OPTIMISM_RPC_URL }}
+#  operator_mainnet_arbitrum_rpc_url: ${{ secrets.OPERATOR_MAINNET_ARBITRUM_RPC_URL }}
+#  operator_mainnet_binance_rpc_url: ${{ secrets.OPERATOR_MAINNET_BINANCE_RPC_URL }}
+#  operator_mainnet_mantle_rpc_url: 'https://rpc.mantle.xyz/'
+#  operator_mainnet_zora_rpc_url: 'https://rpc.zora.energy'
+#  operator_mainnet_base_rpc_url: ${{ secrets.OPERATOR_MAINNET_BASE_RPC_URL }} # Notice: Operator should currently be disabled on Base
   #
-  operator_mainnet_private_key: ${{ secrets.OPERATOR_MAINNET_PRIVATE_KEY }}
+#  operator_mainnet_private_key: ${{ secrets.OPERATOR_MAINNET_PRIVATE_KEY }}
   operator_mainnet_address: ${{ secrets.OPERATOR_MAINNET_ADDRESS }}
   #
   # V2 INDEXER MAINNET rpc endpoints
@@ -95,7 +94,7 @@ env:
   SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
   SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
   MAINNET_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
-  MAINNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/mainnet-indexer-processor'
+#  MAINNET_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/mainnet-indexer-processor'
   MAINNET_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/mainnet-indexer-processor'
   #
   MAINNET_COMMON_NAMESPACE: 'mainnet'
@@ -138,6 +137,16 @@ jobs:
         with:
           role-to-assume: ${{ env.IAM_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get secrets from AWS Secrets Manager
+        uses: aws-actions/aws-secretsmanager-get-secrets@v1
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          secret-ids: |
+            MAINNET_INDEXER_V1
+            MAINNET_OPERATOR_V1
+            COMMON
+          parse-json-secrets: true # to be able to get the json k/v pairs
 
       - name: Login to ECR
         id: login-ecr
@@ -450,22 +459,22 @@ jobs:
             \
             --values ./holo-operator/values-v1-mainnet-iv.yaml
 
-#      - name: -> V1 -- Info for the new V1 deployments
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }}
-#          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            echo "------------------------- Last n Helm releases -------------------------"
-#            echo "--INDEXER--"
-#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.MAINNET_COMMON_NAMESPACE }} --max 3
-#            echo "--OPERATOR--"
-#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.MAINNET_COMMON_NAMESPACE }} --max 3
-#
-#            echo "------------------------ Newly deployed image [same for all clis] ------------------------ "
-#            echo "$MAINNET_IMAGE_TAG"
+      - name: -> V1 -- Info for the new V1 deployments
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }}
+          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            echo "------------------------- Last n Helm releases -------------------------"
+            echo "--INDEXER--"
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.MAINNET_COMMON_NAMESPACE }} --max 3
+            echo "--OPERATOR--"
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.MAINNET_COMMON_NAMESPACE }} --max 3
+
+            echo "------------------------ Newly deployed image [same for all clis] ------------------------ "
+            echo "$MAINNET_IMAGE_TAG"
 
       # NOTICE: ##### V2 deployments ######
 
@@ -697,19 +706,19 @@ jobs:
             \
             --values ./holo-operator/values-v2-mainnet-iv.yaml
 
-#      - name: -> V2 -- Info for the new V2 deployments
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
-#          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }}
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            echo "------------------------- Last n Helm releases -------------------------"
-#            echo "--V2 INDEXER--"
-#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.MAINNET_COMMON_NAMESPACE_V2 }} --max 3
-#            echo "--V2 OPERATOR--"
-#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.MAINNET_COMMON_NAMESPACE_V2 }} --max 3
-#
-#            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
-#            echo "$MAINNET_IMAGE_TAG"
+      - name: -> V2 -- Info for the new V2 deployments
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
+          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }}
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            echo "------------------------- Last n Helm releases -------------------------"
+            echo "--V2 INDEXER--"
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.MAINNET_COMMON_NAMESPACE_V2 }} --max 3
+            echo "--V2 OPERATOR--"
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.MAINNET_COMMON_NAMESPACE_V2 }} --max 3
+
+            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+            echo "$MAINNET_IMAGE_TAG"
