@@ -623,6 +623,8 @@ jobs:
             holo-operator-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.STG_COMMON_NAMESPACE_V2 }} \
             \
+            --set dummy_deployment_namespace=dev-cli-dummies \
+            \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA }} \
