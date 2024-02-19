@@ -16,96 +16,27 @@ env:
   AWS_KEY_ID: ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
   #
-  STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
-  STG_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY: ${{ secrets.HOLO_INDEXER_OPERATOR_API_KEY }}
-  #
   STG_HOLOGRAPH_INDEXER_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
   STG_HOLOGRAPH_OPERATOR_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
-  #
-  STG_HOLOGRAPH_INDEXER_PASSWORD: ${{ secrets.DEV_HOLO_INDEXER_PASSWORD }}
-  STG_HOLOGRAPH_OPERATOR_PASSWORD: ${{ secrets.DEV_HOLO_OPERATOR_PASSWORD }}
   #
   # set the RPC endpoints config files
   INDEXER_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
   OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
   #
   HOLOGRAPH_ENVIRONMENT: develop
-  HOLOGRAPH_ADDRESS: ${{ secrets.DEV_HOLOGRAPH_ADDRESS }}
   BLOCK_PROCESSING_VERSION: 'V2'
   #
   STG_DOMAIN: 'holograph.xyz' # needed only for the health checks
   #
-  # V1 INDEXER DEV rpc endpoints
-#  indexer_dev_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
-#  indexer_dev_polygonTestnet_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }}
-#  indexer_dev_binanceTestnet_rpc_url: ${{ secrets.INDEXER_DEV_BSC_TESTNET_RPC_URL }}
-#  indexer_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-#  indexer_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_GOERLI_RPC_URL }}
-#  indexer_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_OPTIMISM_GOERLI_RPC_URL }}
-#  indexer_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_ARBITRUM_GOERLI_RPC_URL }}
-#  indexer_dev_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
-#  indexer_dev_baseTestnetGoerli_rpc_url: ${{ secrets.INDEXER_DEV_BASE_GOERLI_RPC_URL }}
-  #
-#  indexer_dev_private_key: ${{ secrets.INDEXER_DEV_PRIVATE_KEY }}
-#  indexer_dev_address: ${{ secrets.INDEXER_DEV_ADDRESS }}
-  # V1 OPERATOR DEV rpc endpoints
-#  operator_dev_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_FUJI_RPC_URL }}
-#  operator_dev_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }}
-#  operator_dev_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_BSC_TESTNET_RPC_URL }}
-#  operator_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-#  operator_dev_ethereumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_GOERLI_RPC_URL }}
-#  operator_dev_optimismTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_OPTIMISM_GOERLI_RPC_URL }}
-#  operator_dev_arbitrumTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_ARBITRUM_GOERLI_RPC_URL }}
-#  operator_dev_zoraTestnetGoerli_rpc_url: 'https://testnet.rpc.zora.energy'
-#  operator_dev_baseTestnetGoerli_rpc_url: ${{ secrets.OPERATOR_DEV_BASE_GOERLI_RPC_URL }}
-  #
-#  operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
-#  operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
-  #
-  # V2 INDEXER DEV rpc endpoints
-  v2_indexer_dev_avalancheTestnet_rpc_url: ${{ secrets.INDEXER_DEV_FUJI_RPC_URL }}
-  v2_indexer_dev_polygonTestnet_rpc_url: ${{ secrets.INDEXER_DEV_MUMBAI_RPC_URL }}
-  v2_indexer_dev_ethereumTestnetSepolia_rpc_url: ${{ secrets.INDEXER_DEV_ETHEREUM_SEPOLIA_RPC_URL }}
-  v2_indexer_dev_optimismTestnetSepolia_rpc_url: 'https://sepolia.optimism.io'
-  v2_indexer_dev_arbitrumTestnetSepolia_rpc_url: ${{ secrets.INDEXER_DEV_ARBITRUM_SEPOLIA_RPC_URL }}
-  v2_indexer_dev_binanceTestnet_rpc_url: ${{ secrets.INDEXER_DEV_BSC_TESTNET_RPC_URL }}
-  v2_indexer_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  v2_indexer_dev_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
-  v2_indexer_dev_baseTestnetSepolia_rpc_url: ${{ secrets.INDEXER_DEV_BASE_SEPOLIA_RPC_URL }}
-  #
-  v2_indexer_dev_private_key: ${{ secrets.INDEXER_DEV_PRIVATE_KEY }}
-  v2_indexer_dev_address: ${{ secrets.INDEXER_DEV_ADDRESS }}
-  # V2 OPERATOR DEV rpc endpoints
-  v2_operator_dev_avalancheTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_FUJI_RPC_URL }}
-  v2_operator_dev_polygonTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_MUMBAI_RPC_URL }}
-  v2_operator_dev_ethereumTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_DEV_ETHEREUM_SEPOLIA_RPC_URL }}
-  v2_operator_dev_optimismTestnetSepolia_rpc_url: 'https://sepolia.optimism.io'
-  v2_operator_dev_arbitrumTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_DEV_ARBITRUM_SEPOLIA_RPC_URL }}
-  v2_operator_dev_binanceTestnet_rpc_url: ${{ secrets.OPERATOR_DEV_BSC_TESTNET_RPC_URL }}
-  v2_operator_dev_mantleTestnet_rpc_url: 'https://rpc.testnet.mantle.xyz'
-  v2_operator_dev_zoraTestnetSepolia_rpc_url: 'https://sepolia.rpc.zora.energy'
-  v2_operator_dev_baseTestnetSepolia_rpc_url: ${{ secrets.OPERATOR_DEV_BASE_SEPOLIA_RPC_URL }}
-  #
-  v2_operator_dev_private_key: ${{ secrets.OPERATOR_DEV_PRIVATE_KEY }}
-  v2_operator_dev_address: ${{ secrets.OPERATOR_DEV_ADDRESS }}
-  #
   # SQS User [indexer_processor_sqs_user]
-  SQS_USER_AWS_ACCESS_KEY_ID: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_KEY_ID }}
-  SQS_USER_AWS_SECRET_ACCESS_KEY: ${{ secrets.SQS_INDEXER_PROCESSOR_USER_AWS_ACCESS_KEY }}
-  DEV_SQS_ENDPOINT: 'https://sqs.us-west-2.amazonaws.com'
-#  DEV_SQS_QUEUE_URL: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor'
-  DEV_SQS_QUEUE_URL_V2: 'https://sqs.us-west-2.amazonaws.com/177635894328/dev-indexer-processor'
   #
-#  STG_COMMON_NAMESPACE: 'develop'
   STG_COMMON_NAMESPACE_V2: 'develop-v2'
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.68
-#  INDEXER_RELEASE_NAME: 'indexer-dev' # format -> [release_name]-indexer-[env]
-  INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2'
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.69
+  INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2' # format -> [release_name]-indexer-[env]
   #
   STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.1.3
-#  OPERATOR_RELEASE_NAME: 'operator-dev' # format -> [release_name]-operator-[env]
-  OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2'
+  OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2' # format -> [release_name]-indexer-[env]
   #######################################
 
 on:
@@ -137,6 +68,8 @@ jobs:
           secret-ids: |
             DEV_INDEXER_V1
             DEV_OPERATOR_V1
+            DEV_INDEXER_V2
+            DEV_OPERATOR_V2
             COMMON
           parse-json-secrets: true # to be able to get the json k/v pairs
 
@@ -320,8 +253,8 @@ jobs:
 #            \
 #            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=$COMMON_AWS_ACCESS_KEY_ID_SQS \
 #            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=$COMMON_AWS_SECRET_ACCESS_KEY_SQS \
-#            --set sqs.SQS_ENDPOINT=$COMMON_SQS_ENDPOINT \
-#            --set sqs.SQS_QUEUE_URL=$COMMON_SQS_QUEUE_URL \
+#            --set sqs.SQS_ENDPOINT=$DEV_INDEXER_V1_SQS_ENDPOINT \
+#            --set sqs.SQS_QUEUE_URL=$DEV_INDEXER_V1_SQS_QUEUE_URL \
 #            --set sqs.AWS_REGION=$COMMON_AWS_REGION
 #
 #      - name: Pause for 60 seconds
@@ -504,14 +437,16 @@ jobs:
             holo-indexer-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.STG_COMMON_NAMESPACE_V2 }} \
             \
+            --set dummy_deployment_namespace=dev-cli-dummies \
+            \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLOGRAPH_CONFIG_FILE_DATA }} \
-            --set holo_indexer_password=${{ env.STG_HOLOGRAPH_INDEXER_PASSWORD }} \
+            --set holo_indexer_password=$DEV_INDEXER_V2_PASSWORD \
             --set HOLO_INDEXER_HOST=${{ env.STG_HOLOGRAPH_INDEXER_HOST }} \
-            --set OPERATOR_API_KEY=${{ env.STG_HOLOGRAPH_INDEXER_OPERATOR_API_KEY }} \
+            --set OPERATOR_API_KEY=$DEV_INDEXER_V2_OPERATOR_API_KEY \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
-            --set HOLOGRAPH_ADDRESS=${{ env.HOLOGRAPH_ADDRESS }} \
+            --set HOLOGRAPH_ADDRESS=$DEV_INDEXER_V2_HOLOGRAPH_ADDRESS \
             --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
             --set BLOCK_PROCESSING_VERSION=${{ env.BLOCK_PROCESSING_VERSION }} \
             \
@@ -543,18 +478,18 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
             \
-            --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.v2_indexer_dev_avalancheTestnet_rpc_url }} \
-            --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.v2_indexer_dev_polygonTestnet_rpc_url }} \
-            --set dev_rpc_config_values.binanceTestnet_rpc_url=${{ env.v2_indexer_dev_binanceTestnet_rpc_url }} \
-            --set dev_rpc_config_values.mantleTestnet_rpc_url=${{ env.v2_indexer_dev_mantleTestnet_rpc_url }} \
-            --set dev_rpc_config_values.ethereumTestnetSepolia_rpc_url=${{ env.v2_indexer_dev_ethereumTestnetSepolia_rpc_url }} \
-            --set dev_rpc_config_values.optimismTestnetSepolia_rpc_url=${{ env.v2_indexer_dev_optimismTestnetSepolia_rpc_url }} \
-            --set dev_rpc_config_values.arbitrumTestnetSepolia_rpc_url=${{ env.v2_indexer_dev_arbitrumTestnetSepolia_rpc_url }} \
-            --set dev_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.v2_indexer_dev_zoraTestnetSepolia_rpc_url }} \
-            --set dev_rpc_config_values.baseTestnetSepolia_rpc_url=${{ env.v2_indexer_dev_baseTestnetSepolia_rpc_url }} \
+            --set dev_rpc_config_values.avalancheTestnet_rpc_url=$DEV_INDEXER_V2_AVALANCHE_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.polygonTestnet_rpc_url=$DEV_INDEXER_V2_POLYGON_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.binanceTestnet_rpc_url=$DEV_INDEXER_V2_BINANCE_SMART_CHAIN_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.mantleTestnet_rpc_url=$DEV_INDEXER_V2_MANTLE_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.ethereumTestnetSepolia_rpc_url=$DEV_INDEXER_V2_ETHEREUM_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.optimismTestnetSepolia_rpc_url=$DEV_INDEXER_V2_OPTIMISM_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.arbitrumTestnetSepolia_rpc_url=$DEV_INDEXER_V2_ARBITRUM_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.zoraTestnetSepolia_rpc_url=$DEV_INDEXER_V2_ZORA_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.baseTestnetSepolia_rpc_url=$DEV_INDEXER_V2_BASE_TESTNET_SEPOLIA_RPC_URL \
             \
-            --set dev_rpc_config_values.private_key=${{ env.v2_indexer_dev_private_key }} \
-            --set dev_rpc_config_values.address=${{ env.v2_indexer_dev_address }} \
+            --set dev_rpc_config_values.private_key=$DEV_INDEXER_V2_PRIVATE_KEY \
+            --set dev_rpc_config_values.address=$COMMON_DEV_WALLET_ADDRESS \
             --set dev_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
@@ -572,11 +507,11 @@ jobs:
             --set replicaCountBase=0 \
             --set replicaCountZora=1 \
             \
-            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=${{ env.SQS_USER_AWS_ACCESS_KEY_ID }} \
-            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=${{ env.SQS_USER_AWS_SECRET_ACCESS_KEY }} \
-            --set sqs.SQS_ENDPOINT=${{ env.DEV_SQS_ENDPOINT }} \
-            --set sqs.SQS_QUEUE_URL=${{ env.DEV_SQS_QUEUE_URL_V2 }} \
-            --set sqs.AWS_REGION=us-west-2
+            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=$COMMON_AWS_ACCESS_KEY_ID_SQS \
+            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=$COMMON_AWS_SECRET_ACCESS_KEY_SQS \
+            --set sqs.SQS_ENDPOINT=$DEV_INDEXER_V2_SQS_ENDPOINT \
+            --set sqs.SQS_QUEUE_URL=$DEV_INDEXER_V2_SQS_QUEUE_URL \
+            --set sqs.AWS_REGION=$COMMON_AWS_REGION
 
       - name: Pause for 60 seconds
         shell: bash
@@ -628,11 +563,11 @@ jobs:
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA }} \
-            --set holo_operator_password=${{ env.STG_HOLOGRAPH_OPERATOR_PASSWORD }} \
+            --set holo_operator_password=$DEV_OPERATOR_V2_PASSWORD \
             --set HOLO_OPERATOR_HOST=${{ env.STG_HOLOGRAPH_OPERATOR_HOST }} \
-            --set OPERATOR_API_KEY=${{ env.STG_HOLOGRAPH_OPERATOR_OPERATOR_API_KEY }} \
+            --set OPERATOR_API_KEY=$DEV_OPERATOR_V2_OPERATOR_API_KEY \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
-            --set HOLOGRAPH_ADDRESS=${{ env.HOLOGRAPH_ADDRESS }} \
+            --set HOLOGRAPH_ADDRESS=$DEV_OPERATOR_V2_HOLOGRAPH_ADDRESS \
             --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
@@ -662,18 +597,18 @@ jobs:
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
             \
-            --set dev_rpc_config_values.avalancheTestnet_rpc_url=${{ env.v2_operator_dev_avalancheTestnet_rpc_url }} \
-            --set dev_rpc_config_values.polygonTestnet_rpc_url=${{ env.v2_operator_dev_polygonTestnet_rpc_url }} \
-            --set dev_rpc_config_values.binanceTestnet_rpc_url=${{ env.v2_operator_dev_binanceTestnet_rpc_url }} \
-            --set dev_rpc_config_values.mantleTestnet_rpc_url=${{ env.v2_operator_dev_mantleTestnet_rpc_url }} \
-            --set dev_rpc_config_values.ethereumTestnetSepolia_rpc_url=${{ env.v2_operator_dev_ethereumTestnetSepolia_rpc_url }} \
-            --set dev_rpc_config_values.optimismTestnetSepolia_rpc_url=${{ env.v2_operator_dev_optimismTestnetSepolia_rpc_url }} \
-            --set dev_rpc_config_values.arbitrumTestnetSepolia_rpc_url=${{ env.v2_operator_dev_arbitrumTestnetSepolia_rpc_url }} \
-            --set dev_rpc_config_values.zoraTestnetSepolia_rpc_url=${{ env.v2_operator_dev_zoraTestnetSepolia_rpc_url }} \
-            --set dev_rpc_config_values.baseTestnetSepolia_rpc_url=${{ env.v2_operator_dev_baseTestnetSepolia_rpc_url }} \
+            --set dev_rpc_config_values.avalancheTestnet_rpc_url=$DEV_OPERATOR_V2_AVALANCHE_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.polygonTestnet_rpc_url=$DEV_OPERATOR_V2_POLYGON_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.binanceTestnet_rpc_url=$DEV_OPERATOR_V2_BINANCE_SMART_CHAIN_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.mantleTestnet_rpc_url=$DEV_OPERATOR_V2_MANTLE_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.ethereumTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_ETHEREUM_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.optimismTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_OPTIMISM_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.arbitrumTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_ARBITRUM_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.zoraTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_ZORA_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.baseTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_BASE_TESTNET_SEPOLIA_RPC_URL \
             \
-            --set dev_rpc_config_values.private_key=${{ env.v2_operator_dev_private_key }} \
-            --set dev_rpc_config_values.address=${{ env.v2_operator_dev_address }} \
+            --set dev_rpc_config_values.private_key=$DEV_OPERATOR_V2_PRIVATE_KEY \
+            --set dev_rpc_config_values.address=$COMMON_DEV_WALLET_ADDRESS \
             \
             --set autoscaling.enabled=false \
             --set replicaCountAvalanche=1 \
