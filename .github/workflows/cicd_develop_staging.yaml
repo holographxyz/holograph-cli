@@ -1,4 +1,4 @@
-name: Deploy V1 & V2 holoclis to staging[develop/develop-v2]
+name: Deploy V2 holoclis to staging[develop-v2]
 
 permissions:
   id-token: write
@@ -9,7 +9,7 @@ env:
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli-dev # notice: the same for all cli apps
   #
-  DEV_IMAGE_TAG: dev-${{ github.sha }}
+  IMAGE_TAG: dev-${{ github.sha }}
   #
   CLUSTER_NAME: staging
   #
@@ -103,7 +103,7 @@ jobs:
           file: Dockerfile
           build-args: AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }}
           platforms: linux/amd64
-          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.DEV_IMAGE_TAG }}
+          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
           push: true # set false to deactivate the push to ECR
@@ -142,126 +142,6 @@ jobs:
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-#      # NOTICE: ##### V1 deployments ######
-#
-#      - name: -> V1 -- Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }} # notice
-#          HOLOGRAPH_VERSION: "V1"
-#          #
-#          ENABLE_DEBUG: 'true'
-#          HEALTHCHECK: 'true'
-#          MODE: 'auto'
-#          ENABLE_UNSAFE: 'false'
-#          ENABLE_SYNC: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
-#          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
-#          #
-#          ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
-#          ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_mantle: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_zora: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
-#          #
-#          AVALANCHE_NETWORK: 'fuji'
-#          POLYGON_NETWORK: 'mumbai'
-#          BINANCE_NETWORK: 'binanceSmartChainTestnet'
-#          MANTLE_NETWORK: 'mantleTestnet'
-#          ETHEREUM_NETWORK: '{ethereumTestnetGoerli}'
-#          OPTIMISM_NETWORK: '{optimismTestnetGoerli}'
-#          ARBITRUM_NETWORK: '{arbitrumTestnetGoerli}'
-#          ZORA_NETWORK: '{zoraTestnetGoerli}'
-#          BASE_NETWORK: '{baseTestnetGoerli}'
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            helm upgrade --install $RELEASE_NAME \
-#            holo-indexer-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }}.tgz \
-#            -n ${{ env.STG_COMMON_NAMESPACE }} \
-#            \
-#            --set image.repository=${{ env.ECR_REPOSITORY }} \
-#            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
-#            --set config_file_data=${{ env.INDEXER_HOLOGRAPH_CONFIG_FILE_DATA }} \
-#            --set holo_indexer_password=${{ env.STG_HOLOGRAPH_INDEXER_PASSWORD }} \
-#            --set HOLO_INDEXER_HOST=${{ env.STG_HOLOGRAPH_INDEXER_HOST }} \
-#            --set OPERATOR_API_KEY=$DEV_INDEXER_V1_OPERATOR_API_KEY \
-#            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
-#            --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
-#            --set BLOCK_PROCESSING_VERSION=${{ env.BLOCK_PROCESSING_VERSION }} \
-#            \
-#            --set ENABLE_DEBUG=$ENABLE_DEBUG \
-#            --set ENABLE_SYNC=$ENABLE_SYNC \
-#            --set HEALTHCHECK=$HEALTHCHECK \
-#            --set MODE=$MODE \
-#            \
-#            --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
-#            --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
-#            --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
-#            --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
-#            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
-#            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
-#            --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
-#            --set ZORA_NETWORK="${ZORA_NETWORK}" \
-#            --set BASE_NETWORK="${BASE_NETWORK}" \
-#            \
-#            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
-#            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
-#            \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
-#            \
-#            --set dev_rpc_config_values.avalancheTestnet_rpc_url=$DEV_INDEXER_V1_AVALANCHE_TESTNET_RPC_URL \
-#            --set dev_rpc_config_values.polygonTestnet_rpc_url=$DEV_INDEXER_V1_POLYGON_TESTNET_RPC_URL \
-#            --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=$DEV_INDEXER_V1_ETHEREUM_TESTNET_GOERLI_RPC_URL \
-#            --set dev_rpc_config_values.optimismTestnetGoerli_rpc_url=$DEV_INDEXER_V1_OPTIMISM_TESTNET_GOERLI_RPC_URL \
-#            --set dev_rpc_config_values.arbitrumTestnetGoerli_rpc_url=$DEV_INDEXER_V1_ARBITRUM_TESTNET_GOERLI_RPC_URL \
-#            --set dev_rpc_config_values.binanceTestnet_rpc_url=$DEV_INDEXER_V1_BINANCE_SMART_CHAIN_TESTNET_RPC_URL \
-#            --set dev_rpc_config_values.mantleTestnet_rpc_url=$DEV_INDEXER_V1_MANTLE_TESTNET_RPC_URL \
-#            --set dev_rpc_config_values.zoraTestnetGoerli_rpc_url=$DEV_INDEXER_V1_ZORA_TESTNET_GOERLI_RPC_URL \
-#            --set dev_rpc_config_values.baseTestnetGoerli_rpc_url=$DEV_INDEXER_V1_BASE_TESTNET_GOERLI_RPC_URL \
-#            \
-#            --set dev_rpc_config_values.private_key=$DEV_INDEXER_V1_PRIVATE_KEY \
-#            --set dev_rpc_config_values.address=${{ env.indexer_dev_address }} \
-#            --set dev_rpc_config_values.version="beta3" \
-#            \
-#            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-#            --set datadog_tags.service=$RELEASE_NAME \
-#            --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }} \
-#            \
-#            --set autoscaling.enabled=false \
-#            --set replicaCountAvalanche=1 \
-#            --set replicaCountPolygon=1 \
-#            --set replicaCountBinance=1 \
-#            --set replicaCountMantle=1 \
-#            --set replicaCountEthereum=1 \
-#            --set replicaCountArbitrum=1 \
-#            --set replicaCountOptimism=1 \
-#            --set replicaCountBase=1 \
-#            --set replicaCountZora=1 \
-#            \
-#            --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=$COMMON_AWS_ACCESS_KEY_ID_SQS \
-#            --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=$COMMON_AWS_SECRET_ACCESS_KEY_SQS \
-#            --set sqs.SQS_ENDPOINT=$DEV_INDEXER_V1_SQS_ENDPOINT \
-#            --set sqs.SQS_QUEUE_URL=$DEV_INDEXER_V1_SQS_QUEUE_URL \
-#            --set sqs.AWS_REGION=$COMMON_AWS_REGION
-#
-#      - name: Pause for 60 seconds
-#        shell: bash
-#        run: |
-#          sleep 60
-
       # NOTICE: --- OPERATOR ---
       - name: Pull the holograph-operator helm chart version x.x.x from ECR
         shell: bash
@@ -273,129 +153,6 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-
-#      - name: -> V1 -- Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE }}]
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }} # notice
-#          HOLOGRAPH_VERSION: "V1"
-#          #
-#          ENABLE_DEBUG: 'true'
-#          ENABLE_SYNC: 'true'
-#          HEALTHCHECK: 'true'
-#          MODE: 'auto'
-#          ENABLE_UNSAFE: 'false'
-#          ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
-#          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
-#          #
-#          ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
-#          ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_mantle: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_zora: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
-#          #
-#          AVALANCHE_NETWORK: 'fuji'
-#          POLYGON_NETWORK: 'mumbai'
-#          BINANCE_NETWORK: 'binanceSmartChainTestnet'
-#          MANTLE_NETWORK: 'mantleTestnet'
-#          ETHEREUM_NETWORK: '{ethereumTestnetGoerli}'
-#          OPTIMISM_NETWORK: '{optimismTestnetGoerli}'
-#          ARBITRUM_NETWORK: '{arbitrumTestnetGoerli}'
-#          ZORA_NETWORK: '{zoraTestnetGoerli}'
-#          BASE_NETWORK: '{baseTestnetGoerli}'
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            helm upgrade --install $RELEASE_NAME \
-#            holo-operator-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}.tgz \
-#            -n ${{ env.STG_COMMON_NAMESPACE }} \
-#            \
-#            --set image.repository=${{ env.ECR_REPOSITORY }} \
-#            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
-#            --set config_file_data=${{ env.OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA }} \
-#            --set holo_operator_password=${{ env.STG_HOLOGRAPH_OPERATOR_PASSWORD }} \
-#            --set HOLO_OPERATOR_HOST=${{ env.STG_HOLOGRAPH_OPERATOR_HOST }} \
-#            --set OPERATOR_API_KEY=$DEV_OPERATOR_V1_OPERATOR_API_KEY \
-#            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
-#            --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
-#            \
-#            --set ENABLE_DEBUG=$ENABLE_DEBUG \
-#            --set ENABLE_SYNC=$ENABLE_SYNC \
-#            --set HEALTHCHECK=$HEALTHCHECK \
-#            --set MODE=$MODE \
-#            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
-#            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
-#            \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
-#            \
-#            --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
-#            --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
-#            --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
-#            --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
-#            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
-#            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
-#            --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
-#            --set ZORA_NETWORK="${ZORA_NETWORK}" \
-#            --set BASE_NETWORK="${BASE_NETWORK}" \
-#            \
-#            --set dev_rpc_config_values.avalancheTestnet_rpc_url=$DEV_OPERATOR_V1_AVALANCHE_TESTNET_RPC_URL \
-#            --set dev_rpc_config_values.polygonTestnet_rpc_url=$DEV_OPERATOR_V1_POLYGON_TESTNET_RPC_URL \
-#            --set dev_rpc_config_values.binanceTestnet_rpc_url=$DEV_OPERATOR_V1_BINANCE_SMART_CHAIN_TESTNET_RPC_URL \
-#            --set dev_rpc_config_values.mantleTestnet_rpc_url=$DEV_OPERATOR_V1_MANTLE_TESTNET_RPC_URL \
-#            --set dev_rpc_config_values.ethereumTestnetGoerli_rpc_url=$DEV_OPERATOR_V1_ETHEREUM_TESTNET_GOERLI_RPC_URL \
-#            --set dev_rpc_config_values.optimismTestnetGoerli_rpc_url=$DEV_OPERATOR_V1_OPTIMISM_TESTNET_GOERLI_RPC_URL \
-#            --set dev_rpc_config_values.arbitrumTestnetGoerli_rpc_url=$DEV_OPERATOR_V1_ARBITRUM_TESTNET_GOERLI_RPC_URL \
-#            --set dev_rpc_config_values.zoraTestnetGoerli_rpc_url=$DEV_OPERATOR_V1_ZORA_TESTNET_GOERLI_RPC_URL \
-#            --set dev_rpc_config_values.baseTestnetGoerli_rpc_url=$DEV_OPERATOR_V1_BASE_TESTNET_GOERLI_RPC_URL \
-#            \
-#            --set dev_rpc_config_values.private_key=$DEV_OPERATOR_V1_PRIVATE_KEY \
-#            --set dev_rpc_config_values.address=${{ env.operator_dev_address }} \
-#            \
-#            --set autoscaling.enabled=false \
-#            --set replicaCountAvalanche=1 \
-#            --set replicaCountPolygon=1 \
-#            --set replicaCountBinance=1 \
-#            --set replicaCountMantle=1 \
-#            --set replicaCountEthereum=1 \
-#            --set replicaCountArbitrum=1 \
-#            --set replicaCountOptimism=1 \
-#            --set replicaCountBase=1 \
-#            --set replicaCountZora=1 \
-#            \
-#            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-#            --set datadog_tags.service=$RELEASE_NAME \
-#            --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}
-#
-#      - name: -> V1 -- Info for the new V1 deployments
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }}
-#          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            echo "------------------------- Last n Helm releases -------------------------"
-#            echo "--INDEXER--"
-#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
-#            echo "--OPERATOR--"
-#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE }} --max 3
-#
-#            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
-#            echo "$DEV_IMAGE_TAG"
-
-      # NOTICE: ##### V2 deployments ######
 
       - name: -> V2 -- Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE_V2 }}]
         uses: tensor-hq/eksctl-helm-action@main
@@ -440,7 +197,7 @@ jobs:
             --set dummy_deployment_namespace=dev-cli-dummies \
             \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
+            --set image.image_tag=${{ env.IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLOGRAPH_CONFIG_FILE_DATA }} \
             --set holo_indexer_password=$DEV_INDEXER_V2_PASSWORD \
             --set HOLO_INDEXER_HOST=${{ env.STG_HOLOGRAPH_INDEXER_HOST }} \
@@ -561,7 +318,7 @@ jobs:
             --set dummy_deployment_namespace=dev-cli-dummies \
             \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=${{ env.DEV_IMAGE_TAG }} \
+            --set image.image_tag=${{ env.IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA }} \
             --set holo_operator_password=$DEV_OPERATOR_V2_PASSWORD \
             --set HOLO_OPERATOR_HOST=${{ env.STG_HOLOGRAPH_OPERATOR_HOST }} \
@@ -640,4 +397,4 @@ jobs:
             helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
 
             echo "------------------------ Newly deployed image [same for all apps] ------------------------"
-            echo "$DEV_IMAGE_TAG"
+            echo "$IMAGE_TAG"
