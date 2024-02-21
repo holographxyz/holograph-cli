@@ -9,7 +9,7 @@ env:
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli # notice: the same for all cli apps
   #
-  MAINNET_IMAGE_TAG: mainnet-${{ github.sha }}
+  IMAGE_TAG: mainnet-${{ github.sha }}
   #
   CLUSTER_NAME: prod0
   #
@@ -100,11 +100,11 @@ env:
   MAINNET_COMMON_NAMESPACE: 'mainnet'
   MAINNET_COMMON_NAMESPACE_V2: 'mainnet-v2'
   #######################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.68
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.69
   INDEXER_RELEASE_NAME: 'blondie-indexer-mainnet' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'blondie-indexer-mainnet-v2'
   #
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.2
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.3
   OPERATOR_RELEASE_NAME: 'blondie-operator-mainnet' # format -> [release_name]-operator-[env]
   OPERATOR_RELEASE_NAME_V2: 'blondie-operator-mainnet-v2'
   #######################################
@@ -178,7 +178,7 @@ jobs:
           file: Dockerfile
           build-args: AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }}
           platforms: linux/amd64
-          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }}
+          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
           push: true # set false to deactivate the push to ECR
@@ -260,8 +260,10 @@ jobs:
             holo-indexer-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.MAINNET_COMMON_NAMESPACE }} \
             \
+            --set dummy_deployment_namespace=mainnet-cli-dummies \
+            \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
+            --set image.image_tag=${{ env.IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
             --set holo_indexer_password=${{ env.MAINNET_HOLO_INDEXER_PASSWORD }} \
             --set HOLO_INDEXER_HOST=${{ env.MAINNET_HOLOGRAPH_INDEXER_HOST }} \
@@ -393,8 +395,10 @@ jobs:
             holo-operator-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.MAINNET_COMMON_NAMESPACE }} \
             \
+            --set dummy_deployment_namespace=mainnet-cli-dummies \
+            \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
+            --set image.image_tag=${{ env.IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.MAINNET_HOLO_OPERATOR_PASSWORD }} \
             --set HOLO_OPERATOR_HOST=${{ env.MAINNET_HOLOGRAPH_OPERATOR_HOST }} \
@@ -474,7 +478,7 @@ jobs:
             helm history $OPERATOR_RELEASE_NAME -n ${{ env.MAINNET_COMMON_NAMESPACE }} --max 3
 
             echo "------------------------ Newly deployed image [same for all clis] ------------------------ "
-            echo "$MAINNET_IMAGE_TAG"
+            echo "$IMAGE_TAG"
 
       # NOTICE: ##### V2 deployments ######
 
@@ -518,8 +522,10 @@ jobs:
             holo-indexer-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.MAINNET_COMMON_NAMESPACE_V2 }} \
             \
+            --set dummy_deployment_namespace=mainnet-cli-dummies \
+            \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
+            --set image.image_tag=${{ env.IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
             --set holo_indexer_password=${{ env.MAINNET_HOLO_INDEXER_PASSWORD }} \
             --set HOLO_INDEXER_HOST=${{ env.MAINNET_HOLOGRAPH_INDEXER_HOST }} \
@@ -639,8 +645,10 @@ jobs:
             holo-operator-${{ env.MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
             -n ${{ env.MAINNET_COMMON_NAMESPACE_V2 }} \
             \
+            --set dummy_deployment_namespace=mainnet-cli-dummies \
+            \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.image_tag=${{ env.MAINNET_IMAGE_TAG }} \
+            --set image.image_tag=${{ env.IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.V2_MAINNET_HOLO_OPERATOR_PASSWORD }} \
             --set HOLO_OPERATOR_HOST=${{ env.MAINNET_HOLOGRAPH_OPERATOR_HOST }} \
@@ -721,4 +729,4 @@ jobs:
             helm history $OPERATOR_RELEASE_NAME -n ${{ env.MAINNET_COMMON_NAMESPACE_V2 }} --max 3
 
             echo "------------------------ Newly deployed image [same for all apps] ------------------------"
-            echo "$MAINNET_IMAGE_TAG"
+            echo "$IMAGE_TAG"
