@@ -101,7 +101,6 @@ export const METADATA_RENDERER_ADDRESS: {[key in Environment]: string} = {
 
 export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
   ethereum: '0x66A71Dcef29A0fFBDBE3c6a460a3B5BC225Cd675'.toLowerCase(),
-  ethereumTestnetGoerli: '0xbfD2135BFfbb0B5378b56643c2Df8a87552Bfa23'.toLowerCase(),
   ethereumTestnetSepolia: '0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1'.toLowerCase(),
   polygon: '0x3c2269811836af69497E5F486A85D7316753cf62'.toLowerCase(),
   polygonTestnet: '0xf69186dfBa60DdB133E91E9A4B5673624293d8F8'.toLowerCase(),
@@ -110,14 +109,11 @@ export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
   avalancheTestnet: '0x93f54D755A063cE7bB9e6Ac47Eccc8e33411d706'.toLowerCase(),
   fantom: '0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7'.toLowerCase(),
   optimism: '0x3c2269811836af69497E5F486A85D7316753cf62'.toLowerCase(),
-  optimismTestnetGoerli: '0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1'.toLowerCase(),
   optimismTestnetSepolia: '0x55370E0fBB5f5b8dAeD978BA1c075a499eB107B8'.toLowerCase(),
   arbitrumOne: '0x3c2269811836af69497E5F486A85D7316753cf62'.toLowerCase(),
-  arbitrumTestnetGoerli: '0x6aB5Ae6822647046626e83ee6dB8187151E1d5ab'.toLowerCase(),
   arbitrumTestnetSepolia: '0x6098e96a28E02f27B1e6BD381f870F1C8Bd169d3'.toLowerCase(),
   mantleTestnet: '0x2cA20802fd1Fd9649bA8Aa7E50F0C82b479f35fe'.toLowerCase(),
   mantle: '0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7'.toLowerCase(),
-  baseTestnetGoerli: '0x6aB5Ae6822647046626e83ee6dB8187151E1d5ab'.toLowerCase(),
   baseTestnetSepolia: '0x55370E0fBB5f5b8dAeD978BA1c075a499eB107B8'.toLowerCase(),
   base: '0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7'.toLowerCase(),
   zoraTestnetSepolia: '0x55370E0fBB5f5b8dAeD978BA1c075a499eB107B8'.toLowerCase(),
