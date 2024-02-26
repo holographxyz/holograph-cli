@@ -35,7 +35,7 @@ env:
   STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.70
   INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2' # format -> [release_name]-indexer-[env]
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.1.4
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.1.5
   OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2' # format -> [release_name]-indexer-[env]
   #######################################
 
