@@ -16,8 +16,8 @@ env:
   AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
   #
-  MAINNET_HOLOGRAPH_INDEXER_HOST: 'http://blondie-holo-api.mainnet.svc.cluster.local:443'
-  MAINNET_HOLOGRAPH_OPERATOR_HOST: 'http://blondie-holo-api.mainnet.svc.cluster.local:443'
+#  MAINNET_HOLOGRAPH_INDEXER_HOST: 'http://blondie-holo-api.mainnet.svc.cluster.local:443'
+#  MAINNET_HOLOGRAPH_OPERATOR_HOST: 'http://blondie-holo-api.mainnet.svc.cluster.local:443'
   #
   MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.MAINNET_HOLO_INDEXER_PASSWORD }}
   MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.MAINNET_HOLO_OPERATOR_PASSWORD }}
@@ -204,7 +204,7 @@ jobs:
             --set image.image_tag=${{ env.IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
             --set holo_indexer_password=${{ env.MAINNET_HOLO_INDEXER_PASSWORD }} \
-            --set HOLO_INDEXER_HOST=${{ env.MAINNET_HOLOGRAPH_INDEXER_HOST }} \
+            --set HOLO_INDEXER_HOST=$MAINNET_INDEXER_V1_HOLO_INDEXER_HOST \
             --set OPERATOR_API_KEY=$MAINNET_INDEXER_V1_OPERATOR_API_KEY \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
@@ -238,15 +238,15 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
             \
-            --set mainnet_rpc_config_values.avalanche_rpc_url=$MAINNET_INDEXER_V1_AVALANCHE_MAINNET_URL \
-            --set mainnet_rpc_config_values.polygon_rpc_url=$MAINNET_INDEXER_V1_POLYGON_MAINNET_URL \
-            --set mainnet_rpc_config_values.ethereum_rpc_url=$MAINNET_INDEXER_V1_ETHEREUM_MAINNET_URL \
-            --set mainnet_rpc_config_values.optimism_rpc_url=$MAINNET_INDEXER_V1_OPTIMISM_MAINNET_URL \
-            --set mainnet_rpc_config_values.arbitrum_rpc_url=$MAINNET_INDEXER_V1_ARBITRUM_MAINNET_URL \
-            --set mainnet_rpc_config_values.binance_rpc_url=$MAINNET_INDEXER_V1_BINANCE_SMART_CHAIN_MAINNET_RPC_URL \
-            --set mainnet_rpc_config_values.mantle_rpc_url=$MAINNET_INDEXER_V1_MANTLE_MAINNET_URL \
-            --set mainnet_rpc_config_values.zora_rpc_url=$MAINNET_INDEXER_V1_ZORA_MAINNET_URL \
-            --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_INDEXER_V1_BASE_MAINNET_URL \
+            --set mainnet_rpc_config_values.avalanche_rpc_url=$MAINNET_INDEXER_V1_AVALANCHE_RPC_URL \
+            --set mainnet_rpc_config_values.polygon_rpc_url=$MAINNET_INDEXER_V1_POLYGON_RPC_URL \
+            --set mainnet_rpc_config_values.ethereum_rpc_url=$MAINNET_INDEXER_V1_ETHEREUM_RPC_URL \
+            --set mainnet_rpc_config_values.optimism_rpc_url=$MAINNET_INDEXER_V1_OPTIMISM_RPC_URL \
+            --set mainnet_rpc_config_values.arbitrum_rpc_url=$MAINNET_INDEXER_V1_ARBITRUM_ONE_RPC_URL \
+            --set mainnet_rpc_config_values.binance_rpc_url=$MAINNET_INDEXER_V1_BINANCE_SMART_CHAIN_RPC_URL \
+            --set mainnet_rpc_config_values.mantle_rpc_url=$MAINNET_INDEXER_V1_MANTLE_RPC_URL \
+            --set mainnet_rpc_config_values.zora_rpc_url=$MAINNET_INDEXER_V1_ZORA_RPC_URL \
+            --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_INDEXER_V1_BASE_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_INDEXER_V1_PRIVATE_KEY \
             --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V1_WALLET_ADDRESS \
@@ -339,7 +339,7 @@ jobs:
             --set image.image_tag=${{ env.IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.MAINNET_HOLO_OPERATOR_PASSWORD }} \
-            --set HOLO_OPERATOR_HOST=${{ env.MAINNET_HOLOGRAPH_OPERATOR_HOST }} \
+            --set HOLO_OPERATOR_HOST=$MAINNET_OPERATOR_V1_HOLO_OPERATOR_HOST \
             --set OPERATOR_API_KEY=$MAINNET_OPERATOR_V1_OPERATOR_API_KEY \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
@@ -371,15 +371,15 @@ jobs:
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
             \
-            --set mainnet_rpc_config_values.avalanche_rpc_url=$MAINNET_OPERATOR_V1_AVALANCHE_MAINNET_URL \
-            --set mainnet_rpc_config_values.polygon_rpc_url=$MAINNET_OPERATOR_V1_POLYGON_MAINNET_URL \
-            --set mainnet_rpc_config_values.binance_rpc_url=$MAINNET_OPERATOR_V1_BINANCE_SMART_CHAIN_MAINNET_RPC_URL \
-            --set mainnet_rpc_config_values.mantle_rpc_url=$MAINNET_OPERATOR_V1_MANTLE_MAINNET_URL \
-            --set mainnet_rpc_config_values.ethereum_rpc_url=$MAINNET_OPERATOR_V1_ETHEREUM_MAINNET_URL \
-            --set mainnet_rpc_config_values.optimism_rpc_url=$MAINNET_OPERATOR_V1_OPTIMISM_MAINNET_URL \
-            --set mainnet_rpc_config_values.arbitrum_rpc_url=$MAINNET_OPERATOR_V1_ARBITRUM_MAINNET_URL \
-            --set mainnet_rpc_config_values.zora_rpc_url=$MAINNET_OPERATOR_V1_ZORA_MAINNET_URL \
-            --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_OPERATOR_V1_BASE_MAINNET_URL \
+            --set mainnet_rpc_config_values.avalanche_rpc_url=$MAINNET_OPERATOR_V1_AVALANCHE_RPC_URL \
+            --set mainnet_rpc_config_values.polygon_rpc_url=$MAINNET_OPERATOR_V1_POLYGON_RPC_URL \
+            --set mainnet_rpc_config_values.binance_rpc_url=$MAINNET_OPERATOR_V1_BINANCE_SMART_CHAIN_RPC_URL \
+            --set mainnet_rpc_config_values.mantle_rpc_url=$MAINNET_OPERATOR_V1_MANTLE_RPC_URL \
+            --set mainnet_rpc_config_values.ethereum_rpc_url=$MAINNET_OPERATOR_V1_ETHEREUM_RPC_URL \
+            --set mainnet_rpc_config_values.optimism_rpc_url=$MAINNET_OPERATOR_V1_OPTIMISM_RPC_URL \
+            --set mainnet_rpc_config_values.arbitrum_rpc_url=$MAINNET_OPERATOR_V1_ARBITRUM_ONE_RPC_URL \
+            --set mainnet_rpc_config_values.zora_rpc_url=$MAINNET_OPERATOR_V1_ZORA_RPC_URL \
+            --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_OPERATOR_V1_BASE_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_OPERATOR_V1_PRIVATE_KEY \
             --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V1_WALLET_ADDRESS \
@@ -466,7 +466,7 @@ jobs:
             --set image.image_tag=${{ env.IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLO_CONFIG_FILE_DATA }} \
             --set holo_indexer_password=${{ env.MAINNET_HOLO_INDEXER_PASSWORD }} \
-            --set HOLO_INDEXER_HOST=${{ env.MAINNET_HOLOGRAPH_INDEXER_HOST }} \
+            --set HOLO_INDEXER_HOST=$MAINNET_INDEXER_V2_HOLO_INDEXER_HOST \
             --set OPERATOR_API_KEY=$MAINNET_INDEXER_V2_OPERATOR_API_KEY \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             --set HOLOGRAPH_ADDRESS=${{ env.HOLOGRAPH_ADDRESS }} \
@@ -501,15 +501,15 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
             \
-            --set mainnet_rpc_config_values.avalanche_rpc_url=$MAINNET_INDEXER_V2_AVALANCHE_MAINNET_URL \
-            --set mainnet_rpc_config_values.polygon_rpc_url=$MAINNET_INDEXER_V2_POLYGON_MAINNET_URL \
-            --set mainnet_rpc_config_values.ethereum_rpc_url=$MAINNET_INDEXER_V2_ETHEREUM_MAINNET_URL \
-            --set mainnet_rpc_config_values.optimism_rpc_url=$MAINNET_INDEXER_V2_OPTIMISM_MAINNET_URL \
-            --set mainnet_rpc_config_values.arbitrum_rpc_url=$MAINNET_INDEXER_V2_ARBITRUM_MAINNET_URL \
-            --set mainnet_rpc_config_values.binance_rpc_url=$MAINNET_INDEXER_V2_BINANCE_SMART_CHAIN_MAINNET_RPC_URL \
-            --set mainnet_rpc_config_values.mantle_rpc_url=$MAINNET_INDEXER_V2_MANTLE_MAINNET_URL \
-            --set mainnet_rpc_config_values.zora_rpc_url=$MAINNET_INDEXER_V2_ZORA_MAINNET_URL \
-            --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_INDEXER_V2_BASE_MAINNET_URL \
+            --set mainnet_rpc_config_values.avalanche_rpc_url=$MAINNET_INDEXER_V2_AVALANCHE_RPC_URL \
+            --set mainnet_rpc_config_values.polygon_rpc_url=$MAINNET_INDEXER_V2_POLYGON_RPC_URL \
+            --set mainnet_rpc_config_values.ethereum_rpc_url=$MAINNET_INDEXER_V2_ETHEREUM_RPC_URL \
+            --set mainnet_rpc_config_values.optimism_rpc_url=$MAINNET_INDEXER_V2_OPTIMISM_RPC_URL \
+            --set mainnet_rpc_config_values.arbitrum_rpc_url=$MAINNET_INDEXER_V2_ARBITRUM_ONE_RPC_URL \
+            --set mainnet_rpc_config_values.binance_rpc_url=$MAINNET_INDEXER_V2_BINANCE_SMART_CHAIN_RPC_URL \
+            --set mainnet_rpc_config_values.mantle_rpc_url=$MAINNET_INDEXER_V2_MANTLE_RPC_URL \
+            --set mainnet_rpc_config_values.zora_rpc_url=$MAINNET_INDEXER_V2_ZORA_RPC_URL \
+            --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_INDEXER_V2_BASE_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_INDEXER_V2_PRIVATE_KEY \
             --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V2_WALLET_ADDRESS \
@@ -534,7 +534,7 @@ jobs:
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=$COMMON_AWS_SECRET_ACCESS_KEY_SQS \
             --set sqs.SQS_ENDPOINT=$MAINNET_INDEXER_V2_SQS_ENDPOINT \
             --set sqs.SQS_QUEUE_URL=$MAINNET_INDEXER_V2_SQS_QUEUE_URL \
-            --set sqs.AWS_REGION=us-west-2 \
+            --set sqs.AWS_REGION=$COMMON_AWS_REGION \
             \
             --values ./holo-indexer/values-v2-mainnet-iv.yaml
 
@@ -589,7 +589,7 @@ jobs:
             --set image.image_tag=${{ env.IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLO_CONFIG_FILE_DATA }} \
             --set holo_operator_password=${{ env.V2_MAINNET_HOLO_OPERATOR_PASSWORD }} \
-            --set HOLO_OPERATOR_HOST=${{ env.MAINNET_HOLOGRAPH_OPERATOR_HOST }} \
+            --set HOLO_OPERATOR_HOST=$MAINNET_OPERATOR_V2_HOLO_OPERATOR_HOST \
             --set OPERATOR_API_KEY=$MAINNET_OPERATOR_V2_OPERATOR_API_KEY \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             --set HOLOGRAPH_ADDRESS=${{ env.HOLOGRAPH_ADDRESS }} \
@@ -622,15 +622,15 @@ jobs:
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
             \
-            --set mainnet_rpc_config_values.avalanche_rpc_url=$MAINNET_OPERATOR_V2_AVALANCHE_MAINNET_URL \
-            --set mainnet_rpc_config_values.polygon_rpc_url=$MAINNET_OPERATOR_V2_POLYGON_MAINNET_URL \
-            --set mainnet_rpc_config_values.binance_rpc_url=$MAINNET_OPERATOR_V2_BINANCE_SMART_CHAIN_MAINNET_RPC_URL \
-            --set mainnet_rpc_config_values.mantle_rpc_url=$MAINNET_OPERATOR_V2_MANTLE_MAINNET_URL \
-            --set mainnet_rpc_config_values.ethereum_rpc_url=$MAINNET_OPERATOR_V2_ETHEREUM_MAINNET_URL \
-            --set mainnet_rpc_config_values.optimism_rpc_url=$MAINNET_OPERATOR_V2_OPTIMISM_MAINNET_URL \
-            --set mainnet_rpc_config_values.arbitrum_rpc_url=$MAINNET_OPERATOR_V2_ARBITRUM_MAINNET_URL \
-            --set mainnet_rpc_config_values.zora_rpc_url=$MAINNET_OPERATOR_V2_ZORA_MAINNET_URL \
-            --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_OPERATOR_V2_BASE_MAINNET_URL \
+            --set mainnet_rpc_config_values.avalanche_rpc_url=$MAINNET_OPERATOR_V2_AVALANCHE_RPC_URL \
+            --set mainnet_rpc_config_values.polygon_rpc_url=$MAINNET_OPERATOR_V2_POLYGON_RPC_URL \
+            --set mainnet_rpc_config_values.binance_rpc_url=$MAINNET_OPERATOR_V2_BINANCE_SMART_CHAIN_RPC_URL \
+            --set mainnet_rpc_config_values.mantle_rpc_url=$MAINNET_OPERATOR_V2_MANTLE_RPC_URL \
+            --set mainnet_rpc_config_values.ethereum_rpc_url=$MAINNET_OPERATOR_V2_ETHEREUM_RPC_URL \
+            --set mainnet_rpc_config_values.optimism_rpc_url=$MAINNET_OPERATOR_V2_OPTIMISM_RPC_URL \
+            --set mainnet_rpc_config_values.arbitrum_rpc_url=$MAINNET_OPERATOR_V2_ARBITRUM_ONE_RPC_URL \
+            --set mainnet_rpc_config_values.zora_rpc_url=$MAINNET_OPERATOR_V2_ZORA_RPC_URL \
+            --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_OPERATOR_V2_BASE_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_OPERATOR_V2_PRIVATE_KEY \
             --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V2_WALLET_ADDRESS \
