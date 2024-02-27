@@ -16,8 +16,8 @@ env:
   AWS_KEY_ID: ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
   #
-  STG_HOLOGRAPH_INDEXER_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
-  STG_HOLOGRAPH_OPERATOR_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
+#  STG_HOLOGRAPH_INDEXER_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
+#  STG_HOLOGRAPH_OPERATOR_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
   #
   # set the RPC endpoints config files
   INDEXER_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
@@ -200,7 +200,7 @@ jobs:
             --set image.image_tag=${{ env.IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLOGRAPH_CONFIG_FILE_DATA }} \
             --set holo_indexer_password=$DEV_INDEXER_V2_PASSWORD \
-            --set HOLO_INDEXER_HOST=${{ env.STG_HOLOGRAPH_INDEXER_HOST }} \
+            --set HOLO_INDEXER_HOST=$DEV_INDEXER_V2_HOLO_INDEXER_HOST \
             --set OPERATOR_API_KEY=$DEV_INDEXER_V2_OPERATOR_API_KEY \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             --set HOLOGRAPH_ADDRESS=$DEV_INDEXER_V2_HOLOGRAPH_ADDRESS \
@@ -321,7 +321,7 @@ jobs:
             --set image.image_tag=${{ env.IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA }} \
             --set holo_operator_password=$DEV_OPERATOR_V2_PASSWORD \
-            --set HOLO_OPERATOR_HOST=${{ env.STG_HOLOGRAPH_OPERATOR_HOST }} \
+            --set HOLO_OPERATOR_HOST=$DEV_OPERATOR_V2_HOLO_OPERATOR_HOST \
             --set OPERATOR_API_KEY=$DEV_OPERATOR_V2_OPERATOR_API_KEY \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
             --set HOLOGRAPH_ADDRESS=$DEV_OPERATOR_V2_HOLOGRAPH_ADDRESS \
