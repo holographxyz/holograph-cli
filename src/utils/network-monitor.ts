@@ -601,6 +601,9 @@ export class NetworkMonitor {
       binanceSmartChain: BigNumber.from('740000000000000'),
       optimism: BigNumber.from('54000000000000'),
       arbitrumOne: BigNumber.from('100000000000000'),
+      zora: BigNumber.from('100000000000000'),
+      mantle: BigNumber.from('100000000000000'),
+      base: BigNumber.from('100000000000000'),
     }
     for (const network of networks) {
       const networkName = getNetworkByChainId(network).key
@@ -2081,7 +2084,7 @@ export class NetworkMonitor {
         this.structuredLog(network, `Transaction sent to mempool ${tx.hash}`, tags)
         return tx
       } catch (error: any) {
-        this.structuredLogError(network, `Send transaction failed ${error}`, tags)
+        // this.structuredLogError(network, `Send transaction failed ${error}`, tags)
 
         if (error.message.includes('intrinsic gas too low')) {
           if (this.greedy) {
@@ -2109,9 +2112,11 @@ export class NetworkMonitor {
           throw new IntrinsicGasTooLowError()
         } else if (error.message === 'already known' || error.message === 'nonce has already been used') {
           const tx = await this.getTransaction({transactionHash: txHash, network, tags, attempts, interval})
-
           if (!tx) throw new KnownTransactionError(error.message)
           return tx
+        } else if (error.message.includes('transaction underpriced')) {
+          this.structuredLog(network, `Adjust gas price so that it may be submitted`)
+          throw error
         } else {
           throw error
         }
@@ -2129,6 +2134,9 @@ export class NetworkMonitor {
         throw error
       } else if (error instanceof KnownTransactionError) {
         this.structuredLogError(network, error.message, tags)
+        throw error
+      } else if (error.message.includes('transaction underpriced')) {
+        this.structuredLogError(network, 'Transaction gas price too low, not retrying', tags)
         throw error
       } else {
         this.structuredLogError(network, 'Failed submitting transaction', tags)
@@ -2204,14 +2212,15 @@ export class NetworkMonitor {
     }
 
     if (network === 'polygon') {
-      this.structuredLog(network, `Gas Price before = ${formatUnits(gasPrice, 'gwei')}`, tags)
+      this.structuredLog(network, `(polygon) Gas Price before = ${formatUnits(gasPrice, 'gwei')}`, tags)
       const staticGasPrice = BigNumber.from('400017425011')
       gasPrice = gasPrice.gt(staticGasPrice) ? gasPrice : staticGasPrice
     }
+    
 
-    if (network === 'binanceSmartChainTestnet') {
-      this.structuredLog(network, `Gas Price before bnbTestnet = ${formatUnits(gasPrice, 'gwei')}`, tags)
-      const staticGasPrice = BigNumber.from('10000000000')
+    if (network === 'binanceSmartChain') {
+      this.structuredLog(network, `(BNB) Gas Price before = ${formatUnits(gasPrice, 'gwei')}`, tags)
+      const staticGasPrice = BigNumber.from('3000000001')
       gasPrice = gasPrice.gt(staticGasPrice) ? gasPrice : staticGasPrice
     }
 
@@ -2344,16 +2353,26 @@ export class NetworkMonitor {
           return result
         }
       } catch (error: any) {
-        this.structuredLogError(network, `Attempt ${i + 1} failed: ${error.message}`)
-
-        if (i === attempts - 1) {
-          // If this was the last attempt, throw the error.
+        // If this is an execution reverted error, bubble up immediately
+        if ('reason' in error && error.reason.startsWith('execution reverted:')) {
+          // transaction reverted, we got a `revert` error from web3 call
           throw error
         }
 
-        // Sleep before the next attempt.
-        await sleep(interval)
+        // If this is a gas underpriced error, bubble up immediately
+        if (error.message.includes('transaction underpriced')) {
+          throw error
+        }
+
+        this.structuredLogError(network, `Attempt ${i + 1} failed: ${error.message}`)
+        // If this was the last attempt, throw the error.
+        if (i === attempts - 1) {
+          throw error
+        }
       }
+
+      // Sleep before the next attempt.
+      await sleep(interval)
     }
 
     throw new Error(`Maximum attempts reached for ${func.name}, function did not succeed after ${attempts} attempts`)
