@@ -10,11 +10,11 @@ export enum BytecodeType {
 
 export function getByteCodes(bytecodeType: BytecodeType, networkName = ''): string {
   const ZORA_KEY = networks.zora.key
-  const ZORA_TESTNET_KEY = networks.zoraTestnetGoerli.key
+  const ZORA_TESTNET_KEY = networks.zoraTestnetSepolia.key
   const MANTLE_KEY = networks.mantle.key
   const MANTLE_TESTNET_KEY = networks.mantleTestnet.key
   const BASE_KEY = networks.base.key
-  const BASE_TESTNET_KEY = networks.baseTestnetGoerli.key
+  const BASE_TESTNET_KEY = networks.baseTestnetSepolia.key
 
   switch (networkName) {
     case ZORA_KEY:
