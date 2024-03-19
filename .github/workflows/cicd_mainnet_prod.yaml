@@ -191,7 +191,6 @@ jobs:
           ARBITRUM_NETWORK: '{arbitrumOne}'
           ZORA_NETWORK: '{zora}'
           BASE_NETWORK: '{base}'
-          LINEA_NETWORK: '{linea}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -225,7 +224,6 @@ jobs:
             --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
-            --set LINEA_NETWORK="${LINEA_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
@@ -239,7 +237,6 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
-            --set ENABLE_PROCESS_BLOCK_RANGE.linea=$ENABLE_PROCESS_BLOCK_RANGE_linea \
             \
             --set mainnet_rpc_config_values.avalanche_rpc_url=$MAINNET_INDEXER_V1_AVALANCHE_RPC_URL \
             --set mainnet_rpc_config_values.polygon_rpc_url=$MAINNET_INDEXER_V1_POLYGON_RPC_URL \
@@ -250,7 +247,6 @@ jobs:
             --set mainnet_rpc_config_values.mantle_rpc_url=$MAINNET_INDEXER_V1_MANTLE_RPC_URL \
             --set mainnet_rpc_config_values.zora_rpc_url=$MAINNET_INDEXER_V1_ZORA_RPC_URL \
             --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_INDEXER_V1_BASE_RPC_URL \
-            --set mainnet_rpc_config_values.linea_rpc_url=$MAINNET_INDEXER_V1_LINEA_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_INDEXER_V1_PRIVATE_KEY \
             --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V1_WALLET_ADDRESS \
@@ -321,7 +317,6 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
-          ENABLE_PROCESS_BLOCK_RANGE_linea: 'true'
           #
           AVALANCHE_NETWORK: 'avax'
           POLYGON_NETWORK: '{matic}'
@@ -332,7 +327,6 @@ jobs:
           ARBITRUM_NETWORK: '{arbitrumOne}'
           ZORA_NETWORK: '{zora}'
           BASE_NETWORK: '{base}'
-          LINEA_NETWORK: '{linea}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -367,7 +361,6 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
-            --set ENABLE_PROCESS_BLOCK_RANGE.linea=$ENABLE_PROCESS_BLOCK_RANGE_linea \
             \
             --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
             --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
@@ -378,7 +371,6 @@ jobs:
             --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
-            --set LINEA_NETWORK="${LINEA_NETWORK}" \
             \
             --set mainnet_rpc_config_values.avalanche_rpc_url=$MAINNET_OPERATOR_V1_AVALANCHE_RPC_URL \
             --set mainnet_rpc_config_values.polygon_rpc_url=$MAINNET_OPERATOR_V1_POLYGON_RPC_URL \
@@ -389,7 +381,6 @@ jobs:
             --set mainnet_rpc_config_values.arbitrum_rpc_url=$MAINNET_OPERATOR_V1_ARBITRUM_ONE_RPC_URL \
             --set mainnet_rpc_config_values.zora_rpc_url=$MAINNET_OPERATOR_V1_ZORA_RPC_URL \
             --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_OPERATOR_V1_BASE_RPC_URL \
-            --set mainnet_rpc_config_values.linea_rpc_url=$MAINNET_OPERATOR_V1_LINEA_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_OPERATOR_V1_PRIVATE_KEY \
             --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V1_WALLET_ADDRESS \
