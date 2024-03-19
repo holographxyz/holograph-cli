@@ -36,11 +36,11 @@ env:
   MAINNET_COMMON_NAMESPACE: 'mainnet'
   MAINNET_COMMON_NAMESPACE_V2: 'mainnet-v2'
   #######################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.75
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.76
   INDEXER_RELEASE_NAME: 'blondie-indexer-mainnet' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'blondie-indexer-mainnet-v2'
   #
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.9
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.10
   OPERATOR_RELEASE_NAME: 'blondie-operator-mainnet' # format -> [release_name]-operator-[env]
   OPERATOR_RELEASE_NAME_V2: 'blondie-operator-mainnet-v2'
   #######################################
@@ -183,14 +183,15 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           #
           AVALANCHE_NETWORK: 'avalanche'
-          POLYGON_NETWORK: 'polygon'
+          POLYGON_NETWORK: '{polygon}'
           BINANCE_NETWORK: 'binanceSmartChain'
-          MANTLE_NETWORK: 'mantle'
+          MANTLE_NETWORK: '{mantle}'
           ETHEREUM_NETWORK: '{ethereum}'
           OPTIMISM_NETWORK: '{optimism}'
           ARBITRUM_NETWORK: '{arbitrumOne}'
           ZORA_NETWORK: '{zora}'
           BASE_NETWORK: '{base}'
+          LINEA_NETWORK: '{linea}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -224,6 +225,7 @@ jobs:
             --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
+            --set LINEA_NETWORK="${LINEA_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
@@ -237,6 +239,7 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
+            --set ENABLE_PROCESS_BLOCK_RANGE.linea=$ENABLE_PROCESS_BLOCK_RANGE_linea \
             \
             --set mainnet_rpc_config_values.avalanche_rpc_url=$MAINNET_INDEXER_V1_AVALANCHE_RPC_URL \
             --set mainnet_rpc_config_values.polygon_rpc_url=$MAINNET_INDEXER_V1_POLYGON_RPC_URL \
@@ -247,6 +250,7 @@ jobs:
             --set mainnet_rpc_config_values.mantle_rpc_url=$MAINNET_INDEXER_V1_MANTLE_RPC_URL \
             --set mainnet_rpc_config_values.zora_rpc_url=$MAINNET_INDEXER_V1_ZORA_RPC_URL \
             --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_INDEXER_V1_BASE_RPC_URL \
+            --set mainnet_rpc_config_values.linea_rpc_url=$MAINNET_INDEXER_V1_LINEA_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_INDEXER_V1_PRIVATE_KEY \
             --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V1_WALLET_ADDRESS \
@@ -265,6 +269,7 @@ jobs:
             --set replicaCountArbitrum=1 \
             --set replicaCountOptimism=1 \
             --set replicaCountBase=0 \
+            --set replicaCountLinea=0 \
             --set replicaCountZora=1 \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=$COMMON_AWS_ACCESS_KEY_ID_SQS \
@@ -316,16 +321,18 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_linea: 'true'
           #
           AVALANCHE_NETWORK: 'avax'
-          POLYGON_NETWORK: 'matic'
+          POLYGON_NETWORK: '{matic}'
           BINANCE_NETWORK: 'binanceSmartChain'
-          MANTLE_NETWORK: 'mantle'
+          MANTLE_NETWORK: '{mantle}'
           ETHEREUM_NETWORK: '{eth}'
           OPTIMISM_NETWORK: '{optimism}'
           ARBITRUM_NETWORK: '{arbitrumOne}'
           ZORA_NETWORK: '{zora}'
           BASE_NETWORK: '{base}'
+          LINEA_NETWORK: '{linea}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -360,6 +367,7 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
+            --set ENABLE_PROCESS_BLOCK_RANGE.linea=$ENABLE_PROCESS_BLOCK_RANGE_linea \
             \
             --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
             --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
@@ -370,6 +378,7 @@ jobs:
             --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
+            --set LINEA_NETWORK="${LINEA_NETWORK}" \
             \
             --set mainnet_rpc_config_values.avalanche_rpc_url=$MAINNET_OPERATOR_V1_AVALANCHE_RPC_URL \
             --set mainnet_rpc_config_values.polygon_rpc_url=$MAINNET_OPERATOR_V1_POLYGON_RPC_URL \
@@ -380,6 +389,7 @@ jobs:
             --set mainnet_rpc_config_values.arbitrum_rpc_url=$MAINNET_OPERATOR_V1_ARBITRUM_ONE_RPC_URL \
             --set mainnet_rpc_config_values.zora_rpc_url=$MAINNET_OPERATOR_V1_ZORA_RPC_URL \
             --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_OPERATOR_V1_BASE_RPC_URL \
+            --set mainnet_rpc_config_values.linea_rpc_url=$MAINNET_OPERATOR_V1_LINEA_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_OPERATOR_V1_PRIVATE_KEY \
             --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V1_WALLET_ADDRESS \
@@ -393,6 +403,7 @@ jobs:
             --set replicaCountArbitrum=1 \
             --set replicaCountOptimism=1 \
             --set replicaCountBase=0 \
+            --set replicaCountLinea=0 \
             --set replicaCountZora=1 \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
@@ -443,16 +454,18 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_linea: 'true'
           #
           AVALANCHE_NETWORK: 'avalanche'
-          POLYGON_NETWORK: 'polygon'
+          POLYGON_NETWORK: '{polygon}'
           BINANCE_NETWORK: 'binanceSmartChain'
-          MANTLE_NETWORK: 'mantle'
+          MANTLE_NETWORK: '{mantle}'
           ETHEREUM_NETWORK: '{ethereum}'
           OPTIMISM_NETWORK: '{optimism}'
           ARBITRUM_NETWORK: '{arbitrumOne}'
           ZORA_NETWORK: '{zora}'
           BASE_NETWORK: '{base}'
+          LINEA_NETWORK: '{linea}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -487,6 +500,7 @@ jobs:
             --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
+            --set LINEA_NETWORK="${LINEA_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
@@ -500,6 +514,7 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
+            --set ENABLE_PROCESS_BLOCK_RANGE.linea=$ENABLE_PROCESS_BLOCK_RANGE_linea \
             \
             --set mainnet_rpc_config_values.avalanche_rpc_url=$MAINNET_INDEXER_V2_AVALANCHE_RPC_URL \
             --set mainnet_rpc_config_values.polygon_rpc_url=$MAINNET_INDEXER_V2_POLYGON_RPC_URL \
@@ -510,6 +525,7 @@ jobs:
             --set mainnet_rpc_config_values.mantle_rpc_url=$MAINNET_INDEXER_V2_MANTLE_RPC_URL \
             --set mainnet_rpc_config_values.zora_rpc_url=$MAINNET_INDEXER_V2_ZORA_RPC_URL \
             --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_INDEXER_V2_BASE_RPC_URL \
+            --set mainnet_rpc_config_values.linea_rpc_url=$MAINNET_INDEXER_V2_LINEA_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_INDEXER_V2_PRIVATE_KEY \
             --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V2_WALLET_ADDRESS \
@@ -528,6 +544,7 @@ jobs:
             --set replicaCountArbitrum=1 \
             --set replicaCountOptimism=1 \
             --set replicaCountBase=1 \
+            --set replicaCountLinea=1 \
             --set replicaCountZora=1 \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=$COMMON_AWS_ACCESS_KEY_ID_SQS \
@@ -566,16 +583,18 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_linea: 'true'
           #
           AVALANCHE_NETWORK: 'avax'
-          POLYGON_NETWORK: 'matic'
+          POLYGON_NETWORK: '{matic}'
           BINANCE_NETWORK: 'binanceSmartChain'
-          MANTLE_NETWORK: 'mantle'
+          MANTLE_NETWORK: '{mantle}'
           ETHEREUM_NETWORK: '{eth}'
           OPTIMISM_NETWORK: '{optimism}'
           ARBITRUM_NETWORK: '{arbitrumOne}'
           ZORA_NETWORK: '{zora}'
           BASE_NETWORK: '{base}'
+          LINEA_NETWORK: '{linea}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -611,6 +630,7 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
+            --set ENABLE_PROCESS_BLOCK_RANGE.linea=$ENABLE_PROCESS_BLOCK_RANGE_linea \
             \
             --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
             --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
@@ -621,6 +641,7 @@ jobs:
             --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
+            --set LINEA_NETWORK="${LINEA_NETWORK}" \
             \
             --set mainnet_rpc_config_values.avalanche_rpc_url=$MAINNET_OPERATOR_V2_AVALANCHE_RPC_URL \
             --set mainnet_rpc_config_values.polygon_rpc_url=$MAINNET_OPERATOR_V2_POLYGON_RPC_URL \
@@ -631,6 +652,7 @@ jobs:
             --set mainnet_rpc_config_values.arbitrum_rpc_url=$MAINNET_OPERATOR_V2_ARBITRUM_ONE_RPC_URL \
             --set mainnet_rpc_config_values.zora_rpc_url=$MAINNET_OPERATOR_V2_ZORA_RPC_URL \
             --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_OPERATOR_V2_BASE_RPC_URL \
+            --set mainnet_rpc_config_values.linea_rpc_url=$MAINNET_OPERATOR_V2_LINEA_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_OPERATOR_V2_PRIVATE_KEY \
             --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V2_WALLET_ADDRESS \
@@ -644,6 +666,7 @@ jobs:
             --set replicaCountArbitrum=1 \
             --set replicaCountOptimism=1 \
             --set replicaCountBase=1 \
+            --set replicaCountLinea=1 \
             --set replicaCountZora=1 \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \

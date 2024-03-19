@@ -35,7 +35,7 @@ env:
   STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.76
   INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2' # format -> [release_name]-indexer-[env]
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.1.9
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.1.10
   OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2' # format -> [release_name]-indexer-[env]
   #######################################
 
@@ -241,8 +241,10 @@ jobs:
             \
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=$DEV_INDEXER_V2_AVALANCHE_TESTNET_RPC_URL \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=$DEV_INDEXER_V2_POLYGON_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.polygonTestnetAmoy_rpc_url=$DEV_INDEXER_V2_POLYGON_TESTNET_AMOY_RPC_URL \
             --set dev_rpc_config_values.binanceTestnet_rpc_url=$DEV_INDEXER_V2_BINANCE_SMART_CHAIN_TESTNET_RPC_URL \
             --set dev_rpc_config_values.mantleTestnet_rpc_url=$DEV_INDEXER_V2_MANTLE_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.mantleTestnetSepolia_rpc_url=$DEV_INDEXER_V2_MANTLE_TESTNET_SEPOLIA_RPC_URL \
             --set dev_rpc_config_values.ethereumTestnetSepolia_rpc_url=$DEV_INDEXER_V2_ETHEREUM_TESTNET_SEPOLIA_RPC_URL \
             --set dev_rpc_config_values.optimismTestnetSepolia_rpc_url=$DEV_INDEXER_V2_OPTIMISM_TESTNET_SEPOLIA_RPC_URL \
             --set dev_rpc_config_values.arbitrumTestnetSepolia_rpc_url=$DEV_INDEXER_V2_ARBITRUM_TESTNET_SEPOLIA_RPC_URL \
@@ -307,9 +309,9 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_linea: 'true'
           #
           AVALANCHE_NETWORK: 'fuji'
-          POLYGON_NETWORK: 'mumbai'
+          POLYGON_NETWORK: '{mumbai,amoy}'
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
-          MANTLE_NETWORK: 'mantleTestnet'
+          MANTLE_NETWORK: '{mantleTestnet,mantleTestnetSepolia}'
           ETHEREUM_NETWORK: '{ethereumTestnetSepolia}'
           OPTIMISM_NETWORK: '{optimismTestnetSepolia}'
           ARBITRUM_NETWORK: '{arbitrumTestnetSepolia}'
@@ -366,8 +368,10 @@ jobs:
             \
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=$DEV_OPERATOR_V2_AVALANCHE_TESTNET_RPC_URL \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=$DEV_OPERATOR_V2_POLYGON_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.polygonTestnetAmoy_rpc_url=$DEV_OPERATOR_V2_POLYGON_TESTNET_AMOY_RPC_URL \
             --set dev_rpc_config_values.binanceTestnet_rpc_url=$DEV_OPERATOR_V2_BINANCE_SMART_CHAIN_TESTNET_RPC_URL \
             --set dev_rpc_config_values.mantleTestnet_rpc_url=$DEV_OPERATOR_V2_MANTLE_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.mantleTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_MANTLE_TESTNET_SEPOLIA_RPC_URL \
             --set dev_rpc_config_values.ethereumTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_ETHEREUM_TESTNET_SEPOLIA_RPC_URL \
             --set dev_rpc_config_values.optimismTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_OPTIMISM_TESTNET_SEPOLIA_RPC_URL \
             --set dev_rpc_config_values.arbitrumTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_ARBITRUM_TESTNET_SEPOLIA_RPC_URL \
