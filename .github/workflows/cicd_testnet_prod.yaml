@@ -30,10 +30,10 @@ env:
   #
   TESTNET_COMMON_NAMESPACE_V2: 'testnet-v2'
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.77
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.78
   INDEXER_RELEASE_NAME_V2: 'blondie-indexer-testnet-v2' # format -> [release_name]-indexer-[env]
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.11
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.12
   OPERATOR_RELEASE_NAME_V2: 'blondie-operator-testnet-v2' # format -> [release_name]-indexer-[env]
   #######################################
 
