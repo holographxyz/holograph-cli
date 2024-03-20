@@ -120,5 +120,5 @@ export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
   zora: '0xA658742d33ebd2ce2F0bdFf73515Aa797Fd161D9'.toLowerCase(),
   lineaGoerli: '0x6EDCE65403992e310A62460808c4b910D972f10f'.toLocaleLowerCase(),
   lineaSepolia: ''.toLowerCase(),
-  linea: '0x1a44076050125825900e736c501f859c50fe728c'.toLowerCase()
+  linea: '0x1a44076050125825900e736c501f859c50fe728c'.toLowerCase(),
 } as const
