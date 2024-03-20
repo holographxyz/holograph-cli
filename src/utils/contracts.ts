@@ -118,4 +118,7 @@ export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
   base: '0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7'.toLowerCase(),
   zoraTestnetSepolia: '0x55370E0fBB5f5b8dAeD978BA1c075a499eB107B8'.toLowerCase(),
   zora: '0xA658742d33ebd2ce2F0bdFf73515Aa797Fd161D9'.toLowerCase(),
+  lineaGoerli: '0x6EDCE65403992e310A62460808c4b910D972f10f'.toLocaleLowerCase(),
+  lineaSepolia: ''.toLowerCase(),
+  linea: '0x1a44076050125825900e736c501f859c50fe728c'.toLowerCase()
 } as const
