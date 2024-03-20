@@ -30,10 +30,10 @@ env:
   #
   TESTNET_COMMON_NAMESPACE_V2: 'testnet-v2'
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.76
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.77
   INDEXER_RELEASE_NAME_V2: 'blondie-indexer-testnet-v2' # format -> [release_name]-indexer-[env]
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.10
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.11
   OPERATOR_RELEASE_NAME_V2: 'blondie-operator-testnet-v2' # format -> [release_name]-indexer-[env]
   #######################################
 
@@ -195,7 +195,7 @@ jobs:
           ARBITRUM_NETWORK: '{arbitrumTestnetSepolia}'
           ZORA_NETWORK: '{zoraTestnetSepolia}'
           BASE_NETWORK: '{baseTestnetSepolia}'
-          LINEA_NETWORK: '{lineaTestnetGoerli}'
+          LINEA_NETWORK: '{lineaTestnetGoerli,lineaTestnetSepolia}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -258,6 +258,7 @@ jobs:
             --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=$TESTNET_INDEXER_V2_ZORA_TESTNET_SEPOLIA_RPC_URL \
             --set testnet_rpc_config_values.baseTestnetSepolia_rpc_url=$TESTNET_INDEXER_V2_BASE_TESTNET_SEPOLIA_RPC_URL \
             --set testnet_rpc_config_values.lineaTestnetGoelri_rpc_url=$TESTNET_INDEXER_V2_LINEA_TESTNET_GOERLI_RPC_URL \
+            --set testnet_rpc_config_values.lineaTestnetSepolia_rpc_url=$TESTNET_INDEXER_V2_LINEA_TESTNET_SEPOLIA_RPC_URL \
             \
             --set testnet_rpc_config_values.private_key=$TESTNET_INDEXER_V2_PRIVATE_KEY \
             --set testnet_rpc_config_values.address=$COMMON_TESTNET_WALLET_ADDRESS \
@@ -326,7 +327,7 @@ jobs:
           ARBITRUM_NETWORK: '{arbitrumTestnetSepolia}'
           ZORA_NETWORK: '{zoraTestnetSepolia}'
           BASE_NETWORK: '{baseTestnetSepolia}'
-          LINEA_NETWORK: '{lineaTestnetGoerli}'
+          LINEA_NETWORK: '{lineaTestnetGoerli,lineaTestnetSepolia}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -387,6 +388,7 @@ jobs:
             --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=$TESTNET_OPERATOR_V2_ZORA_TESTNET_SEPOLIA_RPC_URL \
             --set testnet_rpc_config_values.baseTestnetSepolia_rpc_url=$TESTNET_OPERATOR_V2_BASE_TESTNET_SEPOLIA_RPC_URL \
             --set testnet_rpc_config_values.lineaTestnetGoerli_rpc_url=$TESTNET_OPERATOR_V2_LINEA_TESTNET_GOERLI_RPC_URL \
+            --set testnet_rpc_config_values.lineaTestnetSepolia_rpc_url=$TESTNET_OPERATOR_V2_LINEA_TESTNET_SEPOLIA_RPC_URL \
             \
             --set testnet_rpc_config_values.private_key=$TESTNET_OPERATOR_V2_PRIVATE_KEY \
             --set testnet_rpc_config_values.address=$COMMON_TESTNET_WALLET_ADDRESS \
