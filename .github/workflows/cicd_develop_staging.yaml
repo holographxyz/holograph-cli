@@ -269,8 +269,8 @@ jobs:
             --set replicaCountEthereum=1 \
             --set replicaCountArbitrum=1 \
             --set replicaCountOptimism=1 \
-            --set replicaCountBase=0 \
-            --set replicaCountLinea=0 \
+            --set replicaCountBase=1 \
+            --set replicaCountLinea=1 \
             --set replicaCountZora=1 \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=$COMMON_AWS_ACCESS_KEY_ID_SQS \
@@ -392,8 +392,8 @@ jobs:
             --set replicaCountEthereum=1 \
             --set replicaCountArbitrum=1 \
             --set replicaCountOptimism=1 \
-            --set replicaCountBase=0 \
-            --set replicaCountLinea=0 \
+            --set replicaCountBase=1 \
+            --set replicaCountLinea=1 \
             --set replicaCountZora=1 \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
