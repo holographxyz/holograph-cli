@@ -36,7 +36,7 @@ env:
   MAINNET_COMMON_NAMESPACE: 'mainnet'
   MAINNET_COMMON_NAMESPACE_V2: 'mainnet-v2'
   #######################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.78
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.79
   INDEXER_RELEASE_NAME: 'blondie-indexer-mainnet' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'blondie-indexer-mainnet-v2'
   #
