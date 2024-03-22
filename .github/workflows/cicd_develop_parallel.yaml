@@ -74,8 +74,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: common-stuff
     env:
-      aws-access-key-id: ${{ needs.common-stuff.outputs.aws-access-key-id }}
-      aws-secret-access-key: ${{ needs.common-stuff.outputs.aws-secret-access-key }}
+      AWS_KEY_ID: ${{ needs.common-stuff.outputs.aws-access-key-id }}
+      AWS_ACCESS_KEY: ${{ needs.common-stuff.outputs.aws-secret-access-key }}
 
     steps:
       - name: Get secrets from AWS Secrets Manager
@@ -103,13 +103,13 @@ jobs:
   deploy-operator:
     name: Deploy-operator-in-develop
     runs-on: ubuntu-latest
-
+    needs: common-stuff
     steps:
-      - name: Use Githubs federated identity with AWS
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          role-to-assume: ${{ env.IAM_ROLE }}
-          aws-region: ${{ env.AWS_REGION }}
+#      - name: Use Githubs federated identity with AWS
+#        uses: aws-actions/configure-aws-credentials@v1
+#        with:
+#          role-to-assume: ${{ env.IAM_ROLE }}
+#          aws-region: ${{ env.AWS_REGION }}
 
       - name: Get secrets from AWS Secrets Manager
         uses: aws-actions/aws-secretsmanager-get-secrets@v1
