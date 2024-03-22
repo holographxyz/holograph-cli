@@ -79,7 +79,7 @@ jobs:
 
     steps:
       - name: Get secrets from AWS Secrets Manager
-        uses: aws-actions/aws-secretsmanager-get-secrets@v1
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2.0.2
         with:
           aws-region: ${{ env.AWS_REGION }}
           secret-ids: |
