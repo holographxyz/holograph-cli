@@ -52,16 +52,28 @@ on:
       - '!master'
 
 jobs:
-  generate-number:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - name: Get Random Number
-        id: set-random-number
-        uses: ./.github/actions/random-number-action
+      - name: Use Githubs federated identity with AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.IAM_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get secrets from AWS Secrets Manager
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2.0.2
+        id: step1
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          secret-ids: |
+            DEV_INDEXER_V2
+            COMMON
+          parse-json-secrets: true # to be able to get the json k/v pairs
 
       - name: Display Random Number
         run:
-          echo "random number -- ${{ steps.set-random-number.outputs.random-number }}"
+          echo "random number -- ${{ steps.step1.outputs.secret-ids }}"
 
 
 #jobs:
