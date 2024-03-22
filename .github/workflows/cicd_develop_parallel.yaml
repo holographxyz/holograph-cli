@@ -56,33 +56,22 @@ jobs:
   common-stuff:
     name: Setup-common-stuff
     runs-on: ubuntu-latest
-    outputs:
-      AWS_KEY_ID: ${{ steps.step1.outputs.aws-access-key-id }}
-      AWS_ACCESS_KEY: ${{ steps.step1.outputs.aws-secret-access-key }}
+#    outputs:
+#      AWS_KEY_ID: ${{ steps.step1.outputs.aws-access-key-id }}
+#      AWS_ACCESS_KEY: ${{ steps.step1.outputs.aws-secret-access-key }}
     steps:
       - name: Use Githubs federated identity with AWS
         uses: aws-actions/configure-aws-credentials@v4
-        id: step1
         with:
           role-to-assume: ${{ env.IAM_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
-          output-credentials: true
 
-  # NOTICE: job
-  deploy-indexer:
-    name: Deploy-indexer-in-develop
-    runs-on: ubuntu-latest
-    needs: common-stuff
-    env:
-      AWS_ACCESS_KEY_ID: ${{ needs.common-stuff.outputs.AWS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ needs.common-stuff.outputs.AWS_ACCESS_KEY }}
-    steps:
       - name: Get secrets from AWS Secrets Manager
         uses: aws-actions/aws-secretsmanager-get-secrets@v2.0.2
+        id: step1
         with:
           aws-region: ${{ env.AWS_REGION }}
           secret-ids: |
-            DEV_INDEXER_V1
             DEV_INDEXER_V2
             COMMON
           parse-json-secrets: true # to be able to get the json k/v pairs
@@ -91,12 +80,21 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
+  # NOTICE: job
+  deploy-indexer:
+    name: Deploy-indexer-in-develop
+    runs-on: ubuntu-latest
+    needs: common-stuff
+#    env:
+#      AWS_ACCESS_KEY_ID: ${{ needs.common-stuff.outputs.AWS_KEY_ID }}
+#      AWS_SECRET_ACCESS_KEY: ${{ needs.common-stuff.outputs.AWS_ACCESS_KEY }}
+    steps:
       - name: Checkout the code
         uses: actions/checkout@v2
 
       - name: test
         run: |
-          ls -la
+          echo $DEV_INDEXER_V2_MANTLE_TESTNET_RPC_URL
 
 #  # NOTICE: job
 #  deploy-operator:
