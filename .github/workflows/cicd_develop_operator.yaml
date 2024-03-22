@@ -1,4 +1,4 @@
-name: Deploy V2 holoclis to staging[develop-v2]
+name: Deploy V2 operator [develop-v2]
 
 permissions:
   id-token: write
@@ -32,15 +32,13 @@ env:
   STG_COMMON_NAMESPACE_V2: 'develop-v2'
   #######################################
   STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.1.13
-#  OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2' # format -> [release_name]-operator-[env]
-  OPERATOR_RELEASE_NAME_V2: 'oadfadfa'
+  OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2' # format -> [release_name]-operator-[env]
   #######################################
 
 on:
   push:
     branches:
       - 'develop'
-      - 'feat/separate-v1-v2-cli-cicd'
       # Excluded branches
       - '!testnet'
       - '!main'
@@ -137,121 +135,121 @@ jobs:
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-#      - name: -> V2 -- Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE_V2 }}]
-#        uses: tensor-hq/eksctl-helm-action@main
-#        env:
-#          RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }} # notice
-#          HOLOGRAPH_VERSION: "V2"
-#          #
-#          ENABLE_DEBUG: 'true'
-#          ENABLE_SYNC: 'true'
-#          HEALTHCHECK: 'true'
-#          MODE: 'auto'
-#          ENABLE_UNSAFE: 'false'
-#          ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
-#          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
-#          #
-#          ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
-#          ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_mantle: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_zora: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
-#          ENABLE_PROCESS_BLOCK_RANGE_linea: 'true'
-#          #
-#          AVALANCHE_NETWORK: 'fuji'
-#          POLYGON_NETWORK: '{mumbai,amoy}'
-#          BINANCE_NETWORK: 'binanceSmartChainTestnet'
-#          MANTLE_NETWORK: '{mantleTestnet,mantleTestnetSepolia}'
-#          ETHEREUM_NETWORK: '{ethereumTestnetSepolia}'
-#          OPTIMISM_NETWORK: '{optimismTestnetSepolia}'
-#          ARBITRUM_NETWORK: '{arbitrumTestnetSepolia}'
-#          ZORA_NETWORK: '{zoraTestnetSepolia}'
-#          BASE_NETWORK: '{baseTestnetSepolia}'
-#          LINEA_NETWORK: '{lineaTestnetGoerli,lineaTestnetSepolia}'
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            helm upgrade --install $RELEASE_NAME \
-#            holo-operator-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}.tgz \
-#            -n ${{ env.STG_COMMON_NAMESPACE_V2 }} \
-#            \
-#            --set dummy_deployment_namespace=dev-cli-dummies \
-#            \
-#            --set image.repository=${{ env.ECR_REPOSITORY }} \
-#            --set image.image_tag=${{ env.IMAGE_TAG }} \
-#            --set config_file_data=${{ env.OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA }} \
-#            --set holo_operator_password=$DEV_OPERATOR_V2_PASSWORD \
-#            --set HOLO_OPERATOR_HOST=$DEV_OPERATOR_V2_HOLO_OPERATOR_HOST \
-#            --set OPERATOR_API_KEY=$DEV_OPERATOR_V2_OPERATOR_API_KEY \
-#            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
-#            --set HOLOGRAPH_ADDRESS=$DEV_OPERATOR_V2_HOLOGRAPH_ADDRESS \
-#            --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
-#            \
-#            --set ENABLE_DEBUG=$ENABLE_DEBUG \
-#            --set ENABLE_SYNC=$ENABLE_SYNC \
-#            --set HEALTHCHECK=$HEALTHCHECK \
-#            --set MODE=$MODE \
-#            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
-#            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
-#            \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
-#            --set ENABLE_PROCESS_BLOCK_RANGE.linea=$ENABLE_PROCESS_BLOCK_RANGE_linea \
-#            \
-#            --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
-#            --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
-#            --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
-#            --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
-#            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
-#            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
-#            --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
-#            --set ZORA_NETWORK="${ZORA_NETWORK}" \
-#            --set BASE_NETWORK="${BASE_NETWORK}" \
-#            --set LINEA_NETWORK="${LINEA_NETWORK}" \
-#            \
-#            --set dev_rpc_config_values.avalancheTestnet_rpc_url=$DEV_OPERATOR_V2_AVALANCHE_TESTNET_RPC_URL \
-#            --set dev_rpc_config_values.polygonTestnet_rpc_url=$DEV_OPERATOR_V2_POLYGON_TESTNET_RPC_URL \
-#            --set dev_rpc_config_values.polygonTestnetAmoy_rpc_url=$DEV_OPERATOR_V2_POLYGON_TESTNET_AMOY_RPC_URL \
-#            --set dev_rpc_config_values.binanceTestnet_rpc_url=$DEV_OPERATOR_V2_BINANCE_SMART_CHAIN_TESTNET_RPC_URL \
-#            --set dev_rpc_config_values.mantleTestnet_rpc_url=$DEV_OPERATOR_V2_MANTLE_TESTNET_RPC_URL \
-#            --set dev_rpc_config_values.mantleTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_MANTLE_TESTNET_SEPOLIA_RPC_URL \
-#            --set dev_rpc_config_values.ethereumTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_ETHEREUM_TESTNET_SEPOLIA_RPC_URL \
-#            --set dev_rpc_config_values.optimismTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_OPTIMISM_TESTNET_SEPOLIA_RPC_URL \
-#            --set dev_rpc_config_values.arbitrumTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_ARBITRUM_TESTNET_SEPOLIA_RPC_URL \
-#            --set dev_rpc_config_values.zoraTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_ZORA_TESTNET_SEPOLIA_RPC_URL \
-#            --set dev_rpc_config_values.baseTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_BASE_TESTNET_SEPOLIA_RPC_URL \
-#            --set dev_rpc_config_values.lineaTestnetGoerli_rpc_url=$DEV_OPERATOR_V2_LINEA_TESTNET_GOERLI_RPC_URL \
-#            --set dev_rpc_config_values.lineaTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_LINEA_TESTNET_SEPOLIA_RPC_URL \
-#            \
-#            --set dev_rpc_config_values.private_key=$DEV_OPERATOR_V2_PRIVATE_KEY \
-#            --set dev_rpc_config_values.address=$COMMON_DEV_WALLET_ADDRESS \
-#            \
-#            --set autoscaling.enabled=false \
-#            --set replicaCountAvalanche=1 \
-#            --set replicaCountPolygon=1 \
-#            --set replicaCountBinance=1 \
-#            --set replicaCountMantle=1 \
-#            --set replicaCountEthereum=1 \
-#            --set replicaCountArbitrum=1 \
-#            --set replicaCountOptimism=1 \
-#            --set replicaCountBase=1 \
-#            --set replicaCountLinea=1 \
-#            --set replicaCountZora=1 \
-#            \
-#            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
-#            --set datadog_tags.service=$RELEASE_NAME \
-#            --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}
+      - name: -> V2 -- Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE_V2 }}]
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }} # notice
+          HOLOGRAPH_VERSION: "V2"
+          #
+          ENABLE_DEBUG: 'true'
+          ENABLE_SYNC: 'true'
+          HEALTHCHECK: 'true'
+          MODE: 'auto'
+          ENABLE_UNSAFE: 'false'
+          ENABLE_PROCESS_BLOCK_RANGE: 'true' # undefined/true
+          UPDATE_BLOCK_HEIGHT: 'api' # api/file/disable
+          #
+          ENABLE_PROCESS_BLOCK_RANGE_arbitrum: 'true' # undefined/true
+          ENABLE_PROCESS_BLOCK_RANGE_optimism: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_binance: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_mantle: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_zora: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_avalanche: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_ethereum: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_linea: 'true'
+          #
+          AVALANCHE_NETWORK: 'fuji'
+          POLYGON_NETWORK: '{mumbai,amoy}'
+          BINANCE_NETWORK: 'binanceSmartChainTestnet'
+          MANTLE_NETWORK: '{mantleTestnet,mantleTestnetSepolia}'
+          ETHEREUM_NETWORK: '{ethereumTestnetSepolia}'
+          OPTIMISM_NETWORK: '{optimismTestnetSepolia}'
+          ARBITRUM_NETWORK: '{arbitrumTestnetSepolia}'
+          ZORA_NETWORK: '{zoraTestnetSepolia}'
+          BASE_NETWORK: '{baseTestnetSepolia}'
+          LINEA_NETWORK: '{lineaTestnetGoerli,lineaTestnetSepolia}'
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            helm upgrade --install $RELEASE_NAME \
+            holo-operator-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}.tgz \
+            -n ${{ env.STG_COMMON_NAMESPACE_V2 }} \
+            \
+            --set dummy_deployment_namespace=dev-cli-dummies \
+            \
+            --set image.repository=${{ env.ECR_REPOSITORY }} \
+            --set image.image_tag=${{ env.IMAGE_TAG }} \
+            --set config_file_data=${{ env.OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA }} \
+            --set holo_operator_password=$DEV_OPERATOR_V2_PASSWORD \
+            --set HOLO_OPERATOR_HOST=$DEV_OPERATOR_V2_HOLO_OPERATOR_HOST \
+            --set OPERATOR_API_KEY=$DEV_OPERATOR_V2_OPERATOR_API_KEY \
+            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
+            --set HOLOGRAPH_ADDRESS=$DEV_OPERATOR_V2_HOLOGRAPH_ADDRESS \
+            --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
+            \
+            --set ENABLE_DEBUG=$ENABLE_DEBUG \
+            --set ENABLE_SYNC=$ENABLE_SYNC \
+            --set HEALTHCHECK=$HEALTHCHECK \
+            --set MODE=$MODE \
+            --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
+            --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
+            \
+            --set ENABLE_PROCESS_BLOCK_RANGE.arbitrum=$ENABLE_PROCESS_BLOCK_RANGE_arbitrum \
+            --set ENABLE_PROCESS_BLOCK_RANGE.binance=$ENABLE_PROCESS_BLOCK_RANGE_binance \
+            --set ENABLE_PROCESS_BLOCK_RANGE.avalanche=$ENABLE_PROCESS_BLOCK_RANGE_avalanche \
+            --set ENABLE_PROCESS_BLOCK_RANGE.optimism=$ENABLE_PROCESS_BLOCK_RANGE_optimism \
+            --set ENABLE_PROCESS_BLOCK_RANGE.ethereum=$ENABLE_PROCESS_BLOCK_RANGE_ethereum \
+            --set ENABLE_PROCESS_BLOCK_RANGE.polygon=$ENABLE_PROCESS_BLOCK_RANGE_polygon \
+            --set ENABLE_PROCESS_BLOCK_RANGE.mantle=$ENABLE_PROCESS_BLOCK_RANGE_mantle \
+            --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
+            --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
+            --set ENABLE_PROCESS_BLOCK_RANGE.linea=$ENABLE_PROCESS_BLOCK_RANGE_linea \
+            \
+            --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
+            --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
+            --set BINANCE_NETWORK="${BINANCE_NETWORK}" \
+            --set MANTLE_NETWORK="${MANTLE_NETWORK}" \
+            --set ETHEREUM_NETWORK="${ETHEREUM_NETWORK}" \
+            --set OPTIMISM_NETWORK="${OPTIMISM_NETWORK}" \
+            --set ARBITRUM_NETWORK="${ARBITRUM_NETWORK}" \
+            --set ZORA_NETWORK="${ZORA_NETWORK}" \
+            --set BASE_NETWORK="${BASE_NETWORK}" \
+            --set LINEA_NETWORK="${LINEA_NETWORK}" \
+            \
+            --set dev_rpc_config_values.avalancheTestnet_rpc_url=$DEV_OPERATOR_V2_AVALANCHE_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.polygonTestnet_rpc_url=$DEV_OPERATOR_V2_POLYGON_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.polygonTestnetAmoy_rpc_url=$DEV_OPERATOR_V2_POLYGON_TESTNET_AMOY_RPC_URL \
+            --set dev_rpc_config_values.binanceTestnet_rpc_url=$DEV_OPERATOR_V2_BINANCE_SMART_CHAIN_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.mantleTestnet_rpc_url=$DEV_OPERATOR_V2_MANTLE_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.mantleTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_MANTLE_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.ethereumTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_ETHEREUM_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.optimismTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_OPTIMISM_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.arbitrumTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_ARBITRUM_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.zoraTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_ZORA_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.baseTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_BASE_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.lineaTestnetGoerli_rpc_url=$DEV_OPERATOR_V2_LINEA_TESTNET_GOERLI_RPC_URL \
+            --set dev_rpc_config_values.lineaTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_LINEA_TESTNET_SEPOLIA_RPC_URL \
+            \
+            --set dev_rpc_config_values.private_key=$DEV_OPERATOR_V2_PRIVATE_KEY \
+            --set dev_rpc_config_values.address=$COMMON_DEV_WALLET_ADDRESS \
+            \
+            --set autoscaling.enabled=false \
+            --set replicaCountAvalanche=1 \
+            --set replicaCountPolygon=1 \
+            --set replicaCountBinance=1 \
+            --set replicaCountMantle=1 \
+            --set replicaCountEthereum=1 \
+            --set replicaCountArbitrum=1 \
+            --set replicaCountOptimism=1 \
+            --set replicaCountBase=1 \
+            --set replicaCountLinea=1 \
+            --set replicaCountZora=1 \
+            \
+            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.service=$RELEASE_NAME \
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}
 
       - name: -> V2 -- Info for the new V2 deployments
         uses: tensor-hq/eksctl-helm-action@main
