@@ -61,7 +61,7 @@ jobs:
       output2: ${{ steps.step1.outputs.value2 }}
     steps:
       - name: Use Githubs federated identity with AWS
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         id: step1
         with:
           role-to-assume: ${{ env.IAM_ROLE }}
