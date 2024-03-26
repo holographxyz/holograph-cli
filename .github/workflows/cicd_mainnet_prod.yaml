@@ -318,8 +318,8 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           #
-          AVALANCHE_NETWORK: 'avax'
-          POLYGON_NETWORK: '{matic}'
+          AVALANCHE_NETWORK: 'avalanche'
+          POLYGON_NETWORK: '{polygon}'
           BINANCE_NETWORK: 'binanceSmartChain'
           MANTLE_NETWORK: '{mantle}'
           ETHEREUM_NETWORK: '{eth}'
@@ -576,8 +576,8 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_linea: 'true'
           #
-          AVALANCHE_NETWORK: 'avax'
-          POLYGON_NETWORK: '{matic}'
+          AVALANCHE_NETWORK: 'avalanche'
+          POLYGON_NETWORK: '{polygon}'
           BINANCE_NETWORK: 'binanceSmartChain'
           MANTLE_NETWORK: '{mantle}'
           ETHEREUM_NETWORK: '{eth}'
