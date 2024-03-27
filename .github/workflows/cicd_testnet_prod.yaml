@@ -30,10 +30,10 @@ env:
   #
   TESTNET_COMMON_NAMESPACE_V2: 'testnet-v2'
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.82
+  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.85
   INDEXER_RELEASE_NAME_V2: 'blondie-indexer-testnet-v2' # format -> [release_name]-indexer-[env]
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.14
+  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.16
   OPERATOR_RELEASE_NAME_V2: 'blondie-operator-testnet-v2' # format -> [release_name]-indexer-[env]
   #######################################
 
@@ -187,15 +187,15 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_linea: 'true'
           #
           AVALANCHE_NETWORK: 'fuji'
-          POLYGON_NETWORK: '{mumbai,amoy}'
+          POLYGON_NETWORK: '{mumbai}'
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
-          MANTLE_NETWORK: '{mantleTestnet,mantleSepolia}'
+          MANTLE_NETWORK: '{mantleTestnet}'
           ETHEREUM_NETWORK: '{ethereumTestnetSepolia}'
           OPTIMISM_NETWORK: '{optimismTestnetSepolia}'
           ARBITRUM_NETWORK: '{arbitrumTestnetSepolia}'
           ZORA_NETWORK: '{zoraTestnetSepolia}'
           BASE_NETWORK: '{baseTestnetSepolia}'
-          LINEA_NETWORK: '{lineaTestnetGoerli,lineaTestnetSepolia}'
+          LINEA_NETWORK: '{lineaTestnetGoerli}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -261,7 +261,7 @@ jobs:
             --set testnet_rpc_config_values.lineaTestnetSepolia_rpc_url=$TESTNET_INDEXER_V2_LINEA_TESTNET_SEPOLIA_RPC_URL \
             \
             --set testnet_rpc_config_values.private_key=$TESTNET_INDEXER_V2_PRIVATE_KEY \
-            --set testnet_rpc_config_values.address=$COMMON_TESTNET_WALLET_ADDRESS \
+            --set testnet_rpc_config_values.address=$TESTNET_INDEXER_V2_TESTNET_WALLET_ADDRESS \
             --set testnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
@@ -319,15 +319,15 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_linea: 'true'
           #
           AVALANCHE_NETWORK: 'fuji'
-          POLYGON_NETWORK: '{mumbai,amoy}'
+          POLYGON_NETWORK: '{mumbai}'
           BINANCE_NETWORK: 'binanceSmartChainTestnet'
-          MANTLE_NETWORK: '{mantleTestnet,mantleTestnetSepolia}'
+          MANTLE_NETWORK: '{mantleTestnet}'
           ETHEREUM_NETWORK: '{ethereumTestnetSepolia}'
           OPTIMISM_NETWORK: '{optimismTestnetSepolia}'
           ARBITRUM_NETWORK: '{arbitrumTestnetSepolia}'
           ZORA_NETWORK: '{zoraTestnetSepolia}'
           BASE_NETWORK: '{baseTestnetSepolia}'
-          LINEA_NETWORK: '{lineaTestnetGoerli,lineaTestnetSepolia}'
+          LINEA_NETWORK: '{lineaTestnetGoerli}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -391,7 +391,7 @@ jobs:
             --set testnet_rpc_config_values.lineaTestnetSepolia_rpc_url=$TESTNET_OPERATOR_V2_LINEA_TESTNET_SEPOLIA_RPC_URL \
             \
             --set testnet_rpc_config_values.private_key=$TESTNET_OPERATOR_V2_PRIVATE_KEY \
-            --set testnet_rpc_config_values.address=$COMMON_TESTNET_WALLET_ADDRESS \
+            --set testnet_rpc_config_values.address=$TESTNET_OPERATOR_V2_TESTNET_WALLET_ADDRESS \
             \
             --set autoscaling.enabled=false \
             --set replicaCountAvalanche=1 \
