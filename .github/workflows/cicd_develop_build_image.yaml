@@ -27,11 +27,11 @@
 #      - '!master'
 #
 #jobs:
-#  build-the-image:
-#    name: build-the-image
-#    runs-on: ubuntu-latest
-#
-#    steps:
+  build-the-image:
+    name: build-the-image
+    runs-on: ubuntu-latest
+
+    steps:
       - name: Use Githubs federated identity with AWS
         uses: aws-actions/configure-aws-credentials@v1
         with:

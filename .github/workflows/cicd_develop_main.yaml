@@ -28,5 +28,5 @@ on:
 
 jobs:
   build-the-image:
-  - name: cicd_develop_build_image
+  - name: build-the-image
     uses: ./.github/cicd_develop_build_image
