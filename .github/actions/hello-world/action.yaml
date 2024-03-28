@@ -1,0 +1,8 @@
+name: 'Hello World'
+description: 'Greet someone'
+runs:
+  using: "composite"
+  steps:
+    - name: Set Greeting
+      shell: bash
+      run: echo "Hello world"

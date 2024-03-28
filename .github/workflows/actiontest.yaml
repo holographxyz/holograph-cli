@@ -27,6 +27,9 @@ on:
       - '!master'
 
 jobs:
-  build-the-image:
-  - name: build-the-image
-    uses: ./.github/cicd_develop_build_image
+  my-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Use Composite Action
+        uses: ./.github/actions/hello-world
+
