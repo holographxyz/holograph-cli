@@ -67,8 +67,6 @@ jobs:
         with:
           aws-region: ${{ env.AWS_REGION }}
           secret-ids: |
-            DEV_INDEXER_V1
-            DEV_OPERATOR_V1
             DEV_INDEXER_V2
             DEV_OPERATOR_V2
             COMMON
