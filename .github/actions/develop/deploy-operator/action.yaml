@@ -28,15 +28,15 @@ runs:
         ENABLE_PROCESS_BLOCK_RANGE_linea: 'true'
         #
         AVALANCHE_NETWORK: 'fuji'
-        POLYGON_NETWORK: '{mumbai,amoy}'
+        POLYGON_NETWORK: '{mumbai}'
         BINANCE_NETWORK: 'binanceSmartChainTestnet'
-        MANTLE_NETWORK: '{mantleTestnet,mantleTestnetSepolia}'
+        MANTLE_NETWORK: '{mantleTestnet}'
         ETHEREUM_NETWORK: '{ethereumTestnetSepolia}'
         OPTIMISM_NETWORK: '{optimismTestnetSepolia}'
         ARBITRUM_NETWORK: '{arbitrumTestnetSepolia}'
         ZORA_NETWORK: '{zoraTestnetSepolia}'
         BASE_NETWORK: '{baseTestnetSepolia}'
-        LINEA_NETWORK: '{lineaTestnetGoerli,lineaTestnetSepolia}'
+        LINEA_NETWORK: '{lineaTestnetGoerli}'
       with:
         eks_cluster: ${{ env.CLUSTER_NAME }}
         command: |-
@@ -100,7 +100,7 @@ runs:
           --set dev_rpc_config_values.lineaTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_LINEA_TESTNET_SEPOLIA_RPC_URL \
           \
           --set dev_rpc_config_values.private_key=$DEV_OPERATOR_V2_PRIVATE_KEY \
-          --set dev_rpc_config_values.address=$COMMON_DEV_WALLET_ADDRESS \
+          --set dev_rpc_config_values.address=$DEV_OPERATOR_V2_DEV_WALLET_ADDRESS \
           \
           --set autoscaling.enabled=false \
           --set replicaCountAvalanche=1 \
