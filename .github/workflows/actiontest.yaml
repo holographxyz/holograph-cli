@@ -27,7 +27,7 @@ on:
       - '!master'
 
 jobs:
-  my-job:
+  deploy-clis:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
