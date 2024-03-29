@@ -60,14 +60,14 @@ jobs:
       - uses: actions/checkout@v4
       #
       - name: Initial Setup [composite action]
-        uses: ./.github/actions/initial-setup
+        uses: ./.github/actions/develop/initial-setup
       #
-      - name: Deploy Indexer [composite action]
-        uses: ./.github/actions/deploy-indexer
-      #
-      - name: Pause for 60 seconds
-        shell: bash
-        run: sleep 60
-      #
-      - name: Deploy Operator [composite action]
-        uses: ./.github/actions/deploy-operator
+#      - name: Deploy Indexer [composite action]
+#        uses: ./.github/actions/develop/deploy-indexer
+#      #
+#      - name: Pause for 60 seconds
+#        shell: bash
+#        run: sleep 60
+#      #
+#      - name: Deploy Operator [composite action]
+#        uses: ./.github/actions/develop/deploy-operator
