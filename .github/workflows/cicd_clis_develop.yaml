@@ -53,7 +53,7 @@ on:
       - '!master'
 
 jobs:
-  deploy-clis[dev]:
+  deploy-clis-dev:
     runs-on: ubuntu-latest
     steps:
       #
