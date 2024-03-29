@@ -30,22 +30,19 @@ env:
   #
   # SQS User [indexer_processor_sqs_user]
   #
-#  STG_COMMON_NAMESPACE_V2: 'develop-v2'
-  STG_COMMON_NAMESPACE_V2: 'testholo'
+  STG_COMMON_NAMESPACE_V2: 'develop-v2'
   #######################################
   STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.81
-#  INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2' # format -> [release_name]-indexer-[env]
-  INDEXER_RELEASE_NAME_V2: 'test-1'
+  INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2' # format -> [release_name]-indexer-[env]
   #
   STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.1.13
-#  OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2' # format -> [release_name]-indexer-[env]
-  OPERATOR_RELEASE_NAME_V2: 'test-2'
+  OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2' # format -> [release_name]-indexer-[env]
   #######################################
 
 on:
   push:
     branches:
-      - 'feat/separate-v1-v2-cli-cicd'
+      - 'develop'
       # Excluded branches
       - '!testnet'
       - '!main'
@@ -62,12 +59,12 @@ jobs:
       - name: Initial Setup [composite action]
         uses: ./.github/actions/develop/initial-setup
       #
-#      - name: Deploy Indexer [composite action]
-#        uses: ./.github/actions/develop/deploy-indexer
-#      #
-#      - name: Pause for 60 seconds
-#        shell: bash
-#        run: sleep 60
-#      #
-#      - name: Deploy Operator [composite action]
-#        uses: ./.github/actions/develop/deploy-operator
+      - name: Deploy Indexer [composite action]
+        uses: ./.github/actions/develop/deploy-indexer
+      #
+      - name: Pause for 60 seconds
+        shell: bash
+        run: sleep 60
+      #
+      - name: Deploy Operator [composite action]
+        uses: ./.github/actions/develop/deploy-operator
