@@ -36,11 +36,11 @@ env:
   MAINNET_COMMON_NAMESPACE: 'mainnet'
   MAINNET_COMMON_NAMESPACE_V2: 'mainnet-v2'
   #######################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.81
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.85
   INDEXER_RELEASE_NAME: 'blondie-indexer-mainnet' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'blondie-indexer-mainnet-v2'
   #
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.13
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.16
   OPERATOR_RELEASE_NAME: 'blondie-operator-mainnet' # format -> [release_name]-operator-[env]
   OPERATOR_RELEASE_NAME_V2: 'blondie-operator-mainnet-v2'
   #######################################
@@ -249,7 +249,7 @@ jobs:
             --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_INDEXER_V1_BASE_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_INDEXER_V1_PRIVATE_KEY \
-            --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V1_WALLET_ADDRESS \
+            --set mainnet_rpc_config_values.address=$MAINNET_INDEXER_V1_MAINNET_V1_WALLET_ADDRESS \
             --set mainnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
@@ -318,8 +318,8 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           #
-          AVALANCHE_NETWORK: 'avax'
-          POLYGON_NETWORK: '{matic}'
+          AVALANCHE_NETWORK: 'avalanche'
+          POLYGON_NETWORK: '{polygon}'
           BINANCE_NETWORK: 'binanceSmartChain'
           MANTLE_NETWORK: '{mantle}'
           ETHEREUM_NETWORK: '{eth}'
@@ -383,7 +383,7 @@ jobs:
             --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_OPERATOR_V1_BASE_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_OPERATOR_V1_PRIVATE_KEY \
-            --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V1_WALLET_ADDRESS \
+            --set mainnet_rpc_config_values.address=$MAINNET_OPERATOR_V1_MAINNET_V1_WALLET_ADDRESS \
             \
             --set autoscaling.enabled=false \
             --set replicaCountAvalanche=1 \
@@ -519,7 +519,7 @@ jobs:
             --set mainnet_rpc_config_values.linea_rpc_url=$MAINNET_INDEXER_V2_LINEA_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_INDEXER_V2_PRIVATE_KEY \
-            --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V2_WALLET_ADDRESS \
+            --set mainnet_rpc_config_values.address=$MAINNET_INDEXER_V2_MAINNET_V2_WALLET_ADDRESS \
             --set mainnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
@@ -576,8 +576,8 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_linea: 'true'
           #
-          AVALANCHE_NETWORK: 'avax'
-          POLYGON_NETWORK: '{matic}'
+          AVALANCHE_NETWORK: 'avalanche'
+          POLYGON_NETWORK: '{polygon}'
           BINANCE_NETWORK: 'binanceSmartChain'
           MANTLE_NETWORK: '{mantle}'
           ETHEREUM_NETWORK: '{eth}'
@@ -646,7 +646,7 @@ jobs:
             --set mainnet_rpc_config_values.linea_rpc_url=$MAINNET_OPERATOR_V2_LINEA_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_OPERATOR_V2_PRIVATE_KEY \
-            --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V2_WALLET_ADDRESS \
+            --set mainnet_rpc_config_values.address=$MAINNET_OPERATOR_V2_MAINNET_V2_WALLET_ADDRESS \
             \
             --set autoscaling.enabled=false \
             --set replicaCountAvalanche=1 \
