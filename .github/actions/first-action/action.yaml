@@ -1,8 +1,9 @@
 name: 'Hello World'
-description: 'Greet someone'
+env:
+  NAME: kabamaru
 runs:
   using: "composite"
   steps:
     - name: Set Greeting
       shell: bash
-      run: echo "Hello world"
+      run: echo "Hello ${{ env.NAME }}"
