@@ -1,9 +1,7 @@
-env:
-  NAME: kabamaru
 name: 'Hello World'
 runs:
   using: "composite"
   steps:
     - name: Set Greeting
       shell: bash
-      run: echo "Hello ${{ env.NAME }}"
+      run: echo "Hello ${{ env.AWS_REGION }}"
