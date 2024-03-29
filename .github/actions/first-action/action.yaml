@@ -1,6 +1,6 @@
-name: 'Hello World'
 env:
   NAME: kabamaru
+name: 'Hello World'
 runs:
   using: "composite"
   steps:
