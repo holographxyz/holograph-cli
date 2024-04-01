@@ -50,13 +50,14 @@ env:
 on:
   pull_request:
     branches:
-      - 'testnet'
+      - 'deactivated'
+#      - 'testnet'
     types: [closed]
 
 jobs:
   deploy-to-prod-testnet:
     if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
-    name: Deploy-to-prod[testnet]
+    name: Deploy-on-testnet
     runs-on: ubuntu-latest
 
     steps:
@@ -71,8 +72,6 @@ jobs:
         with:
           aws-region: ${{ env.AWS_REGION }}
           secret-ids: |
-            TESTNET_INDEXER_V1
-            TESTNET_OPERATOR_V1
             TESTNET_INDEXER_V2
             TESTNET_OPERATOR_V2
             COMMON

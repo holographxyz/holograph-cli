@@ -58,7 +58,8 @@ env:
 on:
   pull_request:
     branches:
-      - 'mainnet'
+      - 'deactivated'
+#      - 'mainnet'
     types: [closed]
 
 jobs:
