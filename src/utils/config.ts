@@ -130,9 +130,9 @@ export function generateSupportedNetworksOptions(configNetworks?: ConfigNetworks
   const options: SelectOption[] = []
   for (const key of supportedNetworks) {
     if (configNetworks === undefined) {
-      options.push({name: networks[key].shortKey, value: networks[key].key} as SelectOption)
+      options.push({name: networks[key].key, value: networks[key].key} as SelectOption)
     } else if (key in configNetworks) {
-      options.push({name: networks[key].shortKey, value: networks[key].key} as SelectOption)
+      options.push({name: networks[key].key, value: networks[key].key} as SelectOption)
     }
   }
 

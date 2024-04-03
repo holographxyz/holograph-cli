@@ -7,7 +7,7 @@ import {WebSocketProvider, JsonRpcProvider} from '@ethersproject/providers'
 import {BigNumber} from '@ethersproject/bignumber'
 import {BytesLike} from '@ethersproject/bytes'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
-import {networks, supportedShortNetworks} from '@holographxyz/networks'
+import {networks, supportedNetworks} from '@holographxyz/networks'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {NetworkMonitor} from '../../utils/network-monitor'
@@ -29,7 +29,7 @@ import {overrideToMinGasPrice} from '../../utils/web3'
 export default class BridgeNFT extends Command {
   static description = 'Bridge a Holographable NFT from one network to another.'
   static examples = [
-    '$ <%= config.bin %> <%= command.id %> --sourceNetwork="goerli" --destinationNetwork="fuji" --collectionAddress="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId="0x01"',
+    '$ <%= config.bin %> <%= command.id %> --sourceNetwork="ethereumTestnetSepolia" --destinationNetwork="avalancheTestnet" --collectionAddress="0x1318d3420b0169522eB8F3EF0830aceE700A2eda" --tokenId="0x01"',
   ]
 
   static flags = {
@@ -48,14 +48,14 @@ export default class BridgeNFT extends Command {
     sourceNetwork: Flags.string({
       description: 'The source network from which to bridge',
       parse: validateNetwork,
-      options: supportedShortNetworks,
+      options: supportedNetworks,
       multiple: false,
       required: false,
     }),
     destinationNetwork: Flags.string({
       description: 'The destination network which to bridge to',
       parse: validateNetwork,
-      options: supportedShortNetworks,
+      options: supportedNetworks,
       multiple: false,
       required: false,
     }),

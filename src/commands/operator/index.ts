@@ -56,7 +56,9 @@ import {IntrinsicGasTooLowError} from '../../utils/errors'
  */
 export default class Operator extends OperatorJobAwareCommand {
   static description = 'Listen for jobs and execute jobs.'
-  static examples = ['$ <%= config.bin %> <%= command.id %> --networks goerli fuji mumbai --mode=auto --sync']
+  static examples = [
+    '$ <%= config.bin %> <%= command.id %> --networks ethereumTestnetSepolia polygonTestnet avalancheTestnet --mode=auto --sync',
+  ]
 
   static flags = {
     mode: Flags.string({

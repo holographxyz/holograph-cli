@@ -85,7 +85,7 @@ export const processBlockRange = {
 export const networksFlag = {
   networks: Flags.string({
     description: 'Space separated list of networks to use',
-    options: [...supportedNetworks, ...supportedShortNetworks],
+    options: [...supportedNetworks],
     required: false,
     multiple: true,
   }),
@@ -94,7 +94,7 @@ export const networksFlag = {
 export const networkFlag = {
   network: Flags.string({
     description: 'Name of network to use',
-    options: [...supportedNetworks, ...supportedShortNetworks],
+    options: [...supportedNetworks],
     multiple: false,
     required: false,
   }),
@@ -995,6 +995,8 @@ export class NetworkMonitor {
       setTimeout(this.jobHandlerBuilder.bind(this)(network), 1000)
     } else if (this.blockJobMonitorProcess[network]) {
       this.structuredLog(network, 'All jobs done for network')
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
       clearInterval(this.blockJobMonitorProcess[network])
       delete this.blockJobMonitorProcess[network]
       this.runningProcesses -= 1
