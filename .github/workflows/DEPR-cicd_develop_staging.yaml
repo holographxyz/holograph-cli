@@ -1,4 +1,4 @@
-name: Deploy V2 holoclis to prod[testnet-v2]
+name: Deploy V2 holoclis to staging[develop-v2]
 
 permissions:
   id-token: write
@@ -7,56 +7,52 @@ permissions:
 env:
   AWS_REGION: us-west-2
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
-  ECR_REPOSITORY: holo-cli # notice: the same for all cli apps
+  ECR_REPOSITORY: holo-cli-dev # notice: the same for all cli apps
   #
-  IMAGE_TAG: testnet-${{ github.sha }}
+  IMAGE_TAG: dev-${{ github.sha }}
   #
-  CLUSTER_NAME: prod0
+  CLUSTER_NAME: staging
   #
-  AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
-  AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
+  AWS_KEY_ID: ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
+  AWS_ACCESS_KEY: ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
   #
-#  TESTNET_HOLOGRAPH_INDEXER_HOST: 'http://testblondie-holo-api.testnet.svc.cluster.local:443'
-#  TESTNET_HOLOGRAPH_OPERATOR_HOST: 'http://testblondie-holo-api.testnet.svc.cluster.local:443'
+#  STG_HOLOGRAPH_INDEXER_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
+#  STG_HOLOGRAPH_OPERATOR_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
   #
   # set the RPC endpoints config files
-  INDEXER_HOLOGRAPH_CONFIG_FILE_DATA: testnet-config-file
-  OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA: testnet-config-file
+  INDEXER_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
+  OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
   #
-  HOLOGRAPH_ENVIRONMENT: testnet
+  HOLOGRAPH_ENVIRONMENT: develop
   BLOCK_PROCESSING_VERSION: 'V2'
   #
-  TESTNET_DOMAIN: 'holograph.xyz' # needed only for the health checks
+  STG_DOMAIN: 'holograph.xyz' # needed only for the health checks
   #
-  TESTNET_COMMON_NAMESPACE_V2: 'testnet-v2'
+  # SQS User [indexer_processor_sqs_user]
+  #
+  STG_COMMON_NAMESPACE_V2: 'develop-v2'
   #######################################
-  TESTNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.87
-  INDEXER_RELEASE_NAME_V2: 'blondie-indexer-testnet-v2' # format -> [release_name]-indexer-[env]
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.87
+  INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2' # format -> [release_name]-indexer-[env]
   #
-  TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.18
-  OPERATOR_RELEASE_NAME_V2: 'blondie-operator-testnet-v2' # format -> [release_name]-indexer-[env]
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.1.18
+  OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2' # format -> [release_name]-indexer-[env]
   #######################################
 
-# notice: the trigger
-#on:
-#  push:
-#    branches:
-#      - 'something'
-#      # Excluded branches
-#      - '!develop'
-#      - '!main'
-#      - '!master'
-# notice: the trigger
 on:
-  pull_request:
+  push:
     branches:
-      - 'testnet'
-    types: [closed]
+      - 'deactivated'
+#      - 'develop'
+      # Excluded branches
+      - '!testnet'
+      - '!main'
+      - '!mainnet'
+      - '!master'
 
 jobs:
-  deploy-to-prod-testnet:
-    if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
-    name: Deploy-to-prod[testnet]
+  deploy-to-staging:
+    name: Deploy-to-staging[dev]
     runs-on: ubuntu-latest
 
     steps:
@@ -71,8 +67,8 @@ jobs:
         with:
           aws-region: ${{ env.AWS_REGION }}
           secret-ids: |
-            TESTNET_INDEXER_V2
-            TESTNET_OPERATOR_V2
+            DEV_INDEXER_V2
+            DEV_OPERATOR_V2
             COMMON
           parse-json-secrets: true # to be able to get the json k/v pairs
 
@@ -126,12 +122,12 @@ jobs:
           aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
           aws-region: ${{ env.AWS_REGION }}
 
-#      - name: Create ns [${{ env.TESTNET_COMMON_NAMESPACE }}]
+#      - name: Create ns [${{ env.STG_COMMON_NAMESPACE }}]
 #        uses: tensor-hq/eksctl-helm-action@main
 #        with:
 #          eks_cluster: ${{ env.CLUSTER_NAME }}
 #          command: |-
-#            kubectl create namespace ${{ env.TESTNET_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+#            kubectl create namespace ${{ env.STG_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
 
       # NOTICE: --- INDEXER ---
       - name: Pull the holograph-indexer helm chart version x.x.x from ECR
@@ -139,12 +135,11 @@ jobs:
         env:
           #
           CHART_REPO: holo-indexer
-          CHART_VERSION: ${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }}
+          CHART_VERSION: ${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }}
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-          helm pull --untar oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
       # NOTICE: --- OPERATOR ---
       - name: Pull the holograph-operator helm chart version x.x.x from ECR
@@ -152,14 +147,13 @@ jobs:
         env:
           #
           CHART_REPO: holo-operator
-          CHART_VERSION: ${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }}
+          CHART_VERSION: ${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}
           #
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           helm pull oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
-          helm pull --untar oci://$ECR_REGISTRY/$CHART_REPO --version $CHART_VERSION
 
-      - name: -> V2 -- Deploy INDEXER cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE_V2 }}]
+      - name: -> V2 -- Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE_V2 }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }} # notice
@@ -200,19 +194,19 @@ jobs:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             helm upgrade --install $RELEASE_NAME \
-            holo-indexer-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }}.tgz \
-            -n ${{ env.TESTNET_COMMON_NAMESPACE_V2 }} \
+            holo-indexer-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }}.tgz \
+            -n ${{ env.STG_COMMON_NAMESPACE_V2 }} \
             \
-            --set dummy_deployment_namespace=testnet-cli-dummies \
+            --set dummy_deployment_namespace=dev-cli-dummies \
             \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.IMAGE_TAG }} \
             --set config_file_data=${{ env.INDEXER_HOLOGRAPH_CONFIG_FILE_DATA }} \
-            --set holo_indexer_password=$TESTNET_INDEXER_V2_PASSWORD \
-            --set HOLO_INDEXER_HOST=$TESTNET_INDEXER_V2_HOLO_INDEXER_HOST \
-            --set OPERATOR_API_KEY=$TESTNET_INDEXER_V2_OPERATOR_API_KEY \
+            --set holo_indexer_password=$DEV_INDEXER_V2_PASSWORD \
+            --set HOLO_INDEXER_HOST=$DEV_INDEXER_V2_HOLO_INDEXER_HOST \
+            --set OPERATOR_API_KEY=$DEV_INDEXER_V2_OPERATOR_API_KEY \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
-            --set HOLOGRAPH_ADDRESS=$TESTNET_INDEXER_V2_HOLOGRAPH_ADDRESS \
+            --set HOLOGRAPH_ADDRESS=$DEV_INDEXER_V2_HOLOGRAPH_ADDRESS \
             --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
             --set BLOCK_PROCESSING_VERSION=${{ env.BLOCK_PROCESSING_VERSION }} \
             \
@@ -248,28 +242,28 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.linea=$ENABLE_PROCESS_BLOCK_RANGE_linea \
             --set ENABLE_PROCESS_BLOCK_RANGE.sei=$ENABLE_PROCESS_BLOCK_RANGE_sei \
             \
-            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=$TESTNET_INDEXER_V2_AVALANCHE_TESTNET_RPC_URL \
-            --set testnet_rpc_config_values.polygonTestnet_rpc_url=$TESTNET_INDEXER_V2_POLYGON_TESTNET_RPC_URL \
-            --set testnet_rpc_config_values.polygonTestnetAmoy_rpc_url=$TESTNET_INDEXER_V2_POLYGON_TESTNET_AMOY_RPC_URL \
-            --set testnet_rpc_config_values.binanceTestnet_rpc_url=$TESTNET_INDEXER_V2_BINANCE_SMART_CHAIN_TESTNET_RPC_URL \
-            --set testnet_rpc_config_values.mantleTestnet_rpc_url=$TESTNET_INDEXER_V2_MANTLE_TESTNET_RPC_URL \
-            --set testnet_rpc_config_values.mantleTestnetSepolia_rpc_url=$TESTNET_INDEXER_V2_MANTLE_TESTNET_SEPOLIA_RPC_URL \
-            --set testnet_rpc_config_values.ethereumTestnetSepolia_rpc_url=$TESTNET_INDEXER_V2_ETHEREUM_TESTNET_SEPOLIA_RPC_URL \
-            --set testnet_rpc_config_values.optimismTestnetSepolia_rpc_url=$TESTNET_INDEXER_V2_OPTIMISM_TESTNET_SEPOLIA_RPC_URL \
-            --set testnet_rpc_config_values.arbitrumTestnetSepolia_rpc_url=$TESTNET_INDEXER_V2_ARBITRUM_TESTNET_SEPOLIA_RPC_URL \
-            --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=$TESTNET_INDEXER_V2_ZORA_TESTNET_SEPOLIA_RPC_URL \
-            --set testnet_rpc_config_values.baseTestnetSepolia_rpc_url=$TESTNET_INDEXER_V2_BASE_TESTNET_SEPOLIA_RPC_URL \
-            --set testnet_rpc_config_values.lineaTestnetGoerli_rpc_url=$TESTNET_INDEXER_V2_LINEA_TESTNET_GOERLI_RPC_URL \
-            --set testnet_rpc_config_values.lineaTestnetSepolia_rpc_url=$TESTNET_INDEXER_V2_LINEA_TESTNET_SEPOLIA_RPC_URL \
-            --set testnet_rpc_config_values.seiTestnetArctic_rpc_url=$TESTNET_INDEXER_V2_SEI_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.avalancheTestnet_rpc_url=$DEV_INDEXER_V2_AVALANCHE_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.polygonTestnet_rpc_url=$DEV_INDEXER_V2_POLYGON_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.polygonTestnetAmoy_rpc_url=$DEV_INDEXER_V2_POLYGON_TESTNET_AMOY_RPC_URL \
+            --set dev_rpc_config_values.binanceTestnet_rpc_url=$DEV_INDEXER_V2_BINANCE_SMART_CHAIN_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.mantleTestnet_rpc_url=$DEV_INDEXER_V2_MANTLE_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.mantleTestnetSepolia_rpc_url=$DEV_INDEXER_V2_MANTLE_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.ethereumTestnetSepolia_rpc_url=$DEV_INDEXER_V2_ETHEREUM_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.optimismTestnetSepolia_rpc_url=$DEV_INDEXER_V2_OPTIMISM_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.arbitrumTestnetSepolia_rpc_url=$DEV_INDEXER_V2_ARBITRUM_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.zoraTestnetSepolia_rpc_url=$DEV_INDEXER_V2_ZORA_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.baseTestnetSepolia_rpc_url=$DEV_INDEXER_V2_BASE_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.lineaTestnetGoerli_rpc_url=$DEV_INDEXER_V2_LINEA_TESTNET_GOERLI_RPC_URL \
+            --set dev_rpc_config_values.lineaTestnetSepolia_rpc_url=$DEV_INDEXER_V2_LINEA_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.seiTestnetArctic_rpc_url=$DEV_INDEXER_V2_SEI_TESTNET_RPC_URL \
             \
-            --set testnet_rpc_config_values.private_key=$TESTNET_INDEXER_V2_PRIVATE_KEY \
-            --set testnet_rpc_config_values.address=$COMMON_TESTNET_WALLET_ADDRESS \
-            --set testnet_rpc_config_values.version="beta3" \
+            --set dev_rpc_config_values.private_key=$DEV_INDEXER_V2_PRIVATE_KEY \
+            --set dev_rpc_config_values.address=$DEV_INDEXER_V2_DEV_WALLET_ADDRESS \
+            --set dev_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
-            --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }} \
             \
             --set autoscaling.enabled=false \
             --set replicaCountAvalanche=1 \
@@ -286,18 +280,16 @@ jobs:
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=$COMMON_AWS_ACCESS_KEY_ID_SQS \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=$COMMON_AWS_SECRET_ACCESS_KEY_SQS \
-            --set sqs.SQS_ENDPOINT=$TESTNET_INDEXER_V2_SQS_ENDPOINT \
-            --set sqs.SQS_QUEUE_URL=$TESTNET_INDEXER_V2_SQS_QUEUE_URL \
-            --set sqs.AWS_REGION=$COMMON_AWS_REGION \
-            \
-            --values ./holo-indexer/values-v2-testnet-iv.yaml
+            --set sqs.SQS_ENDPOINT=$DEV_INDEXER_V2_SQS_ENDPOINT \
+            --set sqs.SQS_QUEUE_URL=$DEV_INDEXER_V2_SQS_QUEUE_URL \
+            --set sqs.AWS_REGION=$COMMON_AWS_REGION
 
       - name: Pause for 60 seconds
         shell: bash
         run: |
           sleep 60
 
-      - name: -> V2 -- Deploy OPERATOR cli in TESTNET [namespace -> ${{ env.TESTNET_COMMON_NAMESPACE_V2 }}]
+      - name: -> V2 -- Deploy OPERATOR cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE_V2 }}]
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }} # notice
@@ -338,19 +330,19 @@ jobs:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
             helm upgrade --install $RELEASE_NAME \
-            holo-operator-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }}.tgz \
-            -n ${{ env.TESTNET_COMMON_NAMESPACE_V2 }} \
+            holo-operator-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}.tgz \
+            -n ${{ env.STG_COMMON_NAMESPACE_V2 }} \
             \
-            --set dummy_deployment_namespace=testnet-cli-dummies \
+            --set dummy_deployment_namespace=dev-cli-dummies \
             \
             --set image.repository=${{ env.ECR_REPOSITORY }} \
             --set image.image_tag=${{ env.IMAGE_TAG }} \
             --set config_file_data=${{ env.OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA }} \
-            --set holo_operator_password=$TESTNET_OPERATOR_V2_PASSWORD \
-            --set HOLO_OPERATOR_HOST=$TESTNET_OPERATOR_V2_HOLO_OPERATOR_HOST \
-            --set OPERATOR_API_KEY=$TESTNET_OPERATOR_V2_OPERATOR_API_KEY \
+            --set holo_operator_password=$DEV_OPERATOR_V2_PASSWORD \
+            --set HOLO_OPERATOR_HOST=$DEV_OPERATOR_V2_HOLO_OPERATOR_HOST \
+            --set OPERATOR_API_KEY=$DEV_OPERATOR_V2_OPERATOR_API_KEY \
             --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
-            --set HOLOGRAPH_ADDRESS=$TESTNET_OPERATOR_V2_HOLOGRAPH_ADDRESS \
+            --set HOLOGRAPH_ADDRESS=$DEV_OPERATOR_V2_HOLOGRAPH_ADDRESS \
             --set HOLOGRAPH_VERSION=${{ env.HOLOGRAPH_VERSION }} \
             \
             --set ENABLE_DEBUG=$ENABLE_DEBUG \
@@ -382,24 +374,25 @@ jobs:
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
             --set LINEA_NETWORK="${LINEA_NETWORK}" \
+            --set SEI_NETWORK="${SEI_NETWORK}" \
             \
-            --set testnet_rpc_config_values.avalancheTestnet_rpc_url=$TESTNET_OPERATOR_V2_AVALANCHE_TESTNET_RPC_URL \
-            --set testnet_rpc_config_values.polygonTestnet_rpc_url=$TESTNET_OPERATOR_V2_POLYGON_TESTNET_RPC_URL \
-            --set testnet_rpc_config_values.polygonTestnetAmoy_rpc_url=$TESTNET_OPERATOR_V2_POLYGON_TESTNET_AMOY_RPC_URL \
-            --set testnet_rpc_config_values.binanceTestnet_rpc_url=$TESTNET_OPERATOR_V2_BINANCE_SMART_CHAIN_TESTNET_RPC_URL \
-            --set testnet_rpc_config_values.mantleTestnet_rpc_url=$TESTNET_OPERATOR_V2_MANTLE_TESTNET_RPC_URL \
-            --set testnet_rpc_config_values.mantleTestnetSepolia_rpc_url=$TESTNET_OPERATOR_V2_MANTLE_TESTNET_SEPOLIA_RPC_URL \
-            --set testnet_rpc_config_values.ethereumTestnetSepolia_rpc_url=$TESTNET_OPERATOR_V2_ETHEREUM_TESTNET_SEPOLIA_RPC_URL \
-            --set testnet_rpc_config_values.optimismTestnetSepolia_rpc_url=$TESTNET_OPERATOR_V2_OPTIMISM_TESTNET_SEPOLIA_RPC_URL \
-            --set testnet_rpc_config_values.arbitrumTestnetSepolia_rpc_url=$TESTNET_OPERATOR_V2_ARBITRUM_TESTNET_SEPOLIA_RPC_URL \
-            --set testnet_rpc_config_values.zoraTestnetSepolia_rpc_url=$TESTNET_OPERATOR_V2_ZORA_TESTNET_SEPOLIA_RPC_URL \
-            --set testnet_rpc_config_values.baseTestnetSepolia_rpc_url=$TESTNET_OPERATOR_V2_BASE_TESTNET_SEPOLIA_RPC_URL \
-            --set testnet_rpc_config_values.lineaTestnetGoerli_rpc_url=$TESTNET_OPERATOR_V2_LINEA_TESTNET_GOERLI_RPC_URL \
-            --set testnet_rpc_config_values.lineaTestnetSepolia_rpc_url=$TESTNET_OPERATOR_V2_LINEA_TESTNET_SEPOLIA_RPC_URL \
-            --set testnet_rpc_config_values.seiTestnetArctic_rpc_url=$TESTNET_OPERATOR_V2_SEI_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.avalancheTestnet_rpc_url=$DEV_OPERATOR_V2_AVALANCHE_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.polygonTestnet_rpc_url=$DEV_OPERATOR_V2_POLYGON_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.polygonTestnetAmoy_rpc_url=$DEV_OPERATOR_V2_POLYGON_TESTNET_AMOY_RPC_URL \
+            --set dev_rpc_config_values.binanceTestnet_rpc_url=$DEV_OPERATOR_V2_BINANCE_SMART_CHAIN_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.mantleTestnet_rpc_url=$DEV_OPERATOR_V2_MANTLE_TESTNET_RPC_URL \
+            --set dev_rpc_config_values.mantleTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_MANTLE_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.ethereumTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_ETHEREUM_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.optimismTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_OPTIMISM_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.arbitrumTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_ARBITRUM_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.zoraTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_ZORA_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.baseTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_BASE_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.lineaTestnetGoerli_rpc_url=$DEV_OPERATOR_V2_LINEA_TESTNET_GOERLI_RPC_URL \
+            --set dev_rpc_config_values.lineaTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_LINEA_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.seiTestnetArctic_rpc_url=$DEV_OPERATOR_V2_SEI_TESTNET_RPC_URL \
             \
-            --set testnet_rpc_config_values.private_key=$TESTNET_OPERATOR_V2_PRIVATE_KEY \
-            --set testnet_rpc_config_values.address=$COMMON_TESTNET_WALLET_ADDRESS \
+            --set dev_rpc_config_values.private_key=$DEV_OPERATOR_V2_PRIVATE_KEY \
+            --set dev_rpc_config_values.address=$DEV_OPERATOR_V2_DEV_WALLET_ADDRESS \
             \
             --set autoscaling.enabled=false \
             --set replicaCountAvalanche=1 \
@@ -416,9 +409,7 @@ jobs:
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
-            --set datadog_tags.version=$RELEASE_NAME-${{ env.TESTNET_HOLO_OPERATOR_HELM_CHART_VERSION }} \
-            \
-            --values ./holo-operator/values-v2-testnet-iv.yaml
+            --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION }}
 
       - name: -> V2 -- Info for the new V2 deployments
         uses: tensor-hq/eksctl-helm-action@main
@@ -430,9 +421,9 @@ jobs:
           command: |-
             echo "------------------------- Last n Helm releases -------------------------"
             echo "--V2 INDEXER--"
-            helm history $INDEXER_RELEASE_NAME  -n ${{ env.TESTNET_COMMON_NAMESPACE_V2 }} --max 3
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
             echo "--V2 OPERATOR--"
-            helm history $OPERATOR_RELEASE_NAME -n ${{ env.TESTNET_COMMON_NAMESPACE_V2 }} --max 3
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
 
             echo "------------------------ Newly deployed image [same for all apps] ------------------------"
             echo "$IMAGE_TAG"

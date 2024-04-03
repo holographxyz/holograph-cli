@@ -58,7 +58,8 @@ env:
 on:
   pull_request:
     branches:
-      - 'mainnet'
+      - 'deactivated'
+#      - 'mainnet'
     types: [closed]
 
 jobs:
@@ -249,7 +250,7 @@ jobs:
             --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_INDEXER_V1_BASE_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_INDEXER_V1_PRIVATE_KEY \
-            --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V1_WALLET_ADDRESS \
+            --set mainnet_rpc_config_values.address=$MAINNET_INDEXER_V1_MAINNET_V1_WALLET_ADDRESS \
             --set mainnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
@@ -383,7 +384,7 @@ jobs:
             --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_OPERATOR_V1_BASE_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_OPERATOR_V1_PRIVATE_KEY \
-            --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V1_WALLET_ADDRESS \
+            --set mainnet_rpc_config_values.address=$MAINNET_OPERATOR_V1_MAINNET_V1_WALLET_ADDRESS \
             \
             --set autoscaling.enabled=false \
             --set replicaCountAvalanche=1 \
@@ -519,7 +520,7 @@ jobs:
             --set mainnet_rpc_config_values.linea_rpc_url=$MAINNET_INDEXER_V2_LINEA_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_INDEXER_V2_PRIVATE_KEY \
-            --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V2_WALLET_ADDRESS \
+            --set mainnet_rpc_config_values.address=$MAINNET_INDEXER_V2_MAINNET_V2_WALLET_ADDRESS \
             --set mainnet_rpc_config_values.version="beta3" \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
@@ -646,7 +647,7 @@ jobs:
             --set mainnet_rpc_config_values.linea_rpc_url=$MAINNET_OPERATOR_V2_LINEA_RPC_URL \
             \
             --set mainnet_rpc_config_values.private_key=$MAINNET_OPERATOR_V2_PRIVATE_KEY \
-            --set mainnet_rpc_config_values.address=$COMMON_MAINNET_V2_WALLET_ADDRESS \
+            --set mainnet_rpc_config_values.address=$MAINNET_OPERATOR_V2_MAINNET_V2_WALLET_ADDRESS \
             \
             --set autoscaling.enabled=false \
             --set replicaCountAvalanche=1 \
