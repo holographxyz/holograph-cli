@@ -1,8 +1,9 @@
-# `holograph help`
+`holograph help`
+================
 
 Display help for holograph.
 
-- [`holograph help [COMMANDS]`](#holograph-help-commands)
+* [`holograph help [COMMANDS]`](#holograph-help-commands)
 
 ## `holograph help [COMMANDS]`
 

@@ -1,8 +1,9 @@
-# `holograph faucet`
+`holograph faucet`
+==================
 
 Request Testnet HLG from a faucet.
 
-- [`holograph faucet`](#holograph-faucet)
+* [`holograph faucet`](#holograph-faucet)
 
 ## `holograph faucet`
 
@@ -12,18 +13,16 @@ Request Testnet HLG from a faucet.
 USAGE
   $ holograph faucet [--network
     seiTestnetArctic|lineaTestnetSepolia|mantleTestnetSepolia|lineaTestnetGoerli|zoraTestnetSepolia|baseTestnetSepolia|a
-    rbitrumTestnetSepolia|optimismTestnetSepolia|ethereumTestnetSepolia|baseTestnetGoerli|zoraTestnetGoerli|mantleTestne
-    t|optimismTestnetGoerli|arbitrumTestnetGoerli|ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|binanceSmartChai
-    nTestnet] [--env mainnet|testnet|develop|experimental]
+    rbitrumTestnetSepolia|optimismTestnetSepolia|ethereumTestnetSepolia|mantleTestnet|polygonTestnet|avalancheTestnet|bi
+    nanceSmartChainTestnet] [--env mainnet|testnet|develop|experimental]
 
 FLAGS
   --env=<option>      [default: testnet] Holograph environment to use
                       <options: mainnet|testnet|develop|experimental>
   --network=<option>  Name of network to use
                       <options: seiTestnetArctic|lineaTestnetSepolia|mantleTestnetSepolia|lineaTestnetGoerli|zoraTestnet
-                      Sepolia|baseTestnetSepolia|arbitrumTestnetSepolia|optimismTestnetSepolia|ethereumTestnetSepolia|ba
-                      seTestnetGoerli|zoraTestnetGoerli|mantleTestnet|optimismTestnetGoerli|arbitrumTestnetGoerli|ethere
-                      umTestnetGoerli|polygonTestnet|avalancheTestnet|binanceSmartChainTestnet>
+                      Sepolia|baseTestnetSepolia|arbitrumTestnetSepolia|optimismTestnetSepolia|ethereumTestnetSepolia|ma
+                      ntleTestnet|polygonTestnet|avalancheTestnet|binanceSmartChainTestnet>
 
 DESCRIPTION
   Request Testnet HLG from a faucet.

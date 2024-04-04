@@ -16,17 +16,15 @@
 The Holograph CLI enables you to interact with Holograph Protocol, in addition to participating as an operator in the Operator Network.
 
 <!-- toc -->
-
-- [Overview](#overview)
-- [Usage](#usage)
-- [Commands](#commands)
-- [Command Topics](#command-topics)
+* [Overview](#overview)
+* [Usage](#usage)
+* [Commands](#commands)
+* [Command Topics](#command-topics)
 <!-- tocstop -->
 
 # Usage
 
 <!-- usage -->
-
 ```sh-session
 $ npm install -g @holographxyz/cli
 $ holograph COMMAND
@@ -38,22 +36,20 @@ USAGE
   $ holograph COMMAND
 ...
 ```
-
 <!-- usagestop -->
 
 # Commands
 
 <!-- commands -->
-
 # Command Topics
 
-- [`holograph bridge`](docs/bridge.md) - Make a bridge request.
-- [`holograph config`](docs/config.md) - Initialize the Holograph CLI with a config file. If no flags are passed, the CLI will prompt you for the required information.
-- [`holograph create`](docs/create.md) - Create Holographable contracts and NFTs.
-- [`holograph faucet`](docs/faucet.md) - Request Testnet HLG from a faucet.
-- [`holograph help`](docs/help.md) - Display help for holograph.
-- [`holograph operator`](docs/operator.md) - Listen for jobs and execute jobs.
-- [`holograph status`](docs/status.md) - Get the status of a contract or NFT.
+* [`holograph bridge`](docs/bridge.md) - Make a bridge request.
+* [`holograph config`](docs/config.md) - Initialize the Holograph CLI with a config file. If no flags are passed, the CLI will prompt you for the required information.
+* [`holograph create`](docs/create.md) - Create Holographable contracts and NFTs.
+* [`holograph faucet`](docs/faucet.md) - Request Testnet HLG from a faucet.
+* [`holograph help`](docs/help.md) - Display help for holograph.
+* [`holograph operator`](docs/operator.md) - Listen for jobs and execute jobs.
+* [`holograph status`](docs/status.md) - Get the status of a contract or NFT.
 
 <!-- commandsstop -->
 

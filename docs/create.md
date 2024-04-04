@@ -1,10 +1,11 @@
-# `holograph create`
+`holograph create`
+==================
 
 Create Holographable contracts and NFTs.
 
-- [`holograph create`](#holograph-create)
-- [`holograph create:contract`](#holograph-createcontract)
-- [`holograph create:nft`](#holograph-createnft)
+* [`holograph create`](#holograph-create)
+* [`holograph create:contract`](#holograph-createcontract)
+* [`holograph create:nft`](#holograph-createnft)
 
 ## `holograph create`
 
@@ -39,42 +40,27 @@ Deploy a Holographable contract.
 USAGE
   $ holograph create:contract [--tx <value>] [--txNetwork
     seiTestnetArctic|lineaTestnetSepolia|mantleTestnetSepolia|lineaTestnetGoerli|zoraTestnetSepolia|baseTestnetSepolia|a
-    rbitrumTestnetSepolia|optimismTestnetSepolia|ethereumTestnetSepolia|baseTestnetGoerli|zoraTestnetGoerli|mantleTestne
-    t|optimismTestnetGoerli|arbitrumTestnetGoerli|ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|binanceSmartChai
-    nTestnet] [--targetNetwork seiTestnetArctic|lineaTestnetSepolia|mantleTestnetSepolia|lineaTestnetGoerli|zoraTestnetS
-    epolia|baseTestnetSepolia|arbitrumTestnetSepolia|optimismTestnetSepolia|ethereumTestnetSepolia|baseTestnetGoerli|zor
-    aTestnetGoerli|mantleTestnet|optimismTestnetGoerli|arbitrumTestnetGoerli|ethereumTestnetGoerli|polygonTestnet|avalan
-    cheTestnet|binanceSmartChainTestnet] [--deploymentType deployedTx|deploymentConfig|createConfig] [--deploymentConfig
-    <value>] [--env mainnet|testnet|develop|experimental]
+    rbitrumTestnetSepolia|optimismTestnetSepolia|ethereumTestnetSepolia|mantleTestnet|polygonTestnet|avalancheTestnet|bi
+    nanceSmartChainTestnet] [--targetNetwork seiTestnetArctic|lineaTestnetSepolia|mantleTestnetSepolia|lineaTestnetGoerl
+    i|zoraTestnetSepolia|baseTestnetSepolia|arbitrumTestnetSepolia|optimismTestnetSepolia|ethereumTestnetSepolia|mantleT
+    estnet|polygonTestnet|avalancheTestnet|binanceSmartChainTestnet] [--deploymentType
+    deployedTx|deploymentConfig|createConfig] [--deploymentConfig <value>] [--env mainnet|testnet|develop|experimental]
 
 FLAGS
-  --deploymentConfig=<value>
-      The config file to use
-
-  --deploymentType=<option>
-      The type of deployment to use
-      <options: deployedTx|deploymentConfig|createConfig>
-
-  --env=<option>
-      [default: testnet] Holograph environment to use
-      <options: mainnet|testnet|develop|experimental>
-
-  --targetNetwork=<option>
-      The network on which the contract will be executed
-      <options: seiTestnetArctic|lineaTestnetSepolia|mantleTestnetSepolia|lineaTestnetGoerli|zoraTestnetSepolia|baseTestne
-      tSepolia|arbitrumTestnetSepolia|optimismTestnetSepolia|ethereumTestnetSepolia|baseTestnetGoerli|zoraTestnetGoerli|ma
-      ntleTestnet|optimismTestnetGoerli|arbitrumTestnetGoerli|ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|binanc
-      eSmartChainTestnet>
-
-  --tx=<value>
-      The hash of transaction that deployed the original contract
-
-  --txNetwork=<option>
-      The network on which the transaction was executed
-      <options: seiTestnetArctic|lineaTestnetSepolia|mantleTestnetSepolia|lineaTestnetGoerli|zoraTestnetSepolia|baseTestne
-      tSepolia|arbitrumTestnetSepolia|optimismTestnetSepolia|ethereumTestnetSepolia|baseTestnetGoerli|zoraTestnetGoerli|ma
-      ntleTestnet|optimismTestnetGoerli|arbitrumTestnetGoerli|ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|binanc
-      eSmartChainTestnet>
+  --deploymentConfig=<value>  The config file to use
+  --deploymentType=<option>   The type of deployment to use
+                              <options: deployedTx|deploymentConfig|createConfig>
+  --env=<option>              [default: testnet] Holograph environment to use
+                              <options: mainnet|testnet|develop|experimental>
+  --targetNetwork=<option>    The network on which the contract will be executed
+                              <options: seiTestnetArctic|lineaTestnetSepolia|mantleTestnetSepolia|lineaTestnetGoerli|zor
+                              aTestnetSepolia|baseTestnetSepolia|arbitrumTestnetSepolia|optimismTestnetSepolia|ethereumT
+                              estnetSepolia|mantleTestnet|polygonTestnet|avalancheTestnet|binanceSmartChainTestnet>
+  --tx=<value>                The hash of transaction that deployed the original contract
+  --txNetwork=<option>        The network on which the transaction was executed
+                              <options: seiTestnetArctic|lineaTestnetSepolia|mantleTestnetSepolia|lineaTestnetGoerli|zor
+                              aTestnetSepolia|baseTestnetSepolia|arbitrumTestnetSepolia|optimismTestnetSepolia|ethereumT
+                              estnetSepolia|mantleTestnet|polygonTestnet|avalancheTestnet|binanceSmartChainTestnet>
 
 DESCRIPTION
   Deploy a Holographable contract.
@@ -93,34 +79,22 @@ Mint a Holographable NFT.
 USAGE
   $ holograph create:nft [--collectionAddress <value>] [--tokenId <value>] [--uriType ipfs|https|arweave] [--uri
     <value>] [--network seiTestnetArctic|lineaTestnetSepolia|mantleTestnetSepolia|lineaTestnetGoerli|zoraTestnetSepolia|
-    baseTestnetSepolia|arbitrumTestnetSepolia|optimismTestnetSepolia|ethereumTestnetSepolia|baseTestnetGoerli|zoraTestne
-    tGoerli|mantleTestnet|optimismTestnetGoerli|arbitrumTestnetGoerli|ethereumTestnetGoerli|polygonTestnet|avalancheTest
-    net|binanceSmartChainTestnet] [--env mainnet|testnet|develop|experimental]
+    baseTestnetSepolia|arbitrumTestnetSepolia|optimismTestnetSepolia|ethereumTestnetSepolia|mantleTestnet|polygonTestnet
+    |avalancheTestnet|binanceSmartChainTestnet] [--env mainnet|testnet|develop|experimental]
 
 FLAGS
-  --collectionAddress=<value>
-      The address of the collection smart contract
-
-  --env=<option>
-      [default: testnet] Holograph environment to use
-      <options: mainnet|testnet|develop|experimental>
-
-  --network=<option>
-      Name of network to use
-      <options: seiTestnetArctic|lineaTestnetSepolia|mantleTestnetSepolia|lineaTestnetGoerli|zoraTestnetSepolia|baseTestne
-      tSepolia|arbitrumTestnetSepolia|optimismTestnetSepolia|ethereumTestnetSepolia|baseTestnetGoerli|zoraTestnetGoerli|ma
-      ntleTestnet|optimismTestnetGoerli|arbitrumTestnetGoerli|ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|binanc
-      eSmartChainTestnet>
-
-  --tokenId=<value>
-      [default: 0] The token id to mint. By default the token id is 0, which mints the next available token id
-
-  --uri=<value>
-      The uri of the token, minus the prepend (ie "ipfs://")
-
-  --uriType=<option>
-      The token URI type
-      <options: ipfs|https|arweave>
+  --collectionAddress=<value>  The address of the collection smart contract
+  --env=<option>               [default: testnet] Holograph environment to use
+                               <options: mainnet|testnet|develop|experimental>
+  --network=<option>           Name of network to use
+                               <options: seiTestnetArctic|lineaTestnetSepolia|mantleTestnetSepolia|lineaTestnetGoerli|zo
+                               raTestnetSepolia|baseTestnetSepolia|arbitrumTestnetSepolia|optimismTestnetSepolia|ethereu
+                               mTestnetSepolia|mantleTestnet|polygonTestnet|avalancheTestnet|binanceSmartChainTestnet>
+  --tokenId=<value>            [default: 0] The token id to mint. By default the token id is 0, which mints the next
+                               available token id
+  --uri=<value>                The uri of the token, minus the prepend (ie "ipfs://")
+  --uriType=<option>           The token URI type
+                               <options: ipfs|https|arweave>
 
 DESCRIPTION
   Mint a Holographable NFT.

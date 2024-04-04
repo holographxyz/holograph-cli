@@ -1,10 +1,11 @@
-# `holograph status`
+`holograph status`
+==================
 
 Get the status of a contract or NFT.
 
-- [`holograph status`](#holograph-status)
-- [`holograph status:contract`](#holograph-statuscontract)
-- [`holograph status:nft`](#holograph-statusnft)
+* [`holograph status`](#holograph-status)
+* [`holograph status:contract`](#holograph-statuscontract)
+* [`holograph status:nft`](#holograph-statusnft)
 
 ## `holograph status`
 

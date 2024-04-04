@@ -1,11 +1,12 @@
-# `holograph config`
+`holograph config`
+==================
 
 Initialize the Holograph CLI with a config file. If no flags are passed, the CLI will prompt you for the required information.
 
-- [`holograph config`](#holograph-config)
-- [`holograph config:networks`](#holograph-confignetworks)
-- [`holograph config:user`](#holograph-configuser)
-- [`holograph config:view`](#holograph-configview)
+* [`holograph config`](#holograph-config)
+* [`holograph config:networks`](#holograph-confignetworks)
+* [`holograph config:user`](#holograph-configuser)
+* [`holograph config:view`](#holograph-configview)
 
 ## `holograph config`
 
@@ -15,9 +16,8 @@ Initialize the Holograph CLI with a config file. If no flags are passed, the CLI
 USAGE
   $ holograph config [--url <value> --network
     seiTestnetArctic|lineaTestnetSepolia|mantleTestnetSepolia|lineaTestnetGoerli|zoraTestnetSepolia|baseTestnetSepolia|a
-    rbitrumTestnetSepolia|optimismTestnetSepolia|ethereumTestnetSepolia|baseTestnetGoerli|zoraTestnetGoerli|mantleTestne
-    t|optimismTestnetGoerli|arbitrumTestnetGoerli|ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|binanceSmartChai
-    nTestnet] [--privateKey <value>] [--fromFile <value>] [--fromJson <value>]
+    rbitrumTestnetSepolia|optimismTestnetSepolia|ethereumTestnetSepolia|mantleTestnet|polygonTestnet|avalancheTestnet|bi
+    nanceSmartChainTestnet] [--privateKey <value>] [--fromFile <value>] [--fromJson <value>]
 
 FLAGS
   --fromFile=<value>    Path to the config file to load
@@ -25,8 +25,7 @@ FLAGS
   --network=<option>    Network to set
                         <options: seiTestnetArctic|lineaTestnetSepolia|mantleTestnetSepolia|lineaTestnetGoerli|zoraTestn
                         etSepolia|baseTestnetSepolia|arbitrumTestnetSepolia|optimismTestnetSepolia|ethereumTestnetSepoli
-                        a|baseTestnetGoerli|zoraTestnetGoerli|mantleTestnet|optimismTestnetGoerli|arbitrumTestnetGoerli|
-                        ethereumTestnetGoerli|polygonTestnet|avalancheTestnet|binanceSmartChainTestnet>
+                        a|mantleTestnet|polygonTestnet|avalancheTestnet|binanceSmartChainTestnet>
   --privateKey=<value>  Default account to use when sending all transactions
   --url=<value>         Provider URL of network to set
 
