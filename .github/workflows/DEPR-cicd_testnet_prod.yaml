@@ -16,8 +16,8 @@ env:
   AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
   #
-#  TESTNET_HOLOGRAPH_INDEXER_HOST: 'http://testblondie-holo-api.testnet.svc.cluster.local:443'
-#  TESTNET_HOLOGRAPH_OPERATOR_HOST: 'http://testblondie-holo-api.testnet.svc.cluster.local:443'
+  #  TESTNET_HOLOGRAPH_INDEXER_HOST: 'http://testblondie-holo-api.testnet.svc.cluster.local:443'
+  #  TESTNET_HOLOGRAPH_OPERATOR_HOST: 'http://testblondie-holo-api.testnet.svc.cluster.local:443'
   #
   # set the RPC endpoints config files
   INDEXER_HOLOGRAPH_CONFIG_FILE_DATA: testnet-config-file
@@ -127,12 +127,12 @@ jobs:
           aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
           aws-region: ${{ env.AWS_REGION }}
 
-#      - name: Create ns [${{ env.TESTNET_COMMON_NAMESPACE }}]
-#        uses: tensor-hq/eksctl-helm-action@main
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            kubectl create namespace ${{ env.TESTNET_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+      #      - name: Create ns [${{ env.TESTNET_COMMON_NAMESPACE }}]
+      #        uses: tensor-hq/eksctl-helm-action@main
+      #        with:
+      #          eks_cluster: ${{ env.CLUSTER_NAME }}
+      #          command: |-
+      #            kubectl create namespace ${{ env.TESTNET_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
 
       # NOTICE: --- INDEXER ---
       - name: Pull the holograph-indexer helm chart version x.x.x from ECR
@@ -164,7 +164,7 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }} # notice
-          HOLOGRAPH_VERSION: "V2"
+          HOLOGRAPH_VERSION: 'V2'
           #
           ENABLE_DEBUG: 'true'
           HEALTHCHECK: 'true'
@@ -296,7 +296,7 @@ jobs:
         uses: tensor-hq/eksctl-helm-action@main
         env:
           RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }} # notice
-          HOLOGRAPH_VERSION: "V2"
+          HOLOGRAPH_VERSION: 'V2'
           #
           ENABLE_DEBUG: 'true'
           ENABLE_SYNC: 'true'
