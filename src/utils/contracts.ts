@@ -102,9 +102,9 @@ export const METADATA_RENDERER_ADDRESS: {[key in Environment]: string} = {
 export const ERC20_HLG_ADDRESSES: {[key in Environment]: string} = {
   [Environment.localhost]: '0x0000000000000000000000000000000000000000'.toLowerCase(),
   [Environment.experimental]: '0x0000000000000000000000000000000000000000'.toLowerCase(),
-  [Environment.develop]: '0x5Ff07042d14E60EC1de7a860BBE968344431BaA1'.toLowerCase(),
+  [Environment.develop]: '0x700bFAE1E03Af52CD1EeBD42C763CEA125e6CA1F'.toLowerCase(),
   [Environment.testnet]: '0x09506B435782714EABC66F34256B28661990900d'.toLowerCase(),
-  [Environment.mainnet]: '0x09506B435782714EABC66F34256B28661990900d'.toLowerCase(),
+  [Environment.mainnet]: '0x740df024CE73f589ACD5E8756b377ef8C6558BaB'.toLowerCase(),
 }
 
 export function getHlgAddress() {
