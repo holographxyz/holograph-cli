@@ -1,7 +1,7 @@
 import * as fs from 'fs-extra'
 const path = require('node:path')
 
-import {Environment} from '@holographxyz/environment'
+import {Environment, getEnvironment} from '@holographxyz/environment'
 import {Contract} from 'ethers'
 
 export type ContractInfo = {
@@ -97,6 +97,19 @@ export const METADATA_RENDERER_ADDRESS: {[key in Environment]: string} = {
   [Environment.develop]: '0x1564512435fd9B608c86B2349271Bd8793a78A68'.toLowerCase(),
   [Environment.testnet]: '0x60B839C2f7dBa29eB93b094067E6C87067d1B3df'.toLowerCase(),
   [Environment.mainnet]: '0x60B839C2f7dBa29eB93b094067E6C87067d1B3df'.toLowerCase(),
+}
+
+export const ERC20_HLG_ADDRESSES: {[key in Environment]: string} = {
+  [Environment.localhost]: '0x0000000000000000000000000000000000000000'.toLowerCase(),
+  [Environment.experimental]: '0x0000000000000000000000000000000000000000'.toLowerCase(),
+  [Environment.develop]: '0x5Ff07042d14E60EC1de7a860BBE968344431BaA1'.toLowerCase(),
+  [Environment.testnet]: '0x09506B435782714EABC66F34256B28661990900d'.toLowerCase(),
+  [Environment.mainnet]: '0x09506B435782714EABC66F34256B28661990900d'.toLowerCase(),
+}
+
+export function getHlgAddress() {
+  const ENVIRONMENT = getEnvironment()
+  return ERC20_HLG_ADDRESSES[ENVIRONMENT]
 }
 
 export const LZ_RELAYER_ADDRESSES: {[key: string]: string} = {
