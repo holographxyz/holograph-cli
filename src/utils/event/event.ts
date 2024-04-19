@@ -41,7 +41,6 @@ export enum CrossChainMessageType {
   ERC1155 = 'ERC1155',
   ERC20 = 'ERC20',
   CONTRACT = 'CONTRACT',
-  ERC20_HLG = 'ERC20_HLG',
 }
 
 export interface Event {

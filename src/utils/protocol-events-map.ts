@@ -1,6 +1,5 @@
 import {ExtraDataType, InterestingTransaction, SqsEvent} from '../types/network-monitor'
 import {SqsEventName} from '../types/sqs'
-import {getHlgAddress} from './contracts'
 import {
   Event,
   EventType,
@@ -235,19 +234,11 @@ function getSqsEventsFromTx(protocolEventName: string, interestingTransaction: I
           (protocolEventName as ProtocolEvent) === ProtocolEvent.BridgeOut ||
           (protocolEventName as ProtocolEvent) === ProtocolEvent.BridgeIn
         ) {
-          let crossChainMessageType
-
-          if (decodedEvent.type === EventType.TransferERC721) {
-            crossChainMessageType = CrossChainMessageType.ERC721
-          } else {
-            const hlgAddress = getHlgAddress()
-
-            crossChainMessageType =
-              decodedEvent.contract === hlgAddress ? CrossChainMessageType.ERC20_HLG : CrossChainMessageType.ERC20
-          }
-
           const extraDataValue = {
-            crossChainMessageType,
+            crossChainMessageType:
+              decodedEvent.type === EventType.TransferERC721
+                ? CrossChainMessageType.ERC721
+                : CrossChainMessageType.ERC20,
           }
 
           /**
