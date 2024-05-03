@@ -73,6 +73,11 @@ elif [[ $HOLO_CLI_CMD == "indexer" ]]
 then
   eval $ENABLE_DEBUG holograph $HOLO_CLI_CMD --env $HOLOGRAPH_ENVIRONMENT --networks $NETWORK --host=$HOLO_INDEXER_HOST $HEALTHCHECK $ENABLE_SYNC --update-block-height $UPDATE_BLOCK_HEIGHT $ENABLE_REPLAY $ENABLE_PROCESS_BLOCK_RANGE $ENABLE_UNSAFE
 
+elif [[ $HOLO_CLI_CMD == "terminator" ]]
+then
+  echo "Stay open for 999999999d ... "
+  sleep 999999999d
+
 else
   echo
   echo "-> ERROR...Hey, Should I run as operator, indexer or at least TERMINATOR?"
