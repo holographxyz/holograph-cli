@@ -2209,6 +2209,12 @@ export class NetworkMonitor {
       gasPrice = gasPrice.gt(staticGasPrice) ? gasPrice : staticGasPrice
     }
 
+    if (network === 'binanceSmartChainTestnet') {
+      this.structuredLog(network, `Gas Price before bnbTestnet = ${formatUnits(gasPrice, 'gwei')}`, tags)
+      const staticGasPrice = BigNumber.from('10000000000')
+      gasPrice = gasPrice.gt(staticGasPrice) ? gasPrice : staticGasPrice
+    }
+
     this.structuredLog(network, `Gas price is ${formatUnits(gasPrice, 'gwei')} GWEI`, tags)
     if (gasLimit === undefined) {
       gasLimit = await this.getGasLimit({
