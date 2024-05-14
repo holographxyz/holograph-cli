@@ -1,0 +1,300 @@
+name: Deploy to prod[mainnet]
+
+permissions:
+  id-token: write
+  contents: read # This is required for actions/checkout@v2
+
+env:
+  AWS_REGION: us-west-2
+  IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
+  ECR_REPOSITORY: holo-api
+  #
+  MAINNET_IMAGE_TAG: mainnet-${{ github.sha }}
+  #
+  # imgix_s3_accessor_mainnet user has access only in holograph-mainnet-images S3 bucket
+  #
+  AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
+  AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
+  #
+  CLUSTER_NAME: 'prod0'
+  LB_URL: 'https://prod0-alb-1736382478.us-west-2.elb.amazonaws.com' # NOTICE , it will be deleted if all the deployments are deleted!
+  DOMAIN: 'api.holograph.xyz'
+  #
+  ENABLE_IMGIX: 'true'
+  IMGIX_DOMAIN: holograph-mainnet-images.imgix.net
+  #
+  ENABLE_CLOUDFRONT: 'false'
+  CLOUDFRONT_DOMAIN: 'holograph-mainnet-images.holograph.xyz' # or https://d2znjacd4l1efj.cloudfront.net # GoDaddy CNAME that points to the actual Cloudfront distribution's DNS
+  #
+  ENABLE_PINATA_GATEWAY: 'true'
+  #
+  DB_reader_endpoint: haproxy #${{ secrets.MAINNET_DB_READER_ENDPOINT }}
+  DB_writer_endpoint: haproxy #${{ secrets.MAINNET_DB_WRITER_ENDPOINT }}
+  DB_reader_port: 5432 # defaults to 5432
+  DB_writer_port: 5433 # defaults to 5432
+  DB_connection_limit: 3
+  DB_pool_timeout: 240
+  #
+  RDS_PROXY_ENABLED: 'false' # Notice: not used.
+  RDS_PROXY_WRITER_ENDPOINT: '...' # Notice: not used.
+  RDS_PROXY_READER_ENDPOINT: '...' # Notice: not used.
+  #
+  HOLOGRAPH_ENVIRONMENT: mainnet
+  ALCHEMY_NOTIFY_AUTH_TOKEN: ${{ secrets.ALCHEMY_NOTIFY_AUTH_TOKEN }}
+  ENABLE_GRAPHQL_SANDBOX: 'false'
+  SUPPORTED_NETWORK_GROUP: 'mainnet' # testnet/mainnet
+  # SQS User [indexer_processor_sqs_user]
+  #
+  JAEGER_URL: 'https://mainnetjaeger.holograph.xyz'
+  ENABLE_LEADERBOARD_V1: 'true'
+  #
+  MAINNET_API_HELM_CHART_VERSION: 0.0.90
+  ############
+  RELEASE_NAME: 'blondie'
+  ############
+
+# notice: the cicd trigger
+#on:
+#  push:
+#    branches:
+#      - 'something'
+# notice: the cicd trigger
+on:
+  pull_request:
+    branches:
+      - mainnet
+    types: [closed]
+
+jobs:
+  deploy-to-prod-mainnet:
+    if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
+    #####
+    name: Deploy-to-prod[mainnet]
+    runs-on: ubuntu-latest
+    #####
+    steps:
+      - name: Sanitize the branch name to use with Helm
+        id: sanitized_branch
+        shell: bash
+        # replaces '/' to '-' , '_' to '-' , uppercase to lowercase
+        run: echo "##[set-output name=branch;]$( echo ${GITHUB_REF_NAME} | tr '/' '-' | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
+
+      - name: Use Githubs federated identity with AWS
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ env.IAM_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get secrets from AWS Secrets Manager
+        uses: aws-actions/aws-secretsmanager-get-secrets@v1
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          secret-ids: |
+            MAINNET_API_V1
+            COMMON
+          parse-json-secrets: true # to be able to get the json k/v pairs
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Checkout the code
+        uses: actions/checkout@v2
+
+      # This is a separate action that sets up buildx runner
+      - name: Set up Docker Buildx
+        id: buildx
+        # Use the action from the master, as we've seen some inconsistencies with @v1
+        # Issue: https://github.com/docker/build-push-action/issues/286
+        uses: docker/setup-buildx-action@master # v2
+        # It only worked for us with this option on
+        with:
+          install: true
+
+      # So now you can use Actions' own caching!
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          # Key is named differently to avoid collision
+          key: ${{ runner.os }}-multi-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-multi-buildx
+
+      # And make it available for builds
+      - name: Build image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          builder: ${{ steps.buildx.outputs.name }}
+          file: Dockerfile
+          build-args: AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }}
+          platforms: linux/amd64
+          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.MAINNET_IMAGE_TAG }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          # Note the mode=max here # More: https://github.com/moby/buildkit#--export-cache-options and: https://github.com/docker/buildx#--cache-tonametypetypekeyvalue
+          cache-to: type=local,mode=max,dest=/tmp/.buildx-cache-new
+          push: true # set false to deactivate the push to ECR
+
+      # This ugly bit is necessary if you don't want your cache to grow forever until it hits GitHub's limit of 5GB.
+      # https://github.com/docker/build-push-action/issues/252 & https://github.com/moby/buildkit/issues/1896
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Pull the holo-api helm chart version x.x.x from ECR
+        shell: bash
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          echo "helm pull oci://$ECR_REGISTRY/holo-api --version ${{ env.MAINNET_API_HELM_CHART_VERSION }}"
+          echo
+          helm pull oci://$ECR_REGISTRY/holo-api --version ${{ env.MAINNET_API_HELM_CHART_VERSION }}
+
+      - name: Configure AWS creds to access EKS
+        # notice: TIP: the deployment user must be in the masters group in the aws-auth config map in the cluster
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ env.AWS_KEY_ID }} #notice: unique for each env
+          aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
+          aws-region: ${{ env.AWS_REGION }}
+
+      #      - name: Create the ns [${{ steps.sanitized_branch.outputs.branch }}]
+      #        uses: tensor-hq/eksctl-helm-action@v0.1.2
+      #        env:
+      #          BRANCH_NAME: ${{ steps.sanitized_branch.outputs.branch }}
+      #        with:
+      #          eks_cluster: ${{ env.CLUSTER_NAME }}
+      #          command: |-
+      #            kubectl create namespace $BRANCH_NAME --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: ---> Deploy on prod [branch -> ${{ steps.sanitized_branch.outputs.branch }}]<---
+        uses: tensor-hq/eksctl-helm-action@v0.1.2
+        env:
+          BRANCH_NAME_TO_NS: ${{ steps.sanitized_branch.outputs.branch }}
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            helm upgrade --install ${{ env.RELEASE_NAME }} \
+            holo-api-${{ env.MAINNET_API_HELM_CHART_VERSION }}.tgz \
+            -n $BRANCH_NAME_TO_NS \
+            --set image.repository=$ECR_REPOSITORY \
+            --set image.image_tag=$MAINNET_IMAGE_TAG \
+            --set NODE_ENV=production \
+            --set pinata_api_key=$MAINNET_API_V1_PINATA_API_KEY \
+            --set pinata_secret_api_key=$MAINNET_API_V1_PINATA_SECRET_API_KEY \
+            --set pinata_secret_jwt=$MAINNET_API_V1_PINATA_SECRET_JWT \
+            --set ENABLE_PINATA_GATEWAY=${ENABLE_PINATA_GATEWAY} \
+            --set s3_user_api_key=$MAINNET_API_V1_AWS_ACCESS_KEY_ID_S3 \
+            --set s3_user_secret_api_key=$MAINNET_API_V1_AWS_SECRET_ACCESS_KEY_S3 \
+            \
+            --set db.user=$MAINNET_API_V1_DB_USER \
+            --set db.pass=$MAINNET_API_V1_DB_PASSWORD \
+            --set db.reader_endpoint=$DB_reader_endpoint \
+            --set db.writer_endpoint=$DB_writer_endpoint \
+            --set db.reader_port=$DB_reader_port \
+            --set db.writer_port=$DB_writer_port \
+            --set db.db_name=$MAINNET_API_V1_DB_NAME \
+            --set db.connection_limit=$DB_connection_limit \
+            --set db.pool_timeout=$DB_pool_timeout \
+            \
+            --set RDS_PROXY.enabled=${{ env.RDS_PROXY_ENABLED }} \
+            --set RDS_PROXY.writer_endpoint=${{ env.RDS_PROXY_WRITER_ENDPOINT }} \
+            --set RDS_PROXY.reader_endpoint=${{ env.RDS_PROXY_READER_ENDPOINT }} \
+            \
+            --set s3_bucket.name=$MAINNET_API_V1_AWS_BUCKET_S3 \
+            --set s3_bucket.aws_region=$COMMON_AWS_REGION \
+            \
+            --set operator_api_key=$MAINNET_API_V1_OPERATOR_API_KEY \
+            --set ENABLE_IMGIX=${ENABLE_IMGIX} \
+            --set IMGIX_DOMAIN=${{ env.IMGIX_DOMAIN }} \
+            --set ENABLE_CLOUDFRONT=${{ env.ENABLE_CLOUDFRONT }} \
+            --set CLOUDFRONT_DOMAIN=${{ env.CLOUDFRONT_DOMAIN }} \
+            --set ENABLE_GRAPHQL_SANDBOX=${ENABLE_GRAPHQL_SANDBOX} \
+            --set SUPPORTED_NETWORK_GROUP=${SUPPORTED_NETWORK_GROUP} \
+            \
+            --set AVALANCHE_RPC_URL=$MAINNET_API_V1_AVALANCHE_RPC_URL \
+            --set ETHEREUM_RPC_URL=$MAINNET_API_V1_ETHEREUM_RPC_URL \
+            --set POLYGON_RPC_URL=$MAINNET_API_V1_POLYGON_RPC_URL \
+            --set BINANCE_SMART_CHAIN_RPC_URL=$MAINNET_API_V1_BINANCE_SMART_CHAIN_RPC_URL \
+            --set OPTIMISM_RPC_URL=$MAINNET_API_V1_OPTIMISM_RPC_URL \
+            --set ARBITRUM_ONE_RPC_URL=$MAINNET_API_V1_ARBITRUM_ONE_RPC_URL \
+            --set MANTLE_RPC_URL=$MAINNET_API_V1_MANTLE_RPC_URL \
+            --set ZORA_RPC_URL=$MAINNET_API_V1_ZORA_RPC_URL \
+            --set BASE_RPC_URL=$MAINNET_API_V1_BASE_RPC_URL \
+            --set LINEA_RPC_URL=$MAINNET_API_V1_LINEA_RPC_URL \
+            \
+            --set HOLOGRAPH_ENVIRONMENT=${{ env.HOLOGRAPH_ENVIRONMENT }} \
+            \
+            --set JAEGER_URL=${{ env.JAEGER_URL }} \
+            --set ENABLE_LEADERBOARD_V1=${{ env.ENABLE_LEADERBOARD_V1 }} \
+            --set MOE_WITH_CUSTOM_BONUS_POINTS=$MAINNET_API_V1_MOE_WITH_CUSTOM_BONUS_POINTS \
+            \
+            --set ENABLE_BINANCE_WALLET_API=$MAINNET_API_V1_ENABLE_BINANCE_WALLET_API \
+            --set BINANCE_WALLET_PUBLIC_KEY=$MAINNET_API_V1_BINANCE_WALLET_PUBLIC_KEY \
+            \
+            --set sqs.AWS_REGION_SQS=$COMMON_AWS_REGION \
+            --set sqs.AWS_ACCESS_KEY_ID_SQS=$COMMON_AWS_ACCESS_KEY_ID_SQS \
+            --set sqs.AWS_SECRET_ACCESS_KEY_SQS=$COMMON_AWS_SECRET_ACCESS_KEY_SQS \
+            --set sqs.SQS_ENDPOINT=$MAINNET_API_V1_SQS_ENDPOINT \
+            --set sqs.SQS_QUEUE_URL=$MAINNET_API_V1_SQS_QUEUE_URL \
+            --set sqs.SQS_S3_QUEUE_URL=$MAINNET_API_V1_SQS_S3_QUEUE_URL \
+            \
+            --set autoscaling.minReplicas=10 \
+            --set autoscaling.maxReplicas=10 \
+            \
+            --set probes="activated" \
+            \
+            --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
+            --set datadog_tags.service=${{ env.RELEASE_NAME }}-api-$BRANCH_NAME_TO_NS \
+            --set datadog_tags.version=${{ env.RELEASE_NAME }}-api-$BRANCH_NAME_TO_NS-${{ env.MAINNET_API_HELM_CHART_VERSION }} \
+            \
+            --values .github/values_for_alb_ingress.yaml \
+            --set ingress.annotations."alb\.ingress\.kubernetes\.io/certificate-arn"="$COMMON_ALB_CERT_ARN" \
+            --set ingress.ingress_name=ing-$BRANCH_NAME_TO_NS-${{ env.RELEASE_NAME }} \
+            --set ingress.host=${{ env.RELEASE_NAME }}.${{ env.DOMAIN }} \
+            --set ingress.target_svc_name=${{ env.RELEASE_NAME }}-holo-api \
+            --set ingress.blue_green_deployment=false \
+            \
+            --set ingress.enable_main_ingress=true
+
+            echo 'HELM_RELEASES<<EOF' >> $GITHUB_ENV
+            echo "$(helm history ${{ env.RELEASE_NAME }} -n $BRANCH_NAME_TO_NS --max 5)" >> $GITHUB_ENV
+            echo 'EOF' >> $GITHUB_ENV
+            echo
+            echo "ENDPOINT=${{ env.RELEASE_NAME }}.${{ env.DOMAIN }}" >> $GITHUB_ENV
+            echo "RELEASE_NAME=${{ env.RELEASE_NAME }}" >> $GITHUB_ENV
+
+      - name: ---> Info for the New Deployment <---
+        run: |
+          echo "------------------------- Last 5 Helm releases -------------------------"
+          echo "${{ env.HELM_RELEASES }}"
+          echo "------------------------- Newly deployed image ------------------------- "
+          echo "$MAINNET_IMAGE_TAG"
+          echo "------------------------- Api endpoint ------------------------- "
+          echo "$ENDPOINT"
+          echo
+          echo "Checking /v1/health. Patience you must have...my young padawan..."
+          sleep 120
+          echo "------------------------- Check the endpoint /v1/health -------------------------"
+          echo
+          echo "curl -k -H \"Host: $ENDPOINT\" $LB_URL/v1/health"
+          echo
+          RESPONSE=$(curl -k -H "Host: $ENDPOINT" $LB_URL/v1/health)
+          echo
+          echo $RESPONSE
+          echo
+          echo "curl -k -H \"Host: ${{ env.DOMAIN }}\" $LB_URL/v1/health"
+          echo
+          RESPONSE=$(curl -k -H "Host: ${{ env.DOMAIN }}" $LB_URL/v1/health)
+          echo
+          echo $RESPONSE
+
+          ERROR_CHECK=$(echo $RESPONSE | jq -r '.error')
+          if [[ $ERROR_CHECK != '{}' ]]; then
+            echo
+            echo "- OHH NO...! Something went wrong ... -"
+            echo
+            exit 1
+          fi

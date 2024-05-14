@@ -16,8 +16,8 @@ env:
   AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
   #
-#  MAINNET_HOLOGRAPH_INDEXER_HOST: 'http://blondie-holo-api.mainnet.svc.cluster.local:443'
-#  MAINNET_HOLOGRAPH_OPERATOR_HOST: 'http://blondie-holo-api.mainnet.svc.cluster.local:443'
+  #MAINNET_HOLOGRAPH_INDEXER_HOST: 'http://blondie-holo-api.mainnet.svc.cluster.local:443'
+  #MAINNET_HOLOGRAPH_OPERATOR_HOST: 'http://blondie-holo-api.mainnet.svc.cluster.local:443'
   #
   MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.MAINNET_HOLO_INDEXER_PASSWORD }}
   MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.MAINNET_HOLO_OPERATOR_PASSWORD }}
@@ -33,38 +33,25 @@ env:
   #
   MAINNET_DOMAIN: 'holograph.xyz' # needed only for the health checks
   #
-#  MAINNET_COMMON_NAMESPACE: 'mainnet'
   MAINNET_COMMON_NAMESPACE_V2: 'mainnet-cli-dummies'
-  #######################################
-#  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.85
-#  INDEXER_RELEASE_NAME: 'blondie-indexer-mainnet' # format -> [release_name]-indexer-[env]
-#  INDEXER_RELEASE_NAME_V2: 'blondie-indexer-mainnet-v2'
   #
   MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.16
-#  OPERATOR_RELEASE_NAME: 'blondie-operator-mainnet' # format -> [release_name]-operator-[env]
-#  OPERATOR_RELEASE_NAME_V2: 'blondie-operator-mainnet-v2'
-  OPERATOR_RELEASE_NAME_V2: 'apozo-oper'
+  OPERATOR_RELEASE_NAME_V2: 'dummy-operator'
   #######################################
 
 # notice: the trigger
 on:
   push:
     branches:
-      - 'feat/dummy-mainnet-operators'
+#      - 'feat/dummy-mainnet-operators'
+      - 'dsfsdf'
       # Excluded branches
       - '!develop'
       - '!main'
       - '!master'
-# notice: the trigger
-#on:
-#  pull_request:
-#    branches:
-#      - 'mainnet'
-#    types: [closed]
 
 jobs:
   deploy-to-prod-mainnet:
-#    if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
     name: Deploy-to-prod[mainnet]
     runs-on: ubuntu-latest
 
@@ -80,9 +67,6 @@ jobs:
         with:
           aws-region: ${{ env.AWS_REGION }}
           secret-ids: |
-            MAINNET_INDEXER_V1
-            MAINNET_OPERATOR_V1
-            MAINNET_INDEXER_V2
             MAINNET_OPERATOR_V2
             COMMON
           parse-json-secrets: true # to be able to get the json k/v pairs
