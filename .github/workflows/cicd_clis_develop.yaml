@@ -42,7 +42,8 @@ env:
 on:
   push:
     branches:
-      - 'develop'
+#      - 'develop'
+      - 'feat/add-multi-platform-image-support'
       # Excluded branches
       - '!testnet'
       - '!main'
@@ -59,29 +60,29 @@ jobs:
       - name: Initial Setup [composite action]
         uses: ./.github/actions/develop/initial-setup
       #
-      - name: Deploy Indexer [composite action]
-        uses: ./.github/actions/develop/deploy-indexer
-      #
-      - name: Pause for 60 seconds
-        shell: bash
-        run: sleep 60
-      #
-      - name: Deploy Operator [composite action]
-        uses: ./.github/actions/develop/deploy-operator
-      #
-      - name: -> V2 -- Info for the new V2 deployments
-        uses: tensor-hq/eksctl-helm-action@main
-        env:
-          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
-          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }}
-        with:
-          eks_cluster: ${{ env.CLUSTER_NAME }}
-          command: |-
-            echo "------------------------- Last n Helm releases -------------------------"
-            echo "--V2 INDEXER--"
-            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
-            echo "--V2 OPERATOR--"
-            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
-
-            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
-            echo "$IMAGE_TAG"
+#      - name: Deploy Indexer [composite action]
+#        uses: ./.github/actions/develop/deploy-indexer
+#      #
+#      - name: Pause for 60 seconds
+#        shell: bash
+#        run: sleep 60
+#      #
+#      - name: Deploy Operator [composite action]
+#        uses: ./.github/actions/develop/deploy-operator
+#      #
+#      - name: -> V2 -- Info for the new V2 deployments
+#        uses: tensor-hq/eksctl-helm-action@main
+#        env:
+#          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
+#          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }}
+#        with:
+#          eks_cluster: ${{ env.CLUSTER_NAME }}
+#          command: |-
+#            echo "------------------------- Last n Helm releases -------------------------"
+#            echo "--V2 INDEXER--"
+#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
+#            echo "--V2 OPERATOR--"
+#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
+#
+#            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+#            echo "$IMAGE_TAG"
