@@ -32,10 +32,10 @@ env:
   #
   STG_COMMON_NAMESPACE_V2: 'develop-v2'
   #######################################
-  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.85
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.87
   INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2' # format -> [release_name]-indexer-[env]
   #
-  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.1.16
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.1.18
   OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2' # format -> [release_name]-indexer-[env]
   #######################################
 
@@ -177,6 +177,7 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_linea: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_sei: 'true'
           #
           AVALANCHE_NETWORK: 'avalancheTestnet'
           POLYGON_NETWORK: '{polygonTestnet}'
@@ -188,6 +189,7 @@ jobs:
           ZORA_NETWORK: '{zoraTestnetSepolia}'
           BASE_NETWORK: '{baseTestnetSepolia}'
           LINEA_NETWORK: '{lineaTestnetGoerli}'
+          SEI_NETWORK: '{seiTestnetArctic}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -223,6 +225,7 @@ jobs:
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
             --set LINEA_NETWORK="${LINEA_NETWORK}" \
+            --set SEI_NETWORK="${SEI_NETWORK}" \
             \
             --set ENABLE_UNSAFE="${ENABLE_UNSAFE}" \
             --set UPDATE_BLOCK_HEIGHT=$UPDATE_BLOCK_HEIGHT \
@@ -237,6 +240,7 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
             --set ENABLE_PROCESS_BLOCK_RANGE.linea=$ENABLE_PROCESS_BLOCK_RANGE_linea \
+            --set ENABLE_PROCESS_BLOCK_RANGE.sei=$ENABLE_PROCESS_BLOCK_RANGE_sei \
             \
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=$DEV_INDEXER_V2_AVALANCHE_TESTNET_RPC_URL \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=$DEV_INDEXER_V2_POLYGON_TESTNET_RPC_URL \
@@ -251,6 +255,7 @@ jobs:
             --set dev_rpc_config_values.baseTestnetSepolia_rpc_url=$DEV_INDEXER_V2_BASE_TESTNET_SEPOLIA_RPC_URL \
             --set dev_rpc_config_values.lineaTestnetGoerli_rpc_url=$DEV_INDEXER_V2_LINEA_TESTNET_GOERLI_RPC_URL \
             --set dev_rpc_config_values.lineaTestnetSepolia_rpc_url=$DEV_INDEXER_V2_LINEA_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.seiTestnetArctic_rpc_url=$DEV_INDEXER_V2_SEI_TESTNET_RPC_URL \
             \
             --set dev_rpc_config_values.private_key=$DEV_INDEXER_V2_PRIVATE_KEY \
             --set dev_rpc_config_values.address=$DEV_INDEXER_V2_DEV_WALLET_ADDRESS \
@@ -271,6 +276,7 @@ jobs:
             --set replicaCountBase=1 \
             --set replicaCountLinea=1 \
             --set replicaCountZora=1 \
+            --set replicaCountSei=1 \
             \
             --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=$COMMON_AWS_ACCESS_KEY_ID_SQS \
             --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=$COMMON_AWS_SECRET_ACCESS_KEY_SQS \
@@ -307,6 +313,7 @@ jobs:
           ENABLE_PROCESS_BLOCK_RANGE_polygon: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_base: 'true'
           ENABLE_PROCESS_BLOCK_RANGE_linea: 'true'
+          ENABLE_PROCESS_BLOCK_RANGE_sei: 'true'
           #
           AVALANCHE_NETWORK: 'avalancheTestnet'
           POLYGON_NETWORK: '{polygonTestnet}'
@@ -318,6 +325,7 @@ jobs:
           ZORA_NETWORK: '{zoraTestnetSepolia}'
           BASE_NETWORK: '{baseTestnetSepolia}'
           LINEA_NETWORK: '{lineaTestnetGoerli}'
+          SEI_NETWORK: '{seiTestnetArctic}'
         with:
           eks_cluster: ${{ env.CLUSTER_NAME }}
           command: |-
@@ -354,6 +362,7 @@ jobs:
             --set ENABLE_PROCESS_BLOCK_RANGE.zora=$ENABLE_PROCESS_BLOCK_RANGE_zora \
             --set ENABLE_PROCESS_BLOCK_RANGE.base=$ENABLE_PROCESS_BLOCK_RANGE_base \
             --set ENABLE_PROCESS_BLOCK_RANGE.linea=$ENABLE_PROCESS_BLOCK_RANGE_linea \
+            --set ENABLE_PROCESS_BLOCK_RANGE.sei=$ENABLE_PROCESS_BLOCK_RANGE_sei \
             \
             --set AVALANCHE_NETWORK="${AVALANCHE_NETWORK}" \
             --set POLYGON_NETWORK="${POLYGON_NETWORK}" \
@@ -365,6 +374,7 @@ jobs:
             --set ZORA_NETWORK="${ZORA_NETWORK}" \
             --set BASE_NETWORK="${BASE_NETWORK}" \
             --set LINEA_NETWORK="${LINEA_NETWORK}" \
+            --set SEI_NETWORK="${SEI_NETWORK}" \
             \
             --set dev_rpc_config_values.avalancheTestnet_rpc_url=$DEV_OPERATOR_V2_AVALANCHE_TESTNET_RPC_URL \
             --set dev_rpc_config_values.polygonTestnet_rpc_url=$DEV_OPERATOR_V2_POLYGON_TESTNET_RPC_URL \
@@ -379,6 +389,7 @@ jobs:
             --set dev_rpc_config_values.baseTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_BASE_TESTNET_SEPOLIA_RPC_URL \
             --set dev_rpc_config_values.lineaTestnetGoerli_rpc_url=$DEV_OPERATOR_V2_LINEA_TESTNET_GOERLI_RPC_URL \
             --set dev_rpc_config_values.lineaTestnetSepolia_rpc_url=$DEV_OPERATOR_V2_LINEA_TESTNET_SEPOLIA_RPC_URL \
+            --set dev_rpc_config_values.seiTestnetArctic_rpc_url=$DEV_OPERATOR_V2_SEI_TESTNET_RPC_URL \
             \
             --set dev_rpc_config_values.private_key=$DEV_OPERATOR_V2_PRIVATE_KEY \
             --set dev_rpc_config_values.address=$DEV_OPERATOR_V2_DEV_WALLET_ADDRESS \
@@ -394,6 +405,7 @@ jobs:
             --set replicaCountBase=1 \
             --set replicaCountLinea=1 \
             --set replicaCountZora=1 \
+            --set replicaCountSei=1 \
             \
             --set datadog_tags.env=${{ env.CLUSTER_NAME }} \
             --set datadog_tags.service=$RELEASE_NAME \
