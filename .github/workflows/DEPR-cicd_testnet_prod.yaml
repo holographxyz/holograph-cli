@@ -51,7 +51,7 @@ on:
   pull_request:
     branches:
       - 'deactivated'
-#      - 'testnet'
+    #      - 'testnet'
     types: [closed]
 
 jobs:

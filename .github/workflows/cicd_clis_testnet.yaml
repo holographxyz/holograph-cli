@@ -16,8 +16,8 @@ env:
   AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
   #
-#  TESTNET_HOLOGRAPH_INDEXER_HOST: 'http://testblondie-holo-api.testnet.svc.cluster.local:443'
-#  TESTNET_HOLOGRAPH_OPERATOR_HOST: 'http://testblondie-holo-api.testnet.svc.cluster.local:443'
+  #  TESTNET_HOLOGRAPH_INDEXER_HOST: 'http://testblondie-holo-api.testnet.svc.cluster.local:443'
+  #  TESTNET_HOLOGRAPH_OPERATOR_HOST: 'http://testblondie-holo-api.testnet.svc.cluster.local:443'
   #
   # set the RPC endpoints config files
   INDEXER_HOLOGRAPH_CONFIG_FILE_DATA: testnet-config-file
@@ -51,7 +51,7 @@ on:
   pull_request:
     branches:
       - 'testnet'
-#      - 'deactivated'
+    #      - 'deactivated'
     types: [closed]
 
 jobs:

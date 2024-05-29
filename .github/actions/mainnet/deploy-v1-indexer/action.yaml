@@ -1,12 +1,12 @@
 name: 'deploy-v1-indexer'
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
     - name: -> V1 -- Deploy INDEXER cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
       uses: tensor-hq/eksctl-helm-action@main
       env:
         RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }} # notice
-        HOLOGRAPH_VERSION: "V1"
+        HOLOGRAPH_VERSION: 'V1'
         #
         ENABLE_DEBUG: 'true'
         HEALTHCHECK: 'true'

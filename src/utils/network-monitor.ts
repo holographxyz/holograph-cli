@@ -2216,7 +2216,6 @@ export class NetworkMonitor {
       const staticGasPrice = BigNumber.from('400017425011')
       gasPrice = gasPrice.gt(staticGasPrice) ? gasPrice : staticGasPrice
     }
-    
 
     if (network === 'binanceSmartChain') {
       this.structuredLog(network, `(BNB) Gas Price before = ${formatUnits(gasPrice, 'gwei')}`, tags)

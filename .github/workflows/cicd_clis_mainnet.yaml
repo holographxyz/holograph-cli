@@ -16,8 +16,8 @@ env:
   AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
   #
-#  MAINNET_HOLOGRAPH_INDEXER_HOST: 'http://blondie-holo-api.mainnet.svc.cluster.local:443'
-#  MAINNET_HOLOGRAPH_OPERATOR_HOST: 'http://blondie-holo-api.mainnet.svc.cluster.local:443'
+  #  MAINNET_HOLOGRAPH_INDEXER_HOST: 'http://blondie-holo-api.mainnet.svc.cluster.local:443'
+  #  MAINNET_HOLOGRAPH_OPERATOR_HOST: 'http://blondie-holo-api.mainnet.svc.cluster.local:443'
   #
   MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.MAINNET_HOLO_INDEXER_PASSWORD }}
   MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.MAINNET_HOLO_OPERATOR_PASSWORD }}
