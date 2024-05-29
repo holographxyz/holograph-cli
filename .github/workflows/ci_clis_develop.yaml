@@ -10,8 +10,6 @@ env:
   ECR_REPOSITORY: holo-cli-dev # notice: the same for all cli apps
   #
   IMAGE_TAG: dev-${{ github.sha }}
-  #
-  CLUSTER_NAME: staging
 
 on:
   push:
@@ -84,7 +82,6 @@ jobs:
     needs: build-image
     env:
       helm_repo_branch: 'helm-avp'
-      helm_file: 'holo-indexer/values-develop.yaml'
     steps:
       - name: Checkout the helm repo
         uses: actions/checkout@v3
@@ -94,14 +91,21 @@ jobs:
           ref: ${{env.helm_repo_branch}}
 
       - name: Update the values file in the helm repo
+        env:
+          indexer_helm_file : 'holo-indexer/values-develop.yaml'
+          operator_helm_file: 'holo-operator/values-develop.yaml'
         run: |
           git status
           git config user.email "kostas@holograph.xyz"
           git config user.name "wehappyfew"
 
-          sed -i "s+image_tag: .*+image_tag: ${{env.IMAGE_TAG}}+" $helm_file
-          cat $helm_file
+          sed -i "s+image_tag: .*+image_tag: ${{env.IMAGE_TAG}}+" $indexer_helm_file
+          cat $indexer_helm_file
 
-          git add $helm_file
+          sed -i "s+image_tag: .*+image_tag: ${{env.IMAGE_TAG}}+" $operator_helm_file
+          cat $operator_helm_file
+
+          git add $indexer_helm_file
+          git add $operator_helm_file
           git commit -m 'New tag by GH Actions: ${{ env.IMAGE_TAG }}'
           git push origin ${{env.helm_repo_branch}}
