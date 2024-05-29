@@ -1,6 +1,6 @@
 name: 'initial-setup'
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
     - name: Use Githubs federated identity with AWS
       uses: aws-actions/configure-aws-credentials@v1

@@ -1,6 +1,6 @@
 name: 'initial-setup'
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
     - name: Use Githubs federated identity with AWS
       uses: aws-actions/configure-aws-credentials@v1
@@ -69,12 +69,12 @@ runs:
         aws-secret-access-key: ${{ env.AWS_ACCESS_KEY }} #notice: unique for each env
         aws-region: ${{ env.AWS_REGION }}
 
-#      - name: Create ns [${{ env.TESTNET_COMMON_NAMESPACE }}]
-#        uses: tensor-hq/eksctl-helm-action@main
-#        with:
-#          eks_cluster: ${{ env.CLUSTER_NAME }}
-#          command: |-
-#            kubectl create namespace ${{ env.TESTNET_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+    #      - name: Create ns [${{ env.TESTNET_COMMON_NAMESPACE }}]
+    #        uses: tensor-hq/eksctl-helm-action@main
+    #        with:
+    #          eks_cluster: ${{ env.CLUSTER_NAME }}
+    #          command: |-
+    #            kubectl create namespace ${{ env.TESTNET_COMMON_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
 
     # NOTICE: --- INDEXER ---
     - name: Pull the holograph-indexer helm chart version x.x.x from ECR

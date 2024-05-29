@@ -43,7 +43,7 @@ on:
   push:
     branches:
       - 'deactivated'
-#      - 'develop'
+      #      - 'develop'
       # Excluded branches
       - '!testnet'
       - '!main'

@@ -59,7 +59,7 @@ on:
   pull_request:
     branches:
       - 'deactivated'
-#      - 'mainnet'
+    #      - 'mainnet'
     types: [closed]
 
 jobs:
