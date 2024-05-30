@@ -238,7 +238,7 @@ function getSqsEventsFromTx(protocolEventName: string, interestingTransaction: I
             crossChainMessageType:
               decodedEvent.type === EventType.TransferERC721
                 ? CrossChainMessageType.ERC721
-                : CrossChainMessageType.ERC20_HLG,
+                : CrossChainMessageType.ERC20,
           }
 
           /**

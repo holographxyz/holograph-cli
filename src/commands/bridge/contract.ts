@@ -6,7 +6,7 @@ import {BigNumber} from '@ethersproject/bignumber'
 import {BytesLike} from '@ethersproject/bytes'
 import {formatUnits} from '@ethersproject/units'
 import {TransactionReceipt} from '@ethersproject/abstract-provider'
-import {networks, supportedShortNetworks} from '@holographxyz/networks'
+import {networks, supportedNetworks} from '@holographxyz/networks'
 
 import {ensureConfigFileIsValid} from '../../utils/config'
 import {web3, zeroAddress} from '../../utils/web3'
@@ -22,21 +22,21 @@ export default class BridgeContract extends Command {
     'Bridge a Holographable contract from source chain to destination chain. You need to have a deployment config JSON file. Use the "contract:create" command to create or extract one.'
 
   static examples = [
-    '$ <%= config.bin %> <%= command.id %> --sourceNetwork="goerli" --destinationNetwork="fuji" --deploymentConfig="./MyContract.json"',
+    '$ <%= config.bin %> <%= command.id %> --sourceNetwork="ethereumTestnetSepolia" --destinationNetwork="avalancheTestnet" --deploymentConfig="./MyContract.json"',
   ]
 
   static flags = {
     sourceNetwork: Flags.string({
       description: 'The network from which contract deploy request will be sent',
       parse: validateNetwork,
-      options: supportedShortNetworks,
+      options: supportedNetworks,
       multiple: false,
       required: false,
     }),
     destinationNetwork: Flags.string({
       description: 'The network on which the contract will be deployed',
       parse: validateNetwork,
-      options: supportedShortNetworks,
+      options: supportedNetworks,
       multiple: false,
       required: false,
     }),

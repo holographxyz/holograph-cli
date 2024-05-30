@@ -17,7 +17,7 @@ import {checkOptionFlag} from '../../utils/validation'
 
 export default class Faucet extends Command {
   static description = 'Request Testnet HLG from a faucet.'
-  static examples = ['$ <%= config.bin %> <%= command.id %> --network="goerli"']
+  static examples = ['$ <%= config.bin %> <%= command.id %> --network="ethereumTestnetSepolia"']
   static flags = {
     ...networkFlag,
   }

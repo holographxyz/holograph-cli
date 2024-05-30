@@ -1,0 +1,87 @@
+name: Deploy V2 holoclis to staging[develop-v2]
+
+permissions:
+  id-token: write
+  contents: read # This is required for actions/checkout@v2
+
+env:
+  AWS_REGION: us-west-2
+  IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
+  ECR_REPOSITORY: holo-cli-dev # notice: the same for all cli apps
+  #
+  IMAGE_TAG: dev-${{ github.sha }}
+  #
+  CLUSTER_NAME: staging
+  #
+  AWS_KEY_ID: ${{ secrets.NEWSTAGE_USER_AWS_ACCESS_KEY_ID }}
+  AWS_ACCESS_KEY: ${{ secrets.NEWSTAGE_USER_AWS_SECRET_ACCESS_KEY }}
+  #
+  #  STG_HOLOGRAPH_INDEXER_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
+  #  STG_HOLOGRAPH_OPERATOR_HOST: 'http://devel-holo-api.develop.svc.cluster.local:443'
+  #
+  # set the RPC endpoints config files
+  INDEXER_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
+  OPERATOR_HOLOGRAPH_CONFIG_FILE_DATA: dev-config-file
+  #
+  HOLOGRAPH_ENVIRONMENT: develop
+  BLOCK_PROCESSING_VERSION: 'V2'
+  #
+  STG_DOMAIN: 'holograph.xyz' # needed only for the health checks
+  #
+  # SQS User [indexer_processor_sqs_user]
+  #
+  STG_COMMON_NAMESPACE_V2: 'develop-v2'
+  #######################################
+  STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION: 0.1.85
+  INDEXER_RELEASE_NAME_V2: 'indexer-dev-v2' # format -> [release_name]-indexer-[env]
+  #
+  STG_HOLOGRAPH_OPERATOR_HELM_CHART_VERSION: 0.1.16
+  OPERATOR_RELEASE_NAME_V2: 'operator-dev-v2' # format -> [release_name]-indexer-[env]
+  #######################################
+
+on:
+  push:
+    branches:
+      - 'develop'
+      # Excluded branches
+      - '!testnet'
+      - '!main'
+      - '!mainnet'
+      - '!master'
+
+jobs:
+  deploy-clis-dev:
+    runs-on: ubuntu-latest
+    steps:
+      #
+      - uses: actions/checkout@v4
+      #
+      - name: Initial Setup [composite action]
+        uses: ./.github/actions/develop/initial-setup
+      #
+      - name: Deploy Indexer [composite action]
+        uses: ./.github/actions/develop/deploy-indexer
+      #
+      - name: Pause for 60 seconds
+        shell: bash
+        run: sleep 60
+      #
+      - name: Deploy Operator [composite action]
+        uses: ./.github/actions/develop/deploy-operator
+      #
+      - name: -> V2 -- Info for the new V2 deployments
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
+          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }}
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            echo "------------------------- Last n Helm releases -------------------------"
+            echo "--V2 INDEXER--"
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
+            echo "--V2 OPERATOR--"
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.STG_COMMON_NAMESPACE_V2 }} --max 3
+
+            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+            echo "$IMAGE_TAG"
