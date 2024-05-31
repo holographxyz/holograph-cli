@@ -104,9 +104,9 @@ runs:
           \
           --set autoscaling.enabled=false \
           --set replicaCountAvalanche=1 \
-          --set replicaCountPolygon=1 \
+          --set replicaCountPolygon=0 \
           --set replicaCountBinance=1 \
-          --set replicaCountMantle=1 \
+          --set replicaCountMantle=0 \
           --set replicaCountEthereum=1 \
           --set replicaCountArbitrum=1 \
           --set replicaCountOptimism=1 \
