@@ -56,7 +56,9 @@ export default class Indexer extends HealthCheck {
   static hidden = true
   static LAST_BLOCKS_FILE_NAME = 'indexer-blocks.json'
   static description = 'Listen for EVM events and update database network status'
-  static examples = ['$ <%= config.bin %> <%= command.id %> --networks goerli mumbai fuji']
+  static examples = [
+    '$ <%= config.bin %> <%= command.id %> --networks ethereumTestnetSepolia polygonTestnet avalancheTestnet',
+  ]
 
   static flags = {
     host: Flags.string({

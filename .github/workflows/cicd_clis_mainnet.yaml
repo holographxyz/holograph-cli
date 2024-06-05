@@ -1,0 +1,130 @@
+name: Deploy holoclis to prod[mainnet]
+
+permissions:
+  id-token: write
+  contents: read # This is required for actions/checkout@v2
+
+env:
+  AWS_REGION: us-west-2
+  IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
+  ECR_REPOSITORY: holo-cli # notice: the same for all cli apps
+  #
+  IMAGE_TAG: mainnet-${{ github.sha }}
+  #
+  CLUSTER_NAME: prod0
+  #
+  AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
+  AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
+  #
+  #  MAINNET_HOLOGRAPH_INDEXER_HOST: 'http://blondie-holo-api.mainnet.svc.cluster.local:443'
+  #  MAINNET_HOLOGRAPH_OPERATOR_HOST: 'http://blondie-holo-api.mainnet.svc.cluster.local:443'
+  #
+  MAINNET_HOLO_INDEXER_PASSWORD: ${{ secrets.MAINNET_HOLO_INDEXER_PASSWORD }}
+  MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.MAINNET_HOLO_OPERATOR_PASSWORD }}
+  V2_MAINNET_HOLO_OPERATOR_PASSWORD: ${{ secrets.V2_MAINNET_HOLO_OPERATOR_PASSWORD }}
+  #
+  # set the RPC endpoints config files
+  INDEXER_HOLO_CONFIG_FILE_DATA: mainnet-config-file
+  OPERATOR_HOLO_CONFIG_FILE_DATA: mainnet-config-file
+  #
+  HOLOGRAPH_ENVIRONMENT: mainnet
+  HOLOGRAPH_ADDRESS: ${{ secrets.MAINNET_HOLOGRAPH_ADDRESS }}
+  BLOCK_PROCESSING_VERSION: 'V2'
+  #
+  MAINNET_DOMAIN: 'holograph.xyz' # needed only for the health checks
+  #
+  MAINNET_COMMON_NAMESPACE: 'mainnet'
+  MAINNET_COMMON_NAMESPACE_V2: 'mainnet-v2'
+  #######################################
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.86
+  INDEXER_RELEASE_NAME: 'blondie-indexer-mainnet' # format -> [release_name]-indexer-[env]
+  INDEXER_RELEASE_NAME_V2: 'blondie-indexer-mainnet-v2'
+  #
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.19
+  OPERATOR_RELEASE_NAME: 'blondie-operator-mainnet' # format -> [release_name]-operator-[env]
+  OPERATOR_RELEASE_NAME_V2: 'blondie-operator-mainnet-v2'
+  #######################################
+
+## notice: the trigger
+#on:
+#  push:
+#    branches:
+#      - 'something'
+#      # Excluded branches
+#      - '!develop'
+#      - '!main'
+#      - '!master'
+# notice: the trigger
+on:
+  pull_request:
+    branches:
+      - 'mainnet'
+    types: [closed]
+
+jobs:
+  deploy-to-prod-mainnet:
+    if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
+    name: Deploy-on-mainnet
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      #
+      - name: Initial Setup [composite action]
+        uses: ./.github/actions/mainnet/initial-setup
+
+      # --- Notice: V1 ---
+      - name: Deploy V1 Indexer [composite action]
+        uses: ./.github/actions/mainnet/deploy-v1-indexer
+      #
+      - name: Pause for 60 seconds
+        shell: bash
+        run: sleep 60
+      #
+      - name: Deploy V1 Operator [composite action]
+        uses: ./.github/actions/mainnet/deploy-v1-operator
+      #
+      - name: -> V1 -- Info for the new V1 deployments
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME }}
+          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }}
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            echo "------------------------- Last n Helm releases -------------------------"
+            echo "--INDEXER--"
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.MAINNET_COMMON_NAMESPACE }} --max 3
+            echo "--OPERATOR--"
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.MAINNET_COMMON_NAMESPACE }} --max 3
+
+            echo "------------------------ Newly deployed image [same for all clis] ------------------------ "
+            echo "$IMAGE_TAG"
+
+      # --- Notice: V2 ---
+      - name: Deploy V2 Indexer [composite action]
+        uses: ./.github/actions/mainnet/deploy-v2-indexer
+      #
+      - name: Pause for 60 seconds
+        shell: bash
+        run: sleep 60
+      #
+      - name: Deploy V2 Operator [composite action]
+        uses: ./.github/actions/mainnet/deploy-v2-operator
+      #
+      - name: -> V2 -- Info for the new V2 deployments
+        uses: tensor-hq/eksctl-helm-action@main
+        env:
+          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
+          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }}
+        with:
+          eks_cluster: ${{ env.CLUSTER_NAME }}
+          command: |-
+            echo "------------------------- Last n Helm releases -------------------------"
+            echo "--V2 INDEXER--"
+            helm history $INDEXER_RELEASE_NAME  -n ${{ env.MAINNET_COMMON_NAMESPACE_V2 }} --max 3
+            echo "--V2 OPERATOR--"
+            helm history $OPERATOR_RELEASE_NAME -n ${{ env.MAINNET_COMMON_NAMESPACE_V2 }} --max 3
+
+            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+            echo "$IMAGE_TAG"

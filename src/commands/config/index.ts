@@ -4,7 +4,7 @@ import * as path from 'node:path'
 
 import {Command, Flags} from '@oclif/core'
 import {Wallet} from '@ethersproject/wallet'
-import {supportedShortNetworks, networks} from '@holographxyz/networks'
+import {networks, supportedNetworks} from '@holographxyz/networks'
 
 import {
   checkFileExists,
@@ -28,7 +28,7 @@ export default class Config extends Command {
 
   static flags = {
     network: Flags.string({
-      options: supportedShortNetworks,
+      options: supportedNetworks,
       description: 'Network to set',
     }),
     url: Flags.string({
