@@ -31,7 +31,7 @@ runs:
         POLYGON_NETWORK: '{polygon}'
         BINANCE_NETWORK: 'binanceSmartChain'
         MANTLE_NETWORK: '{mantle}'
-        ETHEREUM_NETWORK: '{eth}'
+        ETHEREUM_NETWORK: '{ethereum}'
         OPTIMISM_NETWORK: '{optimism}'
         ARBITRUM_NETWORK: '{arbitrumOne}'
         ZORA_NETWORK: '{zora}'
