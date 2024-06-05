@@ -91,6 +91,7 @@ runs:
           --set mainnet_rpc_config_values.mantle_rpc_url=$MAINNET_INDEXER_V1_MANTLE_RPC_URL \
           --set mainnet_rpc_config_values.zora_rpc_url=$MAINNET_INDEXER_V1_ZORA_RPC_URL \
           --set mainnet_rpc_config_values.base_rpc_url=$MAINNET_INDEXER_V1_BASE_RPC_URL \
+          --set mainnet_rpc_config_values.linea_rpc_url=$MAINNET_INDEXER_V1_LINEA_RPC_URL \
           \
           --set mainnet_rpc_config_values.private_key=$MAINNET_INDEXER_V1_PRIVATE_KEY \
           --set mainnet_rpc_config_values.address=$MAINNET_INDEXER_V1_MAINNET_V1_WALLET_ADDRESS \
