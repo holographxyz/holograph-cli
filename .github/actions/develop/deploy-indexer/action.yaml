@@ -2,7 +2,7 @@ name: 'deploy-indexer'
 runs:
   using: 'composite'
   steps:
-    - name: -> V2 -- Deploy INDEXER cli in staging [namespace -> ${{ env.STG_COMMON_NAMESPACE_V2 }}]
+    - name: -> V2 -- Deploy INDEXER cli in staging2
       uses: tensor-hq/eksctl-helm-action@main
       env:
         RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }} # notice
@@ -110,16 +110,16 @@ runs:
           --set datadog_tags.version=$RELEASE_NAME-${{ env.STG_HOLOGRAPH_INDEXER_HELM_CHART_VERSION }} \
           \
           --set autoscaling.enabled=false \
-          --set replicaCountAvalanche=1 \
+          --set replicaCountAvalanche=0 \
           --set replicaCountPolygon=0 \
-          --set replicaCountBinance=1 \
+          --set replicaCountBinance=0 \
           --set replicaCountMantle=0 \
-          --set replicaCountEthereum=1 \
-          --set replicaCountArbitrum=1 \
-          --set replicaCountOptimism=1 \
-          --set replicaCountBase=1 \
-          --set replicaCountLinea=1 \
-          --set replicaCountZora=1 \
+          --set replicaCountEthereum=0 \
+          --set replicaCountArbitrum=0 \
+          --set replicaCountOptimism=0 \
+          --set replicaCountBase=0 \
+          --set replicaCountLinea=0 \
+          --set replicaCountZora=0 \
           \
           --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=$COMMON_AWS_ACCESS_KEY_ID_SQS \
           --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=$COMMON_AWS_SECRET_ACCESS_KEY_SQS \
