@@ -9,7 +9,7 @@ env:
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli-dev # notice: the same for all cli apps
   #
-  IMAGE_TAG: dev-761cf971c70a0397eab22a4049d8d01c1acf982f #dev-${{ github.sha }}
+  IMAGE_TAG: dev-${{ github.sha }}
   #
   CLUSTER_NAME: 'staging2'
   #
@@ -40,8 +40,7 @@ env:
 on:
   push:
     branches:
-#      - 'develop'
-      - 'feat/staging2-cli-deployment'
+      - 'develop'
       # Excluded branches
       - '!testnet'
       - '!main'
