@@ -9,7 +9,7 @@ env:
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli
   #
-  IMAGE_TAG: testnet-c95c0112f803289fe110e42fbb13a5694c6fbf01 #testnet-${{ github.sha }}
+  IMAGE_TAG: testnet-${{ github.sha }}
   #
   CLUSTER_NAME: 'prod2'
   #
@@ -38,21 +38,21 @@ env:
   #######################################
 
 # notice: the trigger
-on:
-  push:
-    branches:
-      - 'feat/deploy-testnet-clis-into-staging2'
-      # Excluded branches
-      - '!develop'
-      - '!main'
-      - '!master'
-# notice: the trigger
 #on:
-#  pull_request:
+#  push:
 #    branches:
-#      - 'testnet'
-#    #      - 'deactivated'
-#    types: [closed]
+#      - 'feat/deploy-testnet-clis-into-staging2'
+#      # Excluded branches
+#      - '!develop'
+#      - '!main'
+#      - '!master'
+# notice: the trigger
+on:
+  pull_request:
+    branches:
+      - 'testnet'
+    #      - 'deactivated'
+    types: [closed]
 
 jobs:
   deploy-clis-testnet:
