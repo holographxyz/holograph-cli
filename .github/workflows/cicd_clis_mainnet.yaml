@@ -9,7 +9,7 @@ env:
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
   ECR_REPOSITORY: holo-cli
   #
-  IMAGE_TAG: mainnet-fa7c42b200a85dac05767e5ee20e1689bbf9f7f9 #mainnet-${{ github.sha }}
+  IMAGE_TAG: mainnet-${{ github.sha }}
   #
   CLUSTER_NAME: 'prod2'
   #
@@ -46,24 +46,24 @@ env:
   #######################################
 
 ## notice: the trigger
-on:
-  push:
-    branches:
-      - 'feat/deploy-mainnet-cli-into-prod2'
-      # Excluded branches
-      - '!develop'
-      - '!main'
-      - '!master'
-# notice: the trigger
 #on:
-#  pull_request:
+#  push:
 #    branches:
-#      - 'mainnet'
-#    types: [closed]
+#      - 'feat/deploy-mainnet-cli-into-prod2'
+#      # Excluded branches
+#      - '!develop'
+#      - '!main'
+#      - '!master'
+# notice: the trigger
+on:
+  pull_request:
+    branches:
+      - 'mainnet'
+    types: [closed]
 
 jobs:
   deploy-to-prod2-mainnet:
-#    if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
+    if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
     name: Deploy-on-mainnet
     runs-on: ubuntu-latest
 

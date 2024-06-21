@@ -102,16 +102,16 @@ runs:
           --set datadog_tags.version=$RELEASE_NAME-${{ env.MAINNET_HOLO_INDEXER_HELM_CHART_VERSION }} \
           \
           --set autoscaling.enabled=false \
-          --set replicaCountAvalanche=0 \
-          --set replicaCountPolygon=0 \
-          --set replicaCountBinance=0 \
-          --set replicaCountMantle=0 \
-          --set replicaCountEthereum=0 \
-          --set replicaCountArbitrum=0 \
-          --set replicaCountOptimism=0 \
+          --set replicaCountAvalanche=1 \
+          --set replicaCountPolygon=1 \
+          --set replicaCountBinance=1 \
+          --set replicaCountMantle=1 \
+          --set replicaCountEthereum=1 \
+          --set replicaCountArbitrum=1 \
+          --set replicaCountOptimism=1 \
           --set replicaCountBase=0 \
           --set replicaCountLinea=0 \
-          --set replicaCountZora=0 \
+          --set replicaCountZora=1 \
           \
           --set sqs.SQS_USER_AWS_ACCESS_KEY_ID=$COMMON_AWS_ACCESS_KEY_ID_SQS \
           --set sqs.SQS_USER_AWS_SECRET_ACCESS_KEY=$COMMON_AWS_SECRET_ACCESS_KEY_SQS \
