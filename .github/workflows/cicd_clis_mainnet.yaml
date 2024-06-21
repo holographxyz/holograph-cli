@@ -1,4 +1,4 @@
-name: Deploy holoclis to prod[mainnet]
+name: Deploy holoclis to prod2[mainnet]
 
 permissions:
   id-token: write
@@ -7,11 +7,11 @@ permissions:
 env:
   AWS_REGION: us-west-2
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
-  ECR_REPOSITORY: holo-cli # notice: the same for all cli apps
+  ECR_REPOSITORY: holo-cli
   #
-  IMAGE_TAG: mainnet-${{ github.sha }}
+  IMAGE_TAG: mainnet-fa7c42b200a85dac05767e5ee20e1689bbf9f7f9 #mainnet-${{ github.sha }}
   #
-  CLUSTER_NAME: prod0
+  CLUSTER_NAME: 'prod2'
   #
   AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
@@ -46,24 +46,24 @@ env:
   #######################################
 
 ## notice: the trigger
-#on:
-#  push:
-#    branches:
-#      - 'something'
-#      # Excluded branches
-#      - '!develop'
-#      - '!main'
-#      - '!master'
-# notice: the trigger
 on:
-  pull_request:
+  push:
     branches:
-      - 'mainnet'
-    types: [closed]
+      - 'feat/deploy-mainnet-cli-into-prod2'
+      # Excluded branches
+      - '!develop'
+      - '!main'
+      - '!master'
+# notice: the trigger
+#on:
+#  pull_request:
+#    branches:
+#      - 'mainnet'
+#    types: [closed]
 
 jobs:
-  deploy-to-prod-mainnet:
-    if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
+  deploy-to-prod2-mainnet:
+#    if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
     name: Deploy-on-mainnet
     runs-on: ubuntu-latest
 
@@ -101,30 +101,30 @@ jobs:
             echo "------------------------ Newly deployed image [same for all clis] ------------------------ "
             echo "$IMAGE_TAG"
 
-      # --- Notice: V2 ---
-      - name: Deploy V2 Indexer [composite action]
-        uses: ./.github/actions/mainnet/deploy-v2-indexer
-      #
-      - name: Pause for 60 seconds
-        shell: bash
-        run: sleep 60
-      #
-      - name: Deploy V2 Operator [composite action]
-        uses: ./.github/actions/mainnet/deploy-v2-operator
-      #
-      - name: -> V2 -- Info for the new V2 deployments
-        uses: tensor-hq/eksctl-helm-action@main
-        env:
-          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
-          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }}
-        with:
-          eks_cluster: ${{ env.CLUSTER_NAME }}
-          command: |-
-            echo "------------------------- Last n Helm releases -------------------------"
-            echo "--V2 INDEXER--"
-            helm history $INDEXER_RELEASE_NAME  -n ${{ env.MAINNET_COMMON_NAMESPACE_V2 }} --max 3
-            echo "--V2 OPERATOR--"
-            helm history $OPERATOR_RELEASE_NAME -n ${{ env.MAINNET_COMMON_NAMESPACE_V2 }} --max 3
-
-            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
-            echo "$IMAGE_TAG"
+#      # --- Notice: V2 ---
+#      - name: Deploy V2 Indexer [composite action]
+#        uses: ./.github/actions/mainnet/deploy-v2-indexer
+#      #
+#      - name: Pause for 60 seconds
+#        shell: bash
+#        run: sleep 60
+#      #
+#      - name: Deploy V2 Operator [composite action]
+#        uses: ./.github/actions/mainnet/deploy-v2-operator
+#      #
+#      - name: -> V2 -- Info for the new V2 deployments
+#        uses: tensor-hq/eksctl-helm-action@main
+#        env:
+#          INDEXER_RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }}
+#          OPERATOR_RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME_V2 }}
+#        with:
+#          eks_cluster: ${{ env.CLUSTER_NAME }}
+#          command: |-
+#            echo "------------------------- Last n Helm releases -------------------------"
+#            echo "--V2 INDEXER--"
+#            helm history $INDEXER_RELEASE_NAME  -n ${{ env.MAINNET_COMMON_NAMESPACE_V2 }} --max 3
+#            echo "--V2 OPERATOR--"
+#            helm history $OPERATOR_RELEASE_NAME -n ${{ env.MAINNET_COMMON_NAMESPACE_V2 }} --max 3
+#
+#            echo "------------------------ Newly deployed image [same for all apps] ------------------------"
+#            echo "$IMAGE_TAG"
