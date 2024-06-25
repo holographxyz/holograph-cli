@@ -70,10 +70,10 @@ export const protocolEventsMap: {readonly [key in ProtocolEvent]: ProtocolEventI
     events: [
       eventMap[EventType.SecondarySaleFees],
       eventMap[EventType.BridgeableContractDeployed],
-      eventMap[EventType.AssignJob],
-      eventMap[EventType.RelayerParams],
+      // eventMap[EventType.AssignJob], // NOTE: LZ V1 events differ from LZ V2 events, so they will be ignored.
+      // eventMap[EventType.RelayerParams],  // NOTE: LZ V1 events differ from LZ V2 events, so they will be ignored.
       // UNKNOWN EVENT: 0x4e41ee13e03cd5e0446487b524fdc48af6acf26c074dacdbdfb6b574b42c8146
-      eventMap[EventType.PacketLZ],
+      // eventMap[EventType.PacketLZ], // NOTE: LZ V1 events differ from LZ V2 events, so they will be ignored.
       eventMap[EventType.CrossChainMessageSent],
     ],
     sqsEventNames: [SqsEventName.ContractDeployed, SqsEventName.BridgePreProcess],
@@ -111,10 +111,10 @@ export const protocolEventsMap: {readonly [key in ProtocolEvent]: ProtocolEventI
     events: [
       // eventMap[EventType.TransferERC721], // NOTE: transfer checks are skipped for efficiency. Filtering transfer logs is costly, and all relevant data is already available in the HolographableContractEvent.
       eventMap[EventType.HolographableContractEvent],
-      eventMap[EventType.AssignJob],
-      eventMap[EventType.RelayerParams],
+      // eventMap[EventType.AssignJob], // NOTE: LZ V1 events differ from LZ V2 events, so they will be ignored.
+      // eventMap[EventType.RelayerParams],
       // UNKNOWN EVENT: 0x4e41ee13e03cd5e0446487b524fdc48af6acf26c074dacdbdfb6b574b42c8146
-      eventMap[EventType.PacketLZ],
+      // eventMap[EventType.PacketLZ],
       eventMap[EventType.CrossChainMessageSent],
     ],
     sqsEventNames: [SqsEventName.BridgePreProcess],
@@ -124,7 +124,10 @@ export const protocolEventsMap: {readonly [key in ProtocolEvent]: ProtocolEventI
   [ProtocolEvent.AvailableOperatorJob]: {
     name: ProtocolEvent.AvailableOperatorJob,
     contractMethodName: ContractMethodId.validateTransactionProofV1,
-    events: [eventMap[EventType.AvailableOperatorJob], eventMap[EventType.PacketReceived]],
+    events: [
+      eventMap[EventType.AvailableOperatorJob],
+      // eventMap[EventType.PacketReceived] // NOTE: LZ V1 events differ from LZ V2 events, so they will be ignored.
+    ],
     sqsEventNames: [SqsEventName.AvailableOperatorJob],
     validateAndGetSqsEvents: (interestingTransaction: InterestingTransaction) =>
       getSqsEventsFromTx(ProtocolEvent.AvailableOperatorJob, interestingTransaction),
