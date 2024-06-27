@@ -2,7 +2,7 @@ name: 'deploy-v1-operator'
 runs:
   using: 'composite'
   steps:
-    - name: -> V1 -- Deploy OPERATOR cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE }}]
+    - name: -> V1 -- Deploy OPERATOR cli in MAINNET
       uses: tensor-hq/eksctl-helm-action@main
       env:
         RELEASE_NAME: ${{ env.OPERATOR_RELEASE_NAME }} # notice
