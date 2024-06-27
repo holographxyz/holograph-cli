@@ -2,7 +2,7 @@ name: 'deploy-v2-indexer'
 runs:
   using: 'composite'
   steps:
-    - name: -> V2 -- Deploy INDEXER cli in MAINNET [namespace -> ${{ env.MAINNET_COMMON_NAMESPACE_V2 }}]
+    - name: -> V2 -- Deploy INDEXER cli in MAINNET
       uses: tensor-hq/eksctl-helm-action@main
       env:
         RELEASE_NAME: ${{ env.INDEXER_RELEASE_NAME_V2 }} # notice

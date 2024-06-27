@@ -1,4 +1,4 @@
-name: Deploy holoclis to prod[mainnet]
+name: Deploy holoclis to prod2[mainnet]
 
 permissions:
   id-token: write
@@ -7,11 +7,11 @@ permissions:
 env:
   AWS_REGION: us-west-2
   IAM_ROLE: arn:aws:iam::177635894328:role/Github_role_to_access_ECR
-  ECR_REPOSITORY: holo-cli # notice: the same for all cli apps
+  ECR_REPOSITORY: holo-cli
   #
   IMAGE_TAG: mainnet-${{ github.sha }}
   #
-  CLUSTER_NAME: prod0
+  CLUSTER_NAME: 'prod2'
   #
   AWS_KEY_ID: ${{ secrets.PROD0_CICD_USER_AWS_ACCESS_KEY_ID }}
   AWS_ACCESS_KEY: ${{ secrets.PROD0_CICD_USER_AWS_SECRET_ACCESS_KEY }}
@@ -36,11 +36,11 @@ env:
   MAINNET_COMMON_NAMESPACE: 'mainnet'
   MAINNET_COMMON_NAMESPACE_V2: 'mainnet-v2'
   #######################################
-  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.88
+  MAINNET_HOLO_INDEXER_HELM_CHART_VERSION: 0.1.89
   INDEXER_RELEASE_NAME: 'blondie-indexer-mainnet' # format -> [release_name]-indexer-[env]
   INDEXER_RELEASE_NAME_V2: 'blondie-indexer-mainnet-v2'
   #
-  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.20
+  MAINNET_HOLO_OPERATOR_HELM_CHART_VERSION: 0.1.21
   OPERATOR_RELEASE_NAME: 'blondie-operator-mainnet' # format -> [release_name]-operator-[env]
   OPERATOR_RELEASE_NAME_V2: 'blondie-operator-mainnet-v2'
   #######################################
@@ -49,7 +49,7 @@ env:
 #on:
 #  push:
 #    branches:
-#      - 'something'
+#      - 'feat/deploy-mainnet-cli-into-prod2'
 #      # Excluded branches
 #      - '!develop'
 #      - '!main'
@@ -62,7 +62,7 @@ on:
     types: [closed]
 
 jobs:
-  deploy-to-prod-mainnet:
+  deploy-to-prod2-mainnet:
     if: github.event.pull_request.merged == true # so no workflow runs when some PR is just closed without being merged
     name: Deploy-on-mainnet
     runs-on: ubuntu-latest
