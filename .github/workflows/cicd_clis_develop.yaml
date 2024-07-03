@@ -40,7 +40,8 @@ env:
 on:
   push:
     branches:
-      - 'develop'
+      - 'deactivated'
+      #- 'develop'
       # Excluded branches
       - '!testnet'
       - '!main'
