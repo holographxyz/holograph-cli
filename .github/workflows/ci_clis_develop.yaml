@@ -91,7 +91,7 @@ jobs:
 
       - name: Update the Indexer helm file
         env:
-          helm_file: '${{ env.ECR_REPOSITORY }}/values-v2-develop-iv.yaml'
+          helm_file: 'holo-indexer/values-v2-develop-iv.yaml'
         run: |
           git status
           git config user.email "kostas@holograph.xyz"
@@ -120,7 +120,7 @@ jobs:
 
       - name: Update the Operator helm file
         env:
-          helm_file: '${{ env.ECR_REPOSITORY }}/values-v2-develop-iv.yaml'
+          helm_file: 'holo-operator/values-v2-develop-iv.yaml'
         run: |
           git status
           git config user.email "kostas@holograph.xyz"
