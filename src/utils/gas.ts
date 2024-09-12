@@ -23,45 +23,102 @@ export type GasPricing = {
   highestPriorityFee: BigNumber | null
 }
 
+export type BlockFeeConfig = {
+  gasLimit: BigNumber
+  gasTarget: BigNumber
+  elasticityMultiplier: BigNumber
+  maxChangeDenominator: BigNumber
+  maxBaseFeeIncrease: BigNumber
+  maxBaseFeeDecrease: BigNumber
+  blockTime: BigNumber
+}
+const defaultBlockFeeConfig: BlockFeeConfig = {
+  gasLimit: BigNumber.from('30000000'),
+  gasTarget: BigNumber.from('15000000'),
+  elasticityMultiplier: BigNumber.from('2'),
+  maxChangeDenominator: BigNumber.from('8'),
+  maxBaseFeeIncrease: BigNumber.from('1250'), // bps
+  maxBaseFeeDecrease: BigNumber.from('1250'), // bps
+  blockTime: BigNumber.from('12000'), // milliseconds
+}
+
+const blockFeeConfigOverrides: {[k: NetworkKeys]: BlockFeeConfig} = {
+  ['polygon' as NetworkKeys]: Object.assign(defaultBlockFeeConfig, {
+    maxChangeDenominator: BigNumber.from('16'),
+  }) as BlockFeeConfig,
+  ['polygonTestnet' as NetworkKeys]: Object.assign(defaultBlockFeeConfig, {
+    maxChangeDenominator: BigNumber.from('16'),
+  }) as BlockFeeConfig,
+  ['arbitrumOne' as NetworkKeys]: Object.assign(defaultBlockFeeConfig, {
+    gasTarget: BigNumber.from('5000000'),
+    elasticityMultiplier: BigNumber.from('6'),
+    maxChangeDenominator: BigNumber.from('50'),
+    maxBaseFeeIncrease: BigNumber.from('1000'), // bps
+    maxBaseFeeDecrease: BigNumber.from('200'), // bps
+    blockTime: BigNumber.from('2000'), // milliseconds
+  }) as BlockFeeConfig,
+  ['arbitrumTestnetGoerli' as NetworkKeys]: Object.assign(defaultBlockFeeConfig, {
+    gasTarget: BigNumber.from('5000000'),
+    elasticityMultiplier: BigNumber.from('6'),
+    maxChangeDenominator: BigNumber.from('50'),
+    maxBaseFeeIncrease: BigNumber.from('1000'), // bps
+    maxBaseFeeDecrease: BigNumber.from('200'), // bps
+    blockTime: BigNumber.from('2000'), // milliseconds
+  }) as BlockFeeConfig,
+}
+
+const zero: BigNumber = BigNumber.from('0')
+const one: BigNumber = BigNumber.from('1')
+
 // Implemented from https://eips.ethereum.org/EIPS/eip-1559
 export function calculateNextBlockFee(network: string, parent: Block | BlockWithTransactions): BigNumber {
-  const zero: BigNumber = BigNumber.from('0')
   if (parent.baseFeePerGas === undefined) {
     return zero
   }
 
-  const one: BigNumber = BigNumber.from('1')
-  const elasticityMultiplier: BigNumber = BigNumber.from('2')
-  let baseFeeMaxChangeDenominator: BigNumber = BigNumber.from('8')
-  if (network === 'polygon' || network === 'polygonTestnet') {
-    baseFeeMaxChangeDenominator = BigNumber.from('16')
+  let blockFeeConfig: BlockFeeConfig = defaultBlockFeeConfig
+  if ((network as NetworkKeys) in blockFeeConfigOverrides) {
+    blockFeeConfig = blockFeeConfigOverrides[network as NetworkKeys]
   }
 
   const baseFeePerGas: BigNumber = parent.baseFeePerGas!
-  const parentGasTarget: BigNumber = parent.gasLimit.div(elasticityMultiplier)
+  let nextBlockFee: BigNumber = baseFeePerGas
+  const parentGasTarget: BigNumber = blockFeeConfig.gasLimit.div(blockFeeConfig.elasticityMultiplier)
   if (parent.gasUsed.eq(parentGasTarget)) {
     return baseFeePerGas
   }
 
   let gasUsedDelta: BigNumber
   let baseFeeDelta: BigNumber
+  const maxFeeIncrease: BigNumber = baseFeePerGas.mul(blockFeeConfig.maxBaseFeeIncrease).div(BigNumber.from('10000'))
+  const maxFeeDecrease: BigNumber = baseFeePerGas.mul(blockFeeConfig.maxBaseFeeDecrease).div(BigNumber.from('10000'))
 
   // If the parent block used more gas than its target, the baseFee should increase.
   if (parent.gasUsed.gt(parentGasTarget)) {
     gasUsedDelta = parent.gasUsed.sub(parentGasTarget)
-    baseFeeDelta = baseFeePerGas.mul(gasUsedDelta).div(parentGasTarget).div(baseFeeMaxChangeDenominator)
+    baseFeeDelta = baseFeePerGas.mul(gasUsedDelta).div(parentGasTarget).div(blockFeeConfig.maxChangeDenominator)
     if (one.gt(baseFeeDelta)) {
       baseFeeDelta = one
     }
 
-    return baseFeePerGas.add(baseFeeDelta)
+    nextBlockFee = baseFeePerGas.add(baseFeeDelta)
+    if (nextBlockFee.gt(baseFeePerGas.add(maxFeeIncrease))) {
+      return baseFeePerGas.add(maxFeeIncrease)
+    }
+
+    return nextBlockFee
   }
 
   // Otherwise if the parent block used less gas than its target, the baseFee should decrease.
   gasUsedDelta = parentGasTarget.sub(parent.gasUsed)
-  baseFeeDelta = baseFeePerGas.mul(gasUsedDelta).div(parentGasTarget).div(baseFeeMaxChangeDenominator)
+  baseFeeDelta = baseFeePerGas.mul(gasUsedDelta).div(parentGasTarget).div(blockFeeConfig.maxChangeDenominator)
 
-  return baseFeePerGas.sub(baseFeeDelta)
+  nextBlockFee = baseFeePerGas.sub(baseFeeDelta)
+  if (nextBlockFee.lt(baseFeePerGas.sub(maxFeeDecrease))) {
+    return baseFeePerGas.sub(maxFeeDecrease)
+  }
+
+  return nextBlockFee
 }
 
 // This function is here to accomodate instances where a network has a minimum BaseBlockFee
