@@ -25,6 +25,9 @@ runs:
     - name: Checkout the code
       uses: actions/checkout@v4
 
+    - name: Set up QEMU action
+      uses: docker/setup-qemu-action@v3
+
     # This is a separate action that sets up buildx runner
     - name: Set up Docker Buildx
       id: buildx
@@ -47,7 +50,7 @@ runs:
         builder: ${{ steps.buildx.outputs.name }}
         file: Dockerfile
         build-args: AWS_ECR_URL=${{ steps.login-ecr.outputs.registry }}
-        platforms: linux/amd64
+        platforms: linux/amd64,linux/arm64/v8
         tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache-new
